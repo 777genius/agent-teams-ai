@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "scope": "Type arguments on two existing strict empty-load assertions only; no runtime operation, callback, expected value, deadline, or loader boundary changes",
+  "changes": [
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "1e4522ba6e600545535c116e59a53a95f6120b37",
+        "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+        "bytes": 52804,
+        "lines": 744
+      },
+      "after": {
+        "gitBlob": "4a64e6228f2b44f42ec9f3d24cca63272915291e",
+        "sha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "bytes": 52832,
+        "lines": 744
+      }
+    }
+  ],
+  "patch": {
+    "path": "candidate.patch",
+    "gitBlob": "b9614152548b846349b52ca91a4bffab6b749a19",
+    "sha256": "06931113a12bfc7f8258085aeac20ac5b8da3bcd60a174782201d6da4f6c1738",
+    "bytes": 1017,
+    "lines": 15
+  }
+}

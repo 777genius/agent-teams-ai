@@ -1,0 +1,501 @@
+{
+  "kind": "prospective-plan80-root-r1",
+  "at": "2026-11-17T05:19:42.305765+00:00",
+  "decision": "SELECT_SHARED_EXISTING_LIVENESS_AND_CONTROLLED_PROCESS_HEADER_REGRESSION",
+  "parent": "fd60d11dc686467f16c2a4713731de188301497c",
+  "parentTree": "b68e87c071804ce837bb099e17bc3da5b1d958ce",
+  "primary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "externalReadOnly": "23255c9bf81351f455203ef85375e67c1dd8918a",
+  "closedParentActualR2": {
+    "sha256": "98baaefbd63b742e2b9b845d4ed4994fc7f9987397873c602d6758c7b4992a1c",
+    "rootFullReadLines": 156,
+    "dataSha256": "23f4cb059cf47d23117653c476bf3f767a4103354d13818384a6aa9283b185b3",
+    "rootFullDataReadLines": 377
+  },
+  "officialParentPacket": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan79/actual-source/official-packet.json",
+    "bytes": 7535267,
+    "physicalLines": 1,
+    "gitBlob": "1c0f867d8c51728b9849ef9ea8739f1c8bb2e8f0",
+    "sha256": "ccfffca1c6cab5bce6dbe1de97a1b6423c927692b6e6320e207a5590a557bb94"
+  },
+  "plan": {
+    "bytes": 4629,
+    "physicalLines": 22,
+    "gitBlob": "aafd3cb7613f0c485ccf980a338509b7ab18007c",
+    "sha256": "981963c50aae52d031ffdbe24e5b81a9ed368f40435ea80ba6ebfb6b9184dafe"
+  },
+  "sourceCut": [
+    {
+      "path": "src/renderer/components/team/teamProcessLiveness.ts",
+      "preimage": null,
+      "selectedNewFileContent": "import type { TeamProcess } from '@shared/types';\n\nexport function isTeamProcessAlive(proc: TeamProcess, isTeamAlive?: boolean): boolean {\n  return proc.processRef\n    ? proc.observation === 'same-live'\n    : isTeamAlive === true && !proc.stoppedAt;\n}\n",
+      "expectedPhysicalLines": 7,
+      "meaning": "Extract the exact existing row liveness predicate into one colocated pure helper; no new policy."
+    },
+    {
+      "path": "src/renderer/components/team/ProcessesSection.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/src/renderer/components/team/ProcessesSection.tsx",
+      "preimage": {
+        "bytes": 9397,
+        "physicalLines": 236,
+        "gitBlob": "fdfa9b971390730492af0359f5b59c233cc5ee7b",
+        "sha256": "aabad65903c8ef3abb1351309cacea2ef3db4ac4ecb043c0255244e75ad87717"
+      },
+      "selections": [
+        {
+          "selectedOldText": "import { MemberBadge } from './MemberBadge';\n",
+          "selectedNewText": "import { MemberBadge } from './MemberBadge';\nimport { isTeamProcessAlive } from './teamProcessLiveness';\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "  const isAlive = (proc: TeamProcess) =>\n    proc.processRef ? proc.observation === 'same-live' : isTeamAlive === true && !proc.stoppedAt;\n  const sorted = [...processes].sort((a, b) => {\n",
+          "selectedNewText": "  const sorted = [...processes].sort((a, b) => {\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "    const aAlive = isAlive(a);\n",
+          "selectedNewText": "    const aAlive = isTeamProcessAlive(a, isTeamAlive);\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "    const bAlive = isAlive(b);\n",
+          "selectedNewText": "    const bAlive = isTeamProcessAlive(b, isTeamAlive);\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "        const alive = isAlive(proc);\n",
+          "selectedNewText": "        const alive = isTeamProcessAlive(proc, isTeamAlive);\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "expectedPhysicalLines": 235,
+      "meaning": "Preserve row sorting/status/Stop/memo behavior; use the extracted predicate at the three existing call sites."
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailView.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/src/renderer/components/team/TeamDetailView.tsx",
+      "preimage": {
+        "bytes": 137728,
+        "physicalLines": 3749,
+        "gitBlob": "e1fe249d7e5f760f80f87e93918b0ff253b3f450",
+        "sha256": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82"
+      },
+      "selections": [
+        {
+          "selectedOldText": "import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';\n",
+          "selectedNewText": "import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';\nimport { isTeamProcessAlive } from './teamProcessLiveness';\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "                  badge={data.isAlive ? data.processes.filter((p) => !p.stoppedAt).length : 0}\n",
+          "selectedNewText": "                  badge={data.processes.filter((p) => isTeamProcessAlive(p, data.isAlive)).length}\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "                    data.isAlive && data.processes.some((p) => !p.stoppedAt) ? (\n",
+          "selectedNewText": "                    data.processes.some((p) => isTeamProcessAlive(p, data.isAlive)) ? (\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "expectedPhysicalLines": 3750,
+      "meaning": "Use the same row predicate for the count and active header pulse; one import fits the unchanged3750 legacy cap."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-r2/reference/scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "preimage": {
+        "bytes": 22604,
+        "physicalLines": 426,
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f"
+      },
+      "selections": [
+        {
+          "selectedOldText": "    const label=labels[0],container=label.parentElement;\n",
+          "selectedNewText": "    const label=labels[0],container=label.parentElement;\n    const header=container.closest('[data-section-id=\"processes\"]')?.firstElementChild;\n    const badges=header?[...header.querySelectorAll('span.font-normal.leading-none')]:[];\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "    return {label:label.textContent.trim(),pidText:pids[0].textContent.trim(),\n",
+          "selectedNewText": "    return {label:label.textContent.trim(),pidText:pids[0].textContent.trim(),\n      headerActiveCount:badges.length===1?badges[0].textContent.trim():null,\n      headerActiveIndicator:header?Boolean(header.querySelector('span.animate-ping')):null,\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "  proof.beforeScreenshot = await screenshot('ui-original-native-process-before-stop.png');\n",
+          "selectedNewText": "  proof.beforeScreenshot = await screenshot('ui-original-native-process-before-stop.png');\n  if (controlled) {\n    assert.equal(originalRenderedRow.headerActiveCount, '1', 'cold original process is counted');\n    assert.equal(originalRenderedRow.headerActiveIndicator, true, 'cold original process activates header');\n  }\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "    await controlled.assertStopped(commandId, String(stoppedRow.processRef));\n",
+          "selectedNewText": "    assert.equal(stoppedRendered.headerActiveCount, '0', 'stopped original process is not counted');\n    assert.equal(stoppedRendered.headerActiveIndicator, false, 'stopped original process clears header');\n    await controlled.assertStopped(commandId, String(stoppedRow.processRef));\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "expectedPhysicalLines": 436,
+      "meaning": "Extend the same existing two controlled rendered-row observations, with nullable header facts and controlled-only1/true then0/false assertions; no new admission gate on native/readback."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan79/source-candidate/afterimages/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "preimage": {
+        "bytes": 23721,
+        "physicalLines": 365,
+        "gitBlob": "040e1338e247cd5113ebd15ce09bdef2217e04db",
+        "sha256": "7baaefd5177a35ea40ac0fac4ac137b59a5443b94500633363fff7a0be8bd2aa"
+      },
+      "selections": [
+        {
+          "selectedOldText": "  'src/renderer/components/team/kanban/KanbanTaskCard.tsx',\n",
+          "selectedNewText": "  'src/renderer/components/team/kanban/KanbanTaskCard.tsx',\n  'src/renderer/components/team/teamProcessLiveness.ts',\n  'src/renderer/components/team/CollapsibleTeamSection.tsx',\n  'src/renderer/components/ui/badge.tsx',\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "expectedPhysicalLines": 368,
+      "meaning": "Add the new shared predicate and the two existing components that define the asserted header DOM to the existing common source freeze."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/.github/workflows/host-emulated-acceptance.yml",
+      "preimage": {
+        "bytes": 142440,
+        "physicalLines": 1776,
+        "gitBlob": "5556d12fc6ef0564c70d590e4ee9e9af2d860d69",
+        "sha256": "e63fa4c2e24e4e09075389511df531f5209c87e1c9759766efdfa29db1d43c3d"
+      },
+      "selections": [
+        {
+          "selectedOldText": "            test/renderer/utils/teamModelAvailability.test.ts\n",
+          "selectedNewText": "            test/renderer/utils/teamModelAvailability.test.ts \\\n            src/renderer/components/team/teamProcessLiveness.ts \\\n            src/renderer/components/team/ProcessesSection.tsx \\\n            src/renderer/components/team/TeamDetailView.tsx \\\n            scripts/legacy-agent-host/desktop-native-process-ui.ts\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "expectedPhysicalLines": 1780,
+      "meaning": "Append the four changed TS bodies absent from existing141 fast operands; all previous operands, typed/full gates and commands remain exact."
+    }
+  ],
+  "sourceAfterimagesCreated": false,
+  "sourceReferences": [
+    {
+      "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "bytes": 7926,
+      "physicalLines": 241,
+      "gitBlob": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb",
+      "sha256": "db8ad2dba3b3e1e98f8a84ad88237e1156b02193e2923c168f3e9d1c4e9f000d"
+    },
+    {
+      "path": "src/renderer/components/ui/badge.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/src/renderer/components/ui/badge.tsx",
+      "bytes": 1544,
+      "physicalLines": 37,
+      "gitBlob": "d11e0f3e1c7a104cd705b772c5f5573475ffe193",
+      "sha256": "d215898c3398b6d7f2afb87ef9a0ba378a331e98d13a4160126a9e2ad292ae68"
+    },
+    {
+      "path": "test/renderer/components/team/ProcessesSection.test.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/test/renderer/components/team/ProcessesSection.test.tsx",
+      "bytes": 2109,
+      "physicalLines": 78,
+      "gitBlob": "a30949377b558c76c9e713a1ddf84a26526c91b0",
+      "sha256": "4a20ed2711ded641357c428e93c09be5918e240b457b69cb453a250c63ea4c91"
+    },
+    {
+      "path": "test/features/agent-backend/hostProcessesSection.test.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/test/features/agent-backend/hostProcessesSection.test.tsx",
+      "bytes": 3215,
+      "physicalLines": 101,
+      "gitBlob": "5eca7d58fd1a477032e82592bfeaa15994eaeba2",
+      "sha256": "1e29280732fb4c5935eb8661f650a398b1512e983d2f1d96e6f4f8ce0e0b7b60"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-root/reference/scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "bytes": 25519,
+      "physicalLines": 356,
+      "gitBlob": "38efaed8954940698d93b40d9355332ea9f56d75",
+      "sha256": "ad8f8b5ae40f5fae5728ed6321819227969c32986f636e83e56af9ac67bf05d7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "physicalLines": 800,
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan75/rebound-current/reference/scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "bytes": 44561,
+      "physicalLines": 600,
+      "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan75/rebound-current/reference/scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "bytes": 21211,
+      "physicalLines": 309,
+      "gitBlob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan76/source-candidate/afterimages/scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts",
+      "bytes": 1815,
+      "physicalLines": 25,
+      "gitBlob": "9c1472f6e111af15c4e31bca86519885b946c987",
+      "sha256": "146daec80b2e27ecd6e5fb23114d4281aa9a6327324891e69993c4ae89716dec"
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "physicalLines": 231,
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "physicalLines": 146,
+      "gitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+      "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae"
+    }
+  ],
+  "originalEvidence": {
+    "head": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "run": 44008164473,
+    "job": 133788425715,
+    "r2": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-r2/independent-original-processes-r2.json",
+      "bytes": 13642,
+      "physicalLines": 145,
+      "gitBlob": "77ef573d4bd93cb79e53e252eb01b4a5195435b6",
+      "sha256": "fda1341d117667f93091a19c8cb048b4fda981ce3e7dcda3cdf59cbdcc220179"
+    },
+    "data": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-r2/independent-data-proof.json",
+      "bytes": 31767,
+      "physicalLines": 916,
+      "gitBlob": "0dfd303a5f8fdc2e3df94fd5b975d505240d5cc2",
+      "sha256": "5d77580a28840dc4b97faf9375653ddeb31b45a6e6a7ec05fbeb04dc61dd114e"
+    },
+    "badgeFinding": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/processes-5c55-r2/badge-source-finding.json",
+      "bytes": 7277,
+      "physicalLines": 133,
+      "gitBlob": "2221d08555636020bc1d71920c3bc84ff1f536b1",
+      "sha256": "90d2ca45c30db824684ad37ddc34932af3dfdbc86370eaa6f2d1dd909c868ddb"
+    },
+    "rootReadScope": "Full145-line independent R2 and133-line finding, whole data identity/JSON plus bounded original root proof. Both original PNGs actually viewed. Data916lines not claimed fully read.",
+    "beforePngSha256": "f1d137102370143964c5697367b6597f78a8374cd8db4837aa0da726ce8dc76e",
+    "afterPngSha256": "40b3011a9881cd515fd10a2df4d6dd2d0788017edf723cedc131c827f9f1a6ee",
+    "originalResult": "Controlled Linux original-ref Stop PASS; header0 beforeStop is separate confirmed display defect; no future or genuine transfer",
+    "referencePrecision": "Independent badge finding was anchored32aa/5c. This prospect uses actual79 current common365/direct274/expanded296/base1818, not old source-vector totals."
+  },
+  "invariants": {
+    "canonical": "Truthy processRef is alive iff observation is same-live, independent of team flag, stoppedAt, canTerminate and pendingStop.",
+    "legacy": "Absent/falsy processRef retains strict team true and no stoppedAt.",
+    "rowStop": "Existing canTerminate/pendingStop eligibility and original displayed processRef or original command lookup remain byte-exact.",
+    "newUiObservations": "Only two additional nullable fields in the same existing expression; no new early return. Header absence/duplicate badge produces null count. Only controlled assertions require count/pulse.",
+    "uiActionsAndBudgets": "Existing original row read, screenshot, one Kill, lookup, stopped row read and screenshot unchanged; no new action/wait/signal/time.",
+    "scope": "No new provider/backend/public API, native authority or runtime admission semantics."
+  },
+  "roster": {
+    "mainLines": 800,
+    "commonLinesBefore": 365,
+    "commonLinesAfter": 368,
+    "commonDirectLiteralsBefore": 274,
+    "commonDirectLiteralsAfter": 277,
+    "baseUniqueBefore": 1818,
+    "baseUniqueAfter": 1821,
+    "additions": [
+      "src/renderer/components/team/teamProcessLiveness.ts",
+      "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "src/renderer/components/ui/badge.tsx"
+    ],
+    "otherArraysUnchanged": true
+  },
+  "fastLint": {
+    "before": 141,
+    "after": 145,
+    "oldOrderedSha256": "41a31eabc24245b3cf54203d61e3d04034ffbb774044f84fa0c979c6b309108c",
+    "additions": [
+      "src/renderer/components/team/teamProcessLiveness.ts",
+      "src/renderer/components/team/ProcessesSection.tsx",
+      "src/renderer/components/team/TeamDetailView.tsx",
+      "scripts/legacy-agent-host/desktop-native-process-ui.ts"
+    ],
+    "allFourCurrentlyAbsent": true,
+    "allOldOrderPreserved": true
+  },
+  "caps": {
+    "newHelper": 7,
+    "Section": [
+      236,
+      235
+    ],
+    "TeamDetailView": [
+      3749,
+      3750
+    ],
+    "TeamDetailFrozenCap": 3750,
+    "nativeUi": [
+      426,
+      436
+    ],
+    "supplementary": [
+      365,
+      368
+    ],
+    "workflow": [
+      1776,
+      1780
+    ],
+    "baselineUnchanged": true
+  },
+  "tests": {
+    "existingLegacyLines": 78,
+    "existingCanonicalLines": 101,
+    "newUnitTests": 0,
+    "existingActualE2EAssertions": 4,
+    "resultingHeadAllOriginalGatesRequired": true
+  },
+  "protectedLeaves": {
+    "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d2d027f5aab70da3396c9b61fa6bf3c6f77a1f05"
+    },
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f541d89ab012eee5ba912bc80991538cd3ad8367"
+    },
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9d9f0fe21f7859188b5231819affd6e469d8a34"
+    },
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "86281851a8e410dcc5d78f1829a711a44a346a78"
+    },
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d266e5683b3d2db54c3d2af031f675d6a4b3505"
+    },
+    "scripts/legacy-agent-host/desktop-proof-sources.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8be2617b2c765091cecce789f028ef2bf67af60"
+    },
+    ".github/workflows/host-process-acceptance.yml": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77971d912790262a76069c101b905a5357fc9198"
+    },
+    "pnpm-lock.yaml": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b709c1ecdf6a29532ebaefca35b75ed44b2428af"
+    },
+    "scripts/ci/check-source-file-size.mjs": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "65775f7889470056ef7cd91ad6c56d9351e6cdfc"
+    },
+    "scripts/ci/source-file-size-baseline.json": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f5deeed4e406894e1ee587ed541014bcb7dde77"
+    },
+    "scripts/legacy-agent-host/desktop-task-board-group-page-read.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff04e1a1626e79fc31b5bbf70f50fc763185f52b"
+    },
+    "src/renderer/components/team/kanban/KanbanBoard.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15578dd958bf33460c9e166be4b1a0fdb04f4f09"
+    },
+    "src/renderer/components/team/kanban/KanbanTaskCard.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "93c2ad26cfe85d2b9c02bf380e1e9a2cd47d1636"
+    },
+    "src/renderer/components/team/CollapsibleTeamSection.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb"
+    },
+    "src/renderer/components/ui/badge.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d11e0f3e1c7a104cd705b772c5f5573475ffe193"
+    },
+    "test/renderer/components/team/ProcessesSection.test.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a30949377b558c76c9e713a1ddf84a26526c91b0"
+    },
+    "test/features/agent-backend/hostProcessesSection.test.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5eca7d58fd1a477032e82592bfeaa15994eaeba2"
+    },
+    "scripts/legacy-agent-host/desktop-native-process-ui.test.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "38efaed8954940698d93b40d9355332ea9f56d75"
+    },
+    "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "083522612dd93e77dbb0e79c966103b03a71fe87"
+    },
+    "scripts/legacy-agent-host/desktop-proof-management-sources.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "762570da8b4fc492065b217303a3da169bf627cf"
+    },
+    "scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c1472f6e111af15c4e31bca86519885b946c987"
+    },
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "65e479949a0905cc309226923d4e79ad0a41f94a"
+    }
+  },
+  "documentaryPaths": {
+    "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/80-process-header-state-2026-11-17.md",
+    "r1": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/process-header-state-2026-11-17/prospective-r1.json",
+    "r2": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/process-header-state-2026-11-17/prospective-r2.json"
+  },
+  "deliveryGates": [
+    "prospective R1/R2 and root full closure",
+    "three-document ordinary CAS and actual-document independent/root closure before source afterimages",
+    "six-file source candidate independent/root closure",
+    "ordinary source CAS, actual-source independent/root closure",
+    "fresh complete useful-job/ref guard before ordinary primary FF",
+    "resulting-head original automatic CI qualification"
+  ],
+  "restrictions": [
+    "No local project/compiler/lint/tests/VM/native/provider/GUI execution",
+    "No manual Actions dispatch/rerun/cancel or extra RED run",
+    "No permission/stop/oracle/deadline/source-size-baseline weakening",
+    "No historical or new-head runtime outcome transfer",
+    "No external branch/workspace adoption",
+    "Plan40 and original historical P10 requirements unchanged"
+  ]
+}

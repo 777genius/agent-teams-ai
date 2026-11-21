@@ -55,6 +55,7 @@ import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchResult,
 } from '../runtime';
+import type { CaptureLegacyNativeStopSourceFence } from './LegacyNativeStopPublication';
 import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
@@ -701,21 +702,20 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.memberLifecycleController.detachOpenCodeOwnedMemberLane(teamName, memberName)
     );
   }
-
-  override async stopTeam(teamName: string): Promise<void> {
+  override async stopTeam(
+    teamName: string,
+    captureSourceFence?: CaptureLegacyNativeStopSourceFence
+  ): Promise<void> {
     const teamKey = teamName.trim().toLowerCase();
     const aggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(teamKey);
-    if (aggregateRestart) {
-      aggregateRestart.cancelRequested = true;
-    }
+    if (aggregateRestart) aggregateRestart.cancelRequested = true;
     const primaryStopInFlight = this.openCodeRuntimeAdapterStopInFlightByTeam.get(teamKey)?.promise;
     try {
-      await super.stopTeam(teamName);
+      await super.stopTeam(teamName, captureSourceFence);
     } finally {
       await primaryStopInFlight;
     }
   }
-
   protected override stopOpenCodeRuntimeAdapterTeam(
     teamName: string,
     runId: string

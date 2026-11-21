@@ -445,6 +445,57 @@ The already-reviewed successful Settings/defaults/limits journey correctly retai
 
 This does not qualify current Host local-model safety or functional readiness. Whether its captured model proof preserves the original failed-tool/context refusal policy is a separate source and acceptance question; a successful no-tool model request or the absence of the old checkbox is not proof of that equivalence. Keep that question explicit without inventing an override feature or transferring a synthetic test result to native acceptance. No new job, matrix, suite, provider run, permission, input or budget change is authorized here. Root publishes this reviewed clarification; execution evidence still comes from the original relevant coherent-head CI.
 
+
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
+## 2026-11-13: сохранить OpenCode effort в существующем selector
+
+Исходный frontend/Host HEAD: `1160b575c4e43db045ab8726fd16d27bd611196a`.
+Provider source: `be99aa252454feb7730fe64787a4ecd8c9bdbd6b`.
+
+**Подтверждённая потеря:** `v2-owned-directory` удаляет уже проверенные variant IDs;
+V1 `readOpenCodeCatalog` также их не переносит. Management contract не содержит
+variants, а `CapturedRuntimeProviderStatusClient` безусловно возвращает пустой
+`supportedReasoningEfforts`. Existing `getTeamEffortSelectorPresentation` считает
+такой exact model authoritative и выключает прежний selector как Not supported.
+Baseline `ClaudeMultimodelBridgeService` сохраняет reported efforts.
+
+### Минимальный срез
+
+1. D directory сохраняет только валидированные IDs из существующей model
+   projection. Settings, headers, credentials и private variant data не выдаются;
+   прежние четыре metadata GET сохраняются.
+2. Host добавляет optional `variants` к model metadata. V1 берёт IDs из native
+   variant map, V2 переносит уже проверенный список. Main проверяет bounded
+   строки и дубликаты. Отсутствующее поле в старом snapshot остаётся допустимым.
+3. Status переносит только provider-valid `low`/`medium`/`high` в существующий
+   catalog; используется тот же `isTeamEffortLevelForProvider`, что у Team IPC. Явно пустой список сохраняет прежний Not supported; неизвестное имя
+   не создаёт новый UI capability. Catalog не становится proof авторизации или
+   model execution. Native selection и session admission не меняются.
+4. Расширить существующие D protocol, Host management и Main/status tests.
+   Existing renderer selector должен разрешать только reported choices.
+   Реальные Codex/Claude не запускаются; controlled Host/TEST process acceptance
+   остаётся отдельно от native engine acceptance.
+
+### Критика до реализации
+
+- R1: прослежен исходный путь native inventory → Host → Main → existing effort
+  selector; потеря подтверждена кодом, а не отсутствием поля в mock.
+- R2: исключены повторные per-provider reads, новый capability registry, перенос
+  private settings и произвольных variant labels в closed UI enum.
+- R3: root проверил границу и назначил отдельные source files; сохраняются stale
+  scope rejection, malformed metadata refusal и совместимость старых snapshots.
+
+Оценка: 65–100 production LOC, 45–75 test LOC; сложность 3/10, ожидаемая
+надёжность 8/10, уверенность в причине 9/10. Это план исправления, не PASS.
+
+Независимое R4 (`/root/session_schedules`): исходный общий `EffortLevel` filter
+мог предложить `xhigh`/`max`/`ultra`, которые прежний OpenCode Team IPC отвергает.
+Исправлено до публикации: filter переиспользует provider-specific predicate;
+existing regression включает `max`/`ultra` и требует только low/high, а controlled
+IPC→Host→TEST process проверка сопоставляет все предложенные options с тем же
+public request validator. Новая произвольная variant capability не добавляется.
+
 ## §15 — closed observation of the original Settings/cold failure (PLAN ONLY)
 
 ### Review 1 — exact new evidence, and what it does not identify
@@ -606,6 +657,16 @@ Run the additional private purpose operation only when `!activeUpdate && version
 This case has eight original business model responses for its single original business input, not the Darwin case's eleven/two. Keep those eight responses, the one permission reply, exact task/message/file effect, selected model/limits and cold replay refusal unchanged. The separate three native coordination responses yield eleven total under the original model ceiling of sixteen. Preserve the existing normal180-second case deadline and active-update420-second variant; no new input, retry, job, version, matrix or timeout is authorized.
 
 The V2 source-case selection and all other §16 paths remain unchanged. Linux V1 qualification does not qualify Darwin V1; actual native proof, connected phase B, context-floor/applicability policy and final synchronous consumption remain separately required. Source and compiler checks alone cannot close those gates.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
 
 
 ### §16.2. Phase B: retain the old local-model decision and consume its original Host proof before allocation

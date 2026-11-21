@@ -1,0 +1,1727 @@
+{
+  "schemaVersion": 1,
+  "kind": "SOURCE_SCOPED_PARITY_FIXES_AND_PASSIVE_DIAGNOSTICS",
+  "preimageHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+  "scope": [
+    "same-original-Team LiveRoster read fence",
+    "prospective saved-request Resume wait-bound matcher",
+    "retained original current Launch team submit label",
+    "passive Launch hydration inside existing unavailable-target CDP read",
+    "passive Darwin native startup boundaries",
+    "passive existing Windows provider/allocation authority timing"
+  ],
+  "validationMeaning": "Each manifest qualifies only its pinned local source and stated controlled tests. Actual published-source native/GUI acceptance remains separate. No native fixture rerun or original action replay was performed to manufacture evidence.",
+  "reviews": "Independent R2 completed for every final source slice; original Github inline review threads separately recorded in CI evidence.",
+  "manifestInputs": [
+    {
+      "name": "live-roster-authority-local-checks.json",
+      "bytes": 5576,
+      "sha256": "671ff4e4b6eec702c312236fdb79441c9aec5e3158d32aeeb1bf1aa75873d3dd",
+      "record": {
+        "kind": "live-roster-original-team-authority-local-checks",
+        "baseHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "files": [
+          {
+            "path": "packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts",
+            "preimageSha256": "f58c02d12ab9fe03998e31a850fa47bdddb380c2dfbf873d44e326947172054a",
+            "postimageSha256": "33583ee76826ac040bd0f3ac8b2f1cfced12534b30b2fb32c91b74f4ce6e4a1c",
+            "lines": 511
+          },
+          {
+            "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+            "preimageSha256": "a3d3f0eced2fcf66cfca03eff85e75b8acc0d48f6f453cecd166add7fdcae241",
+            "postimageSha256": "998f923a7e046a10609186fc335d5156a7d98d032d042432eda5c8ce695a4ead",
+            "lines": 4901
+          }
+        ],
+        "records": [
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-red.log",
+            "session": 20940,
+            "exitCode": 1,
+            "sha256": "f8a653dbd1cab03ee60bb65083f7e117a116866639888c8a26ec62f8d73dbd33",
+            "purpose": "Original actual Live Add probe guard: 2 physical publications, 4 namespace scans, 5 state reads; expected 1 publication fails."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-build.log",
+            "session": 34723,
+            "exitCode": 0,
+            "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789",
+            "purpose": "One Host TS7 build, GOMEMLIMIT=1536MiB GOMAXPROCS=2."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-regressions.log",
+            "session": 13237,
+            "exitCode": 0,
+            "sha256": "698084de33e7c0353e3f7b82e8786813cdf7793d97e362f699224c5e8ddcde5a",
+            "purpose": "Three existing real Host composition cases: live membership Add/Remove/Restore, OpenCode failed-probe refusal, unknown cleanup/no-live-lead retained Remove/cold replay and original missing/revoked product-read refusals."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-green-reviewed.log",
+            "session": 96892,
+            "exitCode": 0,
+            "sha256": "86f742c81434d199d97493c030cd9474ea4b97d19a34baec0eda076c51f1a691",
+            "purpose": "Final actual Live Add guard after test observer lint fix: each of two original Team blocks 1 publication, 4 namespace scans, 6 state reads; authority/source/namespace/lifecycle/cutoff negatives pass."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-test-types-reviewed.log",
+            "session": 99887,
+            "exitCode": 0,
+            "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150",
+            "purpose": "Final Host test TS7 types, GOMEMLIMIT=1536MiB GOMAXPROCS=2."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-source-size.log",
+            "session": 29135,
+            "exitCode": 0,
+            "sha256": "372810c5e1fc028fe28e9e1b1be6bddd0102b2015114388e4788cde3aebde388",
+            "purpose": "Source guard: 5164 production files, 141 frozen exceptions, 800-line cap; modified production file 511 lines."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-fast-lint-final.log",
+            "session": 82170,
+            "exitCode": 0,
+            "sha256": "d1b0455220d9e35dd586739ef010c029e30152e8e54db9903fed01534f4d6e42",
+            "purpose": "Fast lint limited to the two changed files."
+          }
+        ],
+        "uniqueTargetedCases": 3,
+        "testScope": "Controlled finite in-process providers only; original Host NDJSON capture/continue and original ModelProbeOwner guard. No native executables, CI queries or workflow operations.",
+        "repeats": "The final one-case run verifies the concrete test observer change required by fast lint; three-case lifecycle regressions passed before that observer-only change. Test types initially found exact-optional restoration, then passed; final types passed after the observer change. Production was built once and did not change afterward.",
+        "invariants": {
+          "perSuccessfulTeamBlock": {
+            "physicalPublications": [
+              2,
+              1
+            ],
+            "namespaceScans": [
+              4,
+              4
+            ],
+            "stateReads": [
+              5,
+              6
+            ]
+          },
+          "sourceObservations": "Original checks retained; outer helper adds a fresh read grant and original-source/identity pre/post checks. No observations or authority results are cached.",
+          "separateFences": "Runtime readCapturedSession and recursive captured-source checks begin after the new wrapper releases its Team lock.",
+          "cleanup": "No-lead/fresh=false work path retains original withOriginal flow; coherently replaced original Team/lead owner is now explicitly refused in source.assertCurrent, including cleanup."
+        },
+        "limits": [
+          "No timing-causation claim for Membership33 credential interval.",
+          "No native Windows/Linux/Darwin qualification claimed by controlled tests."
+        ],
+        "diffCheck": "PASS",
+        "patchPath": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-reviewed.patch",
+        "patchSha256": "f734693bff3abc9c0d6d8678bd8746cdbd172c1d6833f6d0e680c756203ef98c",
+        "independentReview": {
+          "agent": "/root/parity_review",
+          "result": "PASS",
+          "filesSha256": [
+            "33583ee76826ac040bd0f3ac8b2f1cfced12534b30b2fb32c91b74f4ce6e4a1c",
+            "998f923a7e046a10609186fc335d5156a7d98d032d042432eda5c8ce695a4ead"
+          ],
+          "scope": "Source-only independent R2; no duplicate tests/build. Verified original checks/order, namespace4, state5+outer1, immutable original owner, separate Runtime/captured fences and meaningful actual guard negatives."
+        }
+      }
+    },
+    {
+      "name": "resume-preflight-observer-local-checks.json",
+      "bytes": 7550,
+      "sha256": "0b415df7594491fa260667e411d0f70a54c35de312ba85e7b7710f2fb74df2e7",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "TEST-resume-preflight-observer-local-checks",
+        "recordedAt": "2026-11-19T18:25:37.394627+00:00",
+        "repository": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+        "preimageHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "workingTreeOnly": true,
+        "sourceFiles": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "046c4ab88d611679be141b205477f8ece83b1274c7b2541a2592176bc1439f74",
+            "postimageSha256": "cedae542e8d06a125290a05fa98cf5e3962a50ddaaa7a62936cf8166c4aa6ecf",
+            "preimagePhysicalLines": 740,
+            "postimagePhysicalLines": 770
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "5407db424d31511161f11a5a3c6f7a556d3fb1a71d673f3f6cd3b60fe5b9b70d",
+            "postimageSha256": "f065f3583315775d76489faf3f49f778cefaaba97ef489568442a63df18e30d1",
+            "preimagePhysicalLines": 2831,
+            "postimagePhysicalLines": 2940
+          }
+        ],
+        "checks": [
+          {
+            "kind": "red",
+            "outcome": "EXPECTED_FAIL",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-red.log",
+            "logBytes": 1486,
+            "logSha256": "b98ad2c8b70f6d80a7dabe6899c625ae492858364f5d5bceb30182d26b7eb11c",
+            "exitCode": 1,
+            "tests": 1,
+            "pass": 0,
+            "fail": 1,
+            "execChunk": "d2fac0",
+            "sessionId": null,
+            "failure": "UI read timed out: one original OpenCode preflight command; no mutation retry"
+          },
+          {
+            "kind": "attempt1",
+            "outcome": "FAIL_TEST_FIXTURE_CONSTRUCTION",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-attempt1.log",
+            "logBytes": 21373,
+            "logSha256": "c57e49c7d097ec2eeef991c2d0380119986ad2b4d8b492a8c2997bc68144a5a2",
+            "exitCode": 1,
+            "tests": 58,
+            "pass": 57,
+            "fail": 1,
+            "execChunk": "db1dd5",
+            "sessionId": 52933,
+            "cause": "New malformed preparation-selection case was refused by canonical FileManagementCommandStore.write schema before the observer. Redundant new case and redundant predicate removed; existing corruption negative retained."
+          },
+          {
+            "kind": "green",
+            "outcome": "PASS",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-green.log",
+            "logBytes": 20208,
+            "logSha256": "ebaeb5c062bf8b2e123c5e307ae7495e05fe42a2d04268248c3b6f2e83bd40a2",
+            "exitCode": 0,
+            "tests": 57,
+            "pass": 57,
+            "fail": 0,
+            "originalCases": 37,
+            "newCases": 20,
+            "execChunk": "e021f9",
+            "sessionId": 26084
+          },
+          {
+            "kind": "types",
+            "outcome": "PASS",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "exitCode": 0,
+            "project": "tsconfig.legacy-agent-host-scripts.json",
+            "compiler": "pinned @typescript/native TS7",
+            "execChunk": "425869",
+            "sessionId": 41726
+          },
+          {
+            "kind": "lint",
+            "outcome": "PASS",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-lint.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "exitCode": 0,
+            "config": "eslint.fast.config.js",
+            "scope": [
+              "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+              "scripts/legacy-agent-host/desktop-backend-observations.test.ts"
+            ],
+            "execChunk": "a66717",
+            "sessionId": 24166
+          },
+          {
+            "kind": "size",
+            "outcome": "PASS",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-size.log",
+            "logBytes": 202,
+            "logSha256": "48cf7fb020073f7549f8e060197b6e7a68e1c12e0c324544849f580368cef6e8",
+            "exitCode": 0,
+            "checkedProductionFiles": 5164,
+            "legacyExceptions": 141,
+            "maximumPhysicalLines": 800,
+            "execChunk": "5168a6",
+            "sessionId": null
+          }
+        ],
+        "diffCheck": {
+          "outcome": "PASS",
+          "scope": [
+            "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-backend-observations.test.ts"
+          ],
+          "execChunk": "476401"
+        },
+        "commands": {
+          "node": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "red": "node --experimental-strip-types --test --test-name-pattern=^original OpenCode prospective preflight observes scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "green": "node --experimental-strip-types --test --test-name-pattern=^original OpenCode (prospective|preflight) scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "types": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
+          "lint": "node node_modules/eslint/bin/eslint.js --config eslint.fast.config.js scripts/legacy-agent-host/desktop-launch-ui-smoke.ts scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "size": "node scripts/ci/check-source-file-size.mjs"
+        },
+        "reviews": [
+          {
+            "reviewer": "/root",
+            "phase": "implementation scope approval",
+            "outcome": "APPROVED",
+            "scope": "TEST wait-bound-only adaptation; same original calls, deadlines and inputs; no independent saved-source admission claim"
+          },
+          {
+            "reviewer": "/root/delivery_review",
+            "phase": "final independent R2",
+            "outcome": "PASS",
+            "sourceSha256": "cedae542e8d06a125290a05fa98cf5e3962a50ddaaa7a62936cf8166c4aa6ecf",
+            "testSha256": "f065f3583315775d76489faf3f49f778cefaaba97ef489568442a63df18e30d1",
+            "remainingFindings": []
+          }
+        ],
+        "evidenceOrigin": {
+          "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+          "jobId": 135707275600,
+          "artifactId": 14558128722,
+          "audit": "/workspace/scratch/f45fed8e9067/audit1192/v2-resume-33ea959-audit.json",
+          "failure": "Original observer required sourceRevision == profile scope runId; actual original request used saved-model-*."
+        },
+        "scopeAndLimits": {
+          "authority": "wait-bound-only",
+          "initialAcquisitionMs": 30000,
+          "initialAcquisitionLimitUnchanged": true,
+          "nativeWaitDeadline": "minimum of first acquired original probe.expiresAt, readinessScope.cutoff and localModelReadinessPreparation.expiresAt",
+          "deadlineRefresh": false,
+          "newReads": 0,
+          "newAwaits": 0,
+          "newRetries": 0,
+          "newUiActions": 0,
+          "legacyRunEqualityPreserved": true,
+          "originalSingleCommandStableIdentityPreserved": true,
+          "sourceRevisionFrozenAfterAcquisition": true,
+          "initialAcquisitionIndependentSourceProof": false,
+          "initialAcquisitionLimit": "Before acquisition, full original handle/scope/payload/roster/context/action/destination joins identify one prospective request for its wait bound. They do not independently reject a coherent foreign saved source with the same handle and full scope when all dependent hashes are recomputed. No independent source or native-readiness qualification is claimed. After acquisition, any source/command/cutoff replacement refuses. The actual original UI-ready result and Host source/currentness admission remain mandatory.",
+          "actualResumeOutcome": "NOT_REQUALIFIED",
+          "nativeExecution": false,
+          "realClaudeOrCodexExecution": false,
+          "hostBuild": false,
+          "ciQueriesOrRuns": false
+        }
+      }
+    },
+    {
+      "name": "launch-target-observation-local-checks.json",
+      "bytes": 4780,
+      "sha256": "06c0f91284db0b97f7d65a5cf87914cae31ebb6cee325ba2f47418c397da9b93",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "TEST-original-launch-target-passive-hydration-observation",
+        "sourceHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "preSha256": "b14b8f86f144607cf75acc72eb6bed73874721b60fdee66245e296ddfdd83c0c",
+            "postSha256": "40a301b693434fba1e86532e30065a1572e46f1e2bed5b03529e40c0dc7bd094",
+            "lines": 765
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+            "preSha256": "164cf15058711b645c741710a758c08adc06c11dca277335ec988ee476a32152",
+            "postSha256": "4429c40b40843e2890ceecebce9a4b5698a6f10bf182305af4d72ea639eecba1",
+            "lines": 1020
+          }
+        ],
+        "motivation": "Original fbc Resume135773058861 consumed its unchanged30s Launch-target wait before preflight; geometry alone cannot distinguish missing hydration from rendering after cutoff. Post-failure screenshot is not atomic with earlier target reads.",
+        "scope": "One synchronous renderer devStore sample within the existing CDP unavailable-target expression, exact initial Launch action only. No extra CDP or owner checks, awaits, requests, input, retries, timers or deadline refresh. Saved-request wait matcher authority is not changed.",
+        "fields": [
+          "launchStoreAvailable",
+          "launchTeamLoading",
+          "launchTeamDataPresent",
+          "launchTeamDataMatches",
+          "launchTeamAlive",
+          "launchTeamErrorPresent"
+        ],
+        "projection": "Own boolean data properties only; no raw state, IDs, names, error text, accessors or extra keys. Missing store returns an explicit false availability; missing individual values remain absent. Exceptions preserve original target result.",
+        "checks": [
+          {
+            "kind": "red",
+            "path": "launch-target-observation-red.log",
+            "bytes": 1228,
+            "sha256": "1163718c80ae09a57f8d1f63f9361d15b308582c8aa3b120ffb493dab4325919",
+            "exitCode": 1,
+            "execChunk": "d856d2",
+            "sessionId": null
+          },
+          {
+            "kind": "green",
+            "path": "launch-target-observation-green.log",
+            "bytes": 12778,
+            "sha256": "7e2be8953ef96021afe06dbcf7a1237551d5c8892d0c76e62a48600d623f24e2",
+            "exitCode": 0,
+            "execChunk": "36f9e1",
+            "sessionId": 34077
+          },
+          {
+            "kind": "lint",
+            "path": "launch-target-observation-lint.log",
+            "bytes": 223,
+            "sha256": "1b9b1ed405e7fdc38ae156573e9a0c6375d7817b1d94a8e46359e04f789398d7",
+            "exitCode": 0,
+            "execChunk": "f2f9c4",
+            "sessionId": 2188
+          }
+        ],
+        "results": {
+          "red": "Original loading case failed only absent hydration facts; original source wait rejected unchanged.",
+          "green": {
+            "tests": 62,
+            "pass": 62,
+            "originalCases": 52,
+            "newCases": 10,
+            "durationMs": 5850.098927
+          },
+          "fastLint": "PASS",
+          "diffCheck": "PASS",
+          "canonicalScriptsTs7": {
+            "status": "PASS",
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pinnedNode24.21.0 node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json --noEmit",
+            "exitCode": 0,
+            "sessionId": 97308,
+            "log": "parity-next-scripts-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "compilerOptions": "Original canonical project unchanged; no stub/skip overrides"
+          },
+          "independentR2": {
+            "status": "PASS",
+            "reviewer": "parity_review",
+            "exactSourceHashesVerified": true,
+            "findings": []
+          }
+        },
+        "coverage": [
+          "loading/offline/data for other selected team",
+          "missing or throwing devStore",
+          "own accessor/unknown/malformed response projection",
+          "exact action scope prevents sampling other labels",
+          "late fulfilled target never reaches predicate or polls again",
+          "ready original target never samples store; following original owner exception identity retained",
+          "existing52 strict timeout, geometry, owner, cadence, input and final-target checks"
+        ],
+        "notClaimed": [
+          "Native Resume PASS",
+          "Cause of original UI timeout",
+          "Cleanup for previous receipt",
+          "Independent source/native authority from diagnostic facts"
+        ],
+        "commands": [
+          "pinnedNode24.21.0 --experimental-strip-types --test --test-name-pattern=<exact new loading case> scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "pinnedNode24.21.0 --experimental-strip-types --test scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "pnpm lint:fast:files -- scripts/legacy-agent-host/desktop-ui-controls.ts scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "git diff --check -- scripts/legacy-agent-host/desktop-ui-controls.ts scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ]
+      }
+    },
+    {
+      "name": "retained-launch-label-local-checks.json",
+      "bytes": 4947,
+      "sha256": "38e8beb058fb26df9115df81f126307c1fc904afa1dc60fda3abee4e93e16a5e",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "retained-original-current-frontend-submit-label-fix",
+        "sourceHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "originalAudit": "retained-original-fbc77ea-audit.json",
+        "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773059015",
+        "artifact": {
+          "id": 14564031833,
+          "bytes": 924726,
+          "sha256": "b41381b8b5cfab234fb90fced6fcf75cd4b9e5f7e0e83ac043bb398e4ca05898",
+          "hashMatchesGitHub": true
+        },
+        "receipt": {
+          "path": "artifact-14564031833/TEST-desktop-backend-WvqfVl/desktop-backend-receipt.json",
+          "sha256": "f84f1902e2fce7eaedee00769e77f8071397e8f4e674a3b95b41e64c39eb50b3"
+        },
+        "originalFailure": "UI read timed out: original scoped Launch; no mutation retry",
+        "observedReadiness": {
+          "metadataOperations": [
+            "model",
+            "runtime"
+          ],
+          "modelProbeCount": 2,
+          "readyScreenshot": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-WvqfVl/ui-retained-original-ready.png",
+            "sha256": "deacbdee8ae7cf962c34d5d26d9fefdc99dc0feabe4f41e230f6fb3b1fc0826a"
+          },
+          "originalWait": {
+            "ownerStarted": 192,
+            "ownerResolved": 192,
+            "readsStarted": 192,
+            "readsResolved": 192,
+            "postReadLate": 0,
+            "contextRetries": 0,
+            "originalDeadlineMs": 1795113858827
+          },
+          "postFailurePartialDialogCount": 1,
+          "oldExactLabelMatches": 0,
+          "currentExactLabelMatches": 1,
+          "currentTarget": {
+            "text": "Launch team",
+            "disabled": false,
+            "x": 916.3125,
+            "y": 1148.5,
+            "width": 164.6875,
+            "height": 44
+          }
+        },
+        "canonicalSource": {
+          "helper": "getLaunchDialogActionLabels: mode launch -> launch.actions.launchTeam",
+          "footer": "LaunchTeamDialog -> WorkspaceTrustLaunchControl.submitLabel",
+          "englishLabel": "Launch team",
+          "sources": [
+            {
+              "path": "src/renderer/components/team/dialogs/launchTeamDialogHelpers.ts",
+              "sha256": "de61188f60b1dc52920c5bcd0e4838bc934265b82a4893b0ec92f0edf55e24eb"
+            },
+            {
+              "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+              "sha256": "af5dc551d2413864fe6542ad444f28361327ec36dc58a49ead8c000053389f2c"
+            },
+            {
+              "path": "src/features/localization/renderer/locales/en/team.json",
+              "sha256": "98387efb047833b6fc451a2a6c2c6d72ab064b6cc7cfa1f49d6427fbdce0908b"
+            },
+            {
+              "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+              "sha256": "b14b8f86f144607cf75acc72eb6bed73874721b60fdee66245e296ddfdd83c0c"
+            }
+          ]
+        },
+        "change": {
+          "path": "scripts/legacy-agent-host/desktop-retained-original-ui.ts",
+          "preSha256": "e31af31d78273d9eda133554a67cf907849524c1acce4148494fd79a6a59d932",
+          "postSha256": "9190a34e765624a94a1edfdfe1742752f77e455a7127e1d8eed92b622ba4444c",
+          "scope": "Only the scoped dialog scroll and single submit text change from Launch to Launch team. Outer detail Launch remains unchanged.",
+          "preserved": [
+            "Exact one target",
+            "Original Main retained scope and TEST project",
+            "Original bounded wheel preparation",
+            "One physical click; no replay",
+            "Current runtime/model/account checks",
+            "Original deadlines and cleanup"
+          ]
+        },
+        "validation": {
+          "receiptToCanonicalLabelJoin": "PASS",
+          "diffCheck": "PASS",
+          "fastLint": {
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 89078,
+            "log": "retained-launch-label-lint.log",
+            "sha256": "ca2df271d49dbc3e39fcf03431d0941221b57f6214995bc676848ad8f0121746",
+            "bytes": 169
+          },
+          "canonicalScriptsTs7": {
+            "status": "PASS",
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pinnedNode24.21.0 node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json --noEmit",
+            "exitCode": 0,
+            "sessionId": 97308,
+            "log": "parity-next-scripts-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "compilerOptions": "Original canonical project unchanged; no stub/skip overrides"
+          },
+          "independentR2": {
+            "status": "PASS",
+            "reviewer": "parity_review",
+            "exactSourceHashVerified": true,
+            "findings": []
+          },
+          "extraMirrorTests": "Not added for two literal selectors; original finite/GUI journey must qualify after publication."
+        },
+        "cleanup": {
+          "processGroup": 4575,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": false,
+          "capturedHostAbsent": null,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        },
+        "managementPeerCleanup": {
+          "pids": [
+            5465,
+            5536
+          ],
+          "absent": true
+        },
+        "notClaimed": [
+          "Original Main bootstrap/reply/Stop/cold Resume PASS",
+          "Captured Host absence (not separately observed)",
+          "Native vendor qualification"
+        ],
+        "noNewNativeExecution": true
+      }
+    },
+    {
+      "name": "darwin-startup-diagnostics-local-checks.json",
+      "bytes": 14485,
+      "sha256": "6afb3953c1f72c0a19fb44d55d5242cba8bc0c99ccee13e88da0277af57c6cdf",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "TEST-passive-opencode-startup-diagnostics-local-checks",
+        "recordedAt": "2026-11-19T18:46:35.898828+00:00",
+        "preimageHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "workingTreeOnly": true,
+        "sourceFiles": [
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "d418826e28e86895034c4884642d72ade01176921195cf04b9b9603d53448ede",
+            "postimageSha256": "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+            "preimagePhysicalLines": 466,
+            "postimagePhysicalLines": 476
+          },
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "49b36fd56b4eeca611294eb8f1beef5965ee2d84ac1aff11e84281db7d18da9a",
+            "postimageSha256": "0e3897710dd2122608e38da14b3ca21aa7c589a26007e66017c10b40ce31f43f",
+            "preimagePhysicalLines": 224,
+            "postimagePhysicalLines": 228
+          },
+          {
+            "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "e0ad0446f5facb2b7153f0db4223373695ab1d93971b8152e4c776f38e1cb097",
+            "postimageSha256": "b63c036c50aad8fbc2a60f2947968312fca0ddae3b3dd2704bc0ea7bbeedc2c0",
+            "preimagePhysicalLines": 361,
+            "postimagePhysicalLines": 363
+          },
+          {
+            "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "81042e47aef5c39918991603bfd1c0599738f96bef9ee84c1154c8e99f9dd556",
+            "postimageSha256": "6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c",
+            "preimagePhysicalLines": 497,
+            "postimagePhysicalLines": 565
+          },
+          {
+            "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+            "preimageCommit": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "preimageSha256": "1e47f907b86483c78e4e7e10f4e905199ded5e76de180766a64f97abf812ffbb",
+            "postimageSha256": "62bd816563a02463413d84ec69ae8741f156cec1026dfad060f2f542b3e6ed2f",
+            "preimagePhysicalLines": 451,
+            "postimagePhysicalLines": 466
+          }
+        ],
+        "checks": [
+          {
+            "name": "red",
+            "status": "EXPECTED_FAIL",
+            "exitCode": 1,
+            "sessionId": 91073,
+            "initialExecChunk": "8c95ff",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "--maxWorkers=1",
+              "-t",
+              "real embedded startup keeps original graph and launch refusal with throw observation"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-red.log",
+            "logBytes": 3469,
+            "logSha256": "c67c7420401b13f9340ee4193ee0038e7e686f6f0ebde47f6ab3bb068d9b9c1f",
+            "tests": 1,
+            "pass": 0,
+            "fail": 1,
+            "skipped": 20,
+            "finding": "Original graph failure and cleanup preserved, but failure observation absent."
+          },
+          {
+            "name": "attempt1",
+            "status": "FAIL_TEST_SEAM",
+            "exitCode": 1,
+            "sessionId": 15760,
+            "initialExecChunk": "fcc182",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+              "--maxWorkers=1"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-attempt1.log",
+            "logBytes": 22210,
+            "logSha256": "ee19d3edc00764af740b4f7800a0a6fe1db722bfb2b63ae75a7829bccd808b3c",
+            "tests": 38,
+            "pass": 36,
+            "fail": 2,
+            "finding": "New finite child fixture tried to spy on prototype.launch; actual launch is an instance arrow. Replaced TEST constructor only, retaining actual constructor checks; no production change."
+          },
+          {
+            "name": "green",
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 57720,
+            "initialExecChunk": "306d7a",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+              "--maxWorkers=1"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-green.log",
+            "logBytes": 19139,
+            "logSha256": "245082b86dcc87710c978dae51395a634234e152a5bfdb03902bd16eb8371b8c",
+            "tests": 38,
+            "pass": 38,
+            "fail": 0,
+            "existingCases": 30,
+            "newCases": 8,
+            "sourcePostimageUnchangedThroughFinal": true
+          },
+          {
+            "name": "types-attempt1",
+            "status": "FAIL_TEST_TYPE",
+            "exitCode": 1,
+            "sessionId": 98791,
+            "initialExecChunk": "4d8fde",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+              "--project",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/tsconfig.darwin-startup-scope-23_oesk9.json"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-types-attempt1.log",
+            "logBytes": 677,
+            "logSha256": "979f6d9685d649cae7578b04941c3970ea6801369c6a797d874bab3839231bf7",
+            "finding": "Finite child lacked ObservableNativeProcess killed/kill. Final fixture supplies killed:false and kill()=>assert.fail, removing result cast; compiler options unchanged."
+          },
+          {
+            "name": "lint-attempt1",
+            "status": "FAIL_IMPORT_ORDER",
+            "exitCode": 1,
+            "sessionId": 7206,
+            "initialExecChunk": "787f02",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "node_modules/eslint/bin/eslint.js",
+              "--config",
+              "eslint.fast.config.js",
+              "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+              "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+              "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "test/features/agent-backend/claudeCloseDiagnostics.test.ts"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-lint-attempt1.log",
+            "logBytes": 304,
+            "logSha256": "afef571a692cde77754d2f20c7a6201d9301dd76c0dfc0be234ac86a18aa5900",
+            "finding": "One import moved into canonical sorted position."
+          },
+          {
+            "name": "final-endpoint",
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 22068,
+            "initialExecChunk": "4a82c2",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "--maxWorkers=1",
+              "-t",
+              "actual embedded native-"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-final-endpoint.log",
+            "logBytes": 365,
+            "logSha256": "a70977a7da105d0b64284361fa7c48d76631a581b62d9af0f8f2465e133f348c",
+            "tests": 2,
+            "pass": 2,
+            "fail": 0,
+            "skipped": 19,
+            "scope": "Only two cases affected by final TEST facade completeness/import delta; original full38 suite not repeated."
+          },
+          {
+            "name": "types",
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 60857,
+            "initialExecChunk": "8ed8b6",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+              "--project",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/tsconfig.darwin-startup-scope-23_oesk9.json"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "scopeFiles": 5,
+            "ambientFiles": 4,
+            "compilerOptionsOverridden": false
+          },
+          {
+            "name": "lint",
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 72772,
+            "initialExecChunk": "c728e6",
+            "argv": [
+              "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "node_modules/eslint/bin/eslint.js",
+              "--config",
+              "eslint.fast.config.js",
+              "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+              "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+              "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "test/features/agent-backend/claudeCloseDiagnostics.test.ts"
+            ],
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-lint.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "typeScope": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-type-scope.json",
+          "sha256": "6f0ad4984f5ee475c81ebe4761aba20f3760efe5e208dfc70903cd932bb4a6ca",
+          "canonicalBase": "test/features/agent-backend/tsconfig.json",
+          "compilerOptionsOverridden": false,
+          "temporaryConfigStillExists": false
+        },
+        "diffCheck": {
+          "status": "PASS",
+          "chunk": "3ea39a",
+          "files": [
+            "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+            "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+            "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+            "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+            "test/features/agent-backend/claudeCloseDiagnostics.test.ts"
+          ]
+        },
+        "sourceSize": {
+          "status": "OWNED_SOURCE_LENGTHS_WITHIN_EXISTING_CAP",
+          "cap": 800,
+          "canonicalAggregate": "delegated to root; not independently rerun"
+        },
+        "review": {
+          "independentReviewer": "/root",
+          "status": "PASS_ALL_FIVE_FINAL_FILES",
+          "reviewedProductionSha256": [
+            "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+            "0e3897710dd2122608e38da14b3ca21aa7c589a26007e66017c10b40ce31f43f",
+            "b63c036c50aad8fbc2a60f2947968312fca0ddae3b3dd2704bc0ea7bbeedc2c0"
+          ],
+          "reviewedDecoderTestSha256": "62bd816563a02463413d84ec69ae8741f156cec1026dfad060f2f542b3e6ed2f",
+          "initialReviewedLifecycleTestSha256": "4f134bcbeb8016a60e9c81118023725e84a39ae5ef0c8aa3ce65640f85fed947",
+          "finalLifecycleTestSha256": "6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c",
+          "finalDelta": "Sorted one import, added killed:false and a kill method that asserts failure to finite child, removed launch result type assertion. Production unchanged.",
+          "finalDeltaReview": "Root verified final lifecycle hash6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c, refusing kill method, killed:false, sorted import and removed result cast; final TS7/lint/two endpoint rerun close validation."
+        },
+        "behavior": {
+          "successfulEventCount": 12,
+          "priorSuccessfulEventCount": 10,
+          "unchangedEmitterCap": 12,
+          "unchangedDecoderSequenceCap": 12,
+          "maximumStartupFailureEventCountIncludingRun": 7,
+          "newSuccessObservations": [
+            "native-launch-returned",
+            "native-endpoint-resolved"
+          ],
+          "catchObservationPrecedence": [
+            "startup-timer-aborted",
+            "startup-parent-aborted",
+            "startup-lifecycle-aborted",
+            "startup-failed"
+          ],
+          "catchBeforeStopOwned": true,
+          "causeNotInferredFromFlags": true,
+          "originalErrorRethrown": true,
+          "originalCleanupUnknownWrapperPreserved": true,
+          "originalOperationalIoOrderPreserved": true,
+          "newNativeOrCurrentnessReads": 0,
+          "newOperationalAwaits": 0,
+          "newRetries": 0,
+          "deadlineOrPolicyChanges": false
+        },
+        "limits": {
+          "qualification": "Controlled source behavior and closed diagnostics only; no native readiness, source, process identity or custody qualification.",
+          "finiteChild": "The actual CapturedProcess constructor still validates the TEST source and directories; only its TEST instance launch and confirmStopped are replaced with finite in-memory streams and counted confirmation. Native child_process.spawn remains a throwing guard and is asserted unused.",
+          "timer": "A controlled test selects the existing permitted startupTimeoutMs=1000 and advances only a fake timer. Production Team30s and outer90s deadlines are unchanged.",
+          "catchFlags": "Observed existing abort states with documented precedence, before cleanup mutates lifecycle. An observed timer flag is not proof that timeout caused the original failure.",
+          "launchReturnedAbort": "Aborting immediately after launch return follows the original generic embedded-startup-failed exception; endpoint-bound abort preserves original parent reason.",
+          "actualFreshDarwinReview": "NOT_RERUN; native cause remains unqualified until an original published-source run produces observations.",
+          "nativeExecution": false,
+          "realClaudeOrCodexExecution": false,
+          "hostBuild": false,
+          "registryChanges": false,
+          "ciQueriesOrRuns": false,
+          "resumePairModified": false
+        }
+      }
+    },
+    {
+      "name": "account-authority-timing-local-checks.json",
+      "bytes": 12209,
+      "sha256": "5914eda0bd13c842a1055d48c79ec6579895a84497e2b37401a4a08d9ca5609c",
+      "record": {
+        "kind": "passive-account-authority-timing-local-checks",
+        "baseHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "files": [
+          {
+            "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+            "sha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b",
+            "lines": 132,
+            "preimageSha256": null
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+            "sha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+            "lines": 741,
+            "preimageSha256": "aa24a9230ed91aab7760686bf36c9a5a0d881f789b67aa35705549a743cca6bf"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+            "sha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190",
+            "lines": 379,
+            "preimageSha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38"
+          },
+          {
+            "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+            "sha256": "874b079e13c9b39e0a12c3943cf2b09f60e6f43976aef4a079c1a58196e7fecf",
+            "lines": 491,
+            "preimageSha256": "6984676a9b54931e0834b9dab2d428a0126ac4097d58afce55a36a4efcdd9f06"
+          },
+          {
+            "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+            "sha256": "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d",
+            "lines": 1866,
+            "preimageSha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+          },
+          {
+            "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+            "sha256": "e59a83c3f54699d2006254c52f59c7ec913ed8d450f58e866dacbf1d6105e70a",
+            "lines": 408,
+            "preimageSha256": "cf2d799ca4db3015779ccf2e755879e2a44f14d23fe9ea6b6f39ad426bff9311"
+          },
+          {
+            "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+            "sha256": "196356b90040c01d897e3034c2fc577ddadb8e78b306a49eebdbb1c7e38b4260",
+            "lines": 387,
+            "preimageSha256": "8feff14c7e0a5194e5e587d4d73d1f9b00c080827115dd187ae38864aee7fbf3"
+          }
+        ],
+        "state": "frozen; Host build, Host test types, five targeted cases and final fast lint PASS; independent source R2 PASS",
+        "authorityAPI": "assertCurrent(): void unchanged; sink only receives provider/allocation labels",
+        "newCountSemantics": "One containing measured current() interval per region, not nested callback count; milliseconds sum original nested calls before rounding",
+        "claimsExcluded": [
+          "No native or CI runs",
+          "No deadline, owner-check, lock-order or authority optimization",
+          "No Windows millisecond benefit claimed"
+        ],
+        "diagnosticPins": "Existing src/dist pin list additionally includes modelReadinessTiming and createRuntimeMemberProviderFactory; no new mechanism",
+        "records": [
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-red.log",
+            "sha256": "2f05736cb54f914480534ba7d4515cea195866a6654231ca21c8ca0e95384a93",
+            "session": 46670,
+            "exitCode": 0,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai/packages/legacy-agent-host",
+            "command": "pnpm exec node --test --test-concurrency=1 --test-name-pattern='missing/ambiguous templates' tests/saved-team-model-probe.test.ts",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "Initial incorrect test-name selection ran one unrelated existing case; NOT the RED regression."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-red-targeted.log",
+            "sha256": "6f43a4906cc8f41dcf264073c42195331a0585ebe2cb591be8bf399a96bd81be",
+            "session": 31913,
+            "exitCode": 1,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai/packages/legacy-agent-host",
+            "command": "pnpm exec node --test --test-concurrency=1 --test-name-pattern='existing probe journal retains original intents and exact opencode cleanup after roster' tests/saved-team-model-probe.test.ts",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "Actual completed V1 receipt/inspector regression against existing pre-extraction Host dist: missing new optional regions, expected provider 1/88ms and allocation 1/56ms."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-build.log",
+            "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789",
+            "session": 54373,
+            "exitCode": 0,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pnpm --filter @agent-teams/legacy-agent-host build",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "One canonical Host build, including existing task-change-ledger prebuild; all three owned production sources frozen before build."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-test-types.log",
+            "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150",
+            "session": 21487,
+            "exitCode": 0,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai/packages/legacy-agent-host",
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pnpm typecheck:test",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "Canonical pinned Host test TS7; no separate compiler or broad workspace retry."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-green.log",
+            "sha256": "06b1eed0c88a135b91cd804444e511055024c1f63a3b1ef7462390b47a4e5920",
+            "session": 25401,
+            "exitCode": 0,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai/packages/legacy-agent-host",
+            "command": "pnpm exec node --test --test-concurrency=1 --test-name-pattern='original factory account|account timing|original refusal emitter|existing probe journal retains original intents and exact opencode cleanup after roster' tests/runtime-open-diagnostic.test.ts tests/saved-team-model-probe.test.ts",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "Five targeted controlled cases PASS; actual built inspector, actual factory callback body and both actual strict projection functions."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-lint.log",
+            "sha256": "37bc523de5938a1d1eccd2b7258347da75484bc935d118b1b88a0b8aa02ee7ac",
+            "session": 69065,
+            "exitCode": 0,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "command": "pnpm lint:fast:files -- packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts tools/owned-process-broker/nativeEmulatedSourceProfile.ts tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "Seven owned files PASS before final two literal diagnostic pin additions."
+          },
+          {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-final-profile-lint.log",
+            "sha256": "796c73d50b1c6351eccd48c92cdecff10fdc651615b0c48adfb09222e1b2b518",
+            "session": 13332,
+            "exitCode": 0,
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "command": "pnpm lint:fast:files -- tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+            "capture": "set -o pipefail; combined stdout/stderr captured with tee; tail only limits displayed output",
+            "purpose": "Final Profile pin-list delta PASS; no repeat of the other six unchanged files."
+          }
+        ],
+        "uniqueTargetedCases": 5,
+        "newRegionFields": [
+          "referenceAccountProviderCount",
+          "referenceAccountProviderMs",
+          "referenceAccountAllocationCount",
+          "referenceAccountAllocationMs"
+        ],
+        "invariants": {
+          "authorityOrder": [
+            "assertCaptured",
+            "provider authority.assertCurrent",
+            "assertAllocation",
+            "assertCaptured"
+          ],
+          "authorityCallbacks": "Existing V1 configured-key path retains eight account callbacks and eleven total callbacks per complete inspection.",
+          "existingClocks": "Original no-sink clock counts, partial failures and fractional sum-before-rounding assertions unchanged and PASS.",
+          "activation": "Only original synchronous account interval with active original TEST subscriber and before first refusal; no additional clocks when disabled.",
+          "restoration": "Exact previous own property descriptor restored in finally; nested intervals restore the still-active outer observer.",
+          "errors": "Original authority error identity preserved through observer getter/begin/end errors; optional options.authorityTiming getter captured once best effort.",
+          "bounds": "4096 interval cap and first-refusal latch unchanged; new Count retains outer-interval semantics; both strict allowlists reject unknown or incomplete region pairs.",
+          "sourcePins": "Existing src/dist diagnosticPins additionally contains the extracted diagnostic module and factory marker owner."
+        },
+        "compiledFiles": [
+          {
+            "path": "packages/legacy-agent-host/dist/diagnostics/modelReadinessTiming.js",
+            "sha256": "2244f5784876949e193ba3bce44c726800a42a9db0b0788ea15a064c9f095ceb",
+            "sourceSha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+            "sha256": "b64113b74df7ae378865f5145a8bed2bee54d928190c582cd475a44af97841b7",
+            "sourceSha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.js",
+            "sha256": "d9c96f0c1d7e6aa882cf4aa0ada5de5c39475ac383c9779ae174a589fd942f75",
+            "sourceSha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190"
+          }
+        ],
+        "independentReview": {
+          "agent": "/root/parity_review",
+          "result": "PASS",
+          "scope": "All seven frozen files including approved final source/dist diagnosticPins delta; no duplicate tests/build by reviewer",
+          "hashes": [
+            "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b",
+            "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+            "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190",
+            "874b079e13c9b39e0a12c3943cf2b09f60e6f43976aef4a079c1a58196e7fecf",
+            "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d",
+            "e59a83c3f54699d2006254c52f59c7ec913ed8d450f58e866dacbf1d6105e70a",
+            "196356b90040c01d897e3034c2fc577ddadb8e78b306a49eebdbb1c7e38b4260"
+          ]
+        },
+        "priorReviewFinding": {
+          "finding": "Reading optional diagnostic accessor before the original authority try could replace an authority error",
+          "fix": "Capture once with best-effort try/catch; actual inspector regression preserves original error and check count",
+          "status": "fixed and independently reviewed"
+        },
+        "combinedGatesOwner": "/root owns canonical scripts TS7 and combined source-size/provisioning guards; not repeated here",
+        "limits": [
+          "Controlled diagnostic tests do not qualify native Windows/Linux/Darwin execution.",
+          "No claim of reducing the observed Windows probe expiry or changing any deadline/authority check.",
+          "No native run, CI query/operation, docs/index/ref mutation."
+        ],
+        "diffCheck": "PASS",
+        "patchPath": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-reviewed.patch",
+        "patchSha256": "4b6826fe71852b7319bc4195d79dab75cf5cdfbc6ae10012d405da977895e6d1"
+      }
+    },
+    {
+      "name": "parity-next-final-checks.json",
+      "bytes": 1531,
+      "sha256": "0eb4e8e2d4a473490be504f9ada35d54b2827b8743d6ec6ba167cb0e8a7034a5",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "combined-source-scoped-final-checks",
+        "preimageHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "checks": [
+          {
+            "status": "PASS",
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pinnedNode24.21.0 node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json --noEmit",
+            "exitCode": 0,
+            "sessionId": 97308,
+            "log": "parity-next-scripts-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "compilerOptions": "Original canonical project unchanged; no stub/skip overrides"
+          },
+          {
+            "status": "PASS",
+            "command": "pnpm guard:source-file-size",
+            "exitCode": 0,
+            "sessionId": 88412,
+            "log": "parity-next-source-size.log",
+            "logBytes": 249,
+            "logSha256": "9a77347fbae17eb5486ad5f9e0f216b716548a7703c11acb0fa8ad02c360e774"
+          },
+          {
+            "status": "PASS",
+            "command": "pnpm guard:team-provisioning-architecture",
+            "exitCode": 0,
+            "sessionId": 20097,
+            "log": "parity-next-provisioning-architecture.log",
+            "logBytes": 245,
+            "logSha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+          }
+        ],
+        "sourceGuard": {
+          "productionFiles": 5165,
+          "legacyExceptions": 141,
+          "newFileCap": 800
+        },
+        "fullWorkspaceGate": "Latest executed fbc Team135773058570 passes workspace types/typed lint; these scoped checks do not qualify the next source head.",
+        "nativeTestsRepeated": false
+      }
+    }
+  ],
+  "rawCheckArchive": {
+    "path": "parity-readiness-local-checks-20261119.tar.gz",
+    "bytes": 13939,
+    "sha256": "72bad6a0afca3a2e91695586d39a72adf367eee94944d248417d07f388f66e1b",
+    "entries": [
+      {
+        "path": "logs/account-authority-timing-build.log",
+        "bytes": 182,
+        "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+      },
+      {
+        "path": "logs/account-authority-timing-final-profile-lint.log",
+        "bytes": 169,
+        "sha256": "796c73d50b1c6351eccd48c92cdecff10fdc651615b0c48adfb09222e1b2b518"
+      },
+      {
+        "path": "logs/account-authority-timing-green.log",
+        "bytes": 871,
+        "sha256": "06b1eed0c88a135b91cd804444e511055024c1f63a3b1ef7462390b47a4e5920"
+      },
+      {
+        "path": "logs/account-authority-timing-lint.log",
+        "bytes": 578,
+        "sha256": "37bc523de5938a1d1eccd2b7258347da75484bc935d118b1b88a0b8aa02ee7ac"
+      },
+      {
+        "path": "logs/account-authority-timing-red-targeted.log",
+        "bytes": 1564,
+        "sha256": "6f43a4906cc8f41dcf264073c42195331a0585ebe2cb591be8bf399a96bd81be"
+      },
+      {
+        "path": "logs/account-authority-timing-red.log",
+        "bytes": 234,
+        "sha256": "2f05736cb54f914480534ba7d4515cea195866a6654231ca21c8ca0e95384a93"
+      },
+      {
+        "path": "logs/account-authority-timing-test-types.log",
+        "bytes": 69,
+        "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-attempt1.log",
+        "bytes": 22210,
+        "sha256": "ee19d3edc00764af740b4f7800a0a6fe1db722bfb2b63ae75a7829bccd808b3c"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-final-endpoint.log",
+        "bytes": 365,
+        "sha256": "a70977a7da105d0b64284361fa7c48d76631a581b62d9af0f8f2465e133f348c"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-green.log",
+        "bytes": 19139,
+        "sha256": "245082b86dcc87710c978dae51395a634234e152a5bfdb03902bd16eb8371b8c"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-lint-attempt1.log",
+        "bytes": 304,
+        "sha256": "afef571a692cde77754d2f20c7a6201d9301dd76c0dfc0be234ac86a18aa5900"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-lint.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-red.log",
+        "bytes": 3469,
+        "sha256": "c67c7420401b13f9340ee4193ee0038e7e686f6f0ebde47f6ab3bb068d9b9c1f"
+      },
+      {
+        "path": "configs/darwin-startup-diagnostics-type-scope.json",
+        "bytes": 1558,
+        "sha256": "6f0ad4984f5ee475c81ebe4761aba20f3760efe5e208dfc70903cd932bb4a6ca"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-types-attempt1.log",
+        "bytes": 677,
+        "sha256": "979f6d9685d649cae7578b04941c3970ea6801369c6a797d874bab3839231bf7"
+      },
+      {
+        "path": "logs/darwin-startup-diagnostics-types.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "logs/launch-target-observation-green.log",
+        "bytes": 12778,
+        "sha256": "7e2be8953ef96021afe06dbcf7a1237551d5c8892d0c76e62a48600d623f24e2"
+      },
+      {
+        "path": "logs/launch-target-observation-lint.log",
+        "bytes": 223,
+        "sha256": "1b9b1ed405e7fdc38ae156573e9a0c6375d7817b1d94a8e46359e04f789398d7"
+      },
+      {
+        "path": "logs/launch-target-observation-red.log",
+        "bytes": 1228,
+        "sha256": "1163718c80ae09a57f8d1f63f9361d15b308582c8aa3b120ffb493dab4325919"
+      },
+      {
+        "path": "logs/live-roster-authority-build.log",
+        "bytes": 182,
+        "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+      },
+      {
+        "path": "logs/live-roster-authority-fast-lint-final.log",
+        "bytes": 244,
+        "sha256": "d1b0455220d9e35dd586739ef010c029e30152e8e54db9903fed01534f4d6e42"
+      },
+      {
+        "path": "logs/live-roster-authority-fast-lint.log",
+        "bytes": 535,
+        "sha256": "024487de1f21fbe276f8f79d42dc0b58e5f658f49c0cef40d203a354dc566c74"
+      },
+      {
+        "path": "logs/live-roster-authority-green-reviewed.log",
+        "bytes": 370,
+        "sha256": "86f742c81434d199d97493c030cd9474ea4b97d19a34baec0eda076c51f1a691"
+      },
+      {
+        "path": "logs/live-roster-authority-green.log",
+        "bytes": 371,
+        "sha256": "13668b001f47562478b5bd514dc2afa2dedd9a99d56a3adb8363429e87378fb4"
+      },
+      {
+        "path": "logs/live-roster-authority-red.log",
+        "bytes": 2765,
+        "sha256": "f8a653dbd1cab03ee60bb65083f7e117a116866639888c8a26ec62f8d73dbd33"
+      },
+      {
+        "path": "logs/live-roster-authority-regressions.log",
+        "bytes": 583,
+        "sha256": "698084de33e7c0353e3f7b82e8786813cdf7793d97e362f699224c5e8ddcde5a"
+      },
+      {
+        "path": "logs/live-roster-authority-source-size.log",
+        "bytes": 249,
+        "sha256": "372810c5e1fc028fe28e9e1b1be6bddd0102b2015114388e4788cde3aebde388"
+      },
+      {
+        "path": "logs/live-roster-authority-test-types-final.log",
+        "bytes": 69,
+        "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+      },
+      {
+        "path": "logs/live-roster-authority-test-types-reviewed.log",
+        "bytes": 69,
+        "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+      },
+      {
+        "path": "logs/live-roster-authority-test-types.log",
+        "bytes": 868,
+        "sha256": "6901ea845a456f4856b74fb2e82b8318a156abf02de34ead8340a0503a62f99b"
+      },
+      {
+        "path": "logs/parity-next-provisioning-architecture.log",
+        "bytes": 245,
+        "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+      },
+      {
+        "path": "logs/parity-next-scripts-types.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "logs/parity-next-source-size.log",
+        "bytes": 249,
+        "sha256": "9a77347fbae17eb5486ad5f9e0f216b716548a7703c11acb0fa8ad02c360e774"
+      },
+      {
+        "path": "logs/resume-preflight-observer-attempt1.log",
+        "bytes": 21373,
+        "sha256": "c57e49c7d097ec2eeef991c2d0380119986ad2b4d8b492a8c2997bc68144a5a2"
+      },
+      {
+        "path": "logs/resume-preflight-observer-green.log",
+        "bytes": 20208,
+        "sha256": "ebaeb5c062bf8b2e123c5e307ae7495e05fe42a2d04268248c3b6f2e83bd40a2"
+      },
+      {
+        "path": "logs/resume-preflight-observer-lint.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "logs/resume-preflight-observer-red.log",
+        "bytes": 1486,
+        "sha256": "b98ad2c8b70f6d80a7dabe6899c625ae492858364f5d5bceb30182d26b7eb11c"
+      },
+      {
+        "path": "logs/resume-preflight-observer-size.log",
+        "bytes": 202,
+        "sha256": "48cf7fb020073f7549f8e060197b6e7a68e1c12e0c324544849f580368cef6e8"
+      },
+      {
+        "path": "logs/resume-preflight-observer-types.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "logs/retained-launch-label-lint.log",
+        "bytes": 169,
+        "sha256": "ca2df271d49dbc3e39fcf03431d0941221b57f6214995bc676848ad8f0121746"
+      }
+    ],
+    "pathMapping": "Raw logs are retained under logs/<original basename>; the archived canonical TS7 scope is under configs/. Original machine paths in manifests identify the executed records."
+  },
+  "notClaimed": [
+    "Native Windows source-readiness acceleration/PASS",
+    "Darwin Review/Resume/current Add PASS",
+    "Complete original retained bootstrap/reply/Stop",
+    "Installed vendor/runtime or release qualification",
+    "Ready/default/main merge authority"
+  ],
+  "deliveryRoute": "1192 -> 1186 -> 982; current source remains on1192 Draft until existing gates and owner execution boundary are satisfied.",
+  "integrationCustody": {
+    "name": "parity-next-integration-custody.json",
+    "bytes": 17139,
+    "sha256": "f98f96c916b15b27960abc95e1309d4cf4989c23fb29eba890bd975ba478362a",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "frozen-parity-integration-custody",
+      "recordedAt": "2026-11-19T19:06:16.698633+00:00",
+      "result": "PASS",
+      "repository": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+      "head": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+      "sourceFilesFrozenByRoot": true,
+      "expectedFileCount": 19,
+      "observedFileCount": 19,
+      "totalSourceTestBytes": 1042288,
+      "inputManifests": [
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/live-roster-authority-local-checks.json",
+          "sha256": "671ff4e4b6eec702c312236fdb79441c9aec5e3158d32aeeb1bf1aa75873d3dd",
+          "sourceFileCount": 2
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/resume-preflight-observer-local-checks.json",
+          "sha256": "0b415df7594491fa260667e411d0f70a54c35de312ba85e7b7710f2fb74df2e7",
+          "sourceFileCount": 2
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/launch-target-observation-local-checks.json",
+          "sha256": "06c0f91284db0b97f7d65a5cf87914cae31ebb6cee325ba2f47418c397da9b93",
+          "sourceFileCount": 2
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/retained-launch-label-local-checks.json",
+          "sha256": "38e8beb058fb26df9115df81f126307c1fc904afa1dc60fda3abee4e93e16a5e",
+          "sourceFileCount": 1
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/darwin-startup-diagnostics-local-checks.json",
+          "sha256": "6afb3953c1f72c0a19fb44d55d5242cba8bc0c99ccee13e88da0277af57c6cdf",
+          "sourceFileCount": 5
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/account-authority-timing-local-checks.json",
+          "sha256": "5914eda0bd13c842a1055d48c79ec6579895a84497e2b37401a4a08d9ca5609c",
+          "sourceFileCount": 7
+        }
+      ],
+      "files": [
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+          "expectedSha256": "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+          "manifest": "darwin-startup-diagnostics-local-checks.json",
+          "postSha256": "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+          "bytes": 19943,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+          "expectedSha256": "0e3897710dd2122608e38da14b3ca21aa7c589a26007e66017c10b40ce31f43f",
+          "manifest": "darwin-startup-diagnostics-local-checks.json",
+          "postSha256": "0e3897710dd2122608e38da14b3ca21aa7c589a26007e66017c10b40ce31f43f",
+          "bytes": 13864,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+          "expectedSha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190",
+          "bytes": 19173,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts",
+          "expectedSha256": "33583ee76826ac040bd0f3ac8b2f1cfced12534b30b2fb32c91b74f4ce6e4a1c",
+          "manifest": "live-roster-authority-local-checks.json",
+          "postSha256": "33583ee76826ac040bd0f3ac8b2f1cfced12534b30b2fb32c91b74f4ce6e4a1c",
+          "bytes": 30891,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "expectedSha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+          "bytes": 45961,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+          "expectedSha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b",
+          "bytes": 7237,
+          "status": "untracked",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+          "expectedSha256": "874b079e13c9b39e0a12c3943cf2b09f60e6f43976aef4a079c1a58196e7fecf",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "874b079e13c9b39e0a12c3943cf2b09f60e6f43976aef4a079c1a58196e7fecf",
+          "bytes": 26202,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "expectedSha256": "998f923a7e046a10609186fc335d5156a7d98d032d042432eda5c8ce695a4ead",
+          "manifest": "live-roster-authority-local-checks.json",
+          "postSha256": "998f923a7e046a10609186fc335d5156a7d98d032d042432eda5c8ce695a4ead",
+          "bytes": 286426,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "expectedSha256": "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d",
+          "bytes": 103002,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "expectedSha256": "f065f3583315775d76489faf3f49f778cefaaba97ef489568442a63df18e30d1",
+          "manifest": "resume-preflight-observer-local-checks.json",
+          "postSha256": "f065f3583315775d76489faf3f49f778cefaaba97ef489568442a63df18e30d1",
+          "bytes": 179736,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+          "expectedSha256": "cedae542e8d06a125290a05fa98cf5e3962a50ddaaa7a62936cf8166c4aa6ecf",
+          "manifest": "resume-preflight-observer-local-checks.json",
+          "postSha256": "cedae542e8d06a125290a05fa98cf5e3962a50ddaaa7a62936cf8166c4aa6ecf",
+          "bytes": 52275,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-original-ui.ts",
+          "expectedSha256": "9190a34e765624a94a1edfdfe1742752f77e455a7127e1d8eed92b622ba4444c",
+          "manifest": "retained-launch-label-local-checks.json",
+          "postSha256": "9190a34e765624a94a1edfdfe1742752f77e455a7127e1d8eed92b622ba4444c",
+          "bytes": 14358,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "expectedSha256": "4429c40b40843e2890ceecebce9a4b5698a6f10bf182305af4d72ea639eecba1",
+          "manifest": "launch-target-observation-local-checks.json",
+          "postSha256": "4429c40b40843e2890ceecebce9a4b5698a6f10bf182305af4d72ea639eecba1",
+          "bytes": 54143,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "expectedSha256": "40a301b693434fba1e86532e30065a1572e46f1e2bed5b03529e40c0dc7bd094",
+          "manifest": "launch-target-observation-local-checks.json",
+          "postSha256": "40a301b693434fba1e86532e30065a1572e46f1e2bed5b03529e40c0dc7bd094",
+          "bytes": 45556,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+          "expectedSha256": "b63c036c50aad8fbc2a60f2947968312fca0ddae3b3dd2704bc0ea7bbeedc2c0",
+          "manifest": "darwin-startup-diagnostics-local-checks.json",
+          "postSha256": "b63c036c50aad8fbc2a60f2947968312fca0ddae3b3dd2704bc0ea7bbeedc2c0",
+          "bytes": 17262,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+          "expectedSha256": "62bd816563a02463413d84ec69ae8741f156cec1026dfad060f2f542b3e6ed2f",
+          "manifest": "darwin-startup-diagnostics-local-checks.json",
+          "postSha256": "62bd816563a02463413d84ec69ae8741f156cec1026dfad060f2f542b3e6ed2f",
+          "bytes": 32597,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "expectedSha256": "6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c",
+          "manifest": "darwin-startup-diagnostics-local-checks.json",
+          "postSha256": "6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c",
+          "bytes": 31862,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "expectedSha256": "e59a83c3f54699d2006254c52f59c7ec913ed8d450f58e866dacbf1d6105e70a",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "e59a83c3f54699d2006254c52f59c7ec913ed8d450f58e866dacbf1d6105e70a",
+          "bytes": 33118,
+          "status": "tracked-modified",
+          "matches": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+          "expectedSha256": "196356b90040c01d897e3034c2fc577ddadb8e78b306a49eebdbb1c7e38b4260",
+          "manifest": "account-authority-timing-local-checks.json",
+          "postSha256": "196356b90040c01d897e3034c2fc577ddadb8e78b306a49eebdbb1c7e38b4260",
+          "bytes": 28682,
+          "status": "tracked-modified",
+          "matches": true
+        }
+      ],
+      "unexpectedSourceOrTestPaths": [],
+      "expectedPathsMissingFromDiff": [],
+      "mismatches": [],
+      "excludedRootDocumentationOrEvidencePaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/40-p09-source-writer-decision-2026-11-16.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p09-contract-a-native-receipts-fbc77ea-20261119.tar.gz",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-readiness-local-checks-20261119.tar.gz",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-readiness-observer-fixes-20261119.json"
+      ],
+      "untrackedSourcePaths": [
+        "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts"
+      ],
+      "diagnosticPins": {
+        "owners": [
+          "owned-process/HostWindowsLaunch",
+          "composition/prepareTeamModelReadiness",
+          "diagnostics/modelReadinessTiming",
+          "composition/createRuntimeMemberProviderFactory",
+          "management/ModelProbeOwner",
+          "composition/projectRuntimeMember",
+          "adapters/providers/OpenCodeMemberProvider",
+          "adapters/providers/CodexMemberProvider"
+        ],
+        "sourceAndDistFiles": [
+          {
+            "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "1f525b8dab2b9df0d40d2e76b7810c2c4bc576e53da920c59fbc3784c2afe97e"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "d87c22056cd9add359f0e464f130723b263f859fd5261fdbcb383083872c795f"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+            "matchesFrozenSource": true
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "b64113b74df7ae378865f5145a8bed2bee54d928190c582cd475a44af97841b7",
+            "matchesRecordedBuild": true
+          },
+          {
+            "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b",
+            "matchesFrozenSource": true
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/diagnostics/modelReadinessTiming.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "2244f5784876949e193ba3bce44c726800a42a9db0b0788ea15a064c9f095ceb",
+            "matchesRecordedBuild": true
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190",
+            "matchesFrozenSource": true
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "d9c96f0c1d7e6aa882cf4aa0ada5de5c39475ac383c9779ae174a589fd942f75",
+            "matchesRecordedBuild": true
+          },
+          {
+            "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "f965241bd2d0a841682572f49007511dfa4edfd33e4ec5136e3bc6998775bc17"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "01e8f8e92a5f007a1971088d05de086040d3e53bd9613a748d40734873fa9e68"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "6061f51e4537a966b3c33c595d2538cb0a7be1bf1fdce0975a0e07eeecb0f3f1"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMemberProvider.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "44de265c35ceb4816bc2ece15b8379ab7d544785254fe4ba4df28055db9974e8"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+            "regular": true,
+            "canonical": true,
+            "sha256": "9a221fd80ff7e39159b534be0e56c35ed3bdfd1cec5280cf2d5f3e036a238b67"
+          },
+          {
+            "path": "packages/legacy-agent-host/dist/adapters/providers/CodexMemberProvider.js",
+            "regular": true,
+            "canonical": true,
+            "sha256": "a4af8d7efea8aadf264cbc2c347dd0502ec33d8ad9aba171703877c5dcb6dd48"
+          }
+        ],
+        "recordedBuiltFileMatches": 3,
+        "newOwnersIncluded": [
+          "composition/createRuntimeMemberProviderFactory",
+          "diagnostics/modelReadinessTiming"
+        ],
+        "scope": "Existing source/dist paths resolve to canonical regular files. The three timing implementation dist hashes also match the recorded completed Host build; no compilation repeated."
+      },
+      "combinedGuards": {
+        "manifest": "/workspace/scratch/f45fed8e9067/audit1192/parity-next-final-checks.json",
+        "manifestSha256": "0eb4e8e2d4a473490be504f9ada35d54b2827b8743d6ec6ba167cb0e8a7034a5",
+        "checks": [
+          {
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pinnedNode24.21.0 node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json --noEmit",
+            "recordedStatus": "PASS",
+            "exitCode": 0,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/parity-next-scripts-types.log",
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "matchesRecordedLog": true
+          },
+          {
+            "command": "pnpm guard:source-file-size",
+            "recordedStatus": "PASS",
+            "exitCode": 0,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/parity-next-source-size.log",
+            "logSha256": "9a77347fbae17eb5486ad5f9e0f216b716548a7703c11acb0fa8ad02c360e774",
+            "matchesRecordedLog": true
+          },
+          {
+            "command": "pnpm guard:team-provisioning-architecture",
+            "recordedStatus": "PASS",
+            "exitCode": 0,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/parity-next-provisioning-architecture.log",
+            "logSha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c",
+            "matchesRecordedLog": true
+          }
+        ],
+        "scope": "Existing result and log hashes verified; no gate rerun."
+      },
+      "operations": "Read-only git diff/untracked/HEAD queries and file hashing; only this audit manifest written. No tests, build, native execution, CI queries, source/docs/index/ref edits."
+    }
+  }
+}

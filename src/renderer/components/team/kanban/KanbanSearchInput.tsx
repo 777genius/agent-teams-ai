@@ -140,7 +140,7 @@ export const KanbanSearchInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="h-8 w-full min-w-[140px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-8 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+        className="h-8 w-full min-w-[140px] rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-8 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
       />
       {value && (
         <Tooltip>

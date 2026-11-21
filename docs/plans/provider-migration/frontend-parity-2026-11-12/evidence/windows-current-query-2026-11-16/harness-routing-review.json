@@ -1,0 +1,354 @@
+{
+  "kind": "SOURCE_ONLY_ORIGINAL_FIVE_FILE_HARNESS_ROUTING_R2",
+  "disposition": "APPROVE_BOUNDED_EXISTING_TEAM_COMMAND_ROUTING_SUBJECT_TO_EXACT_CURRENT_R1",
+  "routingInput": {
+    "bytes": 128191,
+    "gitBlob": "87ba0647b0ac45b1acdb78e03f0d4ca3f80f935c",
+    "sha256": "9b0cec3a5ffddbfe22f9c3523aa9f204c470b5f8b0be6ddbae2bc8b409cc3dbe"
+  },
+  "compositionInput": {
+    "bytes": 454654,
+    "gitBlob": "0a8fbd576168dd7a102cc0eaadbc054e5275fe92",
+    "sha256": "2b93cfc05aed57f37218328eace9fe869902888306114aa1ff4abee6d404e92b"
+  },
+  "prospectiveParent": "b5791b2cc05b8d7becf148816fd994baeb407510",
+  "prospectiveParentTree": "e4a3ed50a2a342a8f24d39cc3421d67103563c8e",
+  "originalWorkflow": {
+    "path": ".github/workflows/opencode-packaged-e2e.yml",
+    "pin": {
+      "bytes": 19616,
+      "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe"
+    },
+    "commandLine": 172,
+    "draftGateLine": 136,
+    "draftSkipsOriginalJob": true
+  },
+  "command": "node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs",
+  "wholeFiveTests": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "bytes": 20150,
+      "gitBlob": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+      "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.test.mjs",
+      "bytes": 67288,
+      "gitBlob": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+      "sha256": "df5427548f5d16b89967fbe656ad489d931953170ca1a57847a11d115700d40e"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/catalog.test.mjs",
+      "bytes": 37251,
+      "gitBlob": "af07324feaf2d45f745248624d2d3fedc61d56de",
+      "sha256": "e7946704c5103abaac43545dc34d58d8e4a57debfe06639fc16701f223609453"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs",
+      "bytes": 10839,
+      "gitBlob": "f5a7292973d59bc798ff8efde6caadaa133bcdec",
+      "sha256": "cae8796f6c5e38258e999ff2cbdaea50c499c6f6c96710fab88ec307caec17c3"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs",
+      "bytes": 12270,
+      "gitBlob": "97e7a6765af22ee3fb1cf02e36b9817adfbceb23",
+      "sha256": "7f5d7e7652860958c9fe21456d3cb4c6d3b5d760ddd829765bd3d91a5cb2008c"
+    }
+  ],
+  "draftReachableTeam": {
+    "node": "24.21.0",
+    "runner": "ubuntu-latest / linux-x64",
+    "lane": "team",
+    "timeoutMinutes": 45,
+    "priorFrozenInstall": true,
+    "priorOriginalEightAndRetry": true,
+    "priorOriginalTenInSameSetEuoStep": true,
+    "exactCommandInsertionOnly": true,
+    "originalTypesAndTypedLintFollow": true,
+    "otherWorkflowDelta": "one TaskReview scoped-fast-lint operand,106→107; inverse of only these two added lines restores7d66",
+    "before": {
+      "bytes": 104425,
+      "gitBlob": "7d66b6bca58c1ae8b5793738e809a1d444c92bf5",
+      "sha256": "ed59f03d9a85981edc4884ea5c2b65aec28db5e49c10a79abf7bb6b0ba3ad178"
+    },
+    "after": {
+      "bytes": 104795,
+      "gitBlob": "de0311f66e45e7c914db21e8c32805958e89ab1f",
+      "sha256": "946fa54c3baae6442bb96afa7430e4298a9ee2610a89e2068db90c538212f35e"
+    }
+  },
+  "finiteOperations": [
+    {
+      "file": "platform.test.mjs",
+      "facts": [
+        "fake Windows process/listener query inputs and actual Gate closure extraction",
+        "one loopback ephemeral TCP allocation plus read-only lsof and IPv4/IPv6 bind/close through original15s/250ms availability helper",
+        "Team Linux prerequisite already installs lsof",
+        "real temporary Node fixture subprocesses and Unix shell shim, with exact owned ChildProcess termination for the intentional timeout case",
+        "one original Windows-only cleanup test skips on Linux; no Windows physical qualification from that skip"
+      ]
+    },
+    {
+      "file": "packaged.test.mjs",
+      "facts": [
+        "temporary filesystem provenance/symlink/copy evidence and actual Node executable fingerprint/version",
+        "injected Node fixture failure and1s timeout",
+        "actual desktop seed/start/stop source runs only inside Node loader/preload: packaged/profile/platform/WebSocket helpers mocked; start sentinel at450 precedes app spawn476",
+        "process.kill replaced by recorder for stop scenarios; no real app or vendor process signalled"
+      ]
+    },
+    {
+      "file": "catalog.test.mjs",
+      "facts": [
+        "temporary Node fixture is a finite synthetic CLI, no real Claude/Codex/OpenCode binary",
+        "injected send/evaluate callbacks simulate DOM/CDP instead of browser commands",
+        "original8s delayed summary with12s child cap, other5s fixture caps, original10s catalog case timeout"
+      ]
+    },
+    {
+      "file": "stage-candidate.test.mjs",
+      "facts": [
+        "bounded fake paginated API callbacks, maximum100pages/10000rows",
+        "temporary fake PE/Bun/JS companion bytes, actual local payload inventory/copy and installed builder-util copyDir",
+        "stageCandidate CLI entry guard is false on import; its gh/download/extraction CLI path is not invoked",
+        "electron-builder26.17.0 is an existing dev dependency; full existing install required"
+      ]
+    },
+    {
+      "file": "v2-support-repair.test.mjs",
+      "facts": [
+        "disposable synthetic profile, pure current version contract and manifest validation, local checksum/read/write/hardlink/symlink cases",
+        "fake native bytes are never executed; repair targets only selected temporary helper"
+      ]
+    }
+  ],
+  "importBoundary": [
+    "normal imports define pure helpers or read the static bundled runtime JSON contract; no main-process/app/provider discovery on import",
+    "runtime payload .mts and domain .ts dependencies contain erasable TypeScript and existing Node imports; root Node engine admits pinned24.21",
+    "runtimeZip import has only Node fs and definitions; Windows extraction code is only a string/function definition on the tested import path",
+    "real-runtime module is definitions only; prepareRealRuntimeFixture is unreachable from the selected handoff modes",
+    "startup-cleanup/catalog/packaged-verify/WebSocket are replaced by inert loader modules in the only actual desktop CLI subprocess test"
+  ],
+  "sourcePinInventory": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/catalog.test.mjs",
+      "pin": {
+        "bytes": 37251,
+        "lines": 872,
+        "gitBlob": "af07324feaf2d45f745248624d2d3fedc61d56de",
+        "sha256": "e7946704c5103abaac43545dc34d58d8e4a57debfe06639fc16701f223609453"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs",
+      "pin": {
+        "bytes": 10839,
+        "lines": 270,
+        "gitBlob": "f5a7292973d59bc798ff8efde6caadaa133bcdec",
+        "sha256": "cae8796f6c5e38258e999ff2cbdaea50c499c6f6c96710fab88ec307caec17c3"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs",
+      "pin": {
+        "bytes": 12270,
+        "lines": 210,
+        "gitBlob": "97e7a6765af22ee3fb1cf02e36b9817adfbceb23",
+        "sha256": "7f5d7e7652860958c9fe21456d3cb4c6d3b5d760ddd829765bd3d91a5cb2008c"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/catalog.mjs",
+      "pin": {
+        "bytes": 23448,
+        "lines": 523,
+        "gitBlob": "3a1350d23bb0d00ce3b26a495828021a4f163cda",
+        "sha256": "154806ad02d606cd8ddd4e3bbf7e65558d836ac5c59e832011c6e321d952069b"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged-verify.mjs",
+      "pin": {
+        "bytes": 60868,
+        "lines": 1388,
+        "gitBlob": "8eca2716fa714c16e49190a849c67ecfc11c06dd",
+        "sha256": "e8ccd13930a17289d414f363f559661273b23b81e80bcad8e1580b55e3109703"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/fixture.cjs",
+      "pin": {
+        "bytes": 16768,
+        "lines": 467,
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics-desktop.mjs",
+      "pin": {
+        "bytes": 31252,
+        "lines": 799,
+        "gitBlob": "44a9a5d63d46fb28b19637bd394aad3e05296c36",
+        "sha256": "31c93642dd199280026592cdd7695537fd7098f6de5160d10480cbefc0acba22"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/stage-candidate.mjs",
+      "pin": {
+        "bytes": 12560,
+        "lines": 262,
+        "gitBlob": "7ecec30f50462cc117cd53e77bb8a218a81859e8",
+        "sha256": "a204e061c6a684f83649c1f796083a925295504d2988e74145291ce4177d490d"
+      }
+    },
+    {
+      "path": "scripts/lib/runtime-payload-cache.mjs",
+      "pin": {
+        "bytes": 5495,
+        "lines": 149,
+        "gitBlob": "fda22b1807c79b4135414cf535ff9714fed21eb1",
+        "sha256": "e6945e8305f2c29df253b441e2cca83f57b8d441e07085cfd6a985241953196c"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/v2-support-repair.mjs",
+      "pin": {
+        "bytes": 11328,
+        "lines": 187,
+        "gitBlob": "619c9ced8e5b0761c6a4483bb81ce11659fb53d7",
+        "sha256": "526d1565406cc0df362281670ff9772a268c4c5545adbcf2f4fb8c1fe46ebed4"
+      }
+    },
+    {
+      "path": "scripts/lib/runtime-archive-extraction.mts",
+      "pin": {
+        "bytes": 333,
+        "lines": 3,
+        "gitBlob": "691d283945958ba873805c85ad66ddd8d508b377",
+        "sha256": "6d274bd9ab1dad4cb4bac9a9a43d1724f008b3983fc0ee685fb1652e78ef3da3"
+      }
+    },
+    {
+      "path": "scripts/lib/runtime-bootstrap-diagnostics.mts",
+      "pin": {
+        "bytes": 1194,
+        "lines": 42,
+        "gitBlob": "17ffb96906ed2ba270a84c7cee562acadc160a86",
+        "sha256": "535bf267f22f0ae10389cfdbcf1477b9954e64138388ba825380ce7ed29a9b22"
+      }
+    },
+    {
+      "path": "scripts/lib/runtime-windows-zip-extraction.mts",
+      "pin": {
+        "bytes": 9046,
+        "lines": 183,
+        "gitBlob": "a605b7a2578594710abbd24fa774d81c6ed7180a",
+        "sha256": "97b37d19d7e4b4fcce8d3cf3277afd7c038aef9bed6f6fe9818965c07e5f2e9a"
+      }
+    },
+    {
+      "path": "scripts/lib/runtime-payload-inventory.mts",
+      "pin": {
+        "bytes": 6264,
+        "lines": 156,
+        "gitBlob": "ba17cac0442ceb085cd2c502e74fbbd37f8c3f2e",
+        "sha256": "5d8d342aa627be315166c02f1f82630b066175035eb51d29f7d16672dd8c6c81"
+      }
+    },
+    {
+      "path": "scripts/lib/runtime-archive-checksum.mjs",
+      "pin": {
+        "bytes": 1930,
+        "lines": 50,
+        "gitBlob": "d9f7f1ca28d1800e73a455c012265f31b53da4b3",
+        "sha256": "38f1a3b6c45ae60d6e414d842dbafe3abc86841a79b6d07a8342ae454f71529f"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+      "pin": {
+        "bytes": 21401,
+        "lines": 426,
+        "gitBlob": "34888925ec7d027a05ce131ef6cec74cab2e59ef",
+        "sha256": "435151fa47fa405d08bc5414e47a3b29f5ae111a465c2a12be0ff681abd62dbc"
+      }
+    },
+    {
+      "path": "runtime.lock.json",
+      "pin": {
+        "bytes": 6127,
+        "lines": 197,
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+      }
+    },
+    {
+      "path": "src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts",
+      "pin": {
+        "bytes": 6685,
+        "lines": 161,
+        "gitBlob": "d39c07c809310b13c78d280b89a78ded0079b423",
+        "sha256": "dc77859247ee8d12b6742cb5861f5b5d2896c81bca0e700d16b7edd524d938d2"
+      }
+    },
+    {
+      "path": "src/features/opencode-runtime-installer/core/domain/v2Delivery.ts",
+      "pin": {
+        "bytes": 9472,
+        "lines": 278,
+        "gitBlob": "902073eea19a395b22709ab9c47dfef383e1629e",
+        "sha256": "d287703670dd362d18fd22b634a0e41800ffb9bd7a592057aac0514f6c1ccdd1"
+      }
+    },
+    {
+      "path": "src/features/opencode-runtime-installer/main/infrastructure/runtimeZip.ts",
+      "pin": {
+        "bytes": 13333,
+        "lines": 344,
+        "gitBlob": "7a9f9a85965d65472053757db9c893fecd4d78bf",
+        "sha256": "5238fbe1391655429b0eb291284aa89c55c73495111b841154a36e740c374aeb"
+      }
+    },
+    {
+      "path": "package.json",
+      "pin": {
+        "bytes": 26839,
+        "lines": 580,
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      }
+    }
+  ],
+  "expectedSkip": {
+    "test": "Windows cleanup evidence retains current PID through independent read-only queries",
+    "sourceLine": 236,
+    "condition": "process.platform !== 'win32'",
+    "newObserverCasesMustExecute": true,
+    "newObserverCases": [
+      "Windows observer capture binds the executing query inside each original read",
+      "Windows observer envelopes reject absent, ambiguous and malformed query identities",
+      "actual Windows census guard explains only current query children without App or signal authority"
+    ]
+  },
+  "requiredHonestFutureEvidence": [
+    "retain complete actual whole5 output and counts including original platform-specific skip",
+    "new three Observer cases must execute and pass; import/anchor/setup failure is not semantic qualification",
+    "no all0skip or native Windows custody claim from this Linux command",
+    "all extra fixed fixture delays, local child work, filesystem copies and read-only OS checks consume the unchanged45-minute budget",
+    "no additional mandatory RED-only CI cycle; actual original native packaged proof remains independent"
+  ],
+  "limits": {
+    "projectExecution": false,
+    "testCompilerLintExecution": false,
+    "nativeOrGUIExecution": false,
+    "CIStatusPoll": false,
+    "artifactDownload": false,
+    "sourceRefIndexMutation": false,
+    "unboundedThirdPartyDependencyAudit": false,
+    "resultingSourcePassClaim": false,
+    "completeFutureR1UnionApproval": false
+  }
+}

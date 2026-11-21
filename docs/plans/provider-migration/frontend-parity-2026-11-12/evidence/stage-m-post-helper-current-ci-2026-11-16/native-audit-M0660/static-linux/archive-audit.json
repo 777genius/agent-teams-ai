@@ -1,0 +1,237 @@
+{
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/artifact-14192610672.zip",
+    "bytes": 4000,
+    "sha256": "a40813439aae30d3e2042aa9b7b20e141a88e85de3f7748fc6a13c9b3c47bc53",
+    "blob": "196950086facc7b3839ebfe2715e56d556633a38"
+  },
+  "uniqueSafeCrc": true,
+  "members": [
+    {
+      "name": "native-v1-1.19.4.json",
+      "bytes": 4479,
+      "sha256": "6742fc5b78b37853629d8b7ac9802f73dde45e28177aba5bf6a917c8a3fa14f8",
+      "blob": "098ee2bc1a4d3546edb10df1371a5eb72d23ab05",
+      "data": {
+        "kind": "TEST_NATIVE_V1_VERSION_HOST",
+        "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "platform": "linux-x64",
+        "status": "PASS",
+        "cleanup": true,
+        "selectedCliVersion": "1.19.4",
+        "nativeVersion": "1.19.4",
+        "nativeDigest": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+        "nativeIntegrity": "sha512-rQ/l3jmJoxf8ZYnBargg9alURlz6buEilysGODtzkcmcYtcZ91LOgF034oUUHHQl8/y1hbRTDvg6ujqUjQsMXw==",
+        "wireProtocolRevision": "1.19.4",
+        "nodeVersion": "v24.21.0",
+        "nodeDigest": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "hostSourceDigest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+        "hostDistDigest": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+        "steps": [
+          "native_version_package_integrity_and_source_measured",
+          "original_host_native_runtime_and_mcp_ready",
+          "managed_update_preserved_pending_native_session",
+          "native_model_tools_permission_task_and_reply_completed_once",
+          "original_host_runtime_stop_and_cleanup_confirmed",
+          "cold_receipt_readback_without_native_replay_or_source_mutation"
+        ],
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 8,
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "preferencesSelection": {
+          "defaultModelId": "TEST-local/TEST-model-B",
+          "contextTokens": 64000,
+          "outputTokens": 1024
+        },
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false,
+        "managedUpdate": {
+          "before": {
+            "native": {
+              "pid": 5011,
+              "parent": 5003,
+              "birth": "44323",
+              "device": "64512",
+              "inode": "1589021",
+              "executableSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+            },
+            "binarySha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+            "profileSha256": "cdc08916a0fe27c678b6f23fb5b79b99581e5ea9f41e3807804c942b2a8c2595",
+            "sessionSha256": "ceddd2b7c99578d82aec95818f60e67b5c7b7d3151533005b81463e4ca8cd410",
+            "runtimeStateSha256": "74497894a25d9568a74958cb1776d62b5053b3764ab94660dd36938b541f4e46",
+            "projectionSha256": "6ed61218aa52084a5893b524c82b633a4fe25cdc39992d80f190e13bec503c81",
+            "checkpointSha256": "df4a5b43ac17cde6c54b1e2433263138365dd9d0a3c0d8a171541d220d0372e7"
+          },
+          "after": {
+            "native": {
+              "pid": 5011,
+              "parent": 5003,
+              "birth": "44323",
+              "device": "64512",
+              "inode": "1589021",
+              "executableSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+            },
+            "binarySha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+            "profileSha256": "cdc08916a0fe27c678b6f23fb5b79b99581e5ea9f41e3807804c942b2a8c2595",
+            "sessionSha256": "ceddd2b7c99578d82aec95818f60e67b5c7b7d3151533005b81463e4ca8cd410",
+            "runtimeStateSha256": "74497894a25d9568a74958cb1776d62b5053b3764ab94660dd36938b541f4e46",
+            "projectionSha256": "6ed61218aa52084a5893b524c82b633a4fe25cdc39992d80f190e13bec503c81",
+            "checkpointSha256": "df4a5b43ac17cde6c54b1e2433263138365dd9d0a3c0d8a171541d220d0372e7"
+          },
+          "fromVersion": "1.19.4",
+          "toVersion": "1.19.5",
+          "source": "app-managed",
+          "updatedBinarySha256": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+          "updatedIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+          "oldManifestSha256": "86d5ec9cc6b54c94915bc2e21cc9d5e7addc9e51f437b7217d06ffc32a1fc841",
+          "newManifestSha256": "d56f6bd646303c305903555999d659a74fd5b15084e558f16b73588eea8b5f00",
+          "installerBundleSha256": "d8a5deedf2396f1048f256d763cad0322207a32c15dde6a66d67ded3adc59288",
+          "installerSourceSha256": "c192bb70d39bb7d05154786ed6ceb669ffe32b7e6afcffbbe43809b09b9bf8e4",
+          "electronVersion": "44.10.1",
+          "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+          "installerProcesses": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "cleanup": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "cleanup": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "native-v1-1.19.5.json",
+      "bytes": 1723,
+      "sha256": "2a3c2274cd9368d40f9c14acbbdcc50208a01cc3f9700f6b64a4406dddfa510e",
+      "blob": "594aff6794552296829c98ba9e3bd506347fb5fa",
+      "data": {
+        "kind": "TEST_NATIVE_V1_VERSION_HOST",
+        "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "platform": "linux-x64",
+        "status": "PASS",
+        "cleanup": true,
+        "selectedCliVersion": "1.19.5",
+        "nativeVersion": "1.19.5",
+        "nativeDigest": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+        "nativeIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+        "wireProtocolRevision": "1.19.4",
+        "nodeVersion": "v24.21.0",
+        "nodeDigest": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "hostSourceDigest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+        "hostDistDigest": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+        "steps": [
+          "native_version_package_integrity_and_source_measured",
+          "original_host_native_runtime_and_mcp_ready",
+          "native_model_tools_permission_task_and_reply_completed_once",
+          "original_host_runtime_stop_and_cleanup_confirmed",
+          "cold_receipt_readback_without_native_replay_or_source_mutation"
+        ],
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 8,
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "preferencesSelection": {
+          "defaultModelId": "TEST-local/TEST-model-B",
+          "contextTokens": 64000,
+          "outputTokens": 1024
+        },
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    },
+    {
+      "name": "native-v1-latest.json",
+      "bytes": 1723,
+      "sha256": "2a3c2274cd9368d40f9c14acbbdcc50208a01cc3f9700f6b64a4406dddfa510e",
+      "blob": "594aff6794552296829c98ba9e3bd506347fb5fa",
+      "data": {
+        "kind": "TEST_NATIVE_V1_VERSION_HOST",
+        "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "platform": "linux-x64",
+        "status": "PASS",
+        "cleanup": true,
+        "selectedCliVersion": "1.19.5",
+        "nativeVersion": "1.19.5",
+        "nativeDigest": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+        "nativeIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+        "wireProtocolRevision": "1.19.4",
+        "nodeVersion": "v24.21.0",
+        "nodeDigest": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "hostSourceDigest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+        "hostDistDigest": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+        "steps": [
+          "native_version_package_integrity_and_source_measured",
+          "original_host_native_runtime_and_mcp_ready",
+          "native_model_tools_permission_task_and_reply_completed_once",
+          "original_host_runtime_stop_and_cleanup_confirmed",
+          "cold_receipt_readback_without_native_replay_or_source_mutation"
+        ],
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 8,
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "preferencesSelection": {
+          "defaultModelId": "TEST-local/TEST-model-B",
+          "contextTokens": 64000,
+          "outputTokens": 1024
+        },
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    }
+  ]
+}

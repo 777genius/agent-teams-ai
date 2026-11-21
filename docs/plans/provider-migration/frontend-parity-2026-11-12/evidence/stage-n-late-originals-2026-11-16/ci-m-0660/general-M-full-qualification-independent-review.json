@@ -1,0 +1,488 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE_ORIGINAL_DRAFT_POLICY_FAILURE_AND_TERMINAL_STOP",
+  "reviewer": "/root",
+  "reviewedUtc": "2026-11-16T03:24:49.702062+00:00",
+  "runId": 43780997502,
+  "jobId": 133033795297,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "syntheticMerge": "a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe",
+  "parents": [
+    "def734338f13bcc3209e78079a0cedbc48f05a5b",
+    "0660c748f88675063e3051fb0f8b2022e8f6f056"
+  ],
+  "inputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-full-qualification-original.log",
+      "bytes": 17505,
+      "blob": "3507b4eb1680be2d15322cd8351c6dc484bdfd55",
+      "sha256": "bede758a8d83e8be927297c4e4adf9b76a33698901b9992e04575d8ebffda05a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-full-qualification-original-response.json",
+      "bytes": 18075,
+      "blob": "3c61918a104cf9a648ca41f7a129c6a133b17b1d",
+      "sha256": "4eb40d65fed82ca16d5f78a9ddace4adbaa829cfeef5d34fe28d1c0d939441cd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-jobs-0259.json",
+      "bytes": 7653,
+      "blob": "b7baba75e68e8be4addb897eeb06c1a7e1477e08",
+      "sha256": "cb7de4d65c3753803a4fbde244e0f8f5f65d6d0073bf754e34eb52d1fec2a6c3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-merge-commit-original.json",
+      "bytes": 6362,
+      "blob": "897d1de9f2e0df346d594b545ab5f244e0c1f82e",
+      "sha256": "654b3856c88aa84bd54f78cfcf888ec918fa8f1ea1879323a969f5cf65f555f9"
+    }
+  ],
+  "allDecodedRawBytesExact": true,
+  "rawLineCount": 249,
+  "fullJob": {
+    "id": 133033795297,
+    "name": "Full qualification",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43780997502,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Checkout",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Setup Node.js",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Require selected Codex login and native schedule qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 4
+      },
+      {
+        "name": "Require selected retained V1 and Host V2 native Desktop qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 5
+      },
+      {
+        "name": "Verify completed current-code qualification after metadata edits",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Require complete current-code qualification",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 7
+      },
+      {
+        "name": "Post Setup Node.js",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Post Checkout",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      }
+    ]
+  },
+  "fastFeedbackJob": {
+    "id": 133033794740,
+    "name": "Fast feedback",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "run_id": 43780997502,
+    "logs_url": null,
+    "steps": null
+  },
+  "all15JobsTerminal": true,
+  "terminalCounts": {
+    "success": 1,
+    "skipped": 12,
+    "cancelled": 1,
+    "failure": 1
+  },
+  "fullCommand": "node scripts/ci/ci-feedback.mts gate",
+  "node": "26.12.1",
+  "modeFull": "false",
+  "modeReuse": "false",
+  "sourceRun": "empty",
+  "actualResult": "Draft feedback does not qualify for merge",
+  "actualExitCode": 1,
+  "sourceInputs": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    },
+    {
+      "path": "scripts/ci/ci-feedback.mts",
+      "bytes": 19265,
+      "blob": "9d734783b4e273a4e4fbad27d4e51984646d436d",
+      "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e"
+    },
+    {
+      "path": "scripts/ci/ci-feedback-reuse.mts",
+      "bytes": 25400,
+      "blob": "5d67c89b142b4cfe211e6d3f46375e444bfd0cf2",
+      "sha256": "b910431c726b2f4506ac5edaa1691616f8a5ae1ec6c4958d347cbc3b127fd6b2"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    }
+  ],
+  "sourceGateExcerpt": [
+    {
+      "line": 405,
+      "text": ""
+    },
+    {
+      "line": 406,
+      "text": "export function qualifyFull("
+    },
+    {
+      "line": 407,
+      "text": "  results: unknown,"
+    },
+    {
+      "line": 408,
+      "text": "  full: unknown,"
+    },
+    {
+      "line": 409,
+      "text": "  reuse: unknown,"
+    },
+    {
+      "line": 410,
+      "text": "  shardCount?: unknown"
+    },
+    {
+      "line": 411,
+      "text": "): { ok: boolean; reason: string } {"
+    },
+    {
+      "line": 412,
+      "text": "  try {"
+    },
+    {
+      "line": 413,
+      "text": "    rootTestShards(shardCount);"
+    },
+    {
+      "line": 414,
+      "text": "    if (full !== 'true') throw new Error('Draft feedback does not qualify for merge');"
+    },
+    {
+      "line": 415,
+      "text": "    if (reuse !== 'true' && reuse !== 'false') throw new Error('Invalid reuse mode');"
+    },
+    {
+      "line": 416,
+      "text": "    const needs = object(results);"
+    },
+    {
+      "line": 417,
+      "text": "    const plan = object(needs.plan);"
+    },
+    {
+      "line": 418,
+      "text": "    const outputs = object(plan.outputs);"
+    },
+    {
+      "line": 419,
+      "text": "    if ("
+    },
+    {
+      "line": 420,
+      "text": "      plan.result !== 'success' ||"
+    },
+    {
+      "line": 421,
+      "text": "      outputs.metadata !== 'false' ||"
+    },
+    {
+      "line": 422,
+      "text": "      outputs.full !== full ||"
+    },
+    {
+      "line": 423,
+      "text": "      outputs.reuse !== reuse"
+    },
+    {
+      "line": 424,
+      "text": "    ) {"
+    },
+    {
+      "line": 425,
+      "text": "      throw new Error('Plan did not successfully bind gate mode');"
+    },
+    {
+      "line": 426,
+      "text": "    }"
+    },
+    {
+      "line": 427,
+      "text": "    if ("
+    },
+    {
+      "line": 428,
+      "text": "      reuse === 'true' &&"
+    },
+    {
+      "line": 429,
+      "text": "      (typeof outputs.source_run !== 'string' || !/^[1-9]\\d*$/.test(outputs.source_run))"
+    },
+    {
+      "line": 430,
+      "text": "    ) {"
+    },
+    {
+      "line": 431,
+      "text": "      throw new Error('Reuse lacks authenticated source run');"
+    },
+    {
+      "line": 432,
+      "text": "    }"
+    },
+    {
+      "line": 433,
+      "text": "    const scope = outputs.scope ?? 'full';"
+    },
+    {
+      "line": 434,
+      "text": "    if (!['full', 'docs', 'assets', 'dmg', 'source'].includes(String(scope)))"
+    },
+    {
+      "line": 435,
+      "text": "      throw new Error('Invalid change scope');"
+    }
+  ],
+  "workflowGateExcerpt": [
+    {
+      "line": 2587,
+      "text": "  full-qualification:"
+    },
+    {
+      "line": 2588,
+      "text": "    name: Full qualification"
+    },
+    {
+      "line": 2589,
+      "text": "    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork, retained-opencode-coexistence, codex-login-desktop]"
+    },
+    {
+      "line": 2590,
+      "text": "    if: always() && !cancelled()"
+    },
+    {
+      "line": 2591,
+      "text": "    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}"
+    },
+    {
+      "line": 2592,
+      "text": "    steps:"
+    },
+    {
+      "line": 2593,
+      "text": "      - name: Checkout"
+    },
+    {
+      "line": 2594,
+      "text": "        uses: actions/checkout@v6"
+    },
+    {
+      "line": 2595,
+      "text": "      - name: Setup Node.js"
+    },
+    {
+      "line": 2596,
+      "text": "        uses: actions/setup-node@v6"
+    },
+    {
+      "line": 2597,
+      "text": "        with:"
+    },
+    {
+      "line": 2598,
+      "text": "          node-version-file: .node-version"
+    },
+    {
+      "line": 2599,
+      "text": "      - name: Require selected Codex login and native schedule qualification"
+    },
+    {
+      "line": 2600,
+      "text": "        if: >-"
+    },
+    {
+      "line": 2601,
+      "text": "          needs.plan.outputs.metadata == 'false' &&"
+    },
+    {
+      "line": 2602,
+      "text": "          github.event_name == 'pull_request' && github.event.pull_request.draft == false &&"
+    },
+    {
+      "line": 2603,
+      "text": "          github.event.pull_request.head.repo.full_name == github.repository &&"
+    },
+    {
+      "line": 2604,
+      "text": "          (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||"
+    },
+    {
+      "line": 2605,
+      "text": "           github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112')"
+    },
+    {
+      "line": 2606,
+      "text": "        env:"
+    },
+    {
+      "line": 2607,
+      "text": "          CODEX_LOGIN_RESULT: ${{ needs.codex-login-desktop.result }}"
+    },
+    {
+      "line": 2608,
+      "text": "        run: test \"$CODEX_LOGIN_RESULT\" = success"
+    },
+    {
+      "line": 2609,
+      "text": "      - name: Require selected retained V1 and Host V2 native Desktop qualification"
+    },
+    {
+      "line": 2610,
+      "text": "        if: >-"
+    },
+    {
+      "line": 2611,
+      "text": "          needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&"
+    },
+    {
+      "line": 2612,
+      "text": "          ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||"
+    },
+    {
+      "line": 2613,
+      "text": "          (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&"
+    },
+    {
+      "line": 2614,
+      "text": "          (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))"
+    },
+    {
+      "line": 2615,
+      "text": "        env:"
+    },
+    {
+      "line": 2616,
+      "text": "          RETAINED_COEXISTENCE_RESULT: ${{ needs.retained-opencode-coexistence.result }}"
+    },
+    {
+      "line": 2617,
+      "text": "        run: test \"$RETAINED_COEXISTENCE_RESULT\" = success"
+    },
+    {
+      "line": 2618,
+      "text": "      # The script deadline (METADATA_GATE.waitMs, 90 min) fails the gate first;"
+    },
+    {
+      "line": 2619,
+      "text": "      # this timeout bounds the last proof after it. Either outcome is a failure."
+    },
+    {
+      "line": 2620,
+      "text": "      - name: Verify completed current-code qualification after metadata edits"
+    },
+    {
+      "line": 2621,
+      "text": "        if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'"
+    },
+    {
+      "line": 2622,
+      "text": "        timeout-minutes: 100"
+    },
+    {
+      "line": 2623,
+      "text": "        env:"
+    },
+    {
+      "line": 2624,
+      "text": "          GH_TOKEN: ${{ github.token }}"
+    },
+    {
+      "line": 2625,
+      "text": "        run: node scripts/ci/ci-feedback.mts metadata-gate"
+    },
+    {
+      "line": 2626,
+      "text": "      - name: Require complete current-code qualification"
+    },
+    {
+      "line": 2627,
+      "text": "        if: needs.plan.result != 'success' || needs.plan.outputs.metadata != 'true' || needs.plan.outputs.full != 'false' || needs.plan.outputs.reuse != 'false'"
+    },
+    {
+      "line": 2628,
+      "text": "        env:"
+    },
+    {
+      "line": 2629,
+      "text": "          JOB_RESULTS: ${{ toJSON(needs) }}"
+    },
+    {
+      "line": 2630,
+      "text": "          MODE_FULL: ${{ needs.plan.outputs.full }}"
+    },
+    {
+      "line": 2631,
+      "text": "          MODE_REUSE: ${{ needs.plan.outputs.reuse }}"
+    },
+    {
+      "line": 2632,
+      "text": "          SOURCE_RUN: ${{ needs.plan.outputs.source_run }}"
+    },
+    {
+      "line": 2633,
+      "text": "        run: node scripts/ci/ci-feedback.mts gate"
+    }
+  ],
+  "limits": [
+    "Original policy failure preserved; not a source test failure or successful merge qualification.",
+    "Fast feedback cancelled with no steps; no type/lint/test result can be inferred.",
+    "All12skipped jobs remain unexecuted.",
+    "No new primary608 source qualification, no Ready/manual route authorization.",
+    "Metadata polling for this terminal MGeneral cohort stops; no rerun or cancellation was requested.",
+    "Full log tool-decoded UTF8 equality is proved, not redirected HTTP-wire byte identity."
+  ],
+  "newProjectExecution": false,
+  "sourceRefCiMutation": false
+}

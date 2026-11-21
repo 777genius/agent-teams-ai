@@ -11,6 +11,7 @@ import {
   resolveAppManagedCodexRuntimeBinaryPath,
   resolveVerifiedAppManagedCodexRuntimeBinaryPath,
 } from '@features/codex-runtime-installer/main';
+import { readOriginalRuntimeScope } from '@main/services/runtime/OriginalRuntimeScope';
 import { execCli } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
@@ -401,6 +402,8 @@ export class CodexBinaryResolver {
   }
 
   static async resolve(): Promise<string | null> {
+    const original = readOriginalRuntimeScope();
+    if (original) return original.codexBinaryPath;
     let stalePositiveBinaryPath: string | null = null;
     let stalePositiveLaunchVerifiedAt = 0;
 

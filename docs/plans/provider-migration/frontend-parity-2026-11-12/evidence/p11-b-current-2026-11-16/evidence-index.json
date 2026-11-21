@@ -1,0 +1,534 @@
+{
+  "kind": "P11 B-only actual semantic A RED and exact two-check source evidence",
+  "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "baseTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "actualA": {
+    "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+    "run": 43831885807,
+    "job": 133178913159,
+    "attempt": 1,
+    "event": "pull_request",
+    "lane": "linux-x64 taskboard",
+    "semanticFailureCount": 3,
+    "controlPassed": true,
+    "setupFailure": false,
+    "completeOriginalEightFileCommand": true,
+    "originalCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "counts": {
+      "tests": 123,
+      "pass": 120,
+      "fail": 3,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "durationMs": 9107.032314
+    },
+    "all119PriorCasesPass": true,
+    "rawLog": {
+      "bytes": 94289,
+      "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+      "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+    },
+    "frontendAudit": {
+      "blob": "02a74823ed7cd2926119d0bc8477afffab886a2a",
+      "bytes": 9395,
+      "sha256": "1e7f162a56cb57985cb6b4da47b6ca314c35909f0b8be46bdaad0f5366867ff6"
+    },
+    "independentR2": {
+      "blob": "abcffb42679e85e612dca7bdf4114ebb154d7066",
+      "bytes": 11365,
+      "sha256": "f71d23f3f478cf853574be135b682403584593805750d7f431edbc1dd0de36cc"
+    },
+    "postFailureTailsReached": false,
+    "BGreen": null,
+    "currentTypedOutcome": null,
+    "downstreamQualification": false
+  },
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "before": {
+        "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "after": {
+        "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      "candidatePath": "/workspace/scratch/c2f5ff7c30ee/p11-b-72e-inert-ingredients/after/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "linesAdded": 2,
+      "linesRemoved": 0
+    }
+  ],
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/job-133178913159.log",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+      "bytes": 94289,
+      "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/capture-metadata.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "9a21d51466a6156d474e383100f5116f406b256c",
+      "bytes": 21812,
+      "sha256": "05a8b235cd79d0feb4c95ab5a6fb58670d3eba2de4ce57b2896d79677222f35d",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/source-binding.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "f004b5988b32e0444bb4c3d706142c839b57ed18",
+      "bytes": 7565,
+      "sha256": "218176b99508cad9fb30cc841fc0e104347308c8339dc022734ccae404a85a54",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/case-comparison.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "1e123cc7f4975864d808d38b01ce306d5fe95e73",
+      "bytes": 47214,
+      "sha256": "151f089d33d644ede4eebcb4acbf8b8bfbf73a0ad1a37947f14d90346fd8fe45",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "02a74823ed7cd2926119d0bc8477afffab886a2a",
+      "bytes": 9395,
+      "sha256": "1e7f162a56cb57985cb6b4da47b6ca314c35909f0b8be46bdaad0f5366867ff6",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/review.md",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "d311bcf36eccb98083bae4198fd6754a38513967",
+      "bytes": 2579,
+      "sha256": "13909f87f46c0654f2010a01f6c012754e6c9dbc98156224574bce8c724fa2ed",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/manifest.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "0742c5d42c2b4740f0716a436a6bdb253b9da123",
+      "bytes": 1313,
+      "sha256": "0661d948fe7974a23a16b45624633fb3fe21b641187c8bef9cb933a598e9a85b",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/actual-a/migration-independent-r2.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "abcffb42679e85e612dca7bdf4114ebb154d7066",
+      "bytes": 11365,
+      "sha256": "f71d23f3f478cf853574be135b682403584593805750d7f431edbc1dd0de36cc",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/phase-b/candidate.patch",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+      "bytes": 727,
+      "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-b-current-2026-11-16/phase-b/source-and-context.json",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "bff4e69d3f5e03e98db450d322cdb149698c0764",
+      "bytes": 13652,
+      "sha256": "cf12e896f1b66ddfa838eebdbe1d61c7737c7547ebaec59bbad04b6fa8e11e89",
+      "encoding": "utf-8"
+    }
+  ],
+  "dependencyContext": [
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "size": 26839
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "size": 956788
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "size": 6946
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "size": 1235
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "size": 646
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "size": 12355
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "size": 174
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7130609dd29851148c9e2106e2764b75982739b1",
+      "size": 185996
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "size": 6230
+    }
+  ],
+  "unchangedWorkflows": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "size": 2301
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+      "size": 8602
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+      "size": 4713
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+      "size": 17033
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da94c393b024d3c8a40159edbf9975cd528007a6",
+      "size": 175238
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "size": 2479
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cef44447c47e39a7da678f37e2518952e218da08",
+      "size": 3229
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+      "size": 1527
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "size": 3218
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+      "size": 19680
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "size": 101741
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "size": 32248
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "size": 3335
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "size": 7306
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "size": 5592
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+      "size": 9635
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+      "size": 6719
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+      "size": 29178
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "size": 19616
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+      "size": 2756
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "size": 36309
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "51beb92ade4931fe04336c7d3908bacfc932269e",
+      "size": 8825
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "size": 8958
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+      "size": 3908
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+      "size": 1905
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+      "size": 2706
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+      "size": 46671
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+      "size": 4238
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+      "size": 912
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "size": 5079
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "size": 39878
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+      "size": 5418
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+      "size": 6522
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+      "size": 21602
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+      "size": 5900
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "067a25687f36caefe156b0446c5056d230d27c62",
+      "size": 12460
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+      "size": 7512
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "950f95892277ae303772ac699915250f0f4f66af",
+      "size": 12323
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+      "size": 13476
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "10ffcd79e48a71346df7545af638208ce039ad83",
+      "size": 27610
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+      "size": 11849
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+      "size": 14471
+    }
+  ],
+  "rootBinding": {
+    "blob": "6575f6eee00dd0e0858b8c30f21b095cfacf1052",
+    "bytes": 10640,
+    "sha256": "88d9cb7768a3c2b2670f603799db19716144b607e4285310bc966445f9cc022d"
+  },
+  "beforePlan": {
+    "blob": "bfcd6cbbb7ec293a568a61079bc60ed572979430",
+    "bytes": 1915226,
+    "sha256": "406271bf95c71863fa6e488b4f447f7a4e5c659a15d92db263a003292a51ee4b"
+  },
+  "localProjectCommands": [],
+  "localGitOrIndexWrites": false,
+  "CSelected": false,
+  "actualBGreen": null
+}

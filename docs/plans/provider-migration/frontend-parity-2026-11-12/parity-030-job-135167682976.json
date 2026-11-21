@@ -1,0 +1,353 @@
+{
+  "schema": "original-030-import-lifecycle-producer-publication-failure-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682976,
+    "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-18T23:48:23Z",
+    "completed_at": "2026-11-18T23:53:51Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682976",
+    "runner_name": "GitHub Actions 1000395500"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682976,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-18 23:54:34 UTC",
+    "bytes": 300973,
+    "sha256": "3edb52d9d99dd5588eee3ca2eb96caaf260ab8d00908a04b667c73ee8c2313a1",
+    "computedGitBlobSha": "b4fb01203719ce43c3feb6c32e1f16c17f1c30a1",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682976-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "b4fb01203719ce43c3feb6c32e1f16c17f1c30a1",
+    "exactReadback": true
+  },
+  "originalTerminalSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:48:51Z",
+      "completed_at": "2026-11-18T23:48:51Z"
+    },
+    {
+      "name": "Build existing Desktop prerequisites and verify admission",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-18T23:50:07Z",
+      "completed_at": "2026-11-18T23:50:44Z"
+    },
+    {
+      "name": "Capture package-manager and Host inputs without vendor executables",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13,
+      "started_at": "2026-11-18T23:50:46Z",
+      "completed_at": "2026-11-18T23:50:49Z"
+    },
+    {
+      "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 19,
+      "started_at": "2026-11-18T23:50:49Z",
+      "completed_at": "2026-11-18T23:53:46Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 38,
+      "started_at": "2026-11-18T23:53:46Z",
+      "completed_at": "2026-11-18T23:53:47Z"
+    },
+    {
+      "name": "Preserve original Desktop evidence, including failures",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 39,
+      "started_at": "2026-11-18T23:53:47Z",
+      "completed_at": "2026-11-18T23:53:48Z"
+    }
+  ],
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 31753.506728",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 201.764248",
+    "ℹ tests 13",
+    "ℹ pass 13",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 1289.536968"
+  ],
+  "artifact": {
+    "artifactId": 14484045585,
+    "phase": "GitHub-download-endpoint-permanently-retired",
+    "fileId": "file_00000000fdb881f4a992035dafdb65c9",
+    "bytes": 601701,
+    "sha256": "515798bc7fdfd0e337d5eef75a4e4d046f1961e7e8f9bb38888579499fe0702d",
+    "digestMatchesOriginalUploadLog": true,
+    "zipLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-import-lifecycle-linux-x64-14484045585.zip"
+  },
+  "originalReceipt": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682976-final-receipt.json",
+    "bytes": 472229,
+    "sha256": "b345f79c24ac9788736fa65b3e8c9422fd2c84bda33d83d55a32ef80a62fbc67",
+    "computedGitBlobSha": "6d7b60d97ffdd8a6b590c083f0c8d990dfcab565"
+  },
+  "originalProducerReceipt": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682976-producer-receipt.json",
+    "bytes": 124875,
+    "sha256": "32491641fd56c1c724c38819bbc6141bc2a8737b55b4123987debc2aa24a9431",
+    "computedGitBlobSha": "6de9f4fdb25e490850aca9a627a907f021507885"
+  },
+  "sourceBeforePin": {
+    "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-producer.ts",
+    "sha256": "626dfe43fc3cf2f90cf1663120824423b463a48e09748caf2cef2bb0ed95712a",
+    "matchesOriginalReceipt": true
+  },
+  "firstFailure": {
+    "producerStatus": "INCOMPLETE",
+    "phase": "reply",
+    "message": "original Main launch publication; original action is never repeated",
+    "readPathSuffix": "claude/teams/test-stopped-legacy/launch-state.json",
+    "predicate": "value.version === 2 && typeof value.publicationRunId === 'string' && typeof value.leadSessionId === 'string'",
+    "originalTimeoutMs": 90000,
+    "readAction": "Poll original publication record after the single Create-and-Launch and after the Create page disappeared; ENOENT is read as an empty object. No repeated action.",
+    "wrapperAssertion": "authentic finite producer must finish Stop/Quit and frozen cleanup: {\"phase\":\"reply\",\"failure\":\"original Main launch publication; original action is never repeated\"}\n+ actual - expected\n\n+ 'INCOMPLETE'\n- 'PASS'\n",
+    "laterFailureIsNotFirst": "The original exact-source/UI/cleanup workflow verifier fails after the authentic producer already failed. Import preparation was not reached."
+  },
+  "producerScope": {
+    "sourceKind": "actual-current-finite-solo",
+    "execution": "finite-legacy-bootstrap-protocol",
+    "scope": "Current frontend Create/Launch, visible finite reply, original Main Stop/release, UI Task and ordinary Quit",
+    "excluded": [
+      "genuine historical donor frontend",
+      "vendor CLI/inference/auth qualification",
+      "multi-member or Windows source release",
+      "native session adoption"
+    ],
+    "hostDescriptorPresent": false
+  },
+  "observedEvidence": {
+    "singleCreateLaunchClick": [
+      {
+        "action": "mouseClick",
+        "label": "Create and Launch original solo source exactly once",
+        "state": "attempted",
+        "selector": "[data-testid=\"create-team-page\"] button"
+      }
+    ],
+    "capturedFiniteSourceChild": {
+      "pid": 8532,
+      "ppid": 4795,
+      "pgid": 8532,
+      "startIdentity": "proc:29856",
+      "ancestry": [
+        4795,
+        4731,
+        4707,
+        4686,
+        4685,
+        4671
+      ]
+    },
+    "finitePeerEffectsPin": {
+      "zipMember": "TEST-desktop-backend-8S6RdP/finite-legacy-peer.ndjson",
+      "bytes": 4819,
+      "sha256": "ab4e26c733d0b5199c6361c99ef6ddf65b717ca1ffab0d1ba98d97a4778e6cf4"
+    },
+    "finitePeerEffects": [
+      {
+        "kind": "finite-legacy-bootstrap",
+        "pid": 8532,
+        "event": "bootstrap",
+        "runId": "d699cb4c-b562-40c3-b2f5-e2f96fbe8da1",
+        "sessionId": "94cf931c-ed60-4bbc-84e9-d02476aaaab5",
+        "teamName": "test-stopped-legacy",
+        "configPath": "/home/runner/work/_temp/TEST-desktop-backend-8S6RdP/claude/teams/test-stopped-legacy/config.json",
+        "transcriptPath": "/home/runner/work/_temp/TEST-desktop-backend-8S6RdP/claude/projects/-home-runner-work-_temp-TEST-desktop-backend-8S6RdP-workspace/94cf931c-ed60-4bbc-84e9-d02476aaaab5.jsonl",
+        "prompt": "TEST_CURRENT_LEGACY_SOLO_ONE",
+        "deferredPromptSha256": "b1f87bc6dd41d172d128d10524860d936202c5cbe941841502836ad8b32381fa",
+        "parentPid": 4795,
+        "mainOwnerPid": 4795,
+        "specPath": "/home/runner/work/_temp/TEST-desktop-backend-8S6RdP/tmp/agent-teams-bootstrap-c7279c48075f7c50-6zsaIj/bootstrap.json"
+      },
+      {
+        "kind": "finite-legacy-bootstrap",
+        "pid": 8532,
+        "event": "turn-completed",
+        "runId": "d699cb4c-b562-40c3-b2f5-e2f96fbe8da1",
+        "sessionId": "94cf931c-ed60-4bbc-84e9-d02476aaaab5",
+        "prompt": "TEST_CURRENT_LEGACY_SOLO_ONE",
+        "reply": "REPLY_TEST_CURRENT_LEGACY_SOLO_ONE"
+      }
+    ],
+    "laterRendererProvisioningSample": [
+      {
+        "teamName": "test-stopped-legacy",
+        "currentProvisioningRunId": "d699cb4c-b562-40c3-b2f5-e2f96fbe8da1",
+        "currentRuntimeRunId": "d699cb4c-b562-40c3-b2f5-e2f96fbe8da1",
+        "startedAtFloor": "2026-11-18T23:52:14.435Z",
+        "error": null,
+        "ignoredProvisioning": false,
+        "ignoredRuntime": false,
+        "progress": {
+          "runId": "d699cb4c-b562-40c3-b2f5-e2f96fbe8da1",
+          "teamName": "test-stopped-legacy",
+          "state": "ready",
+          "message": "Team provisioned — process alive and ready",
+          "startedAt": "2026-11-18T23:52:14.553Z",
+          "updatedAt": "2026-11-18T23:52:15.119Z",
+          "configReady": true,
+          "launchDiagnostics": [
+            {
+              "id": "workspace-trust:preflight",
+              "code": "workspace_trust_preflight",
+              "label": "Workspace trust preflight completed",
+              "severity": "info",
+              "observedAt": "2026-11-18T23:52:14.563Z"
+            }
+          ]
+        }
+      }
+    ],
+    "laterRendererDialogs": [],
+    "originalArtifactLaunchStateMembers": [],
+    "laterApplicationDiagnostics": [
+      {
+        "v": 1,
+        "t": "2026-11-18T23:52:15.121Z",
+        "level": "warn",
+        "process": "main",
+        "namespace": "Service:NotificationManager",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Native notifications not supported"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-18T23:53:46.091Z",
+        "level": "warn",
+        "process": "main",
+        "namespace": "Feature:Announcements",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "State transition {\"reason\":\"writer_busy\"}"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-18T23:53:46.306Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "OpenCodeLoopbackRuntimeRelease",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "[OpenCode] opencode_loopback_runtime_release_skipped phase=app_shutdown reason=no_launch_owned_runtime_evidence"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-18T23:53:46.329Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "MemberWorkSyncStartup",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown ingress close started"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-18T23:53:46.330Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "MemberWorkSyncStartup",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown writer drain started"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-18T23:53:46.369Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "MemberWorkSyncStartup",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown backup started after writer drain"
+      }
+    ]
+  },
+  "evidenceLimits": [
+    "A later renderer sample is ready and the finite peer recorded one completed turn; neither proves the required Main publication record satisfied the predicate before the original cutoff.",
+    "Absence of launch-state.json from the retained archive after cleanup does not establish its presence or contents at every earlier read.",
+    "The original wait has no per-read publication snapshot/exception transcript. Exact missing field or inner publication refusal is not established.",
+    "The source TEST app had no Host descriptor. It does not qualify Host import or retained-original selection."
+  ],
+  "unenteredSuccessBoundaries": [
+    "visible finite reply qualification",
+    "original Main Stop and native release",
+    "stopped source Task creation",
+    "ordinary successful Quit proof",
+    "completed frozen-source seed",
+    "Host import lifecycle"
+  ],
+  "cleanup": {
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4745,
+        "ppid": 1,
+        "pgid": 4671
+      }
+    ],
+    "cleanup": {
+      "remaining": [
+        {
+          "pid": 4745,
+          "ppid": 1,
+          "pgid": 4671
+        }
+      ],
+      "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+      "capturedHostAbsent": null
+    },
+    "sourcePeerAbsentAfterCleanup": true,
+    "inputsFrozen": true
+  },
+  "cleanupQualification": "INCOMPLETE: requested failure Quit returned app exit0 and the finite source peer is absent, but one original process-group member remains and the captured leader is absent. Existing cleanup correctly retained debt without signaling. capturedHostAbsent=null. No overall cleanup PASS.",
+  "sourceQualification": "Original initial selected-source hashes and pure fixture/candidate freeze checks are retained; the parent receipt has no completed selectedSourceHashesAfterFlow, so full original workflow source/receipt/cleanup verifier remains FAILURE.",
+  "decision": "Retain actual first failure and cleanup debt. No replay, native run, new deadline, arbitrary signaling or source fix was performed.",
+  "jobLogEndpointRetired": true
+}

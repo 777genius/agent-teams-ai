@@ -46,8 +46,9 @@ export function captureOpenCodeV2SessionCredential(
     if (!selectedFile && restored && restored.credential?.scopeDigest !== captured!.digest) return held();
     const catalog = await owner.readCatalog(providerId);
     check();
-    const integrationId = catalog.provider?.integrationId ??
-      (await owner.readDirectory()).integrations.find(row => row.id === providerId)?.id;
+    const integrationId = catalog.provider?.integrationId === undefined
+      ? (await owner.readDirectory()).integrations.find(row => row.id === providerId)?.id
+      : catalog.provider.integrationId;
     if (!integrationId) return held();
     const source = selectedFile ? nativeFile?.(integrationId) : undefined;
     if (selectedFile && !source) return held();

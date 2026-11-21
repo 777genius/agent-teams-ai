@@ -1,0 +1,617 @@
+{
+  "schemaVersion": 1,
+  "kind": "Original030RetainedDesktopCoordinatorAdmissionRefusal",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826466,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "job": {
+    "id": 135195248979,
+    "name": "Retained OpenCode V1 and Host V2 original Desktop",
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-18T23:43:03Z",
+    "completed_at": "2026-11-18T23:52:30Z",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_attempt": 1
+  },
+  "failedSteps": [
+    {
+      "name": "Exercise original retained V1 and new Host V2 controls once",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 20,
+      "started_at": "2026-11-18T23:48:31Z",
+      "completed_at": "2026-11-18T23:52:21Z"
+    },
+    {
+      "name": "Require original V2 source owners Repair member selection and cold history",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 23,
+      "started_at": "2026-11-18T23:52:21Z",
+      "completed_at": "2026-11-18T23:52:22Z"
+    },
+    {
+      "name": "Require original source publication active-session isolation and cold readback",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 24,
+      "started_at": "2026-11-18T23:52:22Z",
+      "completed_at": "2026-11-18T23:52:22Z"
+    },
+    {
+      "name": "Require complete same-source business, Stop, cold and cleanup evidence",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 25,
+      "started_at": "2026-11-18T23:52:22Z",
+      "completed_at": "2026-11-18T23:52:22Z"
+    }
+  ],
+  "rawLog": {
+    "jobId": 135195248979,
+    "requestedAt": "2026-11-18T23:53:32.114109+00:00",
+    "status": "captured-permanently-retired",
+    "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135195248979-terminal.log",
+    "bytes": 264560,
+    "sha256": "fcaa6748d260d4e1300134ed8687d16a90ad6180bda0187d50bc498490b558c9",
+    "capturedAt": "2026-11-18T23:53:38.222241+00:00",
+    "gitBlob": "3cb0ff01c6b64c582ebdc26b63dc56e2724e3d12",
+    "exactImmutableReadback": true
+  },
+  "artifact": {
+    "artifactId": 14483715821,
+    "expectedDigestProvenance": "original job upload log",
+    "zipBytes": 367886,
+    "zipSha256": "6f3385307518b093c101addf60cbc0fa11d40ad769f16948b6e23eefc12abe11",
+    "verifiedAt": "2026-11-18T23:54:03.482299+00:00"
+  },
+  "originalEvidenceReferences": [
+    {
+      "name": "retained-opencode-coexistence.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483715821/retained-opencode-coexistence.json",
+      "gitBlob": "42f226978a62e1ca21361a14d0f99718f1ec8844",
+      "exactImmutableReadback": true,
+      "bytes": 9293,
+      "sha256": "1cf49804eb0736f69816d03c03bed8a81cdb2ccfa810f3cc2a2ba057c5757dd0"
+    },
+    {
+      "name": "retained-opencode-inputs.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483715821/retained-opencode-inputs.json",
+      "gitBlob": "c9f8d6fd70f14954f672cd55d919e7e898d6bb0a",
+      "exactImmutableReadback": true,
+      "bytes": 8854,
+      "sha256": "702512bf002a602be3c912a79bd6d08d7e921bea6ef80baa1979044c06b29df0"
+    },
+    {
+      "name": "retained-opencode-v2-inputs.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483715821/retained-opencode-v2-inputs.json",
+      "gitBlob": "b1cba92b438a5d1d98f970d121a3658a3bf2d495",
+      "exactImmutableReadback": true,
+      "bytes": 783,
+      "sha256": "98d09a9e3c2808fef473d1ccc91527d9f336a32349184e52cac4fe8c12f4ead1"
+    },
+    {
+      "name": "TEST-desktop-backend-Np69SF/coexistence-app-0.log",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483715821/TEST-desktop-backend-Np69SF/coexistence-app-0.log",
+      "gitBlob": "5bc9b072b7f1215d533f861ae810102d27332253",
+      "exactImmutableReadback": true,
+      "bytes": 13994,
+      "sha256": "f31e9d0312c03984ee14316737df9a3d7a51869a2aff337c4affcded6f479442"
+    },
+    {
+      "name": "TEST-desktop-backend-Np69SF/coexistence-app-1.log",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483715821/TEST-desktop-backend-Np69SF/coexistence-app-1.log",
+      "gitBlob": "643f8e449510e816960b4d5729f302f90bae9741",
+      "exactImmutableReadback": true,
+      "bytes": 7125,
+      "sha256": "153969d81712eccd78088558fbe4952b30b953cf0296723e5e550cb2918b8fdb"
+    }
+  ],
+  "originalReceipt": {
+    "kind": "TEST_NATIVE_RETAINED_V1_HOST_V2_DESKTOP",
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "status": "FAIL",
+    "platform": "linux-x64",
+    "build": {
+      "hostSourceDigest": "d606b96c26666f68e2bb861dcd62eeaed1608191a35253958ca4b01d0e79f49e",
+      "hostDistDigest": "0147ae16ef6b984234f3be6a0b3a4600e933956d871087ce58a83e9fd9ce7aa7",
+      "providerDigest": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7"
+    },
+    "steps": [
+      {
+        "observed": "actual_legacy_fork_V1_history_before_new_Host_selection",
+        "runId": "7c0b0054-e507-4366-8106-03044de214af",
+        "nativeSessionId": "ses_e0eee27e5ffelv1kB9zVAJYMGn",
+        "taskId": "3214acd8-1629-42e5-b9c5-ba7b132da98d",
+        "history": {
+          "provider": "opencode_runtime",
+          "laneId": "primary",
+          "nativeSessionId": "ses_e0eee27e5ffelv1kB9zVAJYMGn",
+          "replyUuid": "msg_1f112230e001f2IBwivtSkN0Zf",
+          "replyContentSha256": "6fe620afc85a5ef2ee908760a25b012bf3138eed1573eaabf7a24119f836c9d2"
+        },
+        "seedProcesses": [
+          {
+            "pid": 6747,
+            "ppid": 6746,
+            "group": 6746,
+            "birth": "50030",
+            "state": "R",
+            "executable": "/home/runner/work/_temp/TEST-desktop-backend-Np69SF/legacy-runtime-data/opencode/profiles/scope-e78879c06d9f4c02757f558dde8b58dd17e8c209aab43189553d41fa97a2a0ba/host-authority/3dc9248516860a47270ff966a1daf354ca7bdc1095641eb2d121522c8f871809/images/2ddc12212e08bb2be9012d17e18f936a48301b2878386ebe26a93e9dbc6525a4/opencode",
+            "sha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+            "dev": "2049",
+            "ino": "9992487"
+          }
+        ]
+      }
+    ],
+    "processBaseline": [
+      {
+        "pid": 1234,
+        "birth": "1182"
+      },
+      {
+        "pid": 1264,
+        "birth": "1190"
+      },
+      {
+        "pid": 2088,
+        "birth": "1457"
+      },
+      {
+        "pid": 2202,
+        "birth": "5382"
+      },
+      {
+        "pid": 2222,
+        "birth": "5629"
+      },
+      {
+        "pid": 5406,
+        "birth": "38333"
+      },
+      {
+        "pid": 5442,
+        "birth": "38388"
+      },
+      {
+        "pid": 5443,
+        "birth": "38388"
+      },
+      {
+        "pid": 5449,
+        "birth": "38392"
+      }
+    ],
+    "vendorAuthQualified": false,
+    "releaseQualified": false,
+    "root": "/home/runner/work/_temp/TEST-desktop-backend-Np69SF",
+    "inputs": {
+      "v1": {
+        "version": "1.19.4",
+        "sha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+      },
+      "retainedRuntime": {
+        "version": "0.0.158",
+        "cliVersion": "2.777.777 (Claude Code)",
+        "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+        "sha256": "b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd",
+        "sourceBuiltRetainedHelper": {
+          "kind": "EXACT_RELEASE_SOURCE_BUILD",
+          "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+          "sourceRepository": "777genius/agent_teams_orchestrator",
+          "sourceTree": "0dbb5a59f199337dec51c82c16b81eb277cd7457",
+          "manifest": {
+            "schemaVersion": 1,
+            "platform": "linux",
+            "arch": "x64",
+            "size": 985408,
+            "sha256": "f7925ea34f749981633c9d2b8c02de984dceaf7e5449b31cd9a6ceb82dae9e3c",
+            "sourceSha256": "86896bedd1555aa1f34351def4ee24bb6811f12422c062709c96148c6e86519e"
+          },
+          "manifestSha256": "276e84dfe719eb759386766a8c5a2f62ec8aa6a555bcdadf60c5ce2c30e892b7",
+          "buildScriptSha256": "95c78e23fa018812612adba89e3efcb35a3275913e209191ac865472a86269dd",
+          "validatorSha256": "73703ca097b06263037dc8a539dd95b90f9e51faa0492efa587663337bfcb892",
+          "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+          "publishedRuntimeComplete": false
+        },
+        "appSource": {
+          "root": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+          "commit": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+          "tree": "ec540290c86af9755c94e52ac795aeda8586a98f",
+          "lockSha256": "1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d",
+          "stageScriptSha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be"
+        },
+        "archiveSha256": "4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d"
+      },
+      "v2": {
+        "version": "2.1.4",
+        "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+      },
+      "profileSha256": "e5ffca5bd4b9d9ec71806273b64fc990a656d849a2c2e124a9f569a63236a540",
+      "descriptorSha256": "1efe80dbe1e388d7644993db816054a5abb21a6c6db417d98ead362043fbe1f4",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    "legacyReadiness": {
+      "runId": "7c0b0054-e507-4366-8106-03044de214af",
+      "spawnRunId": "7c0b0054-e507-4366-8106-03044de214af",
+      "alive": true,
+      "bootstrapConfirmed": true,
+      "historicalBootstrapConfirmed": true,
+      "nativeSessionPresent": true,
+      "status": "online"
+    },
+    "legacyHistoryRead": {
+      "laneId": "primary",
+      "nativeSessionId": "ses_e0eee27e5ffelv1kB9zVAJYMGn",
+      "coverage": [
+        {
+          "provider": "claude_transcript",
+          "status": "skipped",
+          "reason": "no_member_transcripts"
+        },
+        {
+          "provider": "opencode_runtime",
+          "status": "included"
+        },
+        {
+          "provider": "codex_native_trace",
+          "status": "skipped",
+          "reason": "codex_member_wide_not_supported"
+        }
+      ],
+      "warnings": [],
+      "sources": [
+        {
+          "provider": "opencode_runtime",
+          "label": "OpenCode runtime",
+          "sessionId": "ses_e0eee27e5ffelv1kB9zVAJYMGn",
+          "laneId": "primary",
+          "messageCount": 2,
+          "truncated": false
+        }
+      ],
+      "actors": [
+        {
+          "memberName": "bob",
+          "role": "member",
+          "sessionId": "ses_e0eee27e5ffelv1kB9zVAJYMGn",
+          "isSidechain": true
+        }
+      ],
+      "responses": [
+        {
+          "type": "assistant",
+          "role": "assistant",
+          "sessionId": "ses_e0eee27e5ffelv1kB9zVAJYMGn",
+          "uuid": "msg_1f112230e001f2IBwivtSkN0Zf",
+          "expectedTextMatched": true
+        }
+      ]
+    },
+    "failure": "Original runtime open was not confirmed; {\"reason\":\"not-eligible\",\"outcome\":\"not-dispatched\"}\n\n'failed' !== 'done'\n",
+    "cleanupFailures": [],
+    "retainedOpenDiagnostic": {
+      "status": "observed",
+      "phase": "coordinator-admission",
+      "category": "unknown",
+      "outcome": "not-dispatched"
+    },
+    "cleanup": true,
+    "modelObservations": [
+      {
+        "owner": "legacy",
+        "marker": null,
+        "tools": []
+      },
+      {
+        "owner": "legacy",
+        "marker": null,
+        "tools": [],
+        "strictLaunch": {
+          "model": "TEST-model",
+          "challenge": "STRICT_LAUNCH_a4e10f5f-8d53-42d1-90d3-b627dac945bb"
+        }
+      },
+      {
+        "owner": "legacy",
+        "marker": "TEST_RETAINED_V1_HISTORY",
+        "tools": [
+          "agent-teams_app_get_connection_info",
+          "agent-teams_cross_team_get_outbox",
+          "agent-teams_cross_team_list_targets",
+          "agent-teams_cross_team_send",
+          "agent-teams_group_chat_create",
+          "agent-teams_group_chat_list",
+          "agent-teams_group_chat_react",
+          "agent-teams_group_chat_send",
+          "agent-teams_kanban_add_reviewer",
+          "agent-teams_kanban_clear",
+          "agent-teams_kanban_get",
+          "agent-teams_kanban_list_reviewers",
+          "agent-teams_kanban_remove_reviewer",
+          "agent-teams_kanban_set_column",
+          "agent-teams_lead_briefing",
+          "agent-teams_member_briefing",
+          "agent-teams_member_work_sync_report",
+          "agent-teams_member_work_sync_status",
+          "agent-teams_message_send",
+          "agent-teams_process_list",
+          "agent-teams_process_register",
+          "agent-teams_process_stop",
+          "agent-teams_process_unregister",
+          "agent-teams_review_approve",
+          "agent-teams_review_complete",
+          "agent-teams_review_request",
+          "agent-teams_review_request_changes",
+          "agent-teams_review_start",
+          "agent-teams_runtime_bootstrap_checkin",
+          "agent-teams_runtime_deliver_message",
+          "agent-teams_runtime_heartbeat",
+          "agent-teams_runtime_task_event",
+          "agent-teams_task_add_comment",
+          "agent-teams_task_attach_comment_file",
+          "agent-teams_task_attach_file",
+          "agent-teams_task_briefing",
+          "agent-teams_task_complete",
+          "agent-teams_task_create",
+          "agent-teams_task_create_from_message",
+          "agent-teams_task_get",
+          "agent-teams_task_get_comment",
+          "agent-teams_task_link",
+          "agent-teams_task_list",
+          "agent-teams_task_restore",
+          "agent-teams_task_set_clarification",
+          "agent-teams_task_set_owner",
+          "agent-teams_task_set_status",
+          "agent-teams_task_start",
+          "agent-teams_task_unlink",
+          "agent-teams_team_create",
+          "agent-teams_team_get",
+          "agent-teams_team_launch",
+          "agent-teams_team_list",
+          "agent-teams_team_stop",
+          "agent-teams_team_trash",
+          "agent-teams_team_update",
+          "bash",
+          "edit",
+          "glob",
+          "grep",
+          "read",
+          "todowrite",
+          "write"
+        ]
+      }
+    ],
+    "modelFailures": []
+  },
+  "firstFailureLog": [
+    {
+      "line": 2018,
+      "text": "2026-11-18T23:52:21.9552833Z TEST retained open diagnostic {\"status\":\"observed\",\"phase\":\"coordinator-admission\",\"category\":\"unknown\",\"outcome\":\"not-dispatched\"}"
+    },
+    {
+      "line": 2019,
+      "text": "2026-11-18T23:52:21.9598549Z \u2716 original Electron retains legacy fork V1 while routing new Host V2 and isolating both Stop controls (230009.467384ms)"
+    },
+    {
+      "line": 2020,
+      "text": "2026-11-18T23:52:21.9872163Z \u2139 tests 1"
+    },
+    {
+      "line": 2021,
+      "text": "2026-11-18T23:52:21.9872838Z \u2139 suites 0"
+    },
+    {
+      "line": 2022,
+      "text": "2026-11-18T23:52:21.9873447Z \u2139 pass 0"
+    },
+    {
+      "line": 2023,
+      "text": "2026-11-18T23:52:21.9874041Z \u2139 fail 1"
+    },
+    {
+      "line": 2024,
+      "text": "2026-11-18T23:52:21.9874648Z \u2139 cancelled 0"
+    },
+    {
+      "line": 2025,
+      "text": "2026-11-18T23:52:21.9875229Z \u2139 skipped 0"
+    },
+    {
+      "line": 2026,
+      "text": "2026-11-18T23:52:21.9875847Z \u2139 todo 0"
+    },
+    {
+      "line": 2027,
+      "text": "2026-11-18T23:52:21.9876501Z \u2139 duration_ms 230222.436321"
+    },
+    {
+      "line": 2028,
+      "text": "2026-11-18T23:52:21.9886043Z "
+    },
+    {
+      "line": 2029,
+      "text": "2026-11-18T23:52:21.9886446Z \u2716 failing tests:"
+    },
+    {
+      "line": 2030,
+      "text": "2026-11-18T23:52:21.9886713Z "
+    },
+    {
+      "line": 2031,
+      "text": "2026-11-18T23:52:21.9887460Z test at scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts:41:1"
+    },
+    {
+      "line": 2032,
+      "text": "2026-11-18T23:52:21.9890377Z \u2716 original Electron retains legacy fork V1 while routing new Host V2 and isolating both Stop controls (230009.467384ms)"
+    },
+    {
+      "line": 2033,
+      "text": "2026-11-18T23:52:21.9892134Z   AssertionError [ERR_ASSERTION]: Original runtime open was not confirmed; {\"reason\":\"not-eligible\",\"outcome\":\"not-dispatched\"}"
+    },
+    {
+      "line": 2034,
+      "text": "2026-11-18T23:52:21.9893227Z   "
+    },
+    {
+      "line": 2035,
+      "text": "2026-11-18T23:52:21.9893609Z   'failed' !== 'done'"
+    },
+    {
+      "line": 2036,
+      "text": "2026-11-18T23:52:21.9894019Z   "
+    },
+    {
+      "line": 2037,
+      "text": "2026-11-18T23:52:21.9895249Z       at Object.call (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-retained-opencode-app.ts:214:14)"
+    },
+    {
+      "line": 2038,
+      "text": "2026-11-18T23:52:21.9897655Z       at async TestContext.<anonymous> (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts:317:28)"
+    },
+    {
+      "line": 2039,
+      "text": "2026-11-18T23:52:21.9900132Z       at async Test.run (node:internal/test_runner/test:1409:7)"
+    },
+    {
+      "line": 2040,
+      "text": "2026-11-18T23:52:21.9901210Z       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {"
+    },
+    {
+      "line": 2041,
+      "text": "2026-11-18T23:52:21.9902092Z     generatedMessage: false,"
+    },
+    {
+      "line": 2042,
+      "text": "2026-11-18T23:52:21.9902603Z     code: 'ERR_ASSERTION',"
+    },
+    {
+      "line": 2043,
+      "text": "2026-11-18T23:52:21.9903065Z     actual: 'failed',"
+    },
+    {
+      "line": 2044,
+      "text": "2026-11-18T23:52:21.9903455Z     expected: 'done',"
+    },
+    {
+      "line": 2045,
+      "text": "2026-11-18T23:52:21.9903837Z     operator: 'strictEqual',"
+    }
+  ],
+  "originalApp1RelevantLines": [
+    {
+      "line": 89,
+      "text": "[Feature:AgentBackendConnections] Captured backend discovery held { phase: 'discover-bindings', code: 'unavailable' }"
+    },
+    {
+      "line": 90,
+      "text": "[IPC:openCodeRuntime] Error in openCodeRuntime:getStatus: Backend routing: unavailable"
+    }
+  ],
+  "scope": [
+    "Only original legacy V1 history stage completed. Failed action is the retained V1 re-launch after app1 selected Host; it precedes new V2 business-runtime launch.",
+    "Original seed legacy readiness online,bootstrapconfirmed,historyincluded are limited pre-upgrade facts; retained V1 re-launch, new V2 coexistence, and later Stop/cold paths are unqualified.",
+    "First assertion is coordinator-admission unknown/not-dispatched at desktop-retained-opencode-app.ts214 called by native.ts317.",
+    "Original app1 discovery held discover-bindings/unavailable and status routing unavailable are corroborating observations, not an atomic causal diagnosis.",
+    "Later source-selection receipts missing; step23/24 ENOENT and step25 FAIL!=PASS follow the original controls failure.",
+    "Final original cleanuptrue and empty cleanupFailures/modelFailures do not qualify missing business/Stop/cold/V2 paths."
+  ],
+  "noManualRerun": true,
+  "noLocalAppExecution": true,
+  "failedActionSource": {
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "repositoryPath": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+    "sha256": "1ca3df4b0f1465406b6b0c8b0221fe01c033086e882e16f169a1f5a2c59039b1",
+    "gitBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+    "selectedLines": [
+      {
+        "line": 306,
+        "text": "    app = await start(1);"
+      },
+      {
+        "line": 307,
+        "text": "    await waitLegacyControl();"
+      },
+      {
+        "line": 308,
+        "text": "    const retainedData = await callTeams('getData', [legacyTeam]);"
+      },
+      {
+        "line": 309,
+        "text": "    assert.deepEqual(retainedData.tasks, savedLegacy.tasks);"
+      },
+      {
+        "line": 310,
+        "text": "    assert.deepEqual(retainedData.messages, savedLegacy.messages);"
+      },
+      {
+        "line": 311,
+        "text": "    assert.deepEqual(await readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'), historicalReply,"
+      },
+      {
+        "line": 312,
+        "text": "      JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));"
+      },
+      {
+        "line": 313,
+        "text": "    assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);"
+      },
+      {
+        "line": 314,
+        "text": "    assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');"
+      },
+      {
+        "line": 315,
+        "text": "    legacyStopped = false;"
+      },
+      {
+        "line": 316,
+        "text": "    retainedOpenAttempt = { mainPid: app.electron.pid, teamName: legacyTeam, intentId: 'TEST-coexist-retained-original-once' };"
+      },
+      {
+        "line": 317,
+        "text": "    const retainedLaunch = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-original-once',"
+      },
+      {
+        "line": 318,
+        "text": "      request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',"
+      },
+      {
+        "line": 319,
+        "text": "        skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);"
+      },
+      {
+        "line": 320,
+        "text": "    retainedOpenAttempt = undefined;"
+      },
+      {
+        "line": 321,
+        "text": "    assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);"
+      },
+      {
+        "line": 322,
+        "text": "    await waitLegacyRuntime(retainedLaunch.runId);"
+      },
+      {
+        "line": 323,
+        "text": "    const legacyProcesses = await legacyChildren();"
+      },
+      {
+        "line": 324,
+        "text": "    assert.ok(legacyProcesses.length > 0); natives.push(...legacyProcesses);"
+      },
+      {
+        "line": 325,
+        "text": "    steps.push({ observed: 'retained_legacy_fork_owner_before_new_Host_runtime', runId: retainedLaunch.runId, legacyProcesses });"
+      },
+      {
+        "line": 326,
+        "text": "    const selection = await host('team.launch.read', 'TEST-coexist-launch-read', {}); assert.equal(selection.ok, true);"
+      }
+    ]
+  },
+  "classificationCorrection": "The original assertion says runtime open generically; exact call at317 is retainedOpenCodeLaunchExpression for retained legacy V1, not new Host V2 business launch."
+}

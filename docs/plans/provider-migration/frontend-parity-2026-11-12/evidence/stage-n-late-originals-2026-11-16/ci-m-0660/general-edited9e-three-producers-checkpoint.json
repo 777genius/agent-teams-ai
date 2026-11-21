@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "kind": "historical9e edited-General three original completed producers",
+  "runId": 43776996041,
+  "sourceHead": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "syntheticMerge": "7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf",
+  "sourceTree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+  "result": "APPROVE source-bound historical evidence",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-validate-original.log",
+      "bytes": 105875,
+      "blob": "6016679f6589e4b8651189e4bf793b1fb21149e8",
+      "sha256": "541bf8a7a44494ad0da5b5c0377fefd5e0278bb0b38687328f67ca453e2ba976"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-validate-original-log-response.json",
+      "bytes": 123457,
+      "blob": "c410cac3240478ea0da3f73a5379217a93091851",
+      "sha256": "74ea67a5a966e3bc2750151543ffa2ca1141df72925323e9b4d94c1e8652bd06"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-main-original.log",
+      "bytes": 1337264,
+      "blob": "e69931658372732a003c3118db010a04d05f7684",
+      "sha256": "eeb1ea4d572e7b42a716b6cdbe3d548a928e89fa4db3304b05d662391410b0d7"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-main-original-log-response.json",
+      "bytes": 1346136,
+      "blob": "50c4c931aa19665876c18a52d9972e0217d8d62f",
+      "sha256": "b7ab4be726981ce989c96e700c0c12ca14fb7483b872be4c3e05de8e99a9a84d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard4-original.log",
+      "bytes": 209979,
+      "blob": "e0eab264998d76c3f8383cdad398c309d4c648af",
+      "sha256": "a8e329923e5b8c460455aaf13f5956018db89152b184006eecb3706e87535226"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard4-original-log-response.json",
+      "bytes": 255928,
+      "blob": "22446dcb348eebd2034e44691f7da4882d6629cf",
+      "sha256": "40eb79fb15bc944dfbc2a916a2f6a799190e572702dc081a18c3ad2f7d0d0f4a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-9e-edited-jobs-023946.json",
+      "bytes": 21984,
+      "blob": "5b5fad6eef05e9a1cf5b7ebd3ded9177184b7c66",
+      "sha256": "4db2ed352f74d91b5439de860e9be5c74592fcb0840d9d947dd2e1291f363993"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-merge-commit-original.json",
+      "bytes": 2653,
+      "blob": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "sha256": "fca04f15e204a0dfde01b6896c97b26f093fbca514b8fbe0370f80cc379a97f6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-ledger-windows-independent-review.json",
+      "bytes": 35520,
+      "blob": "8d2a638a3f7deccf6d57170fdced769dde770928",
+      "sha256": "e3c3539608bdc46c0640bae6cde9c96fc86ab77b962b5e9862b9b5dfc1bf6ca8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-plan-original.log",
+      "bytes": 117646,
+      "blob": "a97b54613c6c95bcf4b9d663a81ea8029a2ed4f9",
+      "sha256": "c60aef2d978d1d1def2b4107783b50bb5ea501b9bf07204fc1f3fb62dc631f71"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-plan-original-log-response.json",
+      "bytes": 118835,
+      "blob": "9353fdabfb829c4b1dbaf04ce0b84444706bc232",
+      "sha256": "5e6c2db2ee034130ca01129d59a0ebd109edbd2c9d7f528fdc6d9832d234816a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-three-producers-independent-review.json",
+      "bytes": 353611,
+      "blob": "582ca153c120ed1e3049ccc018fbae105a018a50",
+      "sha256": "6a6acda4d53e391cd0975fcbb9d5dfc84f8cd647ff814c7b14a5eb8d4e11b91d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/Plan29-general-edited9e-three-producers-appendix.md",
+      "bytes": 5243,
+      "blob": "87cf0bab96bf590562350432e5ff7b0096dd4b6b",
+      "sha256": "5aa0014e7e92ddff55d37880f24256b4ee8fe1a20df806bf4d31e649c0c06445"
+    }
+  ],
+  "rawLogBytes": 1653118,
+  "originalJobIds": {
+    "validate": 133026000681,
+    "lint-main": 133026000715,
+    "test-shard4": 133026000848
+  },
+  "currentMTransfer": false,
+  "newCiObservationPerformed": false,
+  "limits": "Historical source only; skips and warnings preserved; no reclassification of K -9 or two137 compiler results. Source identities embedded in audit, not a claim to retain all produced outputs."
+}

@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import { CapturedProcess } from './CapturedProcess.js';
+import { runtimeSourceVersionProfile } from './runtimeSourceVersionProfile.js';
 import { RuntimeSourceAdmissionError } from '../../composition/runtimeSourceQualification.js';
 import type { CapturedProcessPort, CapturedProcessProfile } from './CapturedProcess.js';
 import type { RuntimeSourceCandidate } from '../../composition/runtimeSourceContracts.js';
@@ -9,32 +10,6 @@ import type {
   RuntimeSourceNativeIdentity,
 } from '../../management/runtimeSourceVerification.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
-
-const environmentNames = new Set([
-  'HOME',
-  'PATH',
-  'TMP',
-  'TEMP',
-  'TMPDIR',
-  'SYSTEMROOT',
-  'WINDIR',
-  'LOCALAPPDATA',
-  'APPDATA',
-  'LANG',
-  'LC_ALL',
-  'CLAUDE_CONFIG_DIR',
-  'CODEX_HOME',
-  'XDG_CONFIG_HOME',
-  'XDG_DATA_HOME',
-  'XDG_CACHE_HOME',
-]);
-
-/** Version reads receive no credentials, provider config, loader flags or ambient process.env. */
-function versionEnvironment(seed: Readonly<Record<string, string>>): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(seed).filter(([key]) => environmentNames.has(key.toUpperCase()))
-  );
-}
 
 export function parseRuntimeSourceNativeVersion(
   provider: ProviderManagementProfile['provider'],
@@ -53,7 +28,13 @@ export function parseRuntimeSourceNativeVersion(
   return value;
 }
 
-/** At most two owned, noninteractive --version children under one existing source receipt. */
+/**
+ * At most two owned, noninteractive --version children under one existing source receipt.
+ * Each seed/candidate executable inherits CapturedProcess's original-path contract A,
+ * bound to its own copied path and sha256. Version output or allocation cancellation
+ * does not release that contract: retain each original process until close confirms
+ * cleanup, while any other original scope consuming the source remains covered.
+ */
 export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
   private readonly processes = new Set<CapturedProcessPort>();
   private readonly abort = new AbortController();
@@ -97,13 +78,7 @@ export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
     const remaining = this.deadline - performance.now();
     if (remaining <= 0) throw new RuntimeSourceAdmissionError('native-outcome-unknown');
     const process = this.createProcess(
-      {
-        provider: this.seed.provider,
-        cwd: this.seed.cwd,
-        executable,
-        environment: versionEnvironment(this.seed.environment),
-        ...(this.seed.windowsBroker ? { windowsBroker: { ...this.seed.windowsBroker } } : {}),
-      },
+      runtimeSourceVersionProfile(this.seed, executable),
       () => !this.abort.signal.aborted && this.isCurrent(),
       this.processCustody
     );

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo } from 'react';
 
+import { useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
 import {
   isCodexAccountSnapshotPending,
   mergeCodexCliStatusWithSnapshot,
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { useConservativeNow } from '@renderer/hooks/useConservativeNow';
 import { useStore } from '@renderer/store';
 import {
   createLoadingMultimodelCliStatus,
@@ -25,26 +27,6 @@ export interface EffectiveCliProviderStatusSnapshot {
   providerStatus: CliProviderStatus | null;
   loading: boolean;
   codexSnapshotPending: boolean;
-}
-
-interface ConservativeClockSnapshot {
-  source: unknown;
-  now: number;
-}
-
-/** Revalidates each source before paint without reading the clock during render. */
-function useConservativeNow(source: unknown): readonly [number, (now: number) => void] {
-  const [snapshot, publishSnapshot] = useReducer(
-    (_current: ConservativeClockSnapshot, next: ConservativeClockSnapshot) => next,
-    { source: null, now: Number.POSITIVE_INFINITY }
-  );
-  const publishNow = useCallback((now: number) => publishSnapshot({ source, now }), [source]);
-
-  useLayoutEffect(() => {
-    publishNow(Date.now());
-  }, [publishNow]);
-
-  return [Object.is(snapshot.source, source) ? snapshot.now : Number.POSITIVE_INFINITY, publishNow];
 }
 
 export { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
@@ -179,10 +161,14 @@ export function useEffectiveCliProviderStatus(
   providerId: CliProviderId | undefined,
   options: { projectPath?: string | null } = {}
 ): EffectiveCliProviderStatusSnapshot {
+  const retained = useRetainedLegacyLaunch();
+  const original = useRetainedLegacyRuntimeStatus(options.projectPath);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
-  const cliStatus = useStore((s) => s.cliStatus);
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
-  const scopedProviderStatus = useStore((s) => {
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const cliStatus = retained ? original.status : storedCliStatus;
+  const storedLoading = useStore((s) => s.cliStatusLoading);
+  const cliStatusLoading = retained ? original.loading : storedLoading;
+  const storedProviderStatus = useStore((s) => {
     if (!providerId || !options.projectPath?.trim()) {
       return null;
     }
@@ -192,6 +178,7 @@ export function useEffectiveCliProviderStatus(
     );
   });
 
+  const scopedProviderStatus = retained ? (original.status?.providers.find((p) => p.providerId === providerId) ?? null) : storedProviderStatus;
   const loadingCliStatus = useMemo(
     () =>
       !cliStatus && cliStatusLoading && multimodelEnabled

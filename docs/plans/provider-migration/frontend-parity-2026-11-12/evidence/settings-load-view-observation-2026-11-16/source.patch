@@ -1,0 +1,788 @@
+diff --git a/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts b/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts
+index 1176fd06b70f1b717ba83deb387f87b05b18b45b..48a951b2ddec9970fcaa1efa64be061e8e00b3d2 100644
+--- a/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts
++++ b/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts
+@@ -7,7 +7,6 @@
+ import {
+   getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,
+   getRuntimeProviderCredentialUrl,
+-  selectInitialProviderId,
+   selectRuntimeProviderSetupAuthOptionId,
+   supportsScopedDefaultModelInheritance,
+ } from '../../core/domain';
+@@ -62,6 +61,7 @@
+   refreshAfterModelTest,
+   startModelTest,
+ } from './runtimeProviderModelTestState';
++import { refreshRuntimeProviderView } from './runtimeProviderViewRefresh';
+ import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
+ import { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectContext';
+ 
+@@ -449,67 +449,25 @@
+     settledRuntimeRevision,
+   ]);
+   const refresh = useCallback(
+-    async (input: { silent?: boolean } = {}): Promise<boolean> => {
+-      if (!options.enabled) {
+-        return true;
+-      }
+-      viewRequestedRef.current = true;
+-      const projectContext = getProjectContextSnapshot();
+-      const requestSeq = viewLoadRequestSeq.current + 1;
+-      viewLoadRequestSeq.current = requestSeq;
+-      const requestIsCurrent = (): boolean =>
+-        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);
+-      const silent = input.silent === true;
+-      if (!silent) {
+-        setLoading(true);
+-      }
+-      setError(null);
+-      setErrorDiagnostics(null);
+-      try {
+-        const response = await api.runtimeProviderManagement.loadView({
+-          ...connectionForm.runtimeProviderContext(
+-            options.runtimeId,
+-            projectContext.path,
+-            options.connectionContextToken
+-          ),
+-        });
+-        if (!requestIsCurrent()) {
+-          return false;
+-        }
+-        if (response.error) {
+-          if (!silent) {
+-            setView(null);
+-          }
+-          setError(response.error.message);
+-          setErrorDiagnostics(response.error.diagnostics ?? null);
+-          return false;
+-        }
+-        const nextView = presentManagementView(response.view ?? null);
+-        setView(nextView);
+-        setSelectedModelId(nextView?.defaultModel ?? null);
+-        setSelectedProviderId((current) => {
+-          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {
+-            return current;
+-          }
+-          return selectInitialProviderId(nextView);
+-        });
+-        return true;
+-      } catch (loadError) {
+-        if (!requestIsCurrent()) {
+-          return false;
+-        }
+-        if (!silent) {
+-          setView(null);
+-        }
+-        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');
+-        setErrorDiagnostics(null);
+-        return false;
+-      } finally {
+-        if (!silent && requestIsCurrent()) {
+-          setLoading(false);
+-        }
+-      }
+-    },
++    (input: { silent?: boolean } = {}): Promise<boolean> =>
++      refreshRuntimeProviderView(
++        {
++          enabled: options.enabled,
++          runtimeId: options.runtimeId,
++          connectionContextToken: options.connectionContextToken,
++          getProjectContextSnapshot,
++          isProjectContextCurrent,
++          viewRequestedRef,
++          viewLoadRequestSeq,
++          setLoading,
++          setError,
++          setErrorDiagnostics,
++          setView,
++          setSelectedModelId,
++          setSelectedProviderId,
++        },
++        input
++      ),
+     [
+       getProjectContextSnapshot,
+       isProjectContextCurrent,
+diff --git a/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts b/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..ae36029a51a805c1a1a45e17fd08fa3874d8c85e
+--- /dev/null
++++ b/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts
+@@ -0,0 +1,174 @@
++import { api } from '@renderer/api';
++
++import { selectInitialProviderId } from '../../core/domain';
++
++import * as connectionForm from './runtimeProviderConnectInput';
++import { presentManagementView } from './runtimeProviderManagementPresentation';
++
++import type { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectContext';
++import type {
++  RuntimeProviderManagementErrorDiagnosticsDto,
++  RuntimeProviderManagementRuntimeId,
++  RuntimeProviderManagementViewDto,
++} from '@features/runtime-provider-management/contracts';
++import type { Dispatch, SetStateAction } from 'react';
++
++type RefreshContext = ReturnType<typeof useRuntimeProviderProjectContext> & {
++  enabled: boolean;
++  runtimeId: RuntimeProviderManagementRuntimeId;
++  connectionContextToken?: string;
++  viewRequestedRef: { current: boolean };
++  viewLoadRequestSeq: { current: number };
++  setLoading: Dispatch<SetStateAction<boolean>>;
++  setError: Dispatch<SetStateAction<string | null>>;
++  setErrorDiagnostics: Dispatch<SetStateAction<RuntimeProviderManagementErrorDiagnosticsDto | null>>;
++  setView: Dispatch<SetStateAction<RuntimeProviderManagementViewDto | null>>;
++  setSelectedModelId: Dispatch<SetStateAction<string | null>>;
++  setSelectedProviderId: Dispatch<SetStateAction<string | null>>;
++};
++
++type ViewLoadPhase =
++  | 'start'
++  | 'response-checked'
++  | 'response-error'
++  | 'view-set'
++  | 'error-checked'
++  | 'finished';
++
++const diagnosticOwners = new WeakMap<object, number>();
++let nextDiagnosticOwner = 0;
++const inheritanceFieldNames = [
++  'configuredModels',
++  'projectPath',
++  'projectDefaultModel',
++  'allProjectsDefaultModel',
++  'defaultModelSource',
++] as const;
++
++/** The original refresh operation; passive records never control its result or currentness. */
++export async function refreshRuntimeProviderView(
++  context: RefreshContext,
++  input: { silent?: boolean } = {}
++): Promise<boolean> {
++  if (!context.enabled) {
++    return true;
++  }
++  context.viewRequestedRef.current = true;
++  const projectContext = context.getProjectContextSnapshot();
++  const requestSeq = context.viewLoadRequestSeq.current + 1;
++  context.viewLoadRequestSeq.current = requestSeq;
++  let sequenceCurrent: boolean | null = null;
++  let contextCurrent: boolean | null = null;
++  const requestIsCurrent = (): boolean => {
++    sequenceCurrent = context.viewLoadRequestSeq.current === requestSeq;
++    contextCurrent = null;
++    if (!sequenceCurrent) {
++      return false;
++    }
++    contextCurrent = context.isProjectContextCurrent(projectContext);
++    return contextCurrent;
++  };
++  const silent = input.silent === true;
++  const observe = (
++    phase: ViewLoadPhase,
++    view?: RuntimeProviderManagementViewDto | null,
++    loadingFalseSet: boolean | null = null
++  ): void => {
++    try {
++      if (!Number.isSafeInteger(requestSeq) || requestSeq <= 0) {
++        return;
++      }
++      let owner = diagnosticOwners.get(context.viewLoadRequestSeq);
++      if (owner === undefined) {
++        const nextOwner = nextDiagnosticOwner + 1;
++        if (!Number.isSafeInteger(nextOwner)) {
++          return;
++        }
++        diagnosticOwners.set(context.viewLoadRequestSeq, nextOwner);
++        nextDiagnosticOwner = nextOwner;
++        owner = nextOwner;
++      }
++      const inheritanceFields = view
++        ? inheritanceFieldNames.reduce(
++            (mask, field, index) => mask + (Object.hasOwn(view, field) ? 2 ** index : 0),
++            0
++          )
++        : null;
++      console.debug(
++        JSON.stringify({
++          kind: 'runtime-provider-view-load-v1',
++          owner,
++          request: requestSeq,
++          phase,
++          silent,
++          sequenceCurrent: phase === 'finished' && silent ? null : sequenceCurrent,
++          contextCurrent: phase === 'finished' && silent ? null : contextCurrent,
++          viewPresent: view === undefined ? null : view !== null,
++          inheritanceFields,
++          loadingFalseSet,
++        })
++      );
++    } catch {
++      // Diagnostic bookkeeping, projection or emission cannot replace the original operation.
++    }
++  };
++  if (!silent) {
++    context.setLoading(true);
++  }
++  context.setError(null);
++  context.setErrorDiagnostics(null);
++  try {
++    observe('start');
++    const response = await api.runtimeProviderManagement.loadView({
++      ...connectionForm.runtimeProviderContext(
++        context.runtimeId,
++        projectContext.path,
++        context.connectionContextToken
++      ),
++    });
++    const current = requestIsCurrent();
++    observe('response-checked');
++    if (!current) {
++      return false;
++    }
++    if (response.error) {
++      if (!silent) {
++        context.setView(null);
++      }
++      context.setError(response.error.message);
++      context.setErrorDiagnostics(response.error.diagnostics ?? null);
++      observe('response-error');
++      return false;
++    }
++    const nextView = presentManagementView(response.view ?? null);
++    context.setView(nextView);
++    context.setSelectedModelId(nextView?.defaultModel ?? null);
++    context.setSelectedProviderId((current) => {
++      if (current && nextView?.providers.some((provider) => provider.providerId === current)) {
++        return current;
++      }
++      return selectInitialProviderId(nextView);
++    });
++    observe('view-set', nextView);
++    return true;
++  } catch (loadError) {
++    const current = requestIsCurrent();
++    observe('error-checked');
++    if (!current) {
++      return false;
++    }
++    if (!silent) {
++      context.setView(null);
++    }
++    context.setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');
++    context.setErrorDiagnostics(null);
++    return false;
++  } finally {
++    let loadingFalseSet = false;
++    if (!silent && requestIsCurrent()) {
++      context.setLoading(false);
++      loadingFalseSet = true;
++    }
++    observe('finished', undefined, loadingFalseSet);
++  }
++}
+diff --git a/scripts/legacy-agent-host/desktop-team-ui-smoke.ts b/scripts/legacy-agent-host/desktop-team-ui-smoke.ts
+index 9aa43a43d6186c62bc92dae60dab4fe57cc63fe6..602c2fe5d57cc67a8b18fe0c193b61e58293f508 100644
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.ts
+@@ -240,12 +240,14 @@
+   const deadline = performance.now() + startup.remainingMs;
+   const origin = new URL(rendererUrl).origin;
+   const events: unknown[] = [];
++  const viewLoads: { events: unknown[]; overflow: boolean } = { events: [], overflow: false };
+   const startupEvidence: Record<string, unknown> = { status: 'WAITING', commands: [], contextEvents: [] };
+-  evidence.rendererDiagnostics = { scope: 'bounded read-only module/load evidence', events, startup: startupEvidence };
++  evidence.rendererDiagnostics = { scope: 'bounded read-only module/load evidence', events, startup: startupEvidence, viewLoads };
+   const commands = startupEvidence.commands as Record<string, unknown>[];
+   const contextEvents = startupEvidence.contextEvents as Record<string, unknown>[];
+   const contexts = new Map<number, unknown>();
+   let mainFrameId: unknown, revision = 0;
++  let viewLoadDocumentRevision: number | undefined;
+   const noteContext = (event: Record<string, unknown>): void => {
+     if (contextEvents.length < 96) contextEvents.push({ monotonicMs: Math.round(performance.now()), ...event });
+   };
+@@ -336,6 +338,49 @@
+     if (typeof id === 'number') contexts.delete(id);
+     revision++; noteContext({ event: 'contextDestroyed', id });
+   });
++  cdp.on('Runtime.consoleAPICalled', (value) => {
++    try {
++      const entry = record(value), contextId = entry.executionContextId;
++      if (entry.type !== 'debug' || typeof contextId !== 'number' ||
++          viewLoadDocumentRevision === undefined || revision !== viewLoadDocumentRevision ||
++          contextId !== startupEvidence.contextId || mainFrameId !== startupEvidence.frameId ||
++          contexts.get(contextId) !== mainFrameId || !Array.isArray(entry.args) || entry.args.length !== 1)
++        return;
++      const argument = record(entry.args[0]);
++      if (argument.type !== 'string' || typeof argument.value !== 'string') return;
++      const raw = argument.value;
++      if (raw.length > 1024 || !raw.startsWith('{"kind":"runtime-provider-view-load-v1",') ||
++          Buffer.byteLength(raw, 'utf8') > 1024) return;
++      const row = record(JSON.parse(raw) as unknown);
++      const keys = ['kind', 'owner', 'request', 'phase', 'silent', 'sequenceCurrent',
++        'contextCurrent', 'viewPresent', 'inheritanceFields', 'loadingFalseSet'];
++      if (Object.keys(row).length !== keys.length || keys.some(key => !Object.hasOwn(row, key)) ||
++          row.kind !== 'runtime-provider-view-load-v1' ||
++          typeof row.owner !== 'number' || !Number.isSafeInteger(row.owner) || row.owner <= 0 ||
++          typeof row.request !== 'number' || !Number.isSafeInteger(row.request) || row.request <= 0 ||
++          typeof row.phase !== 'string' || !['start', 'response-checked', 'response-error',
++            'view-set', 'error-checked', 'finished'].includes(row.phase) ||
++          typeof row.silent !== 'boolean' ||
++          ['sequenceCurrent', 'contextCurrent', 'viewPresent', 'loadingFalseSet'].some(
++            key => row[key] !== null && typeof row[key] !== 'boolean') ||
++          (row.inheritanceFields !== null && (typeof row.inheritanceFields !== 'number' ||
++            !Number.isInteger(row.inheritanceFields) || row.inheritanceFields < 0 || row.inheritanceFields > 31)))
++        return;
++      if (viewLoads.events.length >= 96) { viewLoads.overflow = true; return; }
++      const observation = {
++        monotonicMs: Math.round(performance.now()), executionContextId: contextId,
++        documentRevision: viewLoadDocumentRevision, kind: row.kind, owner: row.owner,
++        request: row.request, phase: row.phase, silent: row.silent,
++        sequenceCurrent: row.sequenceCurrent, contextCurrent: row.contextCurrent,
++        viewPresent: row.viewPresent, inheritanceFields: row.inheritanceFields,
++        loadingFalseSet: row.loadingFalseSet,
++      };
++      viewLoads.events.push(observation);
++      console.log(JSON.stringify({ kind: 'TEST_RENDERER_VIEW_LOAD', observation }));
++    } catch {
++      // Passive diagnostics cannot replace the original startup or UI failure.
++    }
++  });
+   // Cold protocol subscriptions measured ~25s; every command still keeps CdpClient's original30s bound.
+   await Promise.all([send('Page.enable'), send('Runtime.enable')]);
+   const frame = record(record(record(await send('Page.getFrameTree')).frameTree).frame);
+@@ -352,7 +397,8 @@
+         if (revision === observedRevision && contexts.get(contextId) === mainFrameId && sameDocument(value.url) &&
+             ['interactive', 'complete'].includes(String(value.readyState))) {
+           startupEvidence.status = 'DOCUMENT_READY'; startupEvidence.contextId = contextId;
+-          startupEvidence.frameId = mainFrameId; startupEvidence.readyState = value.readyState; break;
++          startupEvidence.frameId = mainFrameId; startupEvidence.readyState = value.readyState;
++          viewLoadDocumentRevision = observedRevision; break;
+         }
+       } catch (error) {
+         if (!/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error))) throw error;
+diff --git a/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts b/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
+index f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d..1bc8ea60755485af8f347f5b76b0556d675c4555 100644
+--- a/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
++++ b/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
+@@ -158,6 +158,7 @@
+   'src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts',
+   'src/features/runtime-provider-management/renderer/index.ts',
+   'src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts',
++  'src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts',
+   'src/renderer/analytics/productAnalytics.ts',
+   'packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts',
+   'packages/legacy-agent-host/src/adapters/providers/claudeAuthStatus.ts',
+diff --git a/scripts/ci/source-file-size-baseline.json b/scripts/ci/source-file-size-baseline.json
+index e827bccf455235b1ff7871e7b93450cdaa53eb54..8f5deeed4e406894e1ee587ed541014bcb7dde77 100644
+--- a/scripts/ci/source-file-size-baseline.json
++++ b/scripts/ci/source-file-size-baseline.json
+@@ -23,7 +23,7 @@
+     "src/features/organizations/renderer/ui/OrganizationEditorPanel.tsx": 942,
+     "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts": 2642,
+     "src/features/runtime-provider-management/main/infrastructure/cli-companion/RuntimeProviderCliCompanionService.ts": 833,
+-    "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts": 2068,
++    "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts": 2026,
+     "src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog.tsx": 1675,
+     "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx": 2584,
+     "src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx": 4513,
+diff --git a/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+index 6c31165af5b91090fa56bc89ddd286a68f84c978..7342e99150860ac599c3614973334509329ae9b8 100644
+--- a/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
++++ b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+@@ -80,6 +80,20 @@
+   };
+ }
+ 
++function captureViewLoadDiagnostics() {
++  const raw: string[] = [];
++  const debug = vi.spyOn(console, 'debug').mockImplementation((message: unknown) => {
++    if (typeof message === 'string' && message.startsWith('{"kind":"runtime-provider-view-load-v1",')) {
++      raw.push(message);
++    }
++  });
++  return {
++    raw,
++    rows: () => raw.map((message) => JSON.parse(message) as Record<string, unknown>),
++    restore: () => debug.mockRestore(),
++  };
++}
++
+ function createOpenAiLocalProvider(): RuntimeProviderConnectionDto {
+   return {
+     providerId: 'openai',
+@@ -2313,6 +2327,201 @@
+     expect(state?.activeFormProviderId).toBeNull();
+     expect(state?.setupFormLoading).toBe(false);
+   });
++
++  it.each(['current', 'unmounted'] as const)(
++    'retains passive view-load observations while the original request is %s',
++    async (outcome) => {
++      const trace = captureViewLoadDiagnostics();
++      try {
++        let resolve!: (response: RuntimeProviderManagementViewResponse) => void;
++        const response = new Promise<RuntimeProviderManagementViewResponse>((done) => {
++          resolve = done;
++        });
++        const loadView = vi.fn(() => response);
++        const projectPath = '/tmp/TEST-private-view-project';
++        Object.defineProperty(window, 'electronAPI', {
++          configurable: true,
++          value: { runtimeProviderManagement: { loadView } } as unknown as ElectronAPI,
++        });
++        const root = createRoot(host);
++        const props = { enabled: true, loadViewOnEnable: false, projectPath };
++        await act(async () => {
++          root.render(React.createElement(ConfigurableHarness, props));
++        });
++        const refresh = actions!.refresh;
++        await act(async () => {
++          root.render(React.createElement(ConfigurableHarness, props));
++        });
++        expect(actions!.refresh).toBe(refresh);
++        let pending!: Promise<boolean>;
++        let settled = false;
++        await act(async () => {
++          pending = refresh();
++          void pending.then(() => { settled = true; });
++        });
++        expect(settled).toBe(false);
++        expect(loadView).toHaveBeenCalledTimes(1);
++        expect(loadView).toHaveBeenCalledWith(expect.objectContaining({ runtimeId: 'opencode', projectPath }));
++        expect(state?.loading).toBe(true);
++        expect(trace.rows().map((row) => row.phase)).toEqual(['start']);
++        const beforeUnmount = state;
++        if (outcome === 'unmounted') {
++          await act(async () => { root.unmount(); });
++        }
++        const view = {
++          ...createRuntimeView(),
++          projectPath,
++          defaultModel: 'TEST-private-view-model',
++        };
++        await act(async () => {
++          resolve({ schemaVersion: 1, runtimeId: 'opencode', view });
++          expect(await pending).toBe(outcome === 'current');
++        });
++        expect(settled).toBe(true);
++        expect(loadView).toHaveBeenCalledTimes(1);
++        const rows = trace.rows();
++        expect(new Set(rows.map((row) => row.owner)).size).toBe(1);
++        expect(new Set(rows.map((row) => row.request)).size).toBe(1);
++        expect(rows[0]!.owner).toBeGreaterThan(0);
++        expect(rows.find((row) => row.phase === 'response-checked')).toMatchObject({
++          sequenceCurrent: true,
++          contextCurrent: outcome === 'current',
++        });
++        if (outcome === 'current') {
++          expect(state?.view?.defaultModel).toBe(view.defaultModel);
++          expect(state?.loading).toBe(false);
++          expect(rows.find((row) => row.phase === 'view-set')).toMatchObject({
++            viewPresent: true,
++            inheritanceFields: 31,
++          });
++          expect(rows.at(-1)).toMatchObject({ phase: 'finished', loadingFalseSet: true });
++        } else {
++          expect(state).toBe(beforeUnmount);
++          expect(rows.some((row) => row.phase === 'view-set')).toBe(false);
++          expect(rows.at(-1)).toMatchObject({ phase: 'finished', loadingFalseSet: false });
++        }
++        expect(trace.raw.join('\n')).not.toContain('TEST-private');
++        expect(trace.raw.every((line) => Buffer.byteLength(line, 'utf8') <= 1024)).toBe(true);
++      } finally {
++        trace.restore();
++      }
++    }
++  );
++
++  it('keeps the original stale and silent-refresh behavior while retaining passive observations', async () => {
++    const trace = captureViewLoadDiagnostics();
++    try {
++      let resolve!: (response: RuntimeProviderManagementViewResponse) => void;
++      const first = new Promise<RuntimeProviderManagementViewResponse>((done) => {
++        resolve = done;
++      });
++      const currentView = { ...createRuntimeView(), defaultModel: 'TEST-current-silent-model' };
++      let calls = 0;
++      const loadView = vi.fn(() => {
++        calls++;
++        return calls === 1
++          ? first
++          : Promise.resolve({ schemaVersion: 1 as const, runtimeId: 'opencode' as const, view: currentView });
++      });
++      Object.defineProperty(window, 'electronAPI', {
++        configurable: true,
++        value: { runtimeProviderManagement: {
++          loadView,
++          loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
++        } } as unknown as ElectronAPI,
++      });
++      const root = createRoot(host);
++      await act(async () => {
++        root.render(React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false }));
++      });
++      let pending!: Promise<boolean>;
++      await act(async () => { pending = actions!.refresh(); });
++      expect(state?.loading).toBe(true);
++      await act(async () => { await actions!.refreshDirectory(); });
++      expect(loadView).toHaveBeenCalledTimes(2);
++      expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
++      expect(state?.loading).toBe(true);
++      await act(async () => {
++        resolve({ schemaVersion: 1, runtimeId: 'opencode',
++          view: { ...createRuntimeView(), defaultModel: 'TEST-stale-model' } });
++        expect(await pending).toBe(false);
++      });
++      expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
++      // Passive evidence does not select the separate loading-owner correction.
++      expect(state?.loading).toBe(true);
++      const rows = trace.rows();
++      expect(rows.find((row) => row.phase === 'response-checked' && row.silent === false)).toMatchObject({
++        sequenceCurrent: false, contextCurrent: null,
++      });
++      expect(rows.find((row) => row.phase === 'finished' && row.silent === true)).toMatchObject({
++        sequenceCurrent: null, contextCurrent: null, loadingFalseSet: false,
++      });
++      expect(new Set(rows.map((row) => row.owner)).size).toBe(1);
++      expect(new Set(rows.map((row) => row.request)).size).toBe(2);
++      expect(loadView).toHaveBeenCalledTimes(2);
++    } finally {
++      trace.restore();
++    }
++  });
++
++  it.each(['view', 'response-error', 'rejection'] as const)(
++    'preserves the original %s when diagnostic emission throws',
++    async (outcome) => {
++      const raw: string[] = [];
++      const diagnosticFailure = new Error('TEST-diagnostic-transport-failure');
++      const debug = vi.spyOn(console, 'debug').mockImplementation((message: unknown) => {
++        if (typeof message === 'string') raw.push(message);
++        throw diagnosticFailure;
++      });
++      try {
++        const realFailure = new Error('TEST-private-original-load-error');
++        const success: RuntimeProviderManagementViewResponse = {
++          schemaVersion: 1, runtimeId: 'opencode',
++          view: { ...createRuntimeView(), defaultModel: 'TEST-private-original-model' },
++        };
++        const failure: RuntimeProviderManagementViewResponse = {
++          schemaVersion: 1, runtimeId: 'opencode',
++          error: {
++            code: 'runtime-misconfigured', message: realFailure.message, recoverable: true,
++            diagnostics: {
++              summary: realFailure.message, likelyCause: 'TEST-private-original-cause',
++              binaryPath: '/tmp/TEST-private-original-binary', command: 'TEST-private-original-command',
++              projectPath: null, exitCode: null, stderrPreview: null, stdoutPreview: null, hints: [],
++            },
++          },
++        };
++        const loadView = vi.fn(() => outcome === 'rejection'
++          ? Promise.reject(realFailure)
++          : Promise.resolve(outcome === 'response-error' ? failure : success));
++        Object.defineProperty(window, 'electronAPI', {
++          configurable: true,
++          value: { runtimeProviderManagement: { loadView } } as unknown as ElectronAPI,
++        });
++        const root = createRoot(host);
++        await act(async () => {
++          root.render(React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false }));
++        });
++        await act(async () => {
++          expect(await actions!.refresh()).toBe(outcome === 'view');
++        });
++        expect(loadView).toHaveBeenCalledTimes(1);
++        expect(state?.loading).toBe(false);
++        if (outcome === 'view') {
++          expect(state?.view?.defaultModel).toBe(success.view!.defaultModel);
++          expect(state?.error).toBeNull();
++        } else {
++          expect(state?.view).toBeNull();
++          expect(state?.error).toBe(realFailure.message);
++          expect(state?.errorDiagnostics).toBe(outcome === 'response-error' ? failure.error!.diagnostics : null);
++        }
++        expect(raw.length).toBeGreaterThan(0);
++        expect(raw.join('\n')).not.toContain('TEST-private');
++        expect(raw.join('\n')).not.toContain(diagnosticFailure.message);
++      } finally {
++        debug.mockRestore();
++      }
++    }
++  );
+ 
+   it('ignores stale provider views after project context changes', async () => {
+     let resolveProjectA:
+diff --git a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+index 3c2548f7ede3f799a6426c81bb178e4895c790c2..5ea26752689cbf9ef4307816ad7c739eb1dd5f4c 100644
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -30,9 +30,11 @@
+   const listeners = new Map<string, (value: unknown) => void>();
+   const acknowledgments = reads.map(() => deferred<void>());
+   let observations = 0, discovery = 0;
++  const commands: string[] = [];
+   const cdp = {
+     on(method: string, listener: (value: unknown) => void) { listeners.set(method, listener); },
+     async send(method: string) {
++      commands.push(method);
+       if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
+         context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
+       });
+@@ -55,7 +57,8 @@
+   const evidence: Record<string, unknown> = {};
+   const start = (remainingMs: number) => attachRendererDiagnostics(cdp, 'http://localhost:5173/', evidence,
+     { remainingMs, assertOwnedRenderer() {} }).then(() => readRendererBackendConnections(cdp));
+-  return { start, acknowledgments, evidence, discovery: () => discovery };
++  return { start, acknowledgments, evidence, listeners, commands,
++    observations: () => observations, discovery: () => discovery };
+ }
+ 
+ test('captured UI discovery waits for Main admission and actual mount while early diagnostics remain active', { timeout: 5000 }, async () => {
+@@ -83,6 +86,130 @@
+   held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+ });
+ 
++
++const viewLoadSample = {
++  kind: 'runtime-provider-view-load-v1', owner: 1, request: 1, phase: 'view-set', silent: false,
++  sequenceCurrent: true, contextCurrent: true, viewPresent: true,
++  inheritanceFields: 31, loadingFalseSet: null,
++};
++const viewLoadEvent = (value: unknown, contextId = 7) => ({
++  type: 'debug', executionContextId: contextId,
++  args: [{ type: 'string', value: typeof value === 'string' ? value : JSON.stringify(value) }],
++});
++
++test('view-load diagnostics retain and echo the same bounded current-document projection without new reads', { timeout: 5000 }, async t => {
++  const output: string[] = [];
++  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
++  const readyRead = deferred<Record<string, unknown>>(), f = fixture([readyRead]);
++  const running = f.start(3000);
++  const emit = f.listeners.get('Runtime.consoleAPICalled');
++  assert.ok(emit, 'the passive listener precedes the original Runtime.enable');
++  emit(viewLoadEvent(viewLoadSample));
++  readyRead.resolve(ready);
++  await running;
++  const diagnostic = f.evidence.rendererDiagnostics as {
++    events: unknown[];
++    viewLoads: { events: Record<string, unknown>[]; overflow: boolean };
++  };
++  assert.deepEqual(diagnostic.viewLoads, { events: [], overflow: false },
++    'an event before the original document fence is not attributed to the current view');
++  emit(viewLoadEvent(viewLoadSample));
++  assert.equal(diagnostic.viewLoads.events.length, 1);
++  const retained = diagnostic.viewLoads.events[0]!;
++  const { monotonicMs, executionContextId, documentRevision, ...fields } = retained;
++  assert.equal(typeof monotonicMs, 'number'); assert.equal(executionContextId, 7);
++  assert.equal(typeof documentRevision, 'number');
++  assert.deepEqual(fields, viewLoadSample);
++  const canary = 'TEST-private-renderer-value';
++  const incomplete: Record<string, unknown> = { ...viewLoadSample };
++  delete incomplete.contextCurrent;
++  for (const invalid of [
++    { ...viewLoadSample, private: canary }, incomplete,
++    { ...viewLoadSample, owner: 0 }, { ...viewLoadSample, request: Number.MAX_SAFE_INTEGER + 1 },
++    { ...viewLoadSample, phase: canary }, { ...viewLoadSample, silent: null },
++    { ...viewLoadSample, contextCurrent: canary }, { ...viewLoadSample, viewPresent: 1 },
++    { ...viewLoadSample, inheritanceFields: 32 }, { ...viewLoadSample, inheritanceFields: 0.5 },
++    { ...viewLoadSample, loadingFalseSet: canary },
++    '{"kind":"runtime-provider-view-load-v1",',
++    JSON.stringify(viewLoadSample).padEnd(1025, ' '),
++  ]) assert.doesNotThrow(() => emit(viewLoadEvent(invalid)));
++  emit(viewLoadEvent(viewLoadSample, 999));
++  emit({ ...viewLoadEvent(viewLoadSample), type: 'log' });
++  emit({ ...viewLoadEvent(viewLoadSample), args: [{ type: 'object', value: canary }] });
++  emit({ ...viewLoadEvent(viewLoadSample), args: [
++    { type: 'string', value: JSON.stringify(viewLoadSample) }, { type: 'string', value: canary },
++  ] });
++  assert.doesNotThrow(() => emit(Object.defineProperty({}, 'type', {
++    get() { throw new Error(canary); },
++  })));
++  assert.equal(diagnostic.viewLoads.events.length, 1);
++  assert.equal(output.length, 1);
++  f.listeners.get('Log.entryAdded')!({
++    entry: { level: 'error', source: 'javascript', text: 'SyntaxError: TEST retained module error' },
++  });
++  const originalEvents = [...diagnostic.events];
++  for (let request = 2; request <= 97; request++) emit(viewLoadEvent({ ...viewLoadSample, request }));
++  assert.equal(diagnostic.viewLoads.events.length, 96);
++  assert.equal(diagnostic.viewLoads.overflow, true);
++  assert.deepEqual(diagnostic.events, originalEvents, 'view diagnostics do not consume the original module budget');
++  assert.equal(output.length, 96, 'the receipt and stdout share the same finite admission');
++  const echoes = output.map(line => JSON.parse(line) as { kind: string; observation: unknown });
++  assert.ok(echoes.every(row => row.kind === 'TEST_RENDERER_VIEW_LOAD'));
++  assert.deepEqual(echoes.map(row => row.observation), diagnostic.viewLoads.events);
++  assert.ok(echoes.every(row => !('receipt' in row) && !('status' in row)),
++    'the unchanged original final-receipt selector cannot treat a diagnostic as success');
++  const saved = JSON.parse(JSON.stringify(f.evidence)) as typeof f.evidence;
++  assert.deepEqual(saved.rendererDiagnostics, f.evidence.rendererDiagnostics);
++  assert.equal(JSON.stringify(saved).includes(canary), false);
++  assert.equal(output.join('\n').includes(canary), false);
++  assert.deepEqual(f.commands, ['Page.enable', 'Runtime.enable', 'Page.getFrameTree',
++    'Runtime.evaluate', 'Log.enable', 'Network.enable']);
++  assert.equal(f.observations(), 1); assert.equal(f.discovery(), 1);
++});
++
++for (const invalidation of ['navigation', 'cleared', 'destroyed'] as const) test(
++  `view-load diagnostics do not reuse the initial document fence after ${invalidation}`,
++  { timeout: 5000 }, async t => {
++    const output: string[] = [];
++    t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
++    const readyRead = deferred<Record<string, unknown>>(), f = fixture([readyRead]);
++    readyRead.resolve(ready);
++    await f.start(3000);
++    const emit = f.listeners.get('Runtime.consoleAPICalled')!;
++    emit(viewLoadEvent(viewLoadSample));
++    if (invalidation === 'navigation') f.listeners.get('Page.frameNavigated')!({
++      frame: { id: 'TEST-frame', url: 'http://localhost:5173/' },
++    });
++    else if (invalidation === 'cleared') f.listeners.get('Runtime.executionContextsCleared')!({});
++    else f.listeners.get('Runtime.executionContextDestroyed')!({ executionContextId: 7 });
++    // Even a reused default context ID in the same frame does not reopen the initial-document grant.
++    f.listeners.get('Runtime.executionContextCreated')!({
++      context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
++    });
++    emit(viewLoadEvent({ ...viewLoadSample, request: 2 }));
++    const diagnostic = f.evidence.rendererDiagnostics as { viewLoads: { events: unknown[] } };
++    assert.equal(diagnostic.viewLoads.events.length, 1);
++    assert.equal(output.length, 1);
++    assert.equal(f.commands.length, 6); assert.equal(f.observations(), 1); assert.equal(f.discovery(), 1);
++  }
++);
++
++test('throwing diagnostic stdout preserves the retained row and the original startup refusal', { timeout: 5000 }, async t => {
++  let echoes = 0;
++  t.mock.method(console, 'log', () => { echoes++; throw new Error('TEST-diagnostic-stdout-failure'); });
++  const held = deferred<Record<string, unknown>>(), f = fixture([held]);
++  const pending = f.start(3000);
++  const refused = assert.rejects(pending, /Main startup refused before UI readiness/);
++  await f.acknowledgments[0]!.promise;
++  assert.doesNotThrow(() => f.listeners.get('Runtime.consoleAPICalled')!(viewLoadEvent(viewLoadSample)));
++  const diagnostic = f.evidence.rendererDiagnostics as { viewLoads: { events: unknown[] } };
++  assert.equal(diagnostic.viewLoads.events.length, 1);
++  assert.equal(echoes, 1);
++  held.resolve({ ...ready, errorPresent: true });
++  await refused;
++  assert.equal(f.discovery(), 0);
++  assert.equal(diagnostic.viewLoads.events.length, 1);
++});
+ 
+ function readinessRuntime(expression: string, href: string, origin: string): Promise<Record<string, unknown>> {
+   return Promise.resolve(runInNewContext(expression, {
+diff --git a/.github/workflows/host-emulated-acceptance.yml b/.github/workflows/host-emulated-acceptance.yml
+index dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6..d53a2fda2f60c12526b0457cf7d25858f43dd8f2 100644
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -133,6 +133,7 @@
+             scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts \
+             scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \
+             scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
++            scripts/legacy-agent-host/desktop-team-ui-smoke.ts \
+             scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
+             scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
+             scripts/legacy-agent-host/qualify-linux-process-sdk.ts \

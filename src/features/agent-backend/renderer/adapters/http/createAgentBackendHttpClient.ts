@@ -1,6 +1,7 @@
 import {
   AGENT_BACKEND_CONNECTIONS_ROUTE,
   AGENT_BACKEND_OPERATIONS_ROUTE,
+  RETAINED_LEGACY_LAUNCH_ROUTE,
   STOPPED_TEAM_IMPORT_ROUTE,
 } from '../../../contracts';
 
@@ -14,6 +15,8 @@ import type {
   BackendConnectionSnapshot,
   BackendOperationRequest,
   BackendOperationResult,
+  RetainedLegacyLaunchRequest,
+  RetainedLegacyLaunchResult,
   StoppedTeamImportAction,
   StoppedTeamImportResult,
 } from '../../../contracts';
@@ -35,13 +38,23 @@ export function createAgentBackendHttpClient(
   stoppedImport?: (
     route: typeof STOPPED_TEAM_IMPORT_ROUTE,
     request: StoppedTeamImportAction
-  ) => Promise<StoppedTeamImportResult>
+  ) => Promise<StoppedTeamImportResult>,
+  retainedLegacy?: (
+    route: typeof RETAINED_LEGACY_LAUNCH_ROUTE,
+    request: RetainedLegacyLaunchRequest
+  ) => Promise<RetainedLegacyLaunchResult>
 ): AgentBackendApi {
   return {
     ...(watch ? createAgentBackendReviewWatchHttpClient(watch) : {}),
     // An HTTP timeout is response uncertainty; this adapter never retries the intent.
     invoke: (request) => post(AGENT_BACKEND_OPERATIONS_ROUTE, request),
     getConnections: () => get(AGENT_BACKEND_CONNECTIONS_ROUTE),
+    ...(retainedLegacy
+      ? {
+          retainedLegacyLaunch: (request: RetainedLegacyLaunchRequest) =>
+            retainedLegacy(RETAINED_LEGACY_LAUNCH_ROUTE, request),
+        }
+      : {}),
     ...(stoppedImport
       ? {
           stoppedImport: (request: StoppedTeamImportAction) =>

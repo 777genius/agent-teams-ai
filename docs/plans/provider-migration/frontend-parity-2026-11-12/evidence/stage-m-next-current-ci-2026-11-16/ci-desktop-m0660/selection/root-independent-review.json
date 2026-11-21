@@ -1,0 +1,780 @@
+{
+  "schema": "root-independent-M-Selection-original-full-review/v1",
+  "reviewedUtc": "2026-11-16T01:49:13.689358+00:00",
+  "verdict": "APPROVE exact finite Selection journey and its source-enforced final UI/physical Stop conjunction",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017915916,
+  "jobConclusion": "success",
+  "payloadCount": 9,
+  "payloadBytes": 2433169,
+  "payloads": [
+    {
+      "path": "selection/artifact-14190562781.zip",
+      "bytes": 1307479,
+      "blob": "ff83df6b393e78b0cb518769f20484f2348dd481",
+      "sha256": "060a8d84afc1e32e017979d175e106dcdcdbd0c9c7b5bde98c80264a51d10a3d"
+    },
+    {
+      "path": "selection/job-133017915916.log",
+      "bytes": 180864,
+      "blob": "24219e78fa2bd846a7e91589d553b8293ec8cea3",
+      "sha256": "b6ede9087714f43ea014e06d9421a51a662ea6d8d667cee93921f1102741714d"
+    },
+    {
+      "path": "selection/archive-audit.json",
+      "bytes": 8427,
+      "blob": "b0677f8693ec0fe18127d1c20a2764dc19759d10",
+      "sha256": "c824cee403e4eadc855f504c3faf6062b97da3708d0cc4148a233148b76a2159"
+    },
+    {
+      "path": "selection/job-terminal-api.json",
+      "bytes": 6492,
+      "blob": "b2ecb41d71e859ba02c57896c7a07e8700ef5731",
+      "sha256": "e89491515bb9688b51000d9bd3df511f53b988cf2de136aa063eaa786214f4d1"
+    },
+    {
+      "path": "selection/source-pin-audit.json",
+      "bytes": 312678,
+      "blob": "669aec529a68b06c9aaa6908d6f32d904c99f309",
+      "sha256": "9530ab676a473c8483b36d41df3267f84b3ef5143e258dc55d21f8ec93b27b9b"
+    },
+    {
+      "path": "selection/audit.json",
+      "bytes": 20643,
+      "blob": "c707366eef68af4677e99e24a0133138f1e641d0",
+      "sha256": "ed3e8e50eba50cc7ae3ba24e57c788ea9e3da76da0a2d096d326832c46b2dd62"
+    },
+    {
+      "path": "selection/Plan29-selection-appendix.md",
+      "bytes": 5250,
+      "blob": "13137f50f8037f21ab382ddbea730103a3cb0c33",
+      "sha256": "b7b93d27a9f386d100bda3dbe0dc1d398ef0825bfa7ca9b4d1f3021e58c99b16"
+    },
+    {
+      "path": "terminal-artifacts-0135.json",
+      "bytes": 8035,
+      "blob": "0643c77ab28f7b587a3238c565b5c82a2106a10d",
+      "sha256": "60c2bbadcdb5376f7ff468cc7533f58b3caf362b00661f9e3c562ac44ff94c97"
+    },
+    {
+      "path": "opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  ],
+  "officialArtifact": {
+    "id": 14190562781,
+    "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-selection",
+    "size_in_bytes": 1307479,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190562781",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190562781/zip",
+    "expired": false,
+    "created_at": "2026-11-16T01:31:29Z",
+    "expires_at": "2026-11-30T01:31:27Z",
+    "updated_at": "2026-11-16T01:31:29Z",
+    "digest": "sha256:060a8d84afc1e32e017979d175e106dcdcdbd0c9c7b5bde98c80264a51d10a3d",
+    "workflow_run": {
+      "id": 43780997237,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-JWiNYE/TEST-peer-codex-scope/effects.ndjson",
+      "crc32": "b03b8833",
+      "bytes": 14620,
+      "blob": "9f656ad6af52df0f75a87927001b2277a34b88e8",
+      "sha256": "fc316c947b73084b6e116fbdf93f6721d8e7107935d03952c988955d9b97413d"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/desktop-backend-receipt.json",
+      "crc32": "0d1af088",
+      "bytes": 796834,
+      "blob": "6ee1d49b6cfaf5cb7249dd9ae514a5b27a78bc97",
+      "sha256": "529fc164a2e76cfff09178f312fccebb47efafcc6953beccd707fedb0f6a9914"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/desktop-app.log",
+      "crc32": "67e3c798",
+      "bytes": 29982,
+      "blob": "666da1a745bd312abb38df9e2cb5d7eede114bf2",
+      "sha256": "782f76bca17eed44cc3d8fb6faf3c4802cc266c49999d8ef390aa764f88b8519"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/desktop-descriptor.json",
+      "crc32": "e88623d6",
+      "bytes": 2635,
+      "blob": "4eec2c809b9dcdf9524c00c89b2e4f80fe74f29f",
+      "sha256": "843f9526228e2fe71987f044ee03fe8d8b741b5dc9c90e4c1560f2788d50b223"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/host-profile.json",
+      "crc32": "5b1006a8",
+      "bytes": 7388,
+      "blob": "46b5aefc8368b533c1bc366f7edc9797ca391a05",
+      "sha256": "13668ba0bfe90dc370d8aa51c9aaa7d83d7f6b80f9ed8887506c3edf9bee66c9"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/management-commands/30db515875f5510877ae47ad77906ae8415aea53ebfe96974aabed47d1e82725.json",
+      "crc32": "1b143fcf",
+      "bytes": 929,
+      "blob": "e896f3cb8e440bdc77a61c996bab5498a36680cc",
+      "sha256": "c6c9371bed8faea5cdf6fc39b729761756f2002e98d9f886d9b6264b2e548c5e"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/management-commands/b0857182a5bbb5d185de0bbe309bc4d069e2b5efe3baac93065f1605ec624957.json",
+      "crc32": "7cba71a5",
+      "bytes": 923,
+      "blob": "2e51c3b62f27244fc44aca579539c71fc923e6a3",
+      "sha256": "da97f9e59b6f6eaaca01da54f64ee3e93872d25bb16e000516018e737c7d69f5"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/management-commands/ba80f88b4ea923a8fc606d749f1b845270a4cb00ed204550e8f5ae62f01e4c73.json",
+      "crc32": "219dbcdd",
+      "bytes": 904,
+      "blob": "abe80ae093ae809eecf66ea0a179b2b44bf1963a",
+      "sha256": "7b9300c5bcd2761d1a351dc9f35e3d524ceca94174db09001c55c5f49885595c"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/runtime-checkpoints/cp1-90f223120b4f0a0790800c15a71d50dd887f46980fe8a9df95c22cf02b973308.json",
+      "crc32": "6f696e0e",
+      "bytes": 1894,
+      "blob": "5d2725a30dfbbb3dfe65e9dce6c04978246e16ef",
+      "sha256": "8178f4f3b286614a0a7df33a97e12e1c08637bb51d8fbb65b5db972a5f0804ed"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/runtime-checkpoints/cp1-c1199f01bef3582e27f56b73f963d082906142ae12a4e72f510f866cd894b5c7.json",
+      "crc32": "9ae299eb",
+      "bytes": 2318,
+      "blob": "85ca62058db1dbaaf4f1f57c461c0b285853c9e4",
+      "sha256": "df6f664d7f54130dcbb26421c785337d3bf7e8377a428db65cd8149217aa0e95"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "crc32": "4dfce4b4",
+      "bytes": 453,
+      "blob": "5acbf862bb1977415c83d74203c503b70e9ce60f",
+      "sha256": "ba0522d52fdfb5f1035c9ac4fc82d891a415cf4a7b8b36d9cb20adf50ba156a7"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "crc32": "6c037dce",
+      "bytes": 202,
+      "blob": "0a60639d4369406622a2181a0798584ac67eb83e",
+      "sha256": "acdc4c8c843b3c8753ec2f6014ab6401f786ef8925207f83935c89aa6b4bad98"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-a-launch.png",
+      "crc32": "1afc24d9",
+      "bytes": 102027,
+      "blob": "03f130bc1b3192346822bf759acf48861e34eb1f",
+      "sha256": "7c7083dc269686afaa43921b197096605ff437dc5652b7419437bf6e344df833"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-a-survived.png",
+      "crc32": "38031587",
+      "bytes": 114695,
+      "blob": "48207bf38edeee8f752b6c2d2bd4286f569c5843",
+      "sha256": "42d91d5fc87cf147eb6d0a599e4261de754d170c04cd8c7a00c10a9a79b8ae16"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-b-launch.png",
+      "crc32": "d4c6c333",
+      "bytes": 97894,
+      "blob": "507eca809dac9dd193ae8df92bfcf05872c10d0f",
+      "sha256": "93d2befc998b8b63de8bafb0d6abfbec783a6a96bccdc82e9f7a4925429a5055"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-effects.json",
+      "crc32": "9f469fb5",
+      "bytes": 20752,
+      "blob": "f599d5aec71ae452e927106d2aa0b3b3751d0b4e",
+      "sha256": "0f8393c54bba2d32d198152d8d005e3ce3ba705d764597dbdcc543f1f477c283"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-completed.png",
+      "crc32": "377f1c8d",
+      "bytes": 115990,
+      "blob": "75f6ba57ceba6dd367c379b031d6b3bf43bcb31f",
+      "sha256": "d5b2cdd731ee32caf839d9c2683da63691075896ea7254b4ed7d1f08436818ff"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-reloaded.png",
+      "crc32": "402becfd",
+      "bytes": 111143,
+      "blob": "ac847fb78e8f8f4083922c72b517bd7fd99f93c1",
+      "sha256": "53c042a909fbefe561c7a22d647f7257219bf83aacfe18607ccdb3c523d4d985"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-selected.png",
+      "crc32": "3c416bfa",
+      "bytes": 102758,
+      "blob": "74b15413e7dcf6d7f9e95e5fb28793abe7431c0e",
+      "sha256": "fef8513388ff57114f6ba4c2cf1add25f4bc1917fb66259b4fc29318f5a04ad3"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-emulated-selection-stopped.png",
+      "crc32": "e231b9a9",
+      "bytes": 109133,
+      "blob": "bb39862e5c74e96a6f26976acdc94a1e3217b9a1",
+      "sha256": "cfb5ec68af486b6658d849eafeebd95f90ce987624c05f23feff10b2b46d45f8"
+    },
+    {
+      "path": "TEST-desktop-backend-JWiNYE/ui-seed-receipt.json",
+      "crc32": "7f79b43b",
+      "bytes": 2335,
+      "blob": "a8fc4be8f998d601dfbab8a0600634405dcd0b39",
+      "sha256": "38491555d7e4f792c2117a81bdbf043780cfcf415cf21356dd0bad4426160162"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-d282PE/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-d282PE/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-emulated-selection-ui.log",
+      "crc32": "194da505",
+      "bytes": 225,
+      "blob": "8b1677fd374b7bebe114cbb38b15883521063ee1",
+      "sha256": "6167982b654c0097c6596ae9c3fc5b6321a0048af934974b30b0744cae9616b4"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "84e5d30f",
+      "bytes": 1803,
+      "blob": "4425382e8dc12328937c9e3b91b27f678eb0b69b",
+      "sha256": "2f5d66202dd83a8ef5e672ea299d93403666dedf61423a75b942f22203aee542"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "80b902b8",
+      "bytes": 271,
+      "blob": "a480aa9d48ee864c04358c8687abaa4689abdb81",
+      "sha256": "0955d44604dd90d6d27ad14213ba709d9f28a4cf949dedbcdea463a76e348706"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "crc32": "5fd37ad1",
+      "bytes": 1050,
+      "blob": "86834b3a9c6e8c051d942bc84bef1a79e5989a8d",
+      "sha256": "efd195b05774e8f1a6d97651ec47b9d536aaf9d600dd1153b0710b174bfb4808"
+    }
+  ],
+  "all28MembersSafeUniqueCRCAndExtractedBytesExact": true,
+  "originalReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/selection/extracted/TEST-desktop-backend-JWiNYE/desktop-backend-receipt.json",
+    "bytes": 796834,
+    "blob": "6ee1d49b6cfaf5cb7249dd9ae514a5b27a78bc97",
+    "sha256": "529fc164a2e76cfff09178f312fccebb47efafcc6953beccd707fedb0f6a9914"
+  },
+  "sourceCensus": {
+    "files": 1757,
+    "beforeAfterOrderedArraysExact": true,
+    "everyGitBlobSHA256IndependentlyRecomputed": true,
+    "gitSourceBytes": 20308016,
+    "orderedPathAndGitBlobAndSHA256TableSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+    "tableEncoding": "UTF8 compact JSON array of path,bytes,blob,sha256 in retained original pin order",
+    "scope": "Selected source closure; not a rebuilt or whole installed output tree"
+  },
+  "criticalSource": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+    "bytes": 26261,
+    "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+    "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+  },
+  "originalPrerequisiteReporterMetrics": {
+    "tests": [
+      115,
+      7
+    ],
+    "pass": [
+      115,
+      7
+    ],
+    "fail": [
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      0
+    ]
+  },
+  "originalSkippedSteps": [
+    {
+      "number": 9,
+      "name": "Verify original Runtime and Team conversation contracts"
+    },
+    {
+      "number": 10,
+      "name": "Verify complete workspace types and original typed lint scopes"
+    },
+    {
+      "number": 12,
+      "name": "Capture original controlled Linux process input without a provider"
+    },
+    {
+      "number": 13,
+      "name": "Exercise ordinary Team controls and renderer reload"
+    },
+    {
+      "number": 14,
+      "name": "Exercise ordinary Taskboard controls and persistence"
+    },
+    {
+      "number": 15,
+      "name": "Exercise original Skills and cross-Team controls"
+    },
+    {
+      "number": 16,
+      "name": "Exercise model, effort and credential controls with the pinned TEST peer"
+    },
+    {
+      "number": 17,
+      "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers"
+    },
+    {
+      "number": 18,
+      "name": "Exercise original Codex browser and device login controls through the finite TEST peer"
+    },
+    {
+      "number": 19,
+      "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer"
+    },
+    {
+      "number": 20,
+      "name": "Exercise original provider conversations and schedules through pinned TEST peers"
+    },
+    {
+      "number": 21,
+      "name": "Exercise original Review Keep, Reject, Undo, Redo and reload"
+    },
+    {
+      "number": 22,
+      "name": "Exercise original Review after a cold Host and app restart"
+    },
+    {
+      "number": 24,
+      "name": "Exercise original cold Processes Stop with an independently retained neighbor"
+    },
+    {
+      "number": 25,
+      "name": "Exercise stock Codex Update while the original Team retains its captured source"
+    },
+    {
+      "number": 26,
+      "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI"
+    },
+    {
+      "number": 27,
+      "name": "Prepare exact OpenCode V2 Bun and engine graph"
+    },
+    {
+      "number": 28,
+      "name": "Exercise original OpenCode V2 credential and scoped model Settings"
+    },
+    {
+      "number": 29,
+      "name": "Verify original OpenCode V2 UI receipts and physical cleanup"
+    }
+  ],
+  "sourceRead": {
+    "completeSelectionDriver": true,
+    "completeTeamKeyAndRunContracts": true,
+    "finalAStop": {
+      "sourceEnforcedBeforeFinalScreenshot": true,
+      "physicalOriginalPidAbsent": true,
+      "ownerKeyAndOpaqueRunDerivedFromOriginalCapturedDefinition": true,
+      "sameSelectedTeamAndBothRunPinsRequired": true,
+      "sameRunOwnerQualifiedProgressStateRequired": "disconnected",
+      "visibleUniqueOwnerSectionRequired": true,
+      "visibleOfflineBannerAndSingleEnabledLaunchRequired": true,
+      "directAdjacentProgressDivRequiredEmpty": true,
+      "sameOriginalPhysicalAbsencePollBudgetMs": 75000,
+      "cdpTimeoutCappedToRemainingMs": true,
+      "postAwaitStrictDeadlineCheck": true,
+      "pollIntervalMs": 100,
+      "BDefaultUnchanged": true,
+      "rawAcceptedRendererTuplePersistedSeparately": false,
+      "limit": "Passed exact source path enforces this join; receipt serializes original physical stop result, not a standalone accepted progress sample or atomic Stop-to-screenshot timestamp."
+    },
+    "interpretation": "The actual PASS followed cd4 final-A call stop(liveA,true) before stopped PNG. Physical PID absence and same selected owner/run/disconnected progress/Offline+Launch/empty wrapper are source-enforced within that original75s/100ms poll, with remaining-time CDP cap and strict post-await deadline. The accepted renderer tuple itself is not separately serialized."
+  },
+  "recordedActions": {
+    "uiSteps": 104,
+    "originalClickCounts": {
+      "sidebar task": 1,
+      "Open team": 1,
+      "open original saved Team Launch": 2,
+      "expand original saved launch settings": 2,
+      "expand original captured lead model": 2,
+      "select original Low effort": 1,
+      "focus original input": 3,
+      "launch original selection once": 2,
+      "open original lead conversation": 4,
+      "open original application menu": 5,
+      "open original Teams list": 5,
+      "open original Create Team dialog": 1,
+      "focus original team name": 1,
+      "choose original custom project mode": 1,
+      "type TEST workspace": 1,
+      "expand original Create launch settings": 1,
+      "retain tool confirmations for saved Team": 1,
+      "select original save-only Create": 1,
+      "open original lead model selector": 1,
+      "select original Codex provider": 1,
+      "select original second model": 1,
+      "select original High effort": 1,
+      "save original second selection once": 1,
+      "open original captured Team": 4,
+      "send original held stream once": 1,
+      "stop original selected Team once": 2,
+      "return to original A chats after B Stop": 1
+    },
+    "noReplayOfFourBusinessActionKinds": true
+  },
+  "originalAObservations": [
+    {
+      "phase": "before-create",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-save-only",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-reload-before-next-launch",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-next-launch",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-b-stop-during-a-input",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": false
+    }
+  ],
+  "aStop": {
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+      "teamId": "TEST-desktop-team",
+      "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+      "memberId": "alice-id",
+      "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+    },
+    "phase": "closed",
+    "custody": "released",
+    "originalPid": 6673,
+    "absent": true
+  },
+  "bStop": {
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+      "teamId": "c7c9de69-a6b9-59db-abcd-983f4cb31b3e",
+      "runId": "767b4bb9-cd9a-552c-8f1d-626d309a843f",
+      "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+      "generation": "capture-839a7346-926e-59b3-81f6-37b6cb03949f"
+    },
+    "phase": "closed",
+    "custody": "released",
+    "originalPid": 7951,
+    "absent": true
+  },
+  "stream": {
+    "commandId": "3e005da9-5e5f-488c-92b0-eaa36dbff7ae",
+    "inputId": "c94481c0-1d21-5e37-a83e-3b7e62954e87",
+    "terminal": "succeeded",
+    "survivedBStop": true
+  },
+  "effects": {
+    "total": 133,
+    "counts": {
+      "launch": 52,
+      "exit": 39,
+      "thread-selection": 5,
+      "input": 6,
+      "terminal": 6,
+      "mcp-catalog": 13,
+      "managed-configuration-read": 9,
+      "connected": 2,
+      "partial": 1
+    },
+    "rawNDJSONEqualsProofAndFinalCleanup": true,
+    "uniqueCapturedPeerPids": 52,
+    "recordedExit0Rows": 39,
+    "all52ExitCallbacksNotClaimed": true
+  },
+  "capturedHost": {
+    "pid": 5319,
+    "ppid": 5088,
+    "pgid": 4959,
+    "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+    "observedBeforeShutdown": true
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 5033,
+      "ppid": 1,
+      "pgid": 4959
+    }
+  ],
+  "originalExitedGroup": {
+    "settled": true,
+    "reason": "original-natural-exit-and-fresh-absence",
+    "initialMembers": [
+      {
+        "pid": 5033,
+        "ppid": 1,
+        "pgid": 4959
+      }
+    ],
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "capturedDescendantsAbsent": true,
+    "appExitCode": 0,
+    "appSignalCode": null
+  },
+  "cleanup": {
+    "processGroup": 4959,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "finalSentinelCensus": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": 1,
+    "postQuitOrCleanupInvocations": [],
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "recordedBuildAndInputPins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "6e77929af0e78c4f3e45e770100b7943b8d121d4a1703075361e2a9fe9c1a9e3",
+    "profileSha256": "13668ba0bfe90dc370d8aa51c9aaa7d83d7f6b80f9ed8887506c3edf9bee66c9",
+    "descriptorSha256": "843f9526228e2fe71987f044ee03fe8d8b741b5dc9c90e4c1560f2788d50b223",
+    "sentinelSha256": "a72f5eb86b9bdeddbab131710942bab4213b2bb3ce5b7cce5374b12ca20cd421",
+    "shellProbeSha256": "bb7c5e1b2e7c83db2be788e44600cc7125709ab9a193404ce7f48d9aebf47e73",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "screenshots": [
+    {
+      "proofField": "aLaunchScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-a-launch.png",
+      "bytes": 102027,
+      "blob": "03f130bc1b3192346822bf759acf48861e34eb1f",
+      "sha256": "7c7083dc269686afaa43921b197096605ff437dc5652b7419437bf6e344df833",
+      "rootActuallyViewed": false
+    },
+    {
+      "proofField": "selectedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-selected.png",
+      "bytes": 102758,
+      "blob": "74b15413e7dcf6d7f9e95e5fb28793abe7431c0e",
+      "sha256": "fef8513388ff57114f6ba4c2cf1add25f4bc1917fb66259b4fc29318f5a04ad3",
+      "rootActuallyViewed": true
+    },
+    {
+      "proofField": "reloadedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-reloaded.png",
+      "bytes": 111143,
+      "blob": "ac847fb78e8f8f4083922c72b517bd7fd99f93c1",
+      "sha256": "53c042a909fbefe561c7a22d647f7257219bf83aacfe18607ccdb3c523d4d985",
+      "rootActuallyViewed": false
+    },
+    {
+      "proofField": "bLaunchScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-b-launch.png",
+      "bytes": 97894,
+      "blob": "507eca809dac9dd193ae8df92bfcf05872c10d0f",
+      "sha256": "93d2befc998b8b63de8bafb0d6abfbec783a6a96bccdc82e9f7a4925429a5055",
+      "rootActuallyViewed": false
+    },
+    {
+      "proofField": "aSurvivedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-a-survived.png",
+      "bytes": 114695,
+      "blob": "48207bf38edeee8f752b6c2d2bd4286f569c5843",
+      "sha256": "42d91d5fc87cf147eb6d0a599e4261de754d170c04cd8c7a00c10a9a79b8ae16",
+      "rootActuallyViewed": true
+    },
+    {
+      "proofField": "completedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-completed.png",
+      "bytes": 115990,
+      "blob": "75f6ba57ceba6dd367c379b031d6b3bf43bcb31f",
+      "sha256": "d5b2cdd731ee32caf839d9c2683da63691075896ea7254b4ed7d1f08436818ff",
+      "rootActuallyViewed": false
+    },
+    {
+      "proofField": "stoppedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-stopped.png",
+      "bytes": 109133,
+      "blob": "bb39862e5c74e96a6f26976acdc94a1e3217b9a1",
+      "sha256": "cfb5ec68af486b6658d849eafeebd95f90ce987624c05f23feff10b2b46d45f8",
+      "rootActuallyViewed": true
+    }
+  ],
+  "rootVisualFindings": [
+    "The actual selected PNG shows TEST-model-next and High effort on the original create form.",
+    "The actual A-survived PNG shows A Running with TEST-model/Low and the held partial; raw proof separately binds that frame after B Stop.",
+    "The actual stopped PNG shows A selected, Team is offline, Launch button, Alice offline and completed stream; no green launch/progress panel."
+  ],
+  "limits": [
+    "Only3 of7 PNGs were visually inspected by root; all7 hashes and all28 archive members were independently verified.",
+    "All52 captured peers are physically absent, with39 explicit exit0 callbacks retained; original A and B each have one exit0 row. No52-natural-exit claim.",
+    "No separate Host exit code exists; captured Host absence and natural dev-launcher exit0/null remain distinct.",
+    "Original finite115+7 prerequisite passes are not Team privacy RED/GREEN or any skipped static gate.",
+    "No timing/cause inference for older mixed frames; no atomic Stop-to-screenshot sample, no production hide-ready rule, no vendor/native qualification or other lane transfer."
+  ],
+  "projectCodeExecuted": false,
+  "sourceChanged": false,
+  "ciStateChanged": false
+}

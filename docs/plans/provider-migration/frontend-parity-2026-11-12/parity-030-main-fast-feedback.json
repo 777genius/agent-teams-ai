@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "kind": "Original030MainFastFeedbackScopedProvenance",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826466,
+  "runAttempt": 1,
+  "job": {
+    "id": 135195248869,
+    "name": "Fast feedback",
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:42:43Z",
+    "completed_at": "2026-11-18T23:45:50Z"
+  },
+  "log": {
+    "jobId": 135195248869,
+    "requestedAt": "2026-11-18T23:46:50.676717+00:00",
+    "status": "captured-permanently-retired",
+    "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135195248869-terminal.log",
+    "bytes": 143873,
+    "sha256": "1bb23ced188e3cd0eb9456e6a008770195962b06a6881a0284a51af768112ba5",
+    "capturedAt": "2026-11-18T23:46:55.296740+00:00",
+    "gitBlob": "8d5f01ac74491b3dc828a96e76b4728ec7c2c894",
+    "exactImmutableReadback": true
+  },
+  "actualCheckout": "e1cd736dc055035c6cbb39ca1476fa6f36b50ee8",
+  "nodeVersion": "v26.12.1",
+  "pnpmVersion": "11.22.0",
+  "sourceSize": {
+    "productionFiles": 5162,
+    "frozenExceptions": 141,
+    "limit": 800,
+    "status": "PASS"
+  },
+  "types": {
+    "status": "PASS",
+    "scope": "8 root noEmit configs, legacy-host-scripts, Host test, MCP source and test; prerequisite Host/ledger builds",
+    "canonicalFeatureScope": "not established by this job"
+  },
+  "lint": {
+    "command": "pnpm lint:fast",
+    "errors": 0,
+    "warnings": 228,
+    "typedFeatureLint": "not established by this job"
+  },
+  "selectedOriginalLogLines": [
+    {
+      "line": 148,
+      "text": "2026-11-18T23:42:58.4797144Z HEAD is now at e1cd736 Merge 030b21f0765d1a6e6572f46d262c672d63e69eb7 into 8d46f13fe87b4a25156b6be8331119eb8d0f790e"
+    },
+    {
+      "line": 203,
+      "text": "2026-11-18T23:43:11.3893227Z node: v26.12.1"
+    },
+    {
+      "line": 624,
+      "text": "2026-11-18T23:43:30.4357812Z Source file size guard passed: 5162 production files checked, 141 frozen legacy exceptions, 800-line limit."
+    },
+    {
+      "line": 645,
+      "text": "2026-11-18T23:43:30.8797046Z $ pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test"
+    },
+    {
+      "line": 654,
+      "text": "2026-11-18T23:43:34.3230532Z $ node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json"
+    },
+    {
+      "line": 655,
+      "text": "2026-11-18T23:44:05.7799662Z $ node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
+    },
+    {
+      "line": 658,
+      "text": "2026-11-18T23:44:07.5725471Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json"
+    },
+    {
+      "line": 661,
+      "text": "2026-11-18T23:44:11.4294541Z $ tsc --noEmit"
+    },
+    {
+      "line": 664,
+      "text": "2026-11-18T23:44:12.9459514Z $ tsc --noEmit -p tsconfig.test.json"
+    },
+    {
+      "line": 665,
+      "text": "2026-11-18T23:44:14.5699829Z ##[group]Run pnpm lint:fast"
+    },
+    {
+      "line": 1160,
+      "text": "2026-11-18T23:45:48.5369830Z \u2716 228 problems (0 errors, 228 warnings)"
+    }
+  ],
+  "limits": [
+    "Main workflow remains live for retained Desktop job; this is only FastFeedback original terminal job.",
+    "Actual merge checkout must retain known tree-equivalence scope; not exact-checkout030 or Node24 qualification."
+  ],
+  "noManualRerun": true
+}

@@ -1,0 +1,72 @@
+name: Prepare finite Host Desktop inputs
+description: Capture the existing Host, package manager and process launchers without vendor executables.
+inputs:
+  source-head:
+    description: Exact source commit being qualified.
+    required: true
+  lane:
+    description: Existing finite Desktop lane.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Capture package-manager and Host inputs without vendor executables
+      shell: bash
+      env:
+        HOST_EMULATED_SOURCE_HEAD: ${{ inputs.source-head }}
+        HOST_EMULATED_LANE: ${{ inputs.lane }}
+      run: |
+        set -euo pipefail
+        selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-emulated-ui-inputs-XXXXXX")"
+        mkdir "$selected_inputs/corepack" "$selected_inputs/cache"
+        printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+        pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+        COREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version
+        if [[ "$RUNNER_OS" = Linux ]]; then
+          LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
+            --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
+            > "$RUNNER_TEMP/host-emulated-linux-child-exec-selection.json"
+        fi
+        HOST_EMULATED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
+        import assert from 'node:assert/strict';
+        import { createHash } from 'node:crypto';
+        import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+        import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
+        import { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';
+        import { join } from 'node:path';
+        const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+        const selected = process.env.HOST_EMULATED_INPUTS;
+        const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
+        assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');
+        const pnpm = join(corepack, 'dist/pnpm.js');
+        let processLauncher, linuxChildExec;
+        if (process.platform === 'linux') {
+          const launcher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
+          processLauncher = { manifestSha256: launcher.manifestSha256, binarySha256: launcher.binarySha256 };
+          const pin = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-linux-child-exec-selection.json'), 'utf8'));
+          assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+          assert.equal(pin.manifestPath, join(selected, 'linux-child-exec/manifest.json'));
+          assert.ok(!/[\r\n]/.test(pin.manifestPath));
+          linuxChildExec = verifyLinuxChildExecInput(pin);
+          assert.deepEqual(linuxChildExec, pin);
+          assert.equal(JSON.parse(readFileSync(pin.manifestPath, 'utf8')).sourceSha256,
+            sha('packages/legacy-agent-host/native/linux-child-exec.c'));
+        }
+        const values = {
+          LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+          LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
+          LEGACY_DESKTOP_NODE_SHA256: sha(realpathSync(process.execPath)),
+          LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha('packages/legacy-agent-host/dist/cli.js'),
+          LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
+          LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
+          LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
+          ...(linuxChildExec ? { LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
+            LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256 } : {}),
+        };
+        for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+        writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
+          sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
+          architecture: process.arch, nativeProviders: ['opencode-v2-management', 'opencode-v2-review', 'opencode-v2-quit-active', 'opencode-v2-quit-pending-open', 'opencode-v2-resume', 'opencode-v2-chat-attachments'].includes(process.env.HOST_EMULATED_LANE) ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
+          values, linuxChildExec, processLauncher,
+        }, null, 2), { mode: 0o600 });
+        NODE

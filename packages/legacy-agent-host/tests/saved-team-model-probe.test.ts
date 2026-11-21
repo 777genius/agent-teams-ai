@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
 import {
   mkdirSync,
   lstatSync,
@@ -13,6 +14,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse as parsePath, sep } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
@@ -30,7 +32,7 @@ import { captureOpenCodeReadinessOrigin, captureReadinessPreparation } from '../
 import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
   openCodeV2SelectedSourceReference, selectedFilePaths } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
 import { captureOpenCodeProbeAccount, capturePreparedModelReference, captureNativeRestartReadiness,
-  attachMemberModelReadiness, consumeMemberModelReadiness, captureLaunchModelReadiness } from '../dist/composition/prepareTeamModelReadiness.js';
+  attachMemberModelReadiness, inspectMemberModelReadiness, consumeMemberModelReadiness, captureLaunchModelReadiness } from '../dist/composition/prepareTeamModelReadiness.js';
 import type { LocalModelReadinessTransfer } from '../dist/composition/prepareTeamModelReadiness.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
@@ -40,12 +42,17 @@ import { attachInitialRuntimeModelAdmission, captureInitialRuntimeModelAdmission
   captureInitialRuntimeMemberAdmission, initialRuntimeModelProbeScope } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { emptySession } from '../dist/runtime/sessionState.js';
+import { teamHostProfileSchema } from '../dist/composition/TeamHost.js';
 import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
 import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
 import type { LocalModelReadinessOrigin, ReadinessSourceReference, NativeLocalReadinessEvidence, StoredModelProbe } from '../dist/management/commandRecords.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
 import type { TeamModelProbeSelection } from '../dist/composition/teamLaunchModelProbe.js';
+import type { RuntimeSourceProcessOrigin } from '../dist/composition/runtimeSourceProcessOrigin.js';
+import type { ModelProbePreparation } from '../dist/management/ModelProbeOwner.js';
 import type { TestContext } from 'node:test';
 
 function files(root: string, prefix = ''): unknown[] {
@@ -64,7 +71,7 @@ function files(root: string, prefix = ''): unknown[] {
   });
 }
 function fixture(t: TestContext, withSources = false, configure?: (profile: TeamHostProfile) => void,
-  onAllocation?: () => void) {
+  onAllocation?: () => void, windowsMain = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-saved-model-source-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = {
@@ -140,7 +147,7 @@ function fixture(t: TestContext, withSources = false, configure?: (profile: Team
           cwd: root,
           model: 'TEST-default-model',
           accountBinding: 'TEST-private-account',
-          executable: { path: '/TEST/claude', sha256: 'c'.repeat(64) },
+          executable: { path: join(root, 'TEST-never-launched-claude'), sha256: 'c'.repeat(64) },
           environment: {
             HOME: root,
             CLAUDE_CONFIG_DIR: root,
@@ -160,6 +167,14 @@ function fixture(t: TestContext, withSources = false, configure?: (profile: Team
       ],
     },
   };
+  if (windowsMain) {
+    profile.processCustody = { kind: 'main-windows-v1' };
+    profile.runtime!.providerTemplates![0]!.windowsBroker = {
+      path: 'C:\\TEST\\broker.exe', sha256: 'e'.repeat(64), arch: 'x64', protocol: 1,
+      capability: 'service-scopes-v1',
+    };
+    assert.deepEqual(teamHostProfileSchema.parse(profile), profile);
+  }
   configure?.(profile);
   const owner = createFilesystemTeamOwner({
     root,
@@ -267,6 +282,147 @@ test('saved model evidence follows the published source and cannot authorize a l
   const cleanup = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'cancel');
   assert.equal(cleanup.profile, null);
   assert.equal(cleanup.context, captured.context);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
+
+function initialSeedFixture(t: TestContext, onAllocation?: () => void) {
+  return fixture(t, true, profile => {
+    const definition = profile.teams[0]!;
+    const lead = definition.members.find(member => member.role === 'lead')!;
+    definition.members = [{ ...lead, delivery: {
+      backendId: definition.binding.backendId, teamId: definition.binding.teamId,
+      teamName: definition.binding.teamName, runId: definition.scope.runId,
+      memberId: lead.memberId, generation: '1',
+    } }];
+    definition.grants.push({ principalId: 'TEST-seed-agent', memberName: lead.name,
+      permissions: ['read', 'task.write', 'message.write'] });
+    const seed = profile.runtime!.providerTemplates![0]!;
+    seed.teamId = definition.binding.teamId;
+    seed.memberId = lead.memberId;
+    seed.principalId = 'TEST-seed-agent';
+    seed.sessionId = 'TEST-original-seed-session';
+    seed.model = definition.savedSettings!.model!;
+    profile.runtime!.members = [seed];
+  }, onAllocation);
+}
+
+test('unstarted seed model preflight follows current published source without allocating or rebinding the original runtime', async t => {
+  let allocations = 0;
+  const f = initialSeedFixture(t, () => { allocations++; });
+  const selected = await f.sources!.publish('TEST-initial-seed-source-B');
+  const before = files(f.root);
+  const view = f.view();
+  const input: TeamModelProbeSelection = { ...f.selection(),
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root } };
+  const probe = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.equal(probe.profile?.executable.path, selected.executable.path);
+  assert.match(view.source.sourceId, /^saved-model-/u);
+  assert.equal(probe.isCurrent(), true);
+  assert.equal(allocations, 0);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+  assert.deepEqual(files(f.root), before);
+  const original = f.runtime.executeLaunch('TEST-imported-team', 'configuration.read', 'TEST-original-read', {});
+  assert.equal((original as { launch: { launchId: string } }).launch.launchId,
+    f.profile.teams[0]!.scope.runId);
+  await f.sources!.publish('TEST-initial-seed-source-C');
+  assert.equal(probe.isCurrent(), false);
+  assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'),
+    { reason: 'saved-model-source' });
+  assert.equal(allocations, 0);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
+
+for (const blocked of ['attached', 'held', 'pending-input', 'unavailable'] as const) {
+  test(`unstarted seed retains current model reads and refuses prospective evidence when ${blocked}`, async t => {
+    let allocations = 0;
+    const f = initialSeedFixture(t, () => { allocations++; });
+    await f.sources!.publish(`TEST-seed-guard-${blocked}`);
+    const input: TeamModelProbeSelection = { ...f.selection(),
+      draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root } };
+    assert.match(input.launchId, /^saved-model-/u);
+    const probe = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+    assert.equal(probe.isCurrent(), true);
+    const before = files(f.root);
+    const originalRead = RuntimeOwner.prototype.readCapturedSession;
+    t.mock.method(RuntimeOwner.prototype, 'readCapturedSession', function (this: RuntimeOwner,
+      binding: Parameters<RuntimeOwner['readCapturedSession']>[0]) {
+      if (blocked === 'unavailable') throw new Error('TEST-original-runtime-read-unavailable');
+      const observed = originalRead.call(this, binding);
+      if (blocked === 'attached') return { ...observed, attached: true };
+      const record = emptySession(binding, f.profile.owner.profileId, 'TEST-original-incarnation');
+      if (blocked === 'held') { record.phase = 'held'; record.custody = 'unknown'; }
+      else record.inputs.push({ phase: 'admitted', operationRef: 'TEST-pending-operation',
+        fingerprint: 'a'.repeat(64), intent: { binding, deliveryId: 'TEST-pending-delivery',
+          inputId: 'TEST-pending-input', messageId: 'TEST-pending-message', content: 'TEST-pending' } });
+      return { ...observed, record };
+    });
+    assert.equal(f.view().source.sourceId, f.profile.teams[0]!.scope.runId);
+    assert.equal(probe.isCurrent(), false);
+    assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'),
+      { reason: 'saved-model-runtime-history' });
+    assert.equal(allocations, 0);
+    assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+    assert.deepEqual(files(f.root), before);
+  });
+}
+
+test('saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes', async t => {
+  const f = fixture(t, true, undefined, undefined, true), published = await f.sources!.publish('TEST-saved-source-A');
+  const input = f.selection(), captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.ok(captured.profile && captured.processOrigin);
+  const origin = structuredClone(captured.processOrigin), profile = structuredClone(captured.profile);
+  assert.equal(origin.revision, published.selection.revision);
+  assert.equal(origin.sourceId, published.selection.sourceId);
+  assert.equal(origin.origin.kind, 'runtime');
+  assert.equal('processOrigin' in profile, false);
+  assert.equal('runtimeSourceOrigin' in profile, false);
+  const workspace = join(f.root, 'TEST-probe-workspace'); mkdirSync(workspace);
+  const { effort: _effort, ...withoutEffort } = input;
+  const draft = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace },
+  }, 'start');
+  assert.ok(draft.profile);
+  assert.deepEqual(draft.processOrigin, origin, 'default selection cannot replace the original saved source witness');
+  assert.equal(draft.profile?.cwd, workspace);
+  assert.equal(draft.model, 'TEST-default-model');
+  assert.equal(draft.isCurrent(), true);
+  const store = new FileManagementCommandStore(f.root), profiles = new Map<string, ProviderManagementProfile>();
+  let factories = 0, runs = 0, closes = 0, finish!: (value: boolean) => void;
+  const probes = new ModelProbeOwner({ store, fence: new ManagementResourceFence(store.list()),
+    assertWriter() {}, select(profileId, configRevision) {
+      return { profileId, configRevision, selectionDigest: runtimeDigest(profiles.get(profileId)),
+        resourceId: runtimeDigest('TEST-original-account') };
+    }, prepare: () => assert.fail('A source-derived probe must use its original private preparation') });
+  t.after(() => probes.close());
+  const management = { probes,
+    admitTeamProbeProfile(value: ProviderManagementProfile) { profiles.set(value.profileId, structuredClone(value)); },
+    prepareTeamProbe(value: ProviderManagementProfile, selected?: RuntimeSourceProcessOrigin): ModelProbePreparation {
+      assert.deepEqual(value, profile); assert.deepEqual(selected, origin);
+      return () => {
+        factories++;
+        return { timeoutMs: 10000, run: () => { runs++; return new Promise<boolean>(resolve => { finish = resolve; }); },
+          close: async () => { closes++; finish(false); return true; } };
+      };
+    },
+  };
+  const request = { runtime: f.runtime, management, teamId: 'TEST-imported-team',
+    commandId: 'TEST-original-source-probe', payload: input };
+  assert.equal(await executeTeamModelProbe({ ...request, action: 'read' }), null);
+  assert.equal(factories, 0);
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'start' }))?.phase, 'running');
+  const journal = store.read(request.commandId)!;
+  assert.equal(factories, 1); assert.equal(runs, 1);
+  await executeTeamModelProbe({ ...request, action: 'start' });
+  assert.equal(factories, 1); assert.equal(runs, 1); assert.deepEqual(store.read(request.commandId), journal);
+  assert.equal(JSON.stringify(journal).includes('processOrigin'), false);
+  assert.equal(JSON.stringify(journal).includes('runtimeSourceOrigin'), false);
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'cancel' }))?.phase, 'cancelled');
+  assert.equal(closes, 1);
+  await probes.close();
+  await f.sources!.publish('TEST-saved-source-B');
+  assert.equal(captured.isCurrent(), false); assert.equal(draft.isCurrent(), false);
+  assert.deepEqual(captured.processOrigin, origin);
   assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
 });
 
@@ -378,6 +534,7 @@ function selectProvider(f: ReturnType<typeof fixture>, provider: 'claude' | 'cod
 for (const provider of ['claude', 'codex', 'opencode'] as const)
   for (const change of ['roster', 'revoke', 'recipe'] as const)
     test(`existing probe journal retains original intents and exact ${provider} cleanup after ${change} without native Team allocation`, async (t) => {
+      t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
       const f = fixture(t);
       selectProvider(f, provider);
       const payload = f.selection('alice'),
@@ -539,6 +696,8 @@ test('operator grant revocation invalidates saved source evidence even when the 
 });
 
 test('Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable', async (t) => {
+  // These synthetic readers validate provenance, not filesystem throughput within the unchanged 1s lease.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const f = fixture(t),
     captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', f.selection(), 'read');
   assert.ok(captured.profile);
@@ -1141,6 +1300,7 @@ test('V1 saved Default rebases only its proven limit overlay and resets the nati
   });
   const input = f.selection();
   const original = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.ok(original.profile);
   assert.equal(original.model, 'chosen');
   assert.equal(original.providerId, 'TEST-other');
   const originalConfig = JSON.parse(original.profile!.environment.OPENCODE_CONFIG_CONTENT!);
@@ -1150,6 +1310,7 @@ test('V1 saved Default rebases only its proven limit overlay and resets the nati
     ...withoutEffort, model: '__provider_default__',
     draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: f.root },
   }, 'start');
+  assert.ok(fresh.profile);
   assert.equal(fresh.model, 'default');
   assert.equal(fresh.providerId, 'TEST-local');
   const config = JSON.parse(fresh.profile!.environment.OPENCODE_CONFIG_CONTENT!);
@@ -1290,7 +1451,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       provider: 'opencode', protocolRevision: '1.19.4', teamId: definition.binding.teamId, memberId: 'alice',
       principalId: 'TEST-retained-agent', sessionId: 'TEST-retained-session', generation: 1,
       configRevision: 'TEST-retained-config', accountBinding: 'TEST-retained-account', model: modelId, cwd: root,
-      executable: { path: '/TEST/opencode', sha256: 'c'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
+      executable: { path: join(root, 'TEST-opencode'), sha256: 'c'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
       mcpPolicyPlugin: testPolicyPlugin(root),
       environment: { HOME: root, XDG_CONFIG_HOME: root, XDG_DATA_HOME: root, XDG_CACHE_HOME: root },
       nativeOptions: { providerId, agent: 'build' },
@@ -1314,6 +1475,9 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     'technical Launch and product-roster revisions are separate identities');
   assert.equal(payload.launchId.startsWith('saved-model-'), false);
   const captured = own.runtime.captureLaunchModelProbe(own.team.definition.binding.teamId, payload, 'read');
+  assert.ok('productRosterRevision' in captured);
+  assert.equal(captured.productRosterRevision, originalRoster.revision,
+    'the exact prospective destination binds the original product revision');
   assert.equal(captured.profile?.provider, 'opencode');
   if (captured.profile?.provider !== 'opencode') assert.fail('TEST-retained-OpenCode-profile');
   const profile = captured.profile, commandId = 'TEST-retained-product-probe';
@@ -1446,5 +1610,257 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
   } finally {
     records.write(original); assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   }
+  t.mock.timers.setTime(original.expiresAt - 1);
+  assert.deepEqual(captureLaunchModelReadiness(options), transferred,
+    'the original readiness remains usable strictly before its unchanged cutoff');
+  t.mock.timers.setTime(original.expiresAt);
+  assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' },
+    'the original readiness expires exactly at its cutoff without any lease extension');
+  assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   assert.equal(runs, 1); assert.equal(closes, 1); assert.equal(allocations, 0);
+
+  // Exercise the private allocation inspector against the original completed V1
+  // receipt; public capture/transfer alone cannot enter its synchronous bracket.
+  const member = compiled.profiles.find(row => row.memberId === 'alice')!;
+  assert.equal(member.provider, 'opencode');
+  const selectedReference = transferred.groups[0]!, shadowDirectory = join(own.root, 'opencode'),
+    shadow = join(shadowDirectory, 'opencode.json'), consulted = join(own.root, 'opencode.jsonc');
+  const originalProject = readFileSync(join(own.root, 'opencode.json'), 'utf8');
+  let businessOpens = 0;
+  for (const change of ['unchanged', 'shadowed-native', 'main-origin', 'owner', 'expiry', 'credential'] as const) {
+    // Independent observations of the same fixed lease, never an updated receipt.
+    t.mock.timers.setTime(original.expiresAt - 1);
+    const binding: MemberEntry['binding'] = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
+      runId: 'TEST-private-origin-' + change, memberId: member.memberId, generation: '1' };
+    const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member), team: own.team,
+      binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
+      config: { tenantId: own.profile.owner.ownerId, projectId: own.team.definition.scope.projectId,
+        sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
+        requiredCapabilities: ['text'] } };
+    const launch = new TeamLaunchOwner({ definition: { launchId: binding.runId, rosterRevision: published.revision,
+      members: [{ memberId: member.memberId, binding, configurationDigest: runtimeDigest(member),
+        baseConfigurationDigest: runtimeDigest(member), runtimeGeneration: member.generation,
+        contextDigest: runtimeDigest('TEST-no-input'), configRevision: member.configRevision, skipped: false, timeoutMs: 1000 }] },
+      hostIncarnation: 'TEST-retained-host', store: new TeamOwnerStore(own.root, own.team.definition.binding.teamName),
+      authorized: (action, callback) => own.owner.withLaunchAuthority('TEST-human', action, callback),
+      runtime: { read: () => ({ attached: false, nativeReady: false }),
+        open: async () => { businessOpens++; throw Error('TEST no business allocation during readiness inspection'); } } });
+    let active = true, targetReads = 0, changed = false;
+    let diagnosticNow = 0, performanceReads = 0, authorityCalls = 0, authorityCost = 11;
+    let failDiagnosticClock = false, diagnosticReadsAfterUnsubscribe = 0;
+    const manager = { ...management, readinessTarget: (selected: ProviderManagementProfile) => {
+      targetReads++;
+      if (change === 'unchanged') diagnosticNow += 23;
+      if (!changed) {
+        changed = true;
+        if (change === 'main-origin') writeFileSync(consulted, '{}', { flag: 'wx', mode: 0o600 });
+        else if (change === 'owner') active = false;
+        else if (change === 'expiry') t.mock.timers.setTime(original.expiresAt);
+      }
+      return target(selected);
+    } };
+    const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
+    const observe = (value: unknown) => { observations.push(value); };
+    if (change === 'unchanged') diagnostic.subscribe(observe);
+    const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
+      assertCurrent() {
+        if (change === 'unchanged') { diagnosticNow += authorityCost; authorityCalls++; }
+        if (!active) throw Error('TEST original member owner revoked');
+      } };
+    const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
+      configurationDigest: runtimeDigest(member) });
+    const originalRead = launch.readModelReadiness;
+    const measuredRead = change === 'unchanged' ? t.mock.method(launch, 'readModelReadiness',
+      (selected: Parameters<TeamLaunchOwner['readModelReadiness']>[0]) => {
+        diagnosticNow += 7; return originalRead.call(launch, selected);
+      }) : undefined;
+    const measuredClock = change === 'unchanged' ? t.mock.method(performance, 'now', () => {
+      performanceReads++;
+      if (failDiagnosticClock) { failDiagnosticClock = false; throw Error('TEST observational clock failure'); }
+      return diagnosticNow;
+    }) : undefined;
+    try {
+      attachMemberModelReadiness({ launch, entry, reference: selectedReference,
+        commandId: 'TEST-private-consume-' + change, actorDigest: runtimeDigest('TEST-original-actor'),
+        inputDigest: runtimeDigest(payload), cutoff: original.expiresAt });
+      const pending = read();
+      assert.equal(pending.consumer.disposition, 'pending');
+      assert.deepEqual(pending.reference, selectedReference);
+      assert.equal(pending.consumer.cutoff, original.expiresAt);
+      if (change === 'main-origin' || change === 'owner' || change === 'expiry') {
+        assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
+        assert.equal(targetReads, 1, 'the change occurs inside the original target inspection');
+        assert.deepEqual(read(), pending, 'failed final validation never consumes the original reference');
+        if (change === 'expiry') {
+          assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+          assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
+          assert.equal(runs, 1); assert.equal(closes, 1);
+          assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+          continue; // An expired consumer is never qualified again.
+        }
+        if (change === 'main-origin') rmSync(consulted);
+        active = true;
+      }
+      const inspected = inspectMemberModelReadiness(inspection);
+      assert.equal(inspected.kind, 'preparation');
+      assert.equal(inspected.assertReadinessCredential, undefined, 'V1 configured-key inspection has no file-key capability');
+      assert.deepEqual(inspected.reference, selectedReference);
+      assert.deepEqual(read(), pending, 'readonly inspection leaves consumption to its existing owner');
+      inspected.assertCurrent();
+      if (change === 'unchanged') {
+        const originalCheck = inspection.assertCurrent, failure = Error('TEST exact original current refusal');
+        const successfulAuthorityCalls = authorityCalls;
+        inspection.assertCurrent = () => { diagnosticNow += 11; throw failure; };
+        try {
+          assert.throws(inspected.assertCurrent, error => error === failure);
+          assert.throws(inspected.assertCurrent, error => error === failure);
+        } finally { inspection.assertCurrent = originalCheck; }
+        assert.equal(observations.length, 1, 'only the first failure of this actual inspector is observed');
+        const observed = observations[0] as Record<string, unknown>;
+        assert.equal(observed.kind, 'consumer'); assert.equal(observed.phase, 'initial-authority');
+        assert.equal(observed.reason, 'threw'); assert.equal(observed.bindingDigest, managementDigest(binding));
+        assert.equal(observed.consumerId, pending.consumer.consumerId);
+        assert.ok(observed.currentCalls && typeof observed.currentCalls === 'object', 'actual current calls retain bounded timings');
+        const timing = observed.currentCalls as { count: number; totalMs: number; maxMs: number; lastMs: number | null;
+          truncated: boolean; regions?: Record<string, number> };
+        assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'regions', 'totalMs', 'truncated']);
+        assert.equal(timing.count, 3, 'initial inspection, explicit check, and first failed check are measured once');
+        assert.equal(timing.truncated, false);
+        assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
+        assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
+        assert.equal(targetReads, 2);
+        assert.equal(successfulAuthorityCalls, 22, 'two V1 inspections retain source capture and closing currentness checks');
+        assert.deepEqual(timing.regions, { initialAuthorityCount: 3, initialAuthorityMs: 33,
+          readConsumerCount: 2, readConsumerMs: 14,
+          referenceCount: 2, referenceMs: 11 * (successfulAuthorityCalls - 4) + 2 * 23,
+          finalAuthorityCount: 2, finalAuthorityMs: 22,
+          referenceAccountCount: 2, referenceAccountMs: 11 * (successfulAuthorityCalls - 6) + 2 * 23,
+          referenceAccountAuthorityCount: 2, referenceAccountAuthorityMs: 11 * (successfulAuthorityCalls - 6) });
+        assert.equal(timing.totalMs, 11 * (successfulAuthorityCalls + 1) + 2 * 7 + 2 * 23);
+        assert.equal(timing.lastMs, 11, 'the first timed partial throw retains its elapsed region');
+        assert.equal(performanceReads, 20 + 2 * (successfulAuthorityCalls - 6),
+          'original clocks plus account intervals and nested authority; no replay after first latch');
+        diagnostic.unsubscribe(observe);
+        assert.deepEqual(read(), pending, 'observation and the unchanged error never consume readiness');
+        for (const clockFailure of [false, true]) {
+          const partial: unknown[] = [], capturePartial = (value: unknown) => { partial.push(value); };
+          const originalTarget = manager.readinessTarget, targetFailure = Error('TEST exact account target refusal');
+          const previousAuthorityCalls = authorityCalls, previousClockReads = performanceReads;
+          authorityCost = 11.4;
+          manager.readinessTarget = () => {
+            targetReads++; diagnosticNow += 23; failDiagnosticClock = clockFailure;
+            throw targetFailure;
+          };
+          diagnostic.subscribe(capturePartial);
+          try {
+            assert.throws(() => inspectMemberModelReadiness(inspection), error => error === targetFailure);
+            assert.equal(partial.length, 2, 'the original reference refusal and its containing consumer are observed once');
+            const consumer = partial.find(value => (value as Record<string, unknown>).kind === 'consumer') as Record<string, unknown>;
+            assert.equal(consumer.phase, 'reference'); assert.equal(consumer.reason, 'threw');
+            const nested = consumer.currentCalls as { count: number; truncated: boolean; regions: Record<string, number> };
+            assert.equal(nested.count, 1); assert.equal(nested.truncated, clockFailure);
+            const callbacks = authorityCalls - previousAuthorityCalls;
+            assert.equal(callbacks, 8, 'the original target throws before the closing policy and final authority checks');
+            assert.equal(nested.regions.referenceAccountAuthorityCount, 1);
+            assert.equal(nested.regions.referenceAccountAuthorityMs, Math.round(authorityCost * (callbacks - 2)),
+              'sum fractional nested intervals before the single outer-call rounding');
+            if (!clockFailure) {
+              assert.equal(nested.regions.referenceAccountCount, 1);
+              assert.equal(nested.regions.referenceAccountMs, Math.round(authorityCost * (callbacks - 2) + 23));
+            }
+            assert.equal(performanceReads - previousClockReads, 7 + 2 * (callbacks - 2));
+            assert.deepEqual(read(), pending, 'partial timing and a failed observer do not consume readiness');
+          } finally {
+            diagnostic.unsubscribe(capturePartial); manager.readinessTarget = originalTarget; authorityCost = 11;
+          }
+        }
+        const authorityTiming: { observe?(part: 'provider' | 'allocation'): (() => void) | undefined } = {};
+        const parts: unknown[] = [], observeParts = (value: unknown) => { parts.push(value); };
+        const previousAuthorityCalls = authorityCalls, previousClockReads = performanceReads;
+        const timedInspection = { ...inspection, authorityTiming,
+          assertCurrent() {
+            const endProvider = authorityTiming.observe?.('provider');
+            try { originalCheck(); } finally { endProvider?.(); }
+            const endAllocation = authorityTiming.observe?.('allocation');
+            try { diagnosticNow += 7; } finally { endAllocation?.(); }
+          } };
+        diagnostic.subscribe(observeParts);
+        try {
+          const original = inspectMemberModelReadiness(timedInspection);
+          assert.equal(authorityCalls - previousAuthorityCalls, 11,
+            'all eight account callbacks and the three surrounding checks still run');
+          assert.equal(Object.hasOwn(authorityTiming, 'observe'), false, 'the original synchronous account interval releases its observer');
+          timedInspection.assertCurrent = () => { diagnosticNow += 11; throw failure; };
+          assert.throws(original.assertCurrent, error => error === failure);
+          assert.throws(original.assertCurrent, error => error === failure);
+          assert.equal(parts.length, 1, 'the existing first-refusal latch is unchanged');
+          const observed = parts[0] as { currentCalls: { count: number; truncated: boolean; regions: Record<string, number> } };
+          assert.equal(observed.currentCalls.count, 2); assert.equal(observed.currentCalls.truncated, false);
+          assert.deepEqual(Object.fromEntries(Object.entries(observed.currentCalls.regions)
+            .filter(([name]) => /^referenceAccount(?:Provider|Allocation)/.test(name))), {
+            referenceAccountProviderCount: 1, referenceAccountProviderMs: 8 * 11,
+            referenceAccountAllocationCount: 1, referenceAccountAllocationMs: 8 * 7,
+          }, 'new counts retain one containing interval, while milliseconds sum all original callbacks');
+          assert.equal(observed.currentCalls.regions.referenceAccountAuthorityMs, 8 * (11 + 7));
+          assert.equal(performanceReads - previousClockReads, 25 + 4 * 8 + 2,
+            'only the original timed account callbacks add two clock pairs each');
+          assert.deepEqual(read(), pending);
+        } finally { diagnostic.unsubscribe(observeParts); }
+        const clocksWithoutSubscriber = performanceReads;
+        let diagnosticReads = 0, originalChecks = 0;
+        const brokenObservation = { ...inspection,
+          get authorityTiming(): never { diagnosticReads++; throw Error('TEST private diagnostic getter failure'); },
+          assertCurrent() { originalChecks++; throw failure; } };
+        assert.throws(() => inspectMemberModelReadiness(brokenObservation), error => error === failure);
+        assert.equal(diagnosticReads, 1); assert.equal(originalChecks, 1);
+        assert.equal(performanceReads, clocksWithoutSubscriber, 'disabled observation adds no clock reads even when its field throws');
+        diagnosticReadsAfterUnsubscribe = performanceReads;
+      }
+      if (change === 'shadowed-native') {
+        mkdirSync(shadowDirectory, { mode: 0o700 });
+        const shadowConfig = (key: string) => JSON.stringify({ provider: { [providerId]: {
+          options: { apiKey: key },
+        } } });
+        writeFileSync(shadow, shadowConfig('TEST-shadowed-first'), { flag: 'wx', mode: 0o600 });
+        inspected.assertCurrent();
+        renameSync(shadow, shadow + '.original');
+        writeFileSync(shadow, shadowConfig('TEST-shadowed-replacement'), { flag: 'wx', mode: 0o600 });
+        inspected.assertCurrent();
+        assert.deepEqual(read(), pending, 'fresh native source inspection preserves project precedence');
+      }
+      if (change === 'credential') {
+        writeFileSync(join(own.root, 'opencode.json'),
+          originalProject.replace('TEST-retained-key', 'TEST-changed-key'), { mode: 0o600 });
+        assert.throws(inspected.assertCurrent, { code: 'held' });
+        assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
+        assert.deepEqual(read(), pending, 'changed original credential cannot consume old evidence');
+      } else {
+        const consumed = consumeMemberModelReadiness(inspection);
+        const committed = read();
+        assert.equal(committed.consumer.disposition, 'consumed');
+        assert.equal(committed.consumer.consumerId, pending.consumer.consumerId);
+        assert.equal(committed.consumer.cutoff, original.expiresAt);
+        assert.deepEqual(committed.reference, selectedReference);
+        consumed.assertCurrent();
+        assert.equal(consumeMemberModelReadiness(inspection).consumerId, consumed.consumerId);
+        assert.deepEqual(read(), committed, 'repeat consumption retains the same original consumer');
+      }
+      assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+      assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
+      assert.equal(runs, 1); assert.equal(closes, 1);
+      assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+      if (change === 'unchanged') {
+        assert.equal(performanceReads, diagnosticReadsAfterUnsubscribe, 'fresh original consumption checks add no diagnostic clocks without a subscriber');
+        assert.equal(targetReads, 8, 'the two partial checks, one timed inspection and original three consumption checks inspect the target freshly');
+      }
+    } finally {
+      measuredRead?.mock.restore();
+      measuredClock?.mock.restore();
+      diagnostic.unsubscribe(observe);
+      launch.seal();
+      if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });
+      rmSync(consulted, { force: true });
+      t.mock.timers.setTime(original.expiresAt);
+    }
+  }
 }

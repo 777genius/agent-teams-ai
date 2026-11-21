@@ -9,6 +9,7 @@ export function NativeNextPromptProviderCard({
   description,
   enabled,
   saving,
+  disabled = false,
   error,
   onChange,
 }: {
@@ -17,6 +18,7 @@ export function NativeNextPromptProviderCard({
   readonly description: string;
   readonly enabled: boolean;
   readonly saving: boolean;
+  readonly disabled?: boolean;
   readonly error: string | null;
   readonly onChange: (value: boolean) => void;
 }): JSX.Element {
@@ -35,7 +37,7 @@ export function NativeNextPromptProviderCard({
             {description}
           </div>
         </div>
-        <SettingsToggle enabled={enabled} ariaLabel={title} disabled={saving} onChange={onChange} />
+        <SettingsToggle enabled={enabled} ariaLabel={title} disabled={saving || disabled} onChange={onChange} />
       </div>
       {error ? (
         <div

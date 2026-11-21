@@ -1,0 +1,138 @@
+--- a/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts
++++ b/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts
+@@ -63,6 +63,27 @@
+     assert.ok(match, 'closed metadata diagnostic framing');
+     const value = object(JSON.parse(match[1]!));
+     if (value.hostPid !== hostPid) continue;
++    if (value.stage === 'read-failed') {
++      assert.deepEqual(Object.keys(value).sort(), ['aborted', 'deadlineExpired', 'elapsedMs', 'hostPid',
++        'mode', 'profileHash', 'providerHash', 'readStage', 'reason', 'stage']);
++      assert.ok(hash(value.profileHash));
++      assert.ok(value.mode === 'directory' || value.mode === 'provider');
++      assert.ok(value.providerHash === null || hash(value.providerHash));
++      assert.equal(value.mode === 'directory', value.providerHash === null);
++      assert.ok(typeof value.readStage === 'string' && ['admission', 'native-client', 'identity',
++        'plugins', 'permissions', 'mcp', 'credential', 'directory', 'activation-wait', 'current',
++        'projection', 'dispose', 'result-current'].includes(value.readStage));
++      assert.ok(typeof value.reason === 'string' && ['held', 'conflict', 'invalid', 'busy', 'deadline',
++        'cleanup_unknown', 'transport_failure', 'authority_mismatch', 'disposed', 'http_failure',
++        'media_type', 'body_limit', 'frame_limit', 'invalid_response', 'invalid_native_catalog',
++        'native_catalog_binding_mismatch', 'capabilities_pending', 'unqualified_version', 'ABORT_ERR',
++        'unknown'].includes(value.reason));
++      assert.ok(typeof value.elapsedMs === 'number' && Number.isSafeInteger(value.elapsedMs) &&
++        value.elapsedMs >= 0 && value.elapsedMs <= 3_600_000);
++      assert.equal(typeof value.deadlineExpired, 'boolean');
++      assert.ok(value.aborted === null || typeof value.aborted === 'boolean');
++      continue; // A read failure has no native birth or lifecycle/cleanup authority.
++    }
+     assert.deepEqual(Object.keys(value).sort(), ['hostPid', 'mode', 'pid', 'profileHash', 'providerHash', 'stage', 'startIdentityHash']);
+     assert.ok(hash(value.profileHash));
+     assert.ok(value.mode === 'directory' || value.mode === 'provider');
+--- a/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
++++ b/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+@@ -1,6 +1,7 @@
+ import assert from 'node:assert/strict';
+ import { createHash } from 'node:crypto';
+-import { readFile } from 'node:fs/promises';
++import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
++import { tmpdir } from 'node:os';
+ import { basename, join } from 'node:path';
+ import { test } from 'node:test';
+ import { runInNewContext } from 'node:vm';
+@@ -13,6 +14,7 @@
+ import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
+   captureDesktopV2ManagementAuthority, readDesktopV2ManagementPublication } from './desktop-opencode-v2-management-records.ts';
+ import { desktopJsLiteral } from './desktop-ui-controls.ts';
++import { captureDesktopSourceMetadataLineage, assertDesktopMetadataLineageReleased } from './desktop-opencode-metadata-lineage.ts';
+ import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
+ import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
+ 
+@@ -304,3 +306,76 @@
+   assert.equal(ordinary.state.clicks, 1); assert.equal(ordinary.state.reads, 0); assert.equal(ordinary.state.pauses, 0);
+   assert.equal(ordinary.state.finishes, 1); assert.equal(ordinary.effects.length, 1);
+ });
++
++test('metadata read failures cannot acquire or retire an original native lifecycle', async () => {
++  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-observation-')));
++  try {
++    const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host', command: '/TEST/node' };
++    const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-child', command: '/TEST/bun' };
++    const ready = { hostPid: host.pid, profileHash: 'a'.repeat(64), mode: 'directory', providerHash: null,
++      pid: child.pid, startIdentityHash: 'b'.repeat(64), stage: 'ready' };
++    const preReadyFailure = { hostPid: host.pid, profileHash: 'c'.repeat(64), mode: 'directory', providerHash: null,
++      stage: 'read-failed', readStage: 'native-client', reason: 'unknown', elapsedMs: 0,
++      deadlineExpired: false, aborted: null };
++    const liveFailure = { ...preReadyFailure, profileHash: ready.profileHash, mode: 'provider', providerHash: 'd'.repeat(64),
++      readStage: 'directory', reason: 'transport_failure', elapsedMs: 3_600_000, deadlineExpired: true, aborted: true };
++    const captured = { host, children: [child] };
++    const directory = join(root, 'userData/logs'); await mkdir(directory, { recursive: true });
++    const write = (rows: readonly unknown[]) => writeFile(join(directory, 'app-errors.ndjson'),
++      rows.map(row => JSON.stringify({ namespace: 'Host:OpenCodeMetadata',
++        message: 'OpenCode metadata stage ' + JSON.stringify(row) })).join('\n') + '\n');
++    await write([ready]);
++    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
++    const original = captureDesktopSourceMetadataLineage({ ...options, observed: [child] });
++    await write([preReadyFailure, ready, liveFailure]);
++    assert.deepEqual(captureDesktopSourceMetadataLineage({ ...options, observed: [child], original }), original,
++      'closed read failures neither create another profile/partition nor retire the already-ready original child');
++    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [], original }),
++      /original ready is physically present/);
++    const partition = original.partitions[0]; assert.ok(partition);
++    const owned = { ...captured, metadataLineage: partition };
++    assert.throws(() => assertDesktopMetadataLineageReleased(root, owned, []), /confirmed close/);
++    await write([preReadyFailure]);
++    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [] }),
++      /finite original metadata lifecycle observations/, 'a pre-ready failure cannot synthesize custody');
++    await write([ready, liveFailure, { ...ready, stage: 'cleanup-unknown' }]);
++    assert.throws(() => assertDesktopMetadataLineageReleased(root, owned, []), /unknown cleanup/);
++    const released = { ...ready, stage: 'released' };
++    await write([preReadyFailure, ready, liveFailure, released, { ...liveFailure, aborted: false }]);
++    const closed = assertDesktopMetadataLineageReleased(root, owned, []);
++    assert.deepEqual(closed.events, [ready, released]);
++    assert.deepEqual(closed.births, [child]);
++    assert.throws(() => assertDesktopMetadataLineageReleased(root, owned, [{ pid: child.pid }]), /metadata PID/);
++  } finally { await rm(root, { recursive: true, force: true }); }
++});
++
++test('metadata observation separation still refuses malformed diagnostics and unknown lifecycle rows', async () => {
++  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-closed-shape-')));
++  try {
++    const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host', command: '/TEST/node' };
++    const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-child', command: '/TEST/bun' };
++    const ready = { hostPid: host.pid, profileHash: 'a'.repeat(64), mode: 'directory', providerHash: null,
++      pid: child.pid, startIdentityHash: 'b'.repeat(64), stage: 'ready' };
++    const failure = { hostPid: host.pid, profileHash: ready.profileHash, mode: 'directory', providerHash: null,
++      stage: 'read-failed', readStage: 'native-client', reason: 'held', elapsedMs: 1,
++      deadlineExpired: false, aborted: null };
++    const directory = join(root, 'userData/logs'); await mkdir(directory, { recursive: true });
++    for (const invalid of [
++      { ...failure, extra: 'TEST-private' }, { ...failure, pid: child.pid },
++      { ...failure, startIdentityHash: ready.startIdentityHash }, { ...failure, aborted: undefined },
++      { ...failure, readStage: 'unknown-stage' }, { ...failure, reason: 'TEST-private-reason' },
++      { ...failure, profileHash: 'TEST-invalid' }, { ...failure, mode: 'provider' },
++      { ...failure, providerHash: 'd'.repeat(64) }, { ...failure, elapsedMs: -1 },
++      { ...failure, elapsedMs: 3_600_001 }, { ...failure, elapsedMs: 0.5 },
++      { ...failure, elapsedMs: null }, { ...failure, deadlineExpired: 1 }, { ...failure, aborted: 1 },
++      { ...failure, stage: 'unknown' }, { ...failure, stage: 'released' },
++      { ...ready, extra: true }, { ...ready, startIdentityHash: undefined }, { ...ready, pid: 1 },
++    ]) {
++      await writeFile(join(directory, 'app-errors.ndjson'), [ready, invalid].map(row => JSON.stringify({
++        namespace: 'Host:OpenCodeMetadata', message: 'OpenCode metadata stage ' + JSON.stringify(row),
++      })).join('\n') + '\n');
++      assert.throws(() => captureDesktopSourceMetadataLineage({ root, host, profileHashes: [ready.profileHash],
++        observed: [child], executable: child.command }));
++    }
++  } finally { await rm(root, { recursive: true, force: true }); }
++});
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -242,7 +242,8 @@
+             scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts \
+             packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts \
+             packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts \
+-            test/features/agent-backend/claudeCloseDiagnostics.test.ts
++            test/features/agent-backend/claudeCloseDiagnostics.test.ts \
++            scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts
+           pnpm typecheck:workspace
+           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
+           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main

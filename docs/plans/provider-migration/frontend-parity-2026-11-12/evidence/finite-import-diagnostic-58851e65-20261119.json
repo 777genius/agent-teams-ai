@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "kind": "finite-import-passive-diagnostic-retention",
+  "parentSourceHead": "58851e654b00fecf27f215d6c72bbff7308ad2ad",
+  "qualification": "Original588 remains INCOMPLETE. AFTER-EXIT debug does not recover the original exec/parse cause or qualify original native/GUI acceptance.",
+  "verification": {
+    "kind": "FINITE_PRODUCER_PASSIVE_DIAGNOSTIC_RETENTION",
+    "sourceBaseHead": "58851e654b00fecf27f215d6c72bbff7308ad2ad",
+    "originalOutcome": "INCOMPLETE",
+    "originalFailure": {
+      "phase": "task",
+      "expected": true,
+      "observed": "undefined",
+      "returnedDiagnosticNotPersisted": true,
+      "originalExecOrParseCause": "UNKNOWN"
+    },
+    "patch": {
+      "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-producer.ts",
+      "beforeSha256": "626dfe43fc3cf2f90cf1663120824423b463a48e09748caf2cef2bb0ed95712a",
+      "afterSha256": "1e0e48292b3ece661c0aaf4cbdfb9340147b2fdf638d24f4e7511cfca51e511e",
+      "change": "Move the existing originalStopDiagnostics and sourceTask assignments before both unchanged boolean assertions.",
+      "onlyOneExistingLineMoved": true,
+      "newReads": 0,
+      "newActions": 0,
+      "newAwaits": 0,
+      "deadlineChanges": false,
+      "testExecution": "NOT_RUN: statement order changes only passive failure evidence; no new acceptance predicate.",
+      "sourcePin": "scripts/legacy-agent-host/desktop-proof-management-sources.ts:15",
+      "independentR2": {
+        "reviewer": "/root/reviewflow",
+        "verdict": "PASS",
+        "reviewedSha256": "1e0e48292b3ece661c0aaf4cbdfb9340147b2fdf638d24f4e7511cfca51e511e"
+      }
+    },
+    "originalArtifacts": [
+      {
+        "path": "/tmp/TEST-desktop-backend-cbG4z0/desktop-backend-receipt.json",
+        "bytes": 526772,
+        "sha256": "7ac8a64a7f00a39634e76b80d3e1fa622fb91ff346fe317c9702aae00e6216be"
+      },
+      {
+        "path": "/tmp/TEST-desktop-backend-cbG4z0/finite-stopped-import-producer.json",
+        "bytes": 170375,
+        "sha256": "af865815e5987868d7fb1da933d68a451d77271817b6cd5d7bfda6857bf9ca57"
+      },
+      {
+        "path": "/tmp/TEST-desktop-backend-cbG4z0/sentinel-invocations.ndjson",
+        "bytes": 830,
+        "sha256": "60413fa70c49115fad69942c91379c8f929823b447e9c40352ef461b157d4659"
+      }
+    ],
+    "sentinelScope": {
+      "rows": 10,
+      "refusedRows": 0,
+      "qualification": "All recorded sentinel requests were allowed metadata. This does not qualify the original E2E."
+    },
+    "originalMilestones": {
+      "sourceCreateAndReply": true,
+      "mainStopAndNativeReleaseObserved": true,
+      "sourcePeerPhysicallyAbsentBeforeTask": true,
+      "onePostStopTaskSaved": true,
+      "evidence": "Existing producer statement order, retained sourceRelease/sourceStopped, original task UI steps and task-phase failure; no new GUI observation.",
+      "originalStopDiagnosticsPersisted": false,
+      "ordinaryQuit": "NOT_REACHED",
+      "consumer": "NOT_STARTED",
+      "retainedOriginal": "NOT_RUN",
+      "modeSpecificValidators": "NOT_RUN: no fresh PASS receipt"
+    },
+    "originalCleanup": {
+      "producer": {
+        "remaining": [],
+        "capturedHostAbsent": null
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": null,
+        "initialSignalCode": null,
+        "exitCode": null,
+        "signalCode": null
+      },
+      "sourcePeerAbsentAfterCleanup": true,
+      "inputsFrozen": true,
+      "qualification": "Nested producer physical cleanup only. Ordinary successful Quit and a consumer Host lifecycle are not qualified."
+    },
+    "afterExitDebug": {
+      "qualification": "AFTER_EXIT_DEBUG_ONLY; not original E2E or retroactive authority proof",
+      "artifact": {
+        "path": "/workspace/scratch/de9d4631e21c/finite-import-diagnostic-58851e65-20261119/after-exit-result.json",
+        "bytes": 5876,
+        "sha256": "49ca4248a00e3a7f19cc5ae89d5a960d5d39129937242c00db5bccece70ed0cd"
+      },
+      "launcher": {
+        "path": "/workspace/scratch/de9d4631e21c/finite-import-diagnostic-58851e65-20261119/run-after-exit-read.mjs",
+        "bytes": 4412,
+        "sha256": "4b3935055e0a706cdcab9f4e393898db8a417be5520f1742ac9580ed0beaa00b"
+      },
+      "exec": {
+        "status": 0,
+        "signal": null
+      },
+      "elapsedMs": 2934,
+      "timeoutMs": 10000,
+      "maxBufferBytes": 131072,
+      "wrapperReturn": {
+        "keys": [
+          "nodeVersion",
+          "canonicalReleaseCurrent",
+          "proofParseable",
+          "proofCensus",
+          "currentCensus"
+        ],
+        "canonicalReleaseCurrent": true,
+        "proofParseable": true,
+        "nodeVersion": "24.21.0"
+      },
+      "unchangedOriginalFileCount": 11,
+      "originalFilesUnchanged": true,
+      "interpretation": "Same original canonical read-only command succeeds on the preserved state after cleanup. The lost original subprocess/parse cause remains unknown; no product defect or timeout cause is inferred."
+    }
+  },
+  "afterExitDebug": {
+    "qualification": "AFTER_EXIT_DEBUG_ONLY",
+    "originalResult": "INCOMPLETE",
+    "originalSourceHead": "58851e654b00fecf27f215d6c72bbff7308ad2ad",
+    "executable": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "args": [
+      "--import",
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/tsx@4.23.15/node_modules/tsx/dist/loader.mjs",
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts",
+      "/tmp/TEST-desktop-backend-cbG4z0",
+      "--read-only"
+    ],
+    "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+    "environment": {
+      "HOME": "/tmp/TEST-desktop-backend-cbG4z0/home",
+      "CLAUDE_ROOT": "/tmp/TEST-desktop-backend-cbG4z0/claude",
+      "AGENT_TEAMS_ELECTRON_CLAUDE_ROOT": "/tmp/TEST-desktop-backend-cbG4z0/claude",
+      "PATH": "/usr/bin:/bin",
+      "TMPDIR": "/tmp/TEST-desktop-backend-cbG4z0/tmp"
+    },
+    "timeoutMs": 10000,
+    "maxBufferBytes": 131072,
+    "startedAt": "2026-11-19T13:00:57.314Z",
+    "exec": {
+      "status": 0,
+      "signal": null
+    },
+    "wrapperReturn": {
+      "keys": [
+        "nodeVersion",
+        "canonicalReleaseCurrent",
+        "proofParseable",
+        "proofCensus",
+        "currentCensus"
+      ],
+      "canonicalReleaseCurrent": true,
+      "proofParseable": true,
+      "nodeVersion": "24.21.0"
+    },
+    "elapsedMs": 2934,
+    "stdout": {
+      "bytes": 414,
+      "sha256": "37b24f033f65dbc2bb9da657d4e1af394d5b2c7f2ac00cf53bc5f97f10e739a4"
+    },
+    "sourceFilesBefore": [
+      {
+        "path": "claude/teams/test-stopped-legacy/.agent-teams-owner.json",
+        "bytes": 176,
+        "sha256": "840d7b082d66e85d609849d2875dfdc62f3f49616f9be977bce77e9cbe899e1b"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/cache/transcript-affinity/-tmp-TEST-desktop-backend-cbG4z0-workspace.json",
+        "bytes": 773,
+        "sha256": "6e429674c23d2aecc36d7f84990c7bff00d6176da35f2e034244a99c11eb25fe"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/comment-notification-journal.json.sqlite-fallback-replica",
+        "bytes": 152,
+        "sha256": "cd01912a0612ffc2d5eeb5db22aac1aeed2f63228319a3c87987332946efd68a"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/config.json",
+        "bytes": 823,
+        "sha256": "e33ba247c8cf0b323926231c76d9987857a06ebc28d8a396fd6d0347bdb7730a"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/launch-freshness.json",
+        "bytes": 346,
+        "sha256": "787ffb9858d6d16896450fa7fcfae9dd7abb059f2e2148a84576d6acb5378c96"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/launch-stopped.json",
+        "bytes": 1071,
+        "sha256": "70cc16e79b6814339c1a8eb5e8a43d8fc76b9b216fda137eeb260a625bd97477"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/members.meta.json",
+        "bytes": 35,
+        "sha256": "e2fbfff9e76c9fc56bed458637c6904eb5d8f3d6bb9f536f8fe6e2bb2de77bea"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/team.meta.json",
+        "bytes": 891,
+        "sha256": "5e177dbbaa4ff374c7b3983bd58142de53040b77719373d3bc7d67b3fc1eca2d"
+      },
+      {
+        "path": "claude/tasks/test-stopped-legacy/d1ae168e-2817-4a84-816e-6408fbf9c182.json",
+        "bytes": 1026,
+        "sha256": "7c4eb3083f9770a095c0815490c56c46c7675fe8f20de1647abe700a39c67f20"
+      },
+      {
+        "path": "desktop-backend-receipt.json",
+        "bytes": 526772,
+        "sha256": "7ac8a64a7f00a39634e76b80d3e1fa622fb91ff346fe317c9702aae00e6216be"
+      },
+      {
+        "path": "finite-stopped-import-producer.json",
+        "bytes": 170375,
+        "sha256": "af865815e5987868d7fb1da933d68a451d77271817b6cd5d7bfda6857bf9ca57"
+      }
+    ],
+    "sourceFilesAfter": [
+      {
+        "path": "claude/teams/test-stopped-legacy/.agent-teams-owner.json",
+        "bytes": 176,
+        "sha256": "840d7b082d66e85d609849d2875dfdc62f3f49616f9be977bce77e9cbe899e1b"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/cache/transcript-affinity/-tmp-TEST-desktop-backend-cbG4z0-workspace.json",
+        "bytes": 773,
+        "sha256": "6e429674c23d2aecc36d7f84990c7bff00d6176da35f2e034244a99c11eb25fe"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/comment-notification-journal.json.sqlite-fallback-replica",
+        "bytes": 152,
+        "sha256": "cd01912a0612ffc2d5eeb5db22aac1aeed2f63228319a3c87987332946efd68a"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/config.json",
+        "bytes": 823,
+        "sha256": "e33ba247c8cf0b323926231c76d9987857a06ebc28d8a396fd6d0347bdb7730a"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/launch-freshness.json",
+        "bytes": 346,
+        "sha256": "787ffb9858d6d16896450fa7fcfae9dd7abb059f2e2148a84576d6acb5378c96"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/launch-stopped.json",
+        "bytes": 1071,
+        "sha256": "70cc16e79b6814339c1a8eb5e8a43d8fc76b9b216fda137eeb260a625bd97477"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/members.meta.json",
+        "bytes": 35,
+        "sha256": "e2fbfff9e76c9fc56bed458637c6904eb5d8f3d6bb9f536f8fe6e2bb2de77bea"
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/team.meta.json",
+        "bytes": 891,
+        "sha256": "5e177dbbaa4ff374c7b3983bd58142de53040b77719373d3bc7d67b3fc1eca2d"
+      },
+      {
+        "path": "claude/tasks/test-stopped-legacy/d1ae168e-2817-4a84-816e-6408fbf9c182.json",
+        "bytes": 1026,
+        "sha256": "7c4eb3083f9770a095c0815490c56c46c7675fe8f20de1647abe700a39c67f20"
+      },
+      {
+        "path": "desktop-backend-receipt.json",
+        "bytes": 526772,
+        "sha256": "7ac8a64a7f00a39634e76b80d3e1fa622fb91ff346fe317c9702aae00e6216be"
+      },
+      {
+        "path": "finite-stopped-import-producer.json",
+        "bytes": 170375,
+        "sha256": "af865815e5987868d7fb1da933d68a451d77271817b6cd5d7bfda6857bf9ca57"
+      }
+    ],
+    "originalFilesUnchanged": true,
+    "finishedAt": "2026-11-19T13:01:00.253Z"
+  },
+  "originalEvidence": "gui-import-lifecycle-58851e65-20261119.json",
+  "remaining": "Original complete import/retained must still pass. Continue independent authorized V2/native checks; no repeated GUI action or deadline expansion from this diagnostic."
+}

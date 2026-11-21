@@ -1,0 +1,250 @@
+{
+  "kind": "CURRENT_WINDOWS_QUERY_OBSERVER_R1",
+  "parent": "245be6591b00c19aba6a535f294057459b86be02",
+  "parentTree": "bcebf3ad3b60074e339336bbe40a8eb46d9a1160",
+  "primary": "17a39219266a7b468bc357380cc319694a7c7181",
+  "base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+  "pr": 1192,
+  "draft": true,
+  "planPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+  "parentPlan": {
+    "sha": "b2dd976c9dbc1e2aa108f371fbad6c689ea508dd",
+    "bytes": 1973507,
+    "sha256": "92fe484cd4b089b0019f7ce7a6043887f369ca53feb85e3e382e7d91aa9e5dd5"
+  },
+  "append": {
+    "sha": "d092606a44b8e87f2e53adf5bbf9004ca48770a5",
+    "bytes": 13317,
+    "sha256": "69fb325d3727917de043fba67df2223d0a8e3aae62a9935654b47a019bf0c055"
+  },
+  "sourceOnlyHypotheticalTree": "c21d69cac67456206c759ec07f61eb599c9441ff",
+  "sourceFiles": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "sha": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "bytes": 12614,
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4",
+        "lines": 315
+      },
+      "after": {
+        "sha": "d4ad4e8976da305cc6fb4b0d5f7ff62007130782",
+        "bytes": 15906,
+        "sha256": "e803175c8a272e8d5abe9b4c5f7a395321c16d08e64f9adcc535bf8211335a4b",
+        "lines": 374
+      },
+      "fullForwardInverse": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "before": {
+        "sha": "a7b953e61935f6de4b1f29b534b33baaa64a9215",
+        "bytes": 37261,
+        "sha256": "63128b3a2fe85a97a511872344bba39ed270c3f1558c3d65cf328fd0b9ce8864",
+        "lines": 648
+      },
+      "after": {
+        "sha": "40d7c19142de2cafdb0a7b433bbedddc216e99da",
+        "bytes": 38528,
+        "sha256": "feccb3979905fb65ee65d9d925d6d50496c9123c6d6b9fadec3ea11a7f0654ea",
+        "lines": 666
+      },
+      "fullForwardInverse": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "sha": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "bytes": 20150,
+        "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b",
+        "lines": 396
+      },
+      "after": {
+        "sha": "c6799de1bfb3450a265dcd4c6856275fc72c30a4",
+        "bytes": 29201,
+        "sha256": "36e65f4d54923dbd0f2876bc9c70fdd399d1c2cf8d39fcb9220c25442c9d8316",
+        "lines": 532
+      },
+      "fullForwardInverse": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "sha": "8915f1490bc9e223011690dbc1f207ce3ae80f35",
+        "bytes": 104573,
+        "sha256": "cf1a0e466b8557630754a916a4429adc29575a12b57073870b289f73bd15fea2",
+        "lines": 1350
+      },
+      "after": {
+        "sha": "bdafbc763a97fee129c0ee576beddf402b4faf4a",
+        "bytes": 104865,
+        "sha256": "e0485c1eca76a0617cb96e0446415d69b7650d56b30c7d94ea3bd7c1fc0925a6",
+        "lines": 1351
+      },
+      "fullForwardInverse": true
+    }
+  ],
+  "patch": {
+    "sha": "e3e84ae0a7f328e06dd07730b1ad44c8eb418b78",
+    "bytes": 20490,
+    "sha256": "0a793245dceb80d1a61fbc1799a82d2ec82b7b080140355d9300f963f0384db8"
+  },
+  "documents": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "df4bf61833d38d13b44629f82e12dddb7c4558af",
+      "bytes": 1986824,
+      "sha256": "8afe7233f5d108fb2e4bce66e114a8671db4a2e95b22ca2f26080b3a5cbd789d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/candidate.patch",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e3e84ae0a7f328e06dd07730b1ad44c8eb418b78",
+      "bytes": 20490,
+      "sha256": "0a793245dceb80d1a61fbc1799a82d2ec82b7b080140355d9300f963f0384db8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/observer-source-review.json",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "87709adcd0e211ca55f8033ceff6fc902b44237c",
+      "bytes": 11527,
+      "sha256": "6ac7b5e920798f459fdd38b811106b7959719109a03ff883336818ec994cd558"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/original72-arm-audit.json",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "503bc7e13497d74c846491ffdde74414ea9b766e",
+      "bytes": 22339,
+      "sha256": "5dceaef91f53e050520cd167ca3c8c1106c0462e06604aae2ea2d502cd8768bb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/original-b-arm-audit.json",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5e33a1369bb3b52dbf52e504ba640092c4714cd9",
+      "bytes": 22076,
+      "sha256": "04814eb8b00230a373b880531a3032cf1093b792722d20ebf2a98ca80f928bcc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/actual-b-team-r2.json",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cd220a8addb3d2cf6b023c0a7c26b0ae611a80f0",
+      "bytes": 13724,
+      "sha256": "03f2ee942ef9b1a8665b1c36ee59090b6f12b6c71cfc06b98c276e647a6ad448"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/plan37-source-review.json",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "854d593dfb0bb6273102355f7bc84491abf4032f",
+      "bytes": 7253,
+      "sha256": "7ba58b5f45022b8cd159f527a1be55937ceb4dbb4b04ebd47559da8f6a2eaeb5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-current-query-2026-11-16/harness-routing-review.json",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b9f0fa71390fd13519480d4772823b702ade5f7f",
+      "bytes": 14224,
+      "sha256": "6c2e43706b076bc7d9d7a099e1e9783d5eb1cca904912aafc1716d1b5c41ffe8"
+    }
+  ],
+  "frozenObserverR2": {
+    "sha": "87709adcd0e211ca55f8033ceff6fc902b44237c",
+    "bytes": 11527,
+    "sha256": "6ac7b5e920798f459fdd38b811106b7959719109a03ff883336818ec994cd558",
+    "actualOriginalParent": "e45c5a73f106d7e71936426c923171adcd27f5b9",
+    "rebaseGate": "a7b953e61935f6de4b1f29b534b33baaa64a9215",
+    "prepublicationHistoricalApprovalNotTransferred": true
+  },
+  "workflow": {
+    "lintBefore": 108,
+    "lintAfter": 108,
+    "addedOperand": null,
+    "originalFiveHarness": "node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs",
+    "originalHarnessWorkflow": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+    "placedAfterOriginalTenRuntimeCommand": true,
+    "originalEightAndTenCommandsUnchanged": true,
+    "teamBudgetMinutes": 45,
+    "originalWindowsOnlyCaseExpectedSkipOnLinux": true,
+    "newObserverCasesMustExecute": 3,
+    "newJob": false,
+    "newRunner": false,
+    "newCycle": false,
+    "existingTaskReviewOperandPreservedAtEnd": true,
+    "soleSourceChange": "add the same existing complete five-file harness command"
+  },
+  "limits": {
+    "sameCimNonAtomic": true,
+    "positiveExplanationsMaximum": 512,
+    "maximumCandidateRowsPerExplanation": 500,
+    "worstCaseStoredChildRows": 256000,
+    "sourceCapsUnchanged": true,
+    "wholeCurrentPlan37ErrorAndCleanupPreserved": true,
+    "old72CauseUnproved": true,
+    "newBArmTimeoutUnresolved": true,
+    "currentSourceExecutionUnqualified": true
+  },
+  "actualBTeamPrerequisite": {
+    "sha": "cd220a8addb3d2cf6b023c0a7c26b0ae611a80f0",
+    "bytes": 13724
+  },
+  "prospectiveSourceApplied": false,
+  "requiresPublishedR1Readback": true,
+  "requiresIndependentPublishedR1R2": true,
+  "projectExecution": false,
+  "harnessRoutingR2": {
+    "sha": "b9f0fa71390fd13519480d4772823b702ade5f7f",
+    "bytes": 14224,
+    "sha256": "6c2e43706b076bc7d9d7a099e1e9783d5eb1cca904912aafc1716d1b5c41ffe8"
+  },
+  "parentReconciliation": {
+    "previousProspectiveParents": [
+      "b5791b2cc05b8d7becf148816fd994baeb407510",
+      "f9c4f0b95071ea9d34e6651e65ae330ba9d139cc",
+      "17a39219266a7b468bc357380cc319694a7c7181",
+      "91a52ab4299956e5b5e5dc3998892f780831cc8a"
+    ],
+    "previousProspectiveReviews": [
+      "6201b4110bf855d257f9f2b03c92e58730815260",
+      "e90b4162152e8fa26303f2f6664b3367e54a43ae",
+      "e5a7b4a32519263c37f138c4fbd195a3181d36a0",
+      "81930906e5620825a01b00a3f72ce19b81a02db1"
+    ],
+    "previousReviewsDoNotAuthorizeCurrentParent": true,
+    "preservedExternalProviderAdoption": "f9c4f0b95071ea9d34e6651e65ae330ba9d139cc",
+    "preservedSharedBootSource": "17a39219266a7b468bc357380cc319694a7c7181",
+    "preservedFiniteErrorSource": "91a52ab4299956e5b5e5dc3998892f780831cc8a",
+    "preservedPlan40": "f0daf649c8f1e1ec6c6a95ee7343af407e47d914",
+    "p09DecisionNotSelected": true,
+    "ownLifecycleTwoPathSupersededInert": true,
+    "producerQualificationNotGrantedByObserverReview": true,
+    "primaryStill17aWithUsefulOriginalJobs": true,
+    "preservedTypeOnlySource": "245be6591b00c19aba6a535f294057459b86be02",
+    "preservedPlan41": "6e2822bff69c78f4192ae82430f0b1e9e6cb7c3d"
+  },
+  "primarySnapshot": {
+    "head": "17a39219266a7b468bc357380cc319694a7c7181",
+    "observedAtUtc": "2026-11-16 14:28:13 UTC",
+    "freshGuardRequired": true,
+    "reviewedPrimaryHeadsPermittedForDocumentationOnly": [
+      "17a39219266a7b468bc357380cc319694a7c7181",
+      "245be6591b00c19aba6a535f294057459b86be02"
+    ],
+    "notPrimaryAdvanceAuthorization": true
+  }
+}

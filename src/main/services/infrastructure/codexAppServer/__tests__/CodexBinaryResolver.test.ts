@@ -736,6 +736,56 @@ describe('CodexBinaryResolver', () => {
     expect(buildEnrichedEnvMock).toHaveBeenCalledWith(codexShim);
   });
 
+  it('rejects a cold PATH sentinel, retains its canonical TEST alias and prefers managed B', async () => {
+    const f = await capturedFiles();
+    delete process.env.CODEX_CLI_PATH;
+    getCachedShellEnvMock.mockReturnValue(null);
+    await fs.rm(f.manifestPath);
+    const vendorDirectory = path.join(f.root, 'vendor');
+    await fs.mkdir(vendorDirectory);
+    const alias = path.join(vendorDirectory, path.basename(f.files.codex));
+    const aBytes = 'TEST finite original A', bBytes = 'TEST finite managed B';
+    await fs.writeFile(alias, 'TEST unqualified vendor sentinel', { mode: 0o700 });
+    await fs.writeFile(f.files.codex, aBytes, { mode: 0o700 });
+    await fs.writeFile(f.files.managed, bBytes, { mode: 0o700 });
+    process.env.PATH = f.root;
+    const separator = originalPlatform === 'win32' ? ';' : ':';
+    buildMergedCliPathMock.mockReturnValue([vendorDirectory, f.root].join(separator));
+    execCliMock.mockImplementation(async (binary, args) => {
+      expect(args).toEqual(['--version']);
+      const selected = await fs.realpath(String(binary));
+      return { stdout: selected === f.files.codex ? 'codex-cli 0.162.0'
+        : selected === f.files.managed ? 'codex-cli 0.169.0' : '9.9.9 (TEST sentinel)', stderr: '' };
+    });
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    execCliMock.mockClear();
+    await expect(CodexBinaryResolver.captureSelection(() => true).resolve()).rejects.toThrow(
+      'The original Codex version could not be confirmed.'
+    );
+    expect(execCliMock.mock.calls.map(([binary]) => binary)).toEqual([alias]);
+    await fs.rm(alias);
+    if (originalPlatform === 'win32') {
+      await fs.rm(vendorDirectory, { recursive: true });
+      await fs.symlink(f.root, vendorDirectory, 'junction');
+    } else await fs.symlink(f.files.codex, alias);
+    execCliMock.mockClear();
+    const original = await CodexBinaryResolver.captureSelection(() => true).resolve();
+    expect(original?.selection).toEqual({ sourceKind: 'path', nativeCli: {
+      executable: { path: f.files.codex, sha256: createHash('sha256').update(aBytes).digest('hex') },
+      version: '0.162.0' } });
+    expect(execCliMock.mock.calls.map(([binary]) => binary)).toEqual([alias]);
+    await original!.assertCurrent();
+    await fs.writeFile(f.manifestPath, JSON.stringify({ ...f.manifest,
+      rootVersion: '0.169.0', platformVersion: '0.169.0' }));
+    execCliMock.mockClear();
+    const managed = await CodexBinaryResolver.captureSelection(() => true).resolve();
+    expect(managed?.selection).toEqual({ sourceKind: 'app-managed', nativeCli: {
+      executable: { path: f.files.managed, sha256: createHash('sha256').update(bBytes).digest('hex') },
+      version: '0.169.0' } });
+    expect(execCliMock.mock.calls.map(([binary]) => binary)).toEqual([f.files.managed]);
+    expect(await fs.realpath(alias)).toBe(f.files.codex);
+  });
+
   it('reuses a recent known-good binary when revalidation transiently fails', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));

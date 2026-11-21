@@ -1,0 +1,302 @@
+{
+  "kind": "P09_INDEPENDENT_PLAN68_PROSPECTIVE_R2",
+  "verdict": "GO_PROSPECTIVE_DOCUMENTARY_SELECTION_ONLY",
+  "reviewer": "/root/p09_review",
+  "scope": "Exact seven-path prospective selection, its current source semantics and validation closure. No source afterimages, implementation approval, execution result or source publication is qualified by this report.",
+  "base": {
+    "commit": "d4259ace0f265f5b2b060e485d291b8aaf426e9f",
+    "tree": "39e8ed2f35b657e3318a8c91e9e81c6ad9f0405e",
+    "officialPacket": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/actual-source/official-packet.json",
+      "bytes": 3916208,
+      "physicalLines": 1,
+      "gitBlob": "84f5426c61ee87172f69a928dee2fef2a412b86c",
+      "sha256": "de4845805a910da3a3ec6b6b05fd462ff54ea5d305b3a877e6fd0f1690ece039"
+    },
+    "closedActualSourceR2": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/actual-source/independent-actual-source-r2.json",
+      "bytes": 10139,
+      "physicalLines": 191,
+      "gitBlob": "4e9f6111ac8f31db3355235d180c42d445ad076b",
+      "sha256": "ba1643391dd80a57cbe526fafc5fd8df284e95b33473c469d5dbc4126bb9c367"
+    },
+    "recursiveEntries": 12846,
+    "leaves": 11142,
+    "directoriesIncludingRoot": 1705,
+    "allSubtreeHashesIndependentlyReconstructed": true,
+    "completeActualTreeTruncated": false,
+    "repositoryPlanPathAbsent": true
+  },
+  "reviewedDocument": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/plan.md",
+    "bytes": 10832,
+    "physicalLines": 61,
+    "gitBlob": "37031fed3759250351e17ed3be27c4c95a6efb92",
+    "sha256": "bb8e9ee5245cc4a1fdaa081cff484a6bcf85acc4f740a0e29d1e9f669b347f7e"
+  },
+  "reviewedR1": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/prospective-r1.json",
+    "bytes": 6570,
+    "physicalLines": 117,
+    "gitBlob": "4a286c6dbbc02b5e6b22e625f41521ace287e976",
+    "sha256": "4a618a94bfb6a4b0a9a77ed92d6bf4ac2da8adbdb3f4f4fb2c7c77bc97355bf5"
+  },
+  "reviewedBindings": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/preimage-bindings.json",
+    "bytes": 4134,
+    "physicalLines": 89,
+    "gitBlob": "e366fa5a6bb884ff93e266350b0a058c08da6ae0",
+    "sha256": "cc63377be09d42e113e179d96261b0d26be2fc848936186bc123e3a0ff4b5908"
+  },
+  "repositoryPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/68-provider-activity-source-clock-2026-11-16.md",
+  "exactPreimagesAndReferences": [
+    {
+      "path": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "writable": true,
+      "bytes": 9697,
+      "physicalLines": 286,
+      "gitBlob": "4a4c5150cc13bc59a914d34f29033890a2541697",
+      "sha256": "d7db83f4787e51b205fae22b5399d6b19cfe478bda586efb86bfc39ed38be1f1",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "writable": true,
+      "bytes": 13822,
+      "physicalLines": 396,
+      "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+      "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+      "writable": true,
+      "bytes": 4395,
+      "physicalLines": 119,
+      "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9",
+      "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "writable": true,
+      "bytes": 28286,
+      "physicalLines": 844,
+      "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+      "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "writable": true,
+      "bytes": 22506,
+      "physicalLines": 346,
+      "gitBlob": "86374c20f8597210a3331e9730a582df35105c92",
+      "sha256": "505a91105e972b98e8ab2f50ccc88f3bed6e442013d36a6f922f97ba18ff2d97",
+      "joinedToActualBase": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "writable": true,
+      "bytes": 141880,
+      "physicalLines": 1768,
+      "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "sha256": "7e2add679b6b13ed9cc08cc57575e835c3a93a62f52ede4a352571f614ca2134",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "src/renderer/utils/providerReadiness.ts",
+      "writable": false,
+      "bytes": 2022,
+      "physicalLines": 45,
+      "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf",
+      "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "writable": false,
+      "bytes": 5710,
+      "physicalLines": 149,
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "test/renderer/utils/teamProviderRuntimeStatusLoading.test.ts",
+      "writable": false,
+      "bytes": 2223,
+      "physicalLines": 58,
+      "gitBlob": "0656dbf92ba876cc3d9465f9c19fc54ce0d1ffaa",
+      "sha256": "0b210a2c8b36b284b6c5a97634d6d425522c756eda1615a794194f2d79685e9f",
+      "joinedToActualBase": true
+    },
+    {
+      "path": "src/renderer/hooks/useConservativeNow.ts",
+      "writable": true,
+      "before": "ABSENT",
+      "absenceVerifiedInCompleteActualTree": true
+    }
+  ],
+  "currentFailure": {
+    "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "jobId": 133621515563,
+    "runId": 43959134362,
+    "raw": {
+      "path": "/tmp/e2e-original-artifacts/75-desktop-team/original-job.log",
+      "bytes": 2268881,
+      "physicalLines": 13825,
+      "gitBlob": "51812f35d1644029b5f1b09ae4d0d2c355a15da9",
+      "sha256": "89b1bb256c9bc46dc9258f715e7ecf82917b4c78c5937f87f309ad2f17667d67"
+    },
+    "fullFirstBoundaryReport": {
+      "path": "/tmp/e2e-original-artifacts/75-desktop-team/first-failure-boundary.json",
+      "bytes": 11207,
+      "physicalLines": 354,
+      "gitBlob": "f04b5606e7fde39dbd376b933a8bc82b41e2095b",
+      "sha256": "5599ef2d6484d140887aac523a438a7f3c61a2a511331074c948e3bf5930587c"
+    },
+    "heldOriginalJobMetadata": {
+      "path": "/tmp/e2e-original-artifacts/75-desktop-team/original-job.json",
+      "bytes": 11499,
+      "physicalLines": 356,
+      "gitBlob": "a4bfaaf44b9977f844e992375ff3b70f4b291d2b",
+      "sha256": "8126802db2474fdff56b99de6b18f6648da068acaebbe73173f539366faf2c74"
+    },
+    "rawReadScope": "Complete bytes hashed; all 38 report excerpt rows independently matched exact raw lines. Literal source/type/lint boundary spans 1428-1443, 8739-8754 and 13650-13659 read. No claim to a fresh full semantic review of all setup and lint-warning output.",
+    "finding": "One react-hooks/purity renderer error at current Strip168:59, direct Date.now during render. Full chained types preceded typed Main lint; renderer reports one error and 1427 warnings. Steps11-36 are skipped in the held original job metadata.",
+    "limit": "A lint failure with skipped GUI, not a Team GUI run or new TypeScript failure; no existing FAIL is rewritten."
+  },
+  "independentSourceFindings": {
+    "literalClockExtraction": {
+      "owner": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "interfaceAndHookWindow": "30-48",
+      "sameTwoExistingConsumers": "useLaunchAuthorityGatedCliStatus75 and useEffectiveCliProviderStatus221",
+      "preserved": "Reducer snapshot, source-bound publish callback, layout Date.now, Object.is mismatch-to-Infinity and readonly tuple. Both consumers and their original scheduling remain identical.",
+      "imports": "New module imports React useCallback/useLayoutEffect/useReducer only. Those hooks are used solely by the moved primitive in the old module; its remaining React useEffect/useMemo and existing account/store behavior remain. No re-export barrel or parallel implementation is selected.",
+      "reason": "Share one existing clock responsibility without making the props-driven Strip import the account/store status owner. No actual mock break or cycle is demonstrated or required as justification."
+    },
+    "stableSource": {
+      "exactOriginalDependencyOrder": [
+        "cliProviderStatusLoading",
+        "codexSnapshotPending",
+        "forcedLoadingProviderIdSet",
+        "hasCapturedTeamReadiness",
+        "openCodePreparationEvidence",
+        "providerIdSet",
+        "renderCliStatus?.providers",
+        "sourceProviderMap",
+        "providerStatusOverride"
+      ],
+      "newSourceIdentity": "The readProviderStates callback, not only the optional captured predicate and not a fresh object per render.",
+      "updateBehavior": "With unchanged original dependencies, callback identity remains stable through the clock snapshot update and cycleProviderIds update. Changing one original dependency invalidates the source; unknown current time is Infinity until the existing layout measurement for that source.",
+      "snapshotUse": "The resulting provider-state memo depends on callback identity and supplied snapshot only; no Date.now alias or render clock is introduced.",
+      "limits": "No new interval/expiry timer, no guarantee of autonomous expiry with all nine input identities unchanged, and no new deep-mutation detection. Existing source-identity and owner invalidation behavior is preserved."
+    },
+    "fourExplicitClockSites": [
+      "isTeamProviderRuntimeStatusLoading fifth argument",
+      "hasSettledOpenCodeScopedPreparation direct third argument",
+      "hasCapturedTeamReadiness second argument",
+      "hasEffectiveProviderLaunchAuthority second argument"
+    ],
+    "optionalLoadingParameter": {
+      "selection": "now?: number forwarded unchanged to existing hasSettledOpenCodeScopedPreparation",
+      "preservation": "The nested helper keeps its current Date.now default, so undefined reaches that default only through the same previously reachable scoped branch. Prior early returns and unrelated providers acquire no new clock read.",
+      "excluded": "An eager now=Date.now() default at runtime-loading entry, unconditional helper evaluation, or changed branch order."
+    },
+    "authority": "Existing catalog predicate rejects nonfinite now and requires fetchedAt<=now<staleAt. Existing captured proof/time/signature checks remain unmodified. Deliberate local-source behavior is preserved. No Host, launch admission, submit clock, scope/selection proof or lease change.",
+    "unchangedCapturedOwner": "e8f5137ea0b7b69f4c098203d797780be99a5c01 full149 lines: old expiry timeout remains, its permits closure is recreated on owner render, and captureForSubmit retains its current action-time Date.now and refusal checks.",
+    "displayRules": "Original filtering, scope override, forced loading, pending/error precedence, provider cycles, detail text and chip tones are preserved except using a coherent current-source time snapshot."
+  },
+  "testSelectionReview": {
+    "existingSuite": "Full844-line current Strip suite read. The exact nine captured-proof scenarios and original launch-guard/global-status/unrelated-provider checks remain required.",
+    "stablePredicateExpiry": "Add exact expiry while keeping the captured predicate function identity stable and changing one real dependency from the original list. A new provider array/override/loading input suffices; only replacing a wrapper with identical .providers may not. Mounted Strip must cease Ready and the independent existing guard must refuse.",
+    "regressionMeaning": "This distinguishes the selected source key from a mount-frozen or predicate-only clock. It uses actual component/guard behavior without copying clock implementation or relying on exact React render counts.",
+    "scopedExplicitTime": "Reuse the existing full OpenCode scoped DTO case. Check ready before staleAt and loading at equality/nonfinite now while Date.now throws; restore spy in a finally before React rendering. The current ignored-fifth-argument branch would reach its nested clock and fail, so the assertion verifies real forwarding.",
+    "preservedUi": "Keep the original scoped Ready DOM assertions after restoring clock, normal provider details/loading/bootstrap/error cases and all nine proof cases.",
+    "unchangedUtilitySuite": "The58-line current utility test was fully read and stays unchanged. Its authenticated refresh/pending/terminal assertions do not duplicate the new explicit-time branch.",
+    "sourceOnly": "Exact future test code must still be reviewed. Nothing has run; no new framework, utility test file, mock-wide rewrite or fake production authority is selected."
+  },
+  "validationClosure": {
+    "currentFourRosterBodies": [
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 22506,
+        "physicalLines": 346,
+        "gitBlob": "86374c20f8597210a3331e9730a582df35105c92",
+        "sha256": "505a91105e972b98e8ab2f50ccc88f3bed6e442013d36a6f922f97ba18ff2d97",
+        "allThreeSelectedDependenciesAbsent": true
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-sources.ts",
+        "bytes": 52632,
+        "physicalLines": 800,
+        "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+        "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+        "allThreeSelectedDependenciesAbsent": true
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-integrated-sources.ts",
+        "bytes": 44561,
+        "physicalLines": 600,
+        "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+        "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+        "allThreeSelectedDependenciesAbsent": true
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-management-sources.ts",
+        "bytes": 21211,
+        "physicalLines": 309,
+        "gitBlob": "762570da8b4fc492065b217303a3da169bf627cf",
+        "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8",
+        "allThreeSelectedDependenciesAbsent": true
+      }
+    ],
+    "currentRosterOwner": "Actual a8be2617 root combines explicit base, common, integrated and management arrays; no recursive import discovery supplies these missing paths.",
+    "exactSelectedAdditions": [
+      "src/renderer/hooks/useConservativeNow.ts",
+      "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "src/renderer/utils/teamProviderRuntimeStatusLoading.ts"
+    ],
+    "commonRoster": "Only three unique common supplementary entries, existing346 physical lines to349 with natural one-path-per-line formatting; preserve old entries/order and Process/WindowsRetry arrays.",
+    "originalFastLint": {
+      "workflowGitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "commandLine": 139,
+      "oldOperandCount": 133,
+      "oldUniqueOperands": 133,
+      "selectedNewCount": 136,
+      "oldOrderMustBePreserved": true,
+      "allThreeNewOperandsAbsentBefore": true
+    },
+    "scope": "Exactly seven writable paths: four existing behavior/test files, one new primitive, and two existing validation owners. Three reference files read-only. No other roster, step, job, matrix, assertion, timeout, dependency or validation command changes.",
+    "sourceCaps": "Existing production owners and new hook remain under ordinary800 without exception or formatting compression. Current844-line file is an existing test suite; no production cap is raised."
+  },
+  "addendum": {
+    "identity": {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-provider-activity-purity-r2/clock-reuse-mock-defaults-addendum.json",
+      "bytes": 9183,
+      "physicalLines": 167,
+      "gitBlob": "a24d701881007262d1343d92f70d8e2447466800",
+      "sha256": "e94f5a74058cb214423475a67607208d8252e769555f7804f6ee3cda3235cee0"
+    },
+    "readScope": "Entire9183-byte addendum read; its bounded no-proven-mock-break/cycle and optional-default findings agree with independent owner reading. Five-path advisory is superseded by the explicit seven-path final plan, not silently treated as final source approval."
+  },
+  "publicationGate": {
+    "afterimagesObserved": 0,
+    "localAfterDirectoryAbsent": true,
+    "candidatePatchAbsent": true,
+    "next": "Ordinary documentary publication followed by complete actual document/commit/tree/preimage readback and independent actual R2. Only then may root author seven source afterimages for separate exact patch/tree/source R1/R2.",
+    "runtimeAcceptance": "Original resulting-head types, selected fast lint, full typed renderer lint, existing frontend suites and affected Desktop journeys remain required. No new acceptance lane or manual workflow selected."
+  },
+  "blockers": [],
+  "limits": [
+    "No project/import/compiler/lint/test/install/provider/native/GUI/stager execution, CI query/download or source/Git/API mutation occurred. Only held-data reading, hash/Merkle computation and this scratch review write.",
+    "No claim that the planned source already exists, passes lint/tests, or closes a current GUI result.",
+    "No new source-default activation, Ready PR promotion, merge/release/Stage2, P09/Plan40 selection, genuine M16 qualification or producer archive adoption.",
+    "This review is bound to the exact plan/R1/bindings bytes and d425 base. Future incoming changes require exact preservation/rebinding rather than a stale whole-file application."
+  ]
+}

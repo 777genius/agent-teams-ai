@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "kind": "FINITE_MEMBERSHIP_ERROR_COMPLETION_R1",
+  "state": "inert-selected-pending-independent-full-union-and-actual-binding",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-public-c2f5ff7c",
+  "parent": "17a39219266a7b468bc357380cc319694a7c7181",
+  "tree": "e2875484c290db93c764a4b52c648ba27396afb8",
+  "baseLeaves": 11031,
+  "primary": "17a39219266a7b468bc357380cc319694a7c7181",
+  "pr": {
+    "number": 1192,
+    "state": "open",
+    "draft": true,
+    "base": "def734338f13bcc3209e78079a0cedbc48f05a5b"
+  },
+  "sources": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "size": 104495,
+        "sha": "405656361d2804c00265c46129b66cd86fac4677",
+        "sha256": "00ed1c9a1ef871e62247f4b8959e77d708b136b8b295d4380b083f6f67b2f173"
+      },
+      "after": {
+        "size": 104573,
+        "sha": "8915f1490bc9e223011690dbc1f207ce3ae80f35",
+        "sha256": "cf1a0e466b8557630754a916a4429adc29575a12b57073870b289f73bd15fea2"
+      },
+      "lines": 1350
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "before": {
+        "size": 55759,
+        "sha": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+        "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+      },
+      "after": {
+        "size": 55757,
+        "sha": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+        "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e"
+      },
+      "lines": 798
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "size": 159522,
+        "sha": "d882c5b62655ea55ddaa9f73e74212a97afda697",
+        "sha256": "389e63f51a236d2d2c9a0babb0548fee53c1c3b601ab6e1ec51c37611b2af48a"
+      },
+      "after": {
+        "size": 162166,
+        "sha": "b7fda498b1e50856211616a3c062ca65a148cc26",
+        "sha256": "a6d8237d934911e755305361496ee043e45995627b6cadbab9218e6738be1a8d"
+      },
+      "lines": 2689
+    }
+  ],
+  "patch": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/finite-membership-error-completion-2026-11-16/candidate.patch",
+    "size": 5481,
+    "sha": "3683b5476401e8e0e27b16b3bd73001ee65b5df1",
+    "sha256": "ec49c744053cb33cebf8f31b09068e55c8fe1cc8d7ef1666fb623ea270e98ecd",
+    "hunks": 3
+  },
+  "planPrefix": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "size": 1963158,
+    "sha": "311fe7ef1550903fd6df866e1aa7ba4831132375",
+    "sha256": "a11876cf7b3e336fb72f8921967d24ac2c63de061ad84f32d380ff43aa81e0df"
+  },
+  "append": {
+    "size": 10349,
+    "sha": "8f349a7cf6ee06fef5bc63bc35c612acf49f3bc8",
+    "sha256": "fde46c076c54b806e8bb55bef8cd8c8263bf640a40c6ec2897b36d4230e692a6"
+  },
+  "actualB": {
+    "run": 43856040329,
+    "job": 133260433205,
+    "original123": {
+      "pass": 123,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0
+    },
+    "retry": 7,
+    "runtimeTeam": 179,
+    "fullCompilerAndTypedLint": "actualPASS,warnings retained",
+    "rootReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/finite-membership-error-completion-2026-11-16/actual-b-root-review.json",
+      "size": 91359,
+      "sha": "e5e5624ca9105269c9a4fa7f3bf4ad04f2c0480c",
+      "sha256": "da22a4fdb80703ea28de90d0f15a582bf68f61dc5a6af4433157dca1a9e215c8"
+    },
+    "independentReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/finite-membership-error-completion-2026-11-16/actual-b-independent-r2.json",
+      "size": 68386,
+      "sha": "596f1ec8714e7abcc52407cde3866f8d8f093ffe",
+      "sha256": "0f88d10c16d376bb23c935320b5f2ae005eed59e7d717d8133c105ed452b6e94"
+    }
+  },
+  "finally": {
+    "change": "move same finite assertion after original finally",
+    "originalErrorIdentity": true,
+    "originalFinallyPrecedence": true,
+    "normalIncompleteStillRefused": true,
+    "finiteCannotTakeStartupEarlyReturn": true,
+    "testScope": "actual terminal tail only; no entire cleanup execution"
+  },
+  "tests": {
+    "preserveWholeCurrentPrefix": {
+      "size": 159522,
+      "sha": "d882c5b62655ea55ddaa9f73e74212a97afda697",
+      "sha256": "389e63f51a236d2d2c9a0babb0548fee53c1c3b601ab6e1ec51c37611b2af48a"
+    },
+    "append": {
+      "size": 2644,
+      "sha": "b88d52edb1cdee28a6b93519733791093479d32f",
+      "sha256": "92af8a00586ac863839c46c48da8df258fabd3870fcaacc8322a6f587b6cf133"
+    },
+    "addedCases": 2,
+    "existingCasesUnchanged": true
+  },
+  "lint": {
+    "before": 107,
+    "after": 108,
+    "added": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+    "allPriorOperandsInOrder": true,
+    "allOtherWorkflowBytesUnchanged": true
+  },
+  "preserved": {
+    "sharedBootHelper": "00e61ff3a6228c33a59790f9ff997111a487d3e5",
+    "allFourInitialCallers": true,
+    "windowsDiagnostics": true,
+    "allCBodyAndCounters": true,
+    "allPlans34Through40": true,
+    "providerAdoption": "c930 incomingPlan38 preserved; actual53receipts independently join before qualification",
+    "unselectedPlan40": true,
+    "settingsBeforeC45min": true,
+    "all42WorkflowsExceptOneLintOperand": true,
+    "allOtherLeavesModes": true
+  },
+  "limits": {
+    "strictP09Hold": true,
+    "genuineM16AndNativeResumeOpen": true,
+    "directI386AndWindowsOpen": true,
+    "readinessWholeBodyReplyNotIndependentChatOpen": true,
+    "noLocalProjectExecution": true,
+    "noManualActions": true,
+    "noRealClaudeOrCodex": true,
+    "noReadyOrMainMergeOrReleaseOrStage2OrDefaultActivation": true
+  },
+  "publication": "root-only ordinary expectedSHA docs child immediatepush/readback/indepactualR2, then exact3source child immediatepush/readback/indepactualR2; preserve useful started original jobs before primaryFF"
+}

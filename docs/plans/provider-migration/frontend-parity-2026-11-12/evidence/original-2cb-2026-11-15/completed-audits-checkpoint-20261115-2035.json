@@ -1,0 +1,400 @@
+{
+  "kind": "original-2cb-completed-native-audits",
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "sourceTree": "4fd42ca2d74bfb29a834638b25675c51bfd6701a",
+  "sourceUrl": "https://github.com/777genius/agent-teams-ai/commit/2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "localRoot": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb",
+  "checkpointCreatedUtc": "2026-11-15T20:35:14.359658+00:00",
+  "auditScope": [
+    "Windows x64 and ARM64 original V2 manual/auto Host SUCCESS, separately scoped from Process/P08",
+    "Windows ARM64 original Process FAILURE at standalone completion followed by failed original all-Job cleanup assertion",
+    "Windows x64 original Process FAILURE at Team-A OpenCode opening/readiness cutoff, with prior finite Codex/Claude scenarios independently successful",
+    "Darwin x64 original V2 Host SUCCESS followed by P09 baseline FAILURE and retained mutation/script counterexamples",
+    "Source-bound job status snapshot at20:32:46 UTC with separately timed Creation status at20:16:17 UTC; General excluded"
+  ],
+  "storageChoice": "Preserve exact official ZIPs, complete original job logs, bounded source/receipt/integrity audits and appendices. Every archived receipt/log/PNG member is recoverable from its authoritative ZIP; extracted members are not duplicated. Source bytes are already immutable Git blobs linked by the original commit and explicit pin/digest maps, and are not copied as new repository source files. No signed download URLs, download helpers, base64 staging or mutable source checkout is included.",
+  "hashes": "SHA256 over exact bytes; Git blob SHA1 over blob + space + decimal length + NUL + bytes. Each artifact API digest/size is independently matched.",
+  "files": [
+    {
+      "path": "2cb-v2-win32-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 13328,
+      "sha256": "0646c7db67a476aeb6e72a677d78c9b3021671989af376190907362789e6e5c6",
+      "gitBlobSha1": "47e73eba96017a015ab5ae3d9429b0fdbec18a32"
+    },
+    {
+      "path": "job-132939135540.log",
+      "kind": "complete-original-job-log",
+      "bytes": 89306,
+      "sha256": "c209db52906903910023376e3a2b8e67192ab107ae38dc2a0b2bbc5b4202726f",
+      "gitBlobSha1": "1b6b4fd36c14fb1aef6aadaf69cfcbc3683c1a6d"
+    },
+    {
+      "path": "archive-audit-v2-x64.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 1858,
+      "sha256": "5279cd6254a23b65edff0c5115a9478f41ae78e1c480d9cffc99c6a5fdabb3b4",
+      "gitBlobSha1": "57d9b1fd427abb36eda5ed26bbf05fd5532ce8fb"
+    },
+    {
+      "path": "2cb-v2-win32-arm64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 13488,
+      "sha256": "a3dd0b1da79f4918ae4b0b599788113bffd1896e8749ed3537846d851cbd498a",
+      "gitBlobSha1": "217cd55c019e1f8e2a3645e9c01c04ded9e0ed76"
+    },
+    {
+      "path": "job-132939135522.log",
+      "kind": "complete-original-job-log",
+      "bytes": 115072,
+      "sha256": "575d8d36bff8df054f30894bc657617f567f8e0c45af5aaf39a47c6152553c95",
+      "gitBlobSha1": "b78d7f079ed38ef600caadf3ca9e08bb25e9527a"
+    },
+    {
+      "path": "archive-audit-v2-arm.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 1862,
+      "sha256": "34a6493a0efed80bdd3610f10fe6e81003733618b1d1cb25a54af6c5cb4963b9",
+      "gitBlobSha1": "6d993b9ca996736aaf7256bcd53f3985265d6c5c"
+    },
+    {
+      "path": "2cb-process-win32-arm64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 38874,
+      "sha256": "716bf8e52216e9485b848a2f9f92001eec374f7d4fb7ac32e169f2528ed68870",
+      "gitBlobSha1": "cdc90292f838865fb1a3b71c77a654facaaa1a1d"
+    },
+    {
+      "path": "job-132939165328.log",
+      "kind": "complete-original-job-log",
+      "bytes": 371250,
+      "sha256": "fbc8ae303cd50ac925c7c6b56e8a0e049b2281561996d8d57802a0234e6abf6d",
+      "gitBlobSha1": "76ee94c27f939f70027fdc80c431d4264e353c53"
+    },
+    {
+      "path": "archive-audit-process_arm.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 4243,
+      "sha256": "4389b4d6ad0acf23f26c091e9a6bdd668e1fa5287dee49e6bdd74e0a472cc482",
+      "gitBlobSha1": "5089e3962ec39fe9da3b07efef6fc09c229a99c4"
+    },
+    {
+      "path": "2cb-process-win32-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 52962,
+      "sha256": "5c80ebb740fe585fc6749694e8430a465dc4ea692ff1c72d5a836d764e9f5e40",
+      "gitBlobSha1": "859c67a7abd7b86b764ba5f7114d15889b447e0a"
+    },
+    {
+      "path": "job-132939165622.log",
+      "kind": "complete-original-job-log",
+      "bytes": 373569,
+      "sha256": "9ab1fec33b39b565209409c401e6999f9113865baf6885a58682ad7efaba0353",
+      "gitBlobSha1": "30802b67c19efbe9595f62774d0b69dbf01130cd"
+    },
+    {
+      "path": "archive-audit-process_x64.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 5136,
+      "sha256": "22c3ad5ac70b9517130fde85e96fd685762a95a9a1038956fd46db484a6f1587",
+      "gitBlobSha1": "ef49b6ee36553d56f92f3a1147ea07d484e3db6b"
+    },
+    {
+      "path": "2cb-v2-darwin-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 10503,
+      "sha256": "035b4819b31f0a330a7acf8a19c632edcfb906b0a9486c4bdabf52a697a7a019",
+      "gitBlobSha1": "42bdbf980bedaa6af75c869a0866d0aae3994258"
+    },
+    {
+      "path": "job-132939135634.log",
+      "kind": "complete-original-job-log",
+      "bytes": 111486,
+      "sha256": "848b207cde0aa86bffad05fbb3c20c2469298d770e19fa4cc97fe5da8178353b",
+      "gitBlobSha1": "a21b16e996dda34e6bd8f4e8543bac078f9b5294"
+    },
+    {
+      "path": "archive-audit-v2_darwin_x64.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 1860,
+      "sha256": "f2c0bb9e2a0fd3b13a3db32c94e0be7111b24b7c883ae35f8a475e905d1318a5",
+      "gitBlobSha1": "9d49df9cab58d7c9780e5e331c844e93ed2c28f9"
+    },
+    {
+      "path": "receipt-audit-v2-x64.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 33630,
+      "sha256": "392b2a4d9253be533b2876e7b55a63d827e66ac76988e0ba933d3a2831dfbf00",
+      "gitBlobSha1": "a3d2cf9014a7357a474790577dd9c9342d6e3005"
+    },
+    {
+      "path": "receipt-audit-v2-arm.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 33745,
+      "sha256": "2d85833221fcb48e322b061e411d7556501a72886fe30a600c510b2b805b8eca",
+      "gitBlobSha1": "f93fe39853f58d679d93a06b3b8aaa1c87341899"
+    },
+    {
+      "path": "receipt-audit-process-windows.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 49897,
+      "sha256": "0c65c55bd4375dccd735ac4a2ea8efefddd0244fd1b95a8cc14d4d00e0c5f78e",
+      "gitBlobSha1": "6de8aead0cb62d4c93ccc208a1e360dd30fe06b6"
+    },
+    {
+      "path": "receipt-audit-v2-darwin-x64.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 36075,
+      "sha256": "bb675c4af3393aa869efaa9dc7e5dedca89f882db67da03937398002990d79c3",
+      "gitBlobSha1": "d6488be72b212b7e67c0fa599b792076014eeb9d"
+    },
+    {
+      "path": "pin-audit-process_arm-codex.json",
+      "kind": "selected-source-pin-audit",
+      "bytes": 6452,
+      "sha256": "a5bd0170352525348385cf76b0bb7546f3f2d52ca3ea0671b3fb0c226d6d3833",
+      "gitBlobSha1": "8f15b9027dbf8fa5d8c9457dea60572527c9cca6"
+    },
+    {
+      "path": "pin-audit-process_x64-codex.json",
+      "kind": "selected-source-pin-audit",
+      "bytes": 8159,
+      "sha256": "b2650875eb2968b30fe08695dcd3713471d061a5ada1a238d43213b7d99db535",
+      "gitBlobSha1": "8f9bc764b908ec244af071dc393f654eda609134"
+    },
+    {
+      "path": "pin-audit-process_x64-claude.json",
+      "kind": "selected-source-pin-audit",
+      "bytes": 8288,
+      "sha256": "2eb165c3dae70aaeff1833f8fd6850e0990a29475129fe37162aa3c0d44cfeee",
+      "gitBlobSha1": "99f86335f9154f666cef3195543bf66b12627da5"
+    },
+    {
+      "path": "pin-audit-process_x64-opencode.json",
+      "kind": "selected-source-pin-audit",
+      "bytes": 6528,
+      "sha256": "b5c3b9f87b4b350a9f8be556377bc327cc4c53e6184d36f6e302066175c5374e",
+      "gitBlobSha1": "7274deb5c7690676b49d85dc787c61568cccd7d8"
+    },
+    {
+      "path": "source-host-digest-audit.json",
+      "kind": "complete-host-source-git-digest-audit",
+      "bytes": 84915,
+      "sha256": "4c3ca2da1ba7f5fb6143a5b93ca7a842670f34487b0dbeca7d7017fa3d1731c9",
+      "gitBlobSha1": "ddbae83cbede62701650d9e5c743766081c8bcd1"
+    },
+    {
+      "path": "source-2cb-seven-path-delta.json",
+      "kind": "git-incoming-delta-provenance",
+      "bytes": 1726,
+      "sha256": "46e1691a10fd57cb8eedf0b4336738fd7c5fe7379372f84af752b6dccf4367eb",
+      "gitBlobSha1": "72a2f7ca850def9ba5e2b5fb77d92d4f570e235c"
+    },
+    {
+      "path": "plan29-2cb-v2-win-x64-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 4285,
+      "sha256": "164984cd96b8fa799fceaa5e19f63881ba0f82c92a993d928e34d41ed84117b2",
+      "gitBlobSha1": "3456aaa0c80548b474eafd779ab883505090ba3c"
+    },
+    {
+      "path": "plan29-2cb-v2-win-arm-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 2830,
+      "sha256": "ed19f8c72e05624e97e77843699fdd29050c4d2949e9d6ae48fe358d4b8ee1af",
+      "gitBlobSha1": "8f0933657bf82dbb2d86aab1449dd826ada043f7"
+    },
+    {
+      "path": "plan29-2cb-process-windows-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 8213,
+      "sha256": "7fcc482e56f34cf57ddc3ca698158eccd1525e90af99210f8e6928f9eb7f586a",
+      "gitBlobSha1": "0cff9e7c0af9680dc288413caf4600d1b5b6e3bc"
+    },
+    {
+      "path": "plan29-2cb-v2-darwin-x64-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 3549,
+      "sha256": "06bee06f421fb53559fd236ebeda14d1e8b1f26049a9bca243315cc6da2aaf53",
+      "gitBlobSha1": "5c0580891805092bfa921d610f8b5377880bceb3"
+    },
+    {
+      "path": "jobs-snapshot-20261115-203246.json",
+      "kind": "selected-original-job-api-snapshot",
+      "bytes": 164375,
+      "sha256": "03bc7cc513c5f5fa1cb39a64458038e1f1bb86a3c5564088c709988afc10a531",
+      "gitBlobSha1": "6bacde487d4cf18d400395e4b6fc8b21317cc4d2"
+    }
+  ],
+  "fileCount": 30,
+  "totalBytes": 1657464,
+  "uniqueBlobCount": 30,
+  "artifactProvenance": [
+    {
+      "jobId": 132939135540,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43755682505/job/132939135540",
+      "artifactApi": {
+        "id": 14177699760,
+        "name": "opencode-v2-embedded-native-win32-x64",
+        "size_in_bytes": 13328,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177699760",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177699760/zip",
+        "expired": false,
+        "created_at": "2026-11-15T20:14:36Z",
+        "expires_at": "2026-11-22T20:14:35Z",
+        "updated_at": "2026-11-15T20:14:36Z",
+        "digest": "sha256:0646c7db67a476aeb6e72a677d78c9b3021671989af376190907362789e6e5c6",
+        "workflow_run": {
+          "id": 43755682505,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+        }
+      },
+      "zip": "2cb-v2-win32-x64.zip",
+      "jobLog": "job-132939135540.log",
+      "integrityAudit": "archive-audit-v2-x64.json",
+      "receiptAudit": "receipt-audit-v2-x64.json",
+      "memberCount": 4,
+      "memberBytesRecoverableFromExactZip": true
+    },
+    {
+      "jobId": 132939135522,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43755682505/job/132939135522",
+      "artifactApi": {
+        "id": 14178683237,
+        "name": "opencode-v2-embedded-native-win32-arm64",
+        "size_in_bytes": 13488,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178683237",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178683237/zip",
+        "expired": false,
+        "created_at": "2026-11-15T20:30:49Z",
+        "expires_at": "2026-11-22T20:30:49Z",
+        "updated_at": "2026-11-15T20:30:49Z",
+        "digest": "sha256:a3dd0b1da79f4918ae4b0b599788113bffd1896e8749ed3537846d851cbd498a",
+        "workflow_run": {
+          "id": 43755682505,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+        }
+      },
+      "zip": "2cb-v2-win32-arm64.zip",
+      "jobLog": "job-132939135522.log",
+      "integrityAudit": "archive-audit-v2-arm.json",
+      "receiptAudit": "receipt-audit-v2-arm.json",
+      "memberCount": 4,
+      "memberBytesRecoverableFromExactZip": true
+    },
+    {
+      "jobId": 132939165328,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43755682747/job/132939165328",
+      "artifactApi": {
+        "id": 14178133525,
+        "name": "host-process-fixtures-win32-arm64-2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+        "size_in_bytes": 38874,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178133525",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178133525/zip",
+        "expired": false,
+        "created_at": "2026-11-15T20:17:05Z",
+        "expires_at": "2026-11-29T20:17:04Z",
+        "updated_at": "2026-11-15T20:17:05Z",
+        "digest": "sha256:716bf8e52216e9485b848a2f9f92001eec374f7d4fb7ac32e169f2528ed68870",
+        "workflow_run": {
+          "id": 43755682747,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+        }
+      },
+      "zip": "2cb-process-win32-arm64.zip",
+      "jobLog": "job-132939165328.log",
+      "integrityAudit": "archive-audit-process_arm.json",
+      "receiptAudit": "receipt-audit-process-windows.json",
+      "memberCount": 14,
+      "memberBytesRecoverableFromExactZip": true
+    },
+    {
+      "jobId": 132939165622,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43755682747/job/132939165622",
+      "artifactApi": {
+        "id": 14178717477,
+        "name": "host-process-fixtures-win32-x64-2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+        "size_in_bytes": 52962,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178717477",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178717477/zip",
+        "expired": false,
+        "created_at": "2026-11-15T20:18:06Z",
+        "expires_at": "2026-11-29T20:18:05Z",
+        "updated_at": "2026-11-15T20:18:06Z",
+        "digest": "sha256:5c80ebb740fe585fc6749694e8430a465dc4ea692ff1c72d5a836d764e9f5e40",
+        "workflow_run": {
+          "id": 43755682747,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+        }
+      },
+      "zip": "2cb-process-win32-x64.zip",
+      "jobLog": "job-132939165622.log",
+      "integrityAudit": "archive-audit-process_x64.json",
+      "receiptAudit": "receipt-audit-process-windows.json",
+      "memberCount": 18,
+      "memberBytesRecoverableFromExactZip": true
+    },
+    {
+      "jobId": 132939135634,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43755682505/job/132939135634",
+      "artifactApi": {
+        "id": 14178596921,
+        "name": "opencode-v2-embedded-native-darwin-x64",
+        "size_in_bytes": 10503,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178596921",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178596921/zip",
+        "expired": false,
+        "created_at": "2026-11-15T20:19:36Z",
+        "expires_at": "2026-11-22T20:19:34Z",
+        "updated_at": "2026-11-15T20:19:36Z",
+        "digest": "sha256:035b4819b31f0a330a7acf8a19c632edcfb906b0a9486c4bdabf52a697a7a019",
+        "workflow_run": {
+          "id": 43755682505,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+        }
+      },
+      "zip": "2cb-v2-darwin-x64.zip",
+      "jobLog": "job-132939135634.log",
+      "integrityAudit": "archive-audit-v2_darwin_x64.json",
+      "receiptAudit": "receipt-audit-v2-darwin-x64.json",
+      "memberCount": 4,
+      "memberBytesRecoverableFromExactZip": true
+    }
+  ],
+  "sourceCodeProvenance": {
+    "baseHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+    "incomingChangedPaths": 7,
+    "hostChangedIndexBlob": "755158699496506a62132c540f19b225c5a6222d",
+    "incomingScenarioBlob": "8164e614ca3f6e6cb01013ea3ec1fc723b5d5c30",
+    "incomingProfileBlob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+    "hostSourceFileCount": 615,
+    "hostSourceWindowsCRLFSHA256": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+    "hostSourceGitLFSHA256": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e"
+  },
+  "limits": [
+    "No tests, compilers, native/provider processes, CI reruns/cancellations, source edits or refs by this auditor.",
+    "All results belong only to original2cb; no transfer to proposed corrected absolute-D, Selection convergence, caller retirement or another composition.",
+    "Original incoming fixture policy differs from old15s source results and retains the known duration-rebasing gap. Neither historical failures nor current failure reasons are relabeled.",
+    "ARM scenario.cleanupfalse remains despite24 confirmed captured original Jobs and outer controller active0; allocation slot24 lacks root/witness/resume and original HANDLE wait.",
+    "x64 opening/empty-refusal evidence does not identify a specific driver/probe failure or legitimate operation to remove.",
+    "V2 trace limits and separate custody roles remain explicit; recorded cleanup is not a complete serialized PID census.",
+    "Darwin P09 remains INCOMPLETE with all5 qualification flagsfalse despite its separate Host success and10 confirmed child/group cleanups.",
+    "API statuses without separately audited logs/artifacts remain status-only; queued/cancelled/skipped are never PASS.",
+    "All previously frozen original9a34 checkpoints remain unchanged."
+  ]
+}

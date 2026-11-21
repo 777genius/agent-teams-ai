@@ -1,0 +1,1148 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-823-windows-first-refusals-and-bounded-passes",
+  "head": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+  "event": "pull_request",
+  "attempt": 1,
+  "createdAt": "2026-11-18T21:57:19.664546+00:00",
+  "terminalManifest": {
+    "gitBlob": "ee5dd214dc83cbf64e1f3fa71a743075d6dc0ded",
+    "sha256": "dd4a0641b42e5704ab4e1ee48cc0be39e824ca9f7953f915694051271bd6aecb"
+  },
+  "logs": [
+    {
+      "jobId": 135142897340,
+      "path": "/workspace/scratch/c714f5bce554/ci-current-823/job-135142897340-terminal.log",
+      "sha256": "a7452af702b479fbba4fef8e7c2144204438de40a5516c79ae7cf72b672e4bfc",
+      "bytes": 95477,
+      "gitBlob": "92bf8208f9adf56892a48be5d44c3bb655d661ee",
+      "exactImmutableReadback": true,
+      "endpointPermanentlyRetired": true
+    },
+    {
+      "jobId": 135142897464,
+      "path": "/workspace/scratch/c714f5bce554/ci-current-823/job-135142897464-terminal.log",
+      "sha256": "558d416b0e647003117365b1c2c2bf4c004c7c8892fa3ed82e973e1ba4cd0741",
+      "bytes": 113293,
+      "gitBlob": "30996ea684bac6de0e85ef03c1360b7300aa1703",
+      "exactImmutableReadback": true,
+      "endpointPermanentlyRetired": true
+    },
+    {
+      "jobId": 135142681257,
+      "path": "/workspace/scratch/c714f5bce554/ci-current-823/job-135142681257-terminal.log",
+      "sha256": "5ccb801d6aae7521c6f2896f5ef4ce7be5d002b1fc7789a1ab8cab9302ab3454",
+      "bytes": 402449,
+      "gitBlob": "533a7aeab5f9b9799b15b3ab25e46836e489e251",
+      "exactImmutableReadback": true,
+      "endpointPermanentlyRetired": true
+    },
+    {
+      "jobId": 135142897726,
+      "path": "/workspace/scratch/c714f5bce554/ci-current-823/job-135142897726-terminal.log",
+      "sha256": "d0dc463db7cab61d5bb6b55d33234ba2d27220cd67084dd0532940f7c7a09965",
+      "bytes": 117661,
+      "gitBlob": "4617cc9dc0e9511cd9c7c251c6ad4280553a6417",
+      "exactImmutableReadback": true,
+      "endpointPermanentlyRetired": true
+    }
+  ],
+  "windowsX64Stage1": {
+    "runId": 44400669121,
+    "jobId": 135142897340,
+    "jobConclusion": "failure",
+    "workflowPath": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "manualNativePassed": 1,
+    "automaticNativePassed": 1,
+    "nativeFailed": 0,
+    "nativeSkipped": 0,
+    "nativeDurationsMs": [
+      183399.291,
+      165927.8207
+    ],
+    "failureStep": 24,
+    "failureLabel": "Require product-path Host proof after exact candidate qualification",
+    "actualStepArray": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "oldExpectedStepArray": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "exactMissingExpectedStep": "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+    "failurePhase": "post-native inline verifier strict ordered array equality",
+    "qualification": "Original manual/auto callbacks each pass, and both saved native receipts record PASS/cleanup true. Workflow fails at the manual receipt steps array; assertions following that point and the auto iteration were not executed by the original workflow verifier. Parent may test the exact saved receipts with a pure verifier, without native replay.",
+    "artifact": {
+      "artifactId": 14473682433,
+      "zipPath": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-native-win32-x64-823.zip",
+      "bytes": 13580,
+      "sha256": "4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613",
+      "fileId": "file_00000000777081f486492e3cbd51cc59",
+      "apiDigestMatches": true,
+      "members": [
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-host.json",
+          "bytes": 91886,
+          "sha256": "bd682bbbb2ad463dfcc20a1c2bfd704a633f1db9384b27f4b6ce31a65f4986f8",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "approvalMode": "manual",
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "cleanup": true,
+          "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+        },
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-inputs.json",
+          "bytes": 780,
+          "sha256": "f91e4902cc2e8ba6ad629332115039f6b0df4b8a299fed195d6b2be41f2f99f4",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+          "status": "READY",
+          "approvalMode": null,
+          "steps": null,
+          "cleanup": null,
+          "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+        },
+        {
+          "name": "opencode-v2-windows-custody.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-windows-custody.json",
+          "bytes": 907,
+          "sha256": "354c1c12164d6dee53488e52ec56893cd85cef54b98afdaa0e2eca53b3219cc0",
+          "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+          "status": "PASS",
+          "approvalMode": null,
+          "steps": null,
+          "cleanup": true,
+          "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+        },
+        {
+          "name": "opencode-v2-embedded-host-auto.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-host-auto.json",
+          "bytes": 96755,
+          "sha256": "b6202512a9eef253f248a82d9475fbcb5dd4063356578a9b51e5d3d128592055",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "approvalMode": "auto",
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "cleanup": true,
+          "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+        }
+      ],
+      "githubDownloadEndpointPermanentlyRetired": true,
+      "materializedAt": "2026-11-18T21:50:43.280722+00:00"
+    },
+    "immutableOriginalNativeReceipts": [
+      {
+        "name": "opencode-v2-embedded-host.json",
+        "gitBlob": "74530cd0e87b4581afc130dcd83188cddc069dce",
+        "bytes": 91886,
+        "sha256": "bd682bbbb2ad463dfcc20a1c2bfd704a633f1db9384b27f4b6ce31a65f4986f8"
+      },
+      {
+        "name": "opencode-v2-embedded-host-auto.json",
+        "gitBlob": "a8758946ba0196d9339c091cce05f049314ca388",
+        "bytes": 96755,
+        "sha256": "b6202512a9eef253f248a82d9475fbcb5dd4063356578a9b51e5d3d128592055"
+      }
+    ],
+    "assertionExcerptWithoutAnsi": [
+      "2026-11-18T21:40:25.2182430Z AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+      "2026-11-18T21:40:25.2183169Z + actual - expected",
+      "2026-11-18T21:40:25.2183398Z ",
+      "2026-11-18T21:40:25.2183587Z   [",
+      "2026-11-18T21:40:25.2184051Z     'original_host_embedded_native_and_mcp_ready',",
+      "2026-11-18T21:40:25.2185475Z     'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',",
+      "2026-11-18T21:40:25.2186423Z     'changed_project_config_did_not_retarget_running_native_session',",
+      "2026-11-18T21:40:25.2187339Z     'original_uploaded_PNG_native_image_inference_and_public_readback',",
+      "2026-11-18T21:40:25.2188484Z +   'all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback',",
+      "2026-11-18T21:40:25.2189334Z     'checkpoint_and_original_host_native_cleanup_confirmed',",
+      "2026-11-18T21:40:25.2190035Z     'cold_host_restored_native_history_without_model_or_tool_replay'",
+      "2026-11-18T21:40:25.2190677Z   ]",
+      "2026-11-18T21:40:25.2190854Z ",
+      "2026-11-18T21:40:25.2191221Z     at file:///D:/a/agent-teams-ai/agent-teams-ai/[eval1]:29:10",
+      "2026-11-18T21:40:25.2191994Z     at ModuleJob.run (node:internal/modules/esm/module_job:561:25)",
+      "2026-11-18T21:40:25.2192777Z     at async node:internal/modules/esm/loader:223:26",
+      "2026-11-18T21:40:25.2193677Z     at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:220:20)",
+      "2026-11-18T21:40:25.2194717Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {",
+      "2026-11-18T21:40:25.2195532Z   generatedMessage: true,",
+      "2026-11-18T21:40:25.2195973Z   code: 'ERR_ASSERTION',",
+      "2026-11-18T21:40:25.2196464Z   actual: [",
+      "2026-11-18T21:40:25.2196990Z     'original_host_embedded_native_and_mcp_ready',",
+      "2026-11-18T21:40:25.2198657Z     'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',",
+      "2026-11-18T21:40:25.2199243Z     'changed_project_config_did_not_retarget_running_native_session',",
+      "2026-11-18T21:40:25.2200813Z     'original_uploaded_PNG_native_image_inference_and_public_readback',",
+      "2026-11-18T21:40:25.2201997Z     'all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback',",
+      "2026-11-18T21:40:25.2203518Z     'checkpoint_and_original_host_native_cleanup_confirmed',",
+      "2026-11-18T21:40:25.2204333Z     'cold_host_restored_native_history_without_model_or_tool_replay'",
+      "2026-11-18T21:40:25.2204939Z   ],",
+      "2026-11-18T21:40:25.2205324Z   expected: [",
+      "2026-11-18T21:40:25.2206110Z     'original_host_embedded_native_and_mcp_ready',",
+      "2026-11-18T21:40:25.2206913Z     'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',",
+      "2026-11-18T21:40:25.2207804Z     'changed_project_config_did_not_retarget_running_native_session',",
+      "2026-11-18T21:40:25.2208668Z     'original_uploaded_PNG_native_image_inference_and_public_readback',",
+      "2026-11-18T21:40:25.2209473Z     'checkpoint_and_original_host_native_cleanup_confirmed',",
+      "2026-11-18T21:40:25.2210229Z     'cold_host_restored_native_history_without_model_or_tool_replay'",
+      "2026-11-18T21:40:25.2210883Z   ],",
+      "2026-11-18T21:40:25.2211330Z   operator: 'deepStrictEqual',",
+      "2026-11-18T21:40:25.2211788Z   diff: 'simple'",
+      "2026-11-18T21:40:25.2212208Z }",
+      "2026-11-18T21:40:25.2212386Z ",
+      "2026-11-18T21:40:25.2212578Z Node.js v24.21.0",
+      "2026-11-18T21:40:25.2308278Z ##[error]Process completed with exit code 1.",
+      "2026-11-18T21:40:25.2489297Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "2026-11-18T21:40:25.2489821Z with:",
+      "2026-11-18T21:40:25.2490157Z   name: opencode-v2-embedded-native-win32-x64",
+      "2026-11-18T21:40:25.2490552Z   retention-days: 7",
+      "2026-11-18T21:40:25.2490841Z   if-no-files-found: warn",
+      "2026-11-18T21:40:25.2492309Z   path: opencode-v2-embedded-inputs.json",
+      "opencode-v2-darwin-custody.json",
+      "opencode-v2-windows-custody.json",
+      "opencode-v2-embedded-host.json",
+      "opencode-v2-embedded-host-auto.json",
+      "opencode-v2-model-probe.json"
+    ]
+  },
+  "windowsArm64Host": {
+    "runId": 44400668625,
+    "jobId": 135142681257,
+    "jobConclusion": "failure",
+    "failureStep": 20,
+    "failureLabel": "Qualify original codex source A B with TEST peer",
+    "readiness": [
+      {
+        "kind": "TEST_SOURCE_READINESS",
+        "provider": "codex",
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 109,
+        "elapsedMs": 15298.7404,
+        "lastRuntimeRead": {
+          "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      }
+    ],
+    "firstRefusal": [
+      {
+        "kind": "TEST_SOURCE_FIRST_REFUSAL",
+        "provider": "codex",
+        "diagnostic": {
+          "status": "unknown",
+          "reason": "empty"
+        }
+      }
+    ],
+    "readinessObservations": [
+      {
+        "kind": "TEST_SOURCE_READINESS_OBSERVATIONS",
+        "provider": "codex",
+        "runtimeProjection": {
+          "status": "observed",
+          "atomicWithFailure": false,
+          "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+          "bindingMatches": true,
+          "recordReady": true,
+          "providerReady": true,
+          "ownerCurrent": true,
+          "nativeReady": true
+        },
+        "codexReadinessObservation": {
+          "schemaVersion": 2,
+          "status": "observed",
+          "atomicWithFailure": false,
+          "samplePoint": "last-original-projection-with-matching-view-digest",
+          "source": {
+            "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+            "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+          },
+          "bindingDigest": "65d02b7cfa3a370b699d21acf9ca0b81677dc538c6d7314a44f59edf8a6bb5dd",
+          "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+          "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "observedEventCount": 17,
+          "events": [
+            [
+              1,
+              1,
+              "open",
+              "before-await",
+              null
+            ],
+            [
+              2,
+              2,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              3,
+              2,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              4,
+              2,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              5,
+              3,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              6,
+              3,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              7,
+              3,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              8,
+              4,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              9,
+              4,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              10,
+              4,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              11,
+              1,
+              "open",
+              "after-await",
+              null
+            ],
+            [
+              12,
+              5,
+              "readiness",
+              "before-await",
+              null
+            ],
+            [
+              13,
+              6,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              14,
+              6,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              15,
+              6,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              16,
+              5,
+              "readiness",
+              "after-await",
+              null
+            ],
+            [
+              17,
+              5,
+              "readiness",
+              "returned",
+              true
+            ]
+          ],
+          "timing": {
+            "samplePoint": "last-original-codex-phase-event",
+            "sequence": 17,
+            "elapsedDeciMs": [
+              2732,
+              3219,
+              27365,
+              27451,
+              56873,
+              80546,
+              80627,
+              91359,
+              115421,
+              115509,
+              120392,
+              120905,
+              120991,
+              145027,
+              145108,
+              147600,
+              147683
+            ],
+            "isCurrent": [
+              133,
+              11408,
+              260
+            ],
+            "canAllocate": [
+              58,
+              19550,
+              624
+            ],
+            "mcpSourceCurrent": [
+              189,
+              5,
+              0
+            ]
+          }
+        }
+      }
+    ],
+    "cleanupRows": [
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 0,
+        "source": null,
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.0537999999996828,
+            "firstStartMs": 3422.9288000000006,
+            "lastEndMs": 3423.9826000000003
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 315.41969999999947,
+            "firstStartMs": 3434.7736000000004,
+            "lastEndMs": 3750.1933
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 256.3813,
+            "firstStartMs": 4024.3078000000005,
+            "lastEndMs": 4280.6891000000005
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.3858000000000175,
+            "firstStartMs": 4679.2738,
+            "lastEndMs": 4680.6596
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.3290999999990163,
+            "firstStartMs": 4684.515700000001,
+            "lastEndMs": 4684.8448
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 3.2208000000009633,
+            "firstStartMs": 4686.4289,
+            "lastEndMs": 4689.649700000001
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.12400000000070577,
+            "firstStartMs": 3428.9541,
+            "lastEndMs": 3429.0781000000006
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.5021999999999025,
+            "firstStartMs": 3431.6443,
+            "lastEndMs": 3432.1465
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      },
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 1,
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.33730000000105065,
+            "firstStartMs": 6374.9729,
+            "lastEndMs": 6375.310200000001
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 581.7832999999991,
+            "firstStartMs": 6746.5752,
+            "lastEndMs": 7328.358499999999
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 291.60789999999906,
+            "firstStartMs": 8009.386300000001,
+            "lastEndMs": 8300.994200000001
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.9735000000000582,
+            "firstStartMs": 8857.035100000001,
+            "lastEndMs": 8858.008600000001
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.08420000000114669,
+            "firstStartMs": 8858.791099999999,
+            "lastEndMs": 8858.8753
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.316399999999703,
+            "firstStartMs": 8859.3649,
+            "lastEndMs": 8861.6813
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.09149999999863212,
+            "firstStartMs": 6483.902000000001,
+            "lastEndMs": 6483.9935
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.30270000000018626,
+            "firstStartMs": 6586.9809,
+            "lastEndMs": 6587.2836
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      },
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 2,
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2692000000006374,
+            "firstStartMs": 10726.777999999998,
+            "lastEndMs": 10727.0472
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 330.7549999999992,
+            "firstStartMs": 10878.170600000001,
+            "lastEndMs": 11208.925599999999
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 289.6335999999992,
+            "firstStartMs": 11548.3982,
+            "lastEndMs": 11838.0318
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.683100000000195,
+            "firstStartMs": 12293.332600000002,
+            "lastEndMs": 12294.0157
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.08179999999993015,
+            "firstStartMs": 12327.1578,
+            "lastEndMs": 12327.2396
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.4849000000012893,
+            "firstStartMs": 12327.8865,
+            "lastEndMs": 12330.3714
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07949999999982538,
+            "firstStartMs": 10799.1758,
+            "lastEndMs": 10799.2553
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2397000000000844,
+            "firstStartMs": 10816.552,
+            "lastEndMs": 10816.791700000002
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      },
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 3,
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.25649999999950523,
+            "firstStartMs": 13124.174300000002,
+            "lastEndMs": 13124.430800000002
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 337.6679000000004,
+            "firstStartMs": 13428.802200000002,
+            "lastEndMs": 13766.470100000002
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 289.70770000000266,
+            "firstStartMs": 14321.1443,
+            "lastEndMs": 14610.852000000003
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 14.886399999999412,
+            "firstStartMs": 25027.5,
+            "lastEndMs": 25042.3864
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.19350000000122236,
+            "firstStartMs": 25088.5482,
+            "lastEndMs": 25088.741700000002
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.2311999999983527,
+            "firstStartMs": 25089.279000000002,
+            "lastEndMs": 25091.5102
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.0797999999995227,
+            "firstStartMs": 13223.645500000002,
+            "lastEndMs": 13223.725300000002
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.31490000000121654,
+            "firstStartMs": 13293.1312,
+            "lastEndMs": 13293.446100000001
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      },
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 4,
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.26749999999810825,
+            "firstStartMs": 16093.137900000002,
+            "lastEndMs": 16093.4054
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 322.08989999999903,
+            "firstStartMs": 16190.2268,
+            "lastEndMs": 16512.3167
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 291.7179999999971,
+            "firstStartMs": 16879.111500000003,
+            "lastEndMs": 17170.8295
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.0223999999980151,
+            "firstStartMs": 17610.508400000002,
+            "lastEndMs": 17611.5308
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.24259999999776483,
+            "firstStartMs": 17644.814000000002,
+            "lastEndMs": 17645.0566
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.7472000000016124,
+            "firstStartMs": 17645.7599,
+            "lastEndMs": 17648.507100000003
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07709999999860884,
+            "firstStartMs": 16146.047000000002,
+            "lastEndMs": 16146.1241
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.25129999999990105,
+            "firstStartMs": 16164.334900000002,
+            "lastEndMs": 16164.586200000002
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      },
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 5,
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.24989999999888823,
+            "firstStartMs": 19542.917800000003,
+            "lastEndMs": 19543.1677
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 327.1159000000007,
+            "firstStartMs": 19679.1875,
+            "lastEndMs": 20006.3034
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 311.224000000002,
+            "firstStartMs": 20345.9987,
+            "lastEndMs": 20657.222700000002
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.0600000000013097,
+            "firstStartMs": 21129.6819,
+            "lastEndMs": 21130.7419
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2147000000004482,
+            "firstStartMs": 21132.185,
+            "lastEndMs": 21132.3997
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.7576999999982945,
+            "firstStartMs": 21133.091800000002,
+            "lastEndMs": 21135.8495
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07449999999880674,
+            "firstStartMs": 19633.3234,
+            "lastEndMs": 19633.3979
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.24250000000029104,
+            "firstStartMs": 19651.7771,
+            "lastEndMs": 19652.0196
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      },
+      {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "7675ef9e-05be-4e74-99b4-02b7d9184180",
+        "jobSlot": 6,
+        "source": {
+          "sourceId": "b9ecceb84e1992eee025c96fa94a7131a2e1846a572cc05e589a7e9cf1e96d6e",
+          "revision": "b87878b20107f70ae83c0ce4245bb1638a0e4c5917b9b450be5b0cbf6c4724b9"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.38509999999951106,
+            "firstStartMs": 22505.8547,
+            "lastEndMs": 22506.2398
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 323.65610000000015,
+            "firstStartMs": 22632.555200000003,
+            "lastEndMs": 22956.211300000003
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 303.5838999999978,
+            "firstStartMs": 23325.263000000003,
+            "lastEndMs": 23628.8469
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.7112000000015541,
+            "firstStartMs": 24091.913,
+            "lastEndMs": 24092.624200000002
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07879999999931897,
+            "firstStartMs": 24093.5453,
+            "lastEndMs": 24093.6241
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.3774000000012165,
+            "firstStartMs": 24094.1472,
+            "lastEndMs": 24096.5246
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07650000000285218,
+            "firstStartMs": 22555.5003,
+            "lastEndMs": 22555.576800000003
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.4455000000016298,
+            "firstStartMs": 22572.1103,
+            "lastEndMs": 22572.555800000002
+          }
+        },
+        "firstCloseEntryMs": 24853.1761
+      }
+    ],
+    "cleanupSummary": {
+      "rows": 7,
+      "allStoppedDrainedReleased": true,
+      "originalHandleAbsentTrue": 1,
+      "originalHandleAbsentFalse": 6
+    },
+    "controllerExit": [
+      {
+        "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+        "provider": "codex",
+        "exitCode": 104
+      }
+    ],
+    "gateController": [
+      {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      },
+      {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      },
+      {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      },
+      {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    ],
+    "qualification": "Actual outer original readiness assertion failed. Later sampled projection and phase observations explicitly say atomicWithFailure=false; ready=true observations do not replace the failed original deadline predicate. No causal performance diagnosis, missing checkSite, or blanket cleanup qualification is inferred. Original source A/B gate did not pass.",
+    "assertionExcerptWithoutAnsi": [
+      "2026-11-18T21:46:43.5413836Z AssertionError [ERR_ASSERTION]: Original source Team readiness",
+      "2026-11-18T21:46:43.5422629Z     at poll (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:58:12)",
+      "2026-11-18T21:46:43.5431443Z     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "2026-11-18T21:46:43.5440542Z     at async launch (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:480:9)",
+      "2026-11-18T21:46:43.5456584Z     at async nativeEmulatedSourceScenario (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:536:36)",
+      "2026-11-18T21:46:43.5464614Z     at async main (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:401:7)",
+      "2026-11-18T21:46:43.5473229Z     at async <anonymous> (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:428:85) {",
+      "2026-11-18T21:46:43.5481608Z   generatedMessage: false,",
+      "2026-11-18T21:46:43.5489954Z   code: 'ERR_ASSERTION',",
+      "2026-11-18T21:46:43.5498170Z   actual: false,",
+      "2026-11-18T21:46:43.5508395Z   expected: true,",
+      "2026-11-18T21:46:43.5515509Z   operator: '==',",
+      "2026-11-18T21:46:43.5523502Z   diff: 'simple'",
+      "2026-11-18T21:46:43.5531661Z }",
+      "2026-11-18T21:46:43.5566562Z ",
+      "2026-11-18T21:46:43.5575111Z Node.js v24.21.0",
+      "2026-11-18T21:46:43.5576652Z {\"gateController\":\"drained\",\"rootExitCode\":1,\"activeProcesses\":0}",
+      "2026-11-18T21:46:43.5725497Z {\"kind\":\"TEST_SOURCE_CONTROLLER_EXIT\",\"provider\":\"codex\",\"exitCode\":104}",
+      "2026-11-18T21:46:43.7047776Z Exception: C:\\a\\_temp\\489215fa-b0a2-49a7-81b7-408b2814f72d.ps1:12",
+      "2026-11-18T21:46:43.7048316Z Line |",
+      "2026-11-18T21:46:43.7049112Z   12 |  … de -ne 0) { throw 'Original codex source controller did not confirm c …",
+      "2026-11-18T21:46:43.7049915Z      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    ]
+  },
+  "windowsArm64Native": {
+    "jobId": 135142897726,
+    "conclusion": "cancelled",
+    "nativeCallbackQualified": false,
+    "custodyAndExactCustodyVerifierStepsPassed": true
+  },
+  "staticWindows": {
+    "jobId": 135142897464,
+    "conclusion": "success",
+    "finalStaticSuite": {
+      "tests": 263,
+      "pass": 262,
+      "fail": 0,
+      "skip": 1
+    },
+    "scope": "Original job includes Host build, Host TEST typecheck, model/SPI and install/update/static stages; no full app/native qualification from this static result."
+  },
+  "limitations": [
+    "No CI rerun/cancel/dispatch or local app/native process was started.",
+    "No real Claude or Codex was executed by this reviewer.",
+    "Source fixes and any future commit remain independently qualified.",
+    "All 823 owned original endpoints are permanently retired; immutable blobs and saved bytes may be reused."
+  ],
+  "excerptNormalization": "ANSI display formatting stripped and line endings normalized in displayed excerpts; original raw log bytes remain hash-pinned."
+}

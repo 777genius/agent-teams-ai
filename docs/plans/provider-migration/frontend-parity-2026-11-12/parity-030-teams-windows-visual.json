@@ -1,0 +1,255 @@
+{
+  "schema": "original-ci-artifact-bounded-static-visual-inspection-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826458,
+  "jobId": 135167670062,
+  "runAttempt": 1,
+  "initialOriginalRunMetadata": {
+    "id": 44407826458,
+    "name": "Teams creation page Electron E2E",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "event": "pull_request",
+    "run_attempt": 1,
+    "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826458",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "created_at": "2026-11-18T22:03:43Z"
+  },
+  "originalCheckoutAndArtifactSourceLogLines": [
+    "2026-11-18T22:24:56.0978591Z   ref: 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "2026-11-18T22:25:02.4645508Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "2026-11-18T22:25:16.9089048Z  * branch            030b21f0765d1a6e6572f46d262c672d63e69eb7 -> FETCH_HEAD",
+    "2026-11-18T22:25:16.9154156Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" rev-parse --verify --quiet 030b21f0765d1a6e6572f46d262c672d63e69eb7^{object}",
+    "2026-11-18T22:25:16.9611601Z 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "2026-11-18T22:25:17.0549704Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "2026-11-18T22:25:21.7057174Z Note: switching to '030b21f0765d1a6e6572f46d262c672d63e69eb7'.",
+    "2026-11-18T22:25:21.9452643Z 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "2026-11-18T22:33:51.8637205Z   name: teams-create-page-windows-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "2026-11-18T22:33:54.0111541Z Artifact teams-create-page-windows-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7.zip successfully finalized. Artifact ID 14476884996",
+    "2026-11-18T22:33:54.0113504Z Artifact teams-create-page-windows-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7 has been successfully uploaded! Final size is 1824252 bytes. Artifact ID is 14476884996"
+  ],
+  "artifact": {
+    "artifactId": 14476884996,
+    "phase": "GitHub-download-endpoint-permanently-retired",
+    "fileId": "file_000000007bb081f493d396dba85dc443",
+    "bytes": 1824252,
+    "sha256": "ad84f29e6343a332750e594f90fe0e3fbed52c9d883b79a2da674c3d13053d2a",
+    "digestMatchesOriginalUploadLog": true,
+    "zipLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-teams-create-windows-14476884996.zip",
+    "directMetadataEndpointAttemptedOnce": true,
+    "directMetadataEndpointUnsupported": true,
+    "metadataEndpointRetiredWithoutResult": true
+  },
+  "zipEntryCount": 41,
+  "pngEntryCount": 40,
+  "viewedPngCount": 8,
+  "originalArtifactResult": {
+    "entry": "teams-create-page-result.json",
+    "bytes": 2918,
+    "sha256": "c9868a26fe7488f75e1c7d3ded8113c0b18333806cabd6ca79fa600db8aaaf12",
+    "deepEqualsFinalOriginalLogSuccessJson": true,
+    "value": {
+      "success": true,
+      "scheduleUiEvidence": {
+        "scheduleLabel": "schedule-visual-e2e-0e0ed913",
+        "scheduleId": "ee8c9b88-7f0a-4abe-8f6b-f93e75943081",
+        "createdAndDeleted": true
+      },
+      "zhTwMcpUiEvidence": {
+        "locale": "zh-TW",
+        "taskDetailUiEvidence": {
+          "taskId": "77",
+          "locale": "zh-TW",
+          "dialogOpenTabAction": "在獨立分頁中開啟",
+          "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+          "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+          "nativeTaskTabVisible": true
+        },
+        "strictAllowlistVisible": true,
+        "placeholder": "github, sentry",
+        "parsedServerNames": [
+          "github",
+          "sentry"
+        ],
+        "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+        "controlEditedThroughNativeCdp": true
+      },
+      "unique": "create-page-e2e-af02ba48",
+      "retainedAcrossBack": true,
+      "retainedAcrossTabSwitch": true,
+      "manageProvidersNavigationRetainsDraft": true,
+      "retainedAcrossProcessRestart": true,
+      "advancedCliRetainedAcrossRename": true,
+      "teammateModeOverridePersistedThroughNativeUi": true,
+      "teammateModeOverrideValidatedThroughNativeUi": true,
+      "missingRequiredCliValueRejectedThroughNativeUi": true,
+      "advancedCliRetainedAcrossPaneSplit": true,
+      "advancedCliRetainedAcrossBackRemount": true,
+      "advancedCliRestoresUneditedDefaults": true,
+      "unnamedAdvancedCliEditsRetained": true,
+      "launchStillModal": true,
+      "launchContentLoaded": true,
+      "configOnlyCreatedThroughUi": true,
+      "nativeConfigOnlyRejectionKeepsDraft": true,
+      "copiedTeamUsesSharedEditor": true,
+      "copiedDraftDoesNotReplaySeed": true,
+      "templateReplacementCancelledAndConfirmed": true,
+      "organizationPlacementPersistedViaNativeApi": true,
+      "duplicateNameValidationRecovered": true,
+      "themeDarkLightRendered": true,
+      "cssZoom200Rendered": true,
+      "nativeElectronZoom200Rendered": true,
+      "splitPaneSingleEditor": true,
+      "macInputSelectionFallbackCount": 0,
+      "sandboxRoot": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\teams-create-page-e2e-74Ti4L",
+      "cleanup": {
+        "processGroupAbsent": null,
+        "windowsTaskkillExitedZero": true,
+        "windowsExactOwnedProcessesAbsent": true,
+        "windowsTeardowns": [
+          {
+            "launcherPid": 10144,
+            "taskkillAttempted": true,
+            "taskkillExitCode": 0,
+            "observedIdentityCount": 17,
+            "exactOwnedProcessesAbsent": true,
+            "cdpPortAbsent": true
+          },
+          {
+            "launcherPid": 10212,
+            "taskkillAttempted": true,
+            "taskkillExitCode": 0,
+            "observedIdentityCount": 17,
+            "exactOwnedProcessesAbsent": true,
+            "cdpPortAbsent": true
+          },
+          {
+            "launcherPid": 3468,
+            "taskkillAttempted": true,
+            "taskkillExitCode": 0,
+            "observedIdentityCount": 17,
+            "exactOwnedProcessesAbsent": true,
+            "cdpPortAbsent": true
+          }
+        ],
+        "temporaryProfileRemoved": true
+      }
+    }
+  },
+  "viewedOriginalPngs": [
+    {
+      "artifactEntry": "teams-create-opened.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-opened.png",
+      "bytes": 49012,
+      "sha256": "19ace4b943e53ed8e6a5bf066c8924d40d387a348f4d4ad44564ca6f6e8b9345",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "The visible Create Team page has an editable team-name field, Members/lead row, project selector, and optional launch settings.",
+        "The Tasks side panel is visible; lower create/launch controls are outside the captured viewport."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-edited.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-edited.png",
+      "bytes": 52936,
+      "sha256": "69cda9cd0a6b706005eeaab805c22cb03f8336d11d1d1e2ec487452758fb51d3",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "The name field visibly contains create-page-e2e-af02ba48.",
+        "Optional launch settings are expanded; only their upper section is visible."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-restarted.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-restarted.png",
+      "bytes": 49647,
+      "sha256": "999bb21721bfdba29dfb573dbb2972e342be74e36c5dd990d9cc584948628978",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "The same create-page-e2e-af02ba48 name remains visible after the scenario's process-restart capture.",
+        "The Create Team layout and lead member are visible; the static image alone cannot verify every persisted CLI field."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-zh-tw-task-detail-tab.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-zh-tw-task-detail-tab.png",
+      "bytes": 44277,
+      "sha256": "e8755ddea45c6566cae99adc473ea088521fb07298bda1c911ee0cd0d538a74e",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "An active document-style task tab shows task #77 titled TEST zh-TW task detail with description, attachment/change/history/comment sections.",
+        "Traditional-Chinese section labels and the Tasks sidebar are visible. This is the original native task-tab view, not evidence for full cross-team review flow."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-theme-dark.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-theme-dark.png",
+      "bytes": 53896,
+      "sha256": "29190e0645b0ed3cd4bcce57cb182e1f45b37b6068618e1e3451bbd07535e3cb",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "The dark Create Team page shows the same draft name, lead row, project area, and expanded optional launch settings with readable visible headings.",
+        "No claim is made for controls below the viewport or for comprehensive contrast/accessibility compliance."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-theme-light.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-theme-light.png",
+      "bytes": 53771,
+      "sha256": "59c1d29c5fb1dfa4002b1c195a625ba4d26a212992348f53c96fd64563a4d2ea",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "The light theme shows the same draft name and corresponding form structure; visible labels and headings render against light panels.",
+        "Disabled controls and placeholder text are muted. This limited observation is not a blanket contrast/accessibility pass."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-css-zoom-200.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-css-zoom-200.png",
+      "bytes": 46273,
+      "sha256": "4ee827aac285e574133fc8f29b5592bf4ed5128b858dadf38db1b204c7f4582f",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "The Create Team title, name, and Members heading are visibly enlarged.",
+        "A horizontal scrollbar is visible; right-side header/member content lies outside the viewport and lower controls are below the fold. This image does not establish full responsive-fit or control reachability."
+      ]
+    },
+    {
+      "artifactEntry": "teams-create-native-electron-zoom-200.png",
+      "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/windows-teams-visual-originals/teams-create-native-electron-zoom-200.png",
+      "bytes": 51365,
+      "sha256": "058a47a2441e5a80a87cedcd148b3b4f167c0844aa1c09c39b85643a22da2f7f",
+      "width": 1024,
+      "height": 720,
+      "viewedAsOriginal": true,
+      "observations": [
+        "Electron chrome and app content are enlarged; header actions stack in a narrow left pane beside a large Tasks sidebar.",
+        "The draft name is visible; the template-button label is truncated and lower form content lies below the viewport. No blanket visual pass is inferred."
+      ]
+    }
+  ],
+  "method": "Read-only ZIP bytes and original PNG rendering through view_image; no pixel edits, app/browser launches, test reruns, new model/provider calls, or unseen-image claims.",
+  "sourceBindingQualification": "Exact original run/job head plus checkout output and source-bearing artifact name; ZIP digest equals original upload log. Direct artifact metadata route was unsupported and was not retried; no separate workflow_run metadata object is claimed.",
+  "visualConclusion": "The eight named viewport captures were inspected. Visible draft-name retention, localized native task tab and dark/light rendering were observed. Both zoom captures have the recorded viewport limitations; no blanket responsive or visual pass is asserted.",
+  "priorLogEvidenceBlob": "916f0f2b86ed93c5da53208423d79fe46b403da6",
+  "rawLogBlob": "2851491238040ab77c911a117df6f5cfa846765b",
+  "endpointRetirement": {
+    "jobLog": true,
+    "artifactDownload": true,
+    "directArtifactMetadataAttempt": true
+  }
+}

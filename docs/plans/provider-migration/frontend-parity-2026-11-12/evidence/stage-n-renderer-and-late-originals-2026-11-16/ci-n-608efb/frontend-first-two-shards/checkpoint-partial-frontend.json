@@ -1,0 +1,111 @@
+{
+  "kind": "N608_PARTIAL_FRONTEND_TWO_SHARD_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "partialOnly": true,
+  "includedShards": [
+    1,
+    2
+  ],
+  "otherShardsQualified": false,
+  "payloadCount": 15,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard1/job-133062441473.log",
+      "bytes": 169376,
+      "gitBlob": "ab276ff91383b9a4aa3ad72239ce1f83fe4eb9c2",
+      "sha256": "4db8868df8b8232f259a086c77f0e61e21795d58e342a55fb2334b09d44c7163"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard1/original-job-log-response.json",
+      "bytes": 208698,
+      "gitBlob": "b1ab9c26ad153588022375564d97e669a5c56c34",
+      "sha256": "2f1437f62ce1f26f956820825be8ca7d9ad6fded647469d759108f425d720f0c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard1/artifact-14196373078.zip",
+      "bytes": 294919,
+      "gitBlob": "e2b6d5bdeb08013290fb2591d77f11ef9bad9e5e",
+      "sha256": "c1df314c03ac33ee0c3f835c8193b1377e7876bd4d5819298d1083bb3bc30fc5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard1/archive-retention.json",
+      "bytes": 598,
+      "gitBlob": "0eefa84f3cc4b7bd491783bbdd5f5af882532e7c",
+      "sha256": "db5e17e7d77a1d1ae28805cf345b65fcca56cc5df75c61d05617ca60da7764e4"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard1/audit-shard1.json",
+      "bytes": 139425,
+      "gitBlob": "65e10def347242553d432d6a861f159cc02cec14",
+      "sha256": "cffc415d9283596876630d3371805b69db92009d2b8ce4414389dc4a4144df6f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard2/job-133062441445.log",
+      "bytes": 179619,
+      "gitBlob": "819b559bc3259f928345ddc091c2eccdf169f394",
+      "sha256": "05aecbd5f58bfeee688f580bf685df3e68c670806c3ff5de6dcb916ae0ef7376"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard2/original-job-log-response.json",
+      "bytes": 221065,
+      "gitBlob": "ba73cf8ad4612920eaf2f4534a725621eb7cd11d",
+      "sha256": "ec8e75fc90c2d29e8a1c0bccc47d21a886fa7492add95970ee1ad5d1f6e102e2"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard2/artifact-14196032665.zip",
+      "bytes": 312761,
+      "gitBlob": "233287fea4772d5cb4caf6d564d0b5cc8e6bf4d9",
+      "sha256": "aa6c748bc41443e55bb8355d594a0733ff6fe0fc7a63ab5c0de5c9f7645486b9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard2/archive-retention.json",
+      "bytes": 841,
+      "gitBlob": "52408ded01a57946711bc572b888abd498d241f0",
+      "sha256": "3464f8b212d85f0dd246d891dfa58452227d0e6af0d1950591419255eca8dc4b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard2/audit-shard2.json",
+      "bytes": 141397,
+      "gitBlob": "78232fb47637741d9ed873023cb95ae2ce402764",
+      "sha256": "3f7143e9ddc64274ece02ceaa22fa4ce83ca3f9b38877d4bd25d82a88457ef84"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0410.json",
+      "bytes": 9484,
+      "gitBlob": "f34ca6154c2b6e7016dcde8480bdd086e0f442e1",
+      "sha256": "badac9e3b213551e9b4ed59e9236c657320b8f834d2c9120b0009092d8feb670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0409.json",
+      "bytes": 92338,
+      "gitBlob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+      "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-first-two-shards/partial-aggregate-audit.json",
+      "bytes": 8333,
+      "gitBlob": "34fe1cd9b7606d25fdbc100bfa5c5c021fdf59fd",
+      "sha256": "4bd73bc6855dac9ab165cb63fcd4bea3e4210891f94b9aa56cb2680aefa1089b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-first-two-shards/Plan29-partial-frontend-appendix.md",
+      "bytes": 3711,
+      "gitBlob": "1d55ff721a6c5b70abe545845db5c25b750a9b98",
+      "sha256": "b7d10585468836372d12da724ebbc4420bca31048ce3ce2ae733bab5b2c3fd1d"
+    }
+  ],
+  "rawArchiveMemberCount": 4,
+  "independentReviewPending": true,
+  "limits": [
+    "Only two of four original shards; all24 skipped assertions remain unqualified.",
+    "Node26.12.1 Vitest runner is separate from captured TEST Node24.21.0.",
+    "No native/Desktop/vendor/privacy/static qualification transfer."
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "kind": "PASSIVE_STARTUP_READINESS_DIAGNOSTIC_VERIFICATION",
+  "sourceBase": "664449047d3e901c58c0e1ffa77b10d3e8df7b10",
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "baseSha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e",
+      "finalSha256": "58e50bf74dca92c69ebe15e3e187ed063a1134a737f0f7310b9b58293de4224b",
+      "bytes": 33345
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "baseSha256": "1d5d186e19b98c5e3e4fa4587ed256e725be6d01849a1dd3ceb8dcdc99d82c2a",
+      "finalSha256": "406912f5e1bfd68f357a2e14175cb37956976d9852ecf83d59def5e9eb431793",
+      "bytes": 277039
+    }
+  ],
+  "originalFailures": {
+    "qualification": "Read-only comparison of original failed receipts; no new GUI action and no change to either INCOMPLETE verdict",
+    "settings": {
+      "root": "/tmp/TEST-desktop-backend-NAXdPA",
+      "receiptSha256": "c4d5eaf2e22ec96ccf85a6110dd9aa415430bb17e81f959b1812ef2a40b8f023",
+      "setupCommandsAcknowledged": 6,
+      "documentReady": true,
+      "readinessStatus": "WAITING",
+      "firstRetainedObservationMs": 127702,
+      "lastRetainedObservationMs": 135389,
+      "observationCount": 24,
+      "mainReadyAtLastRetained": true,
+      "uiDidInitAtLastRetained": false,
+      "storePresentAtLastRetained": false,
+      "rootChildCountAtLastRetained": 0,
+      "mainRendererKilledLoggedAt": "2026-11-19T13:17:06.029Z",
+      "mainRecoveryScheduledAt": "2026-11-19T13:17:06.030Z",
+      "recoveryFrameNavigationMs": 224286
+    },
+    "finiteConsumer": {
+      "root": "/tmp/TEST-desktop-backend-LKPAdy",
+      "receiptSha256": "72019b0169574b17a7110c868bece2a1853843ebd1911956843f57fc0f87b668",
+      "setupCommandsAcknowledged": 6,
+      "documentReady": true,
+      "readinessStatus": "WAITING",
+      "firstRetainedObservationMs": 190050,
+      "lastRetainedObservationMs": 196806,
+      "observationCount": 24,
+      "mainReadyAtLastRetained": true,
+      "uiDidInitAtLastRetained": false,
+      "storePresentAtLastRetained": false,
+      "rootChildCountAtLastRetained": 0,
+      "mainRendererKilledLoggedAt": "2026-11-19T13:41:38.027Z",
+      "mainRecoveryScheduledAt": "2026-11-19T13:41:38.029Z",
+      "recoveryFrameNavigationMs": 327016
+    },
+    "missingOriginalFacts": [
+      "Actual last failed evaluate send/reject timestamps",
+      "Kill sender",
+      "OOM or other exact kill cause"
+    ],
+    "note": "The first24 history is capped; its last entry is not the actual last attempt. Main event timestamps already exist in original app-errors.ndjson; no new listener is needed.",
+    "comparisonArtifact": {
+      "path": "startup-readiness-diagnostics-66444904-20261119/retained-comparison.json",
+      "bytes": 6897,
+      "sha256": "195b18c31101bf44033d5cecd79cf5855b42ed5a0553544649da89555390055e"
+    }
+  },
+  "changes": [
+    "Preserve the original first24 observations and one fixed closed last record",
+    "Record attempt/phase, last completed scalar observation, call/completion/failure/final rejection timestamps and closed failure category",
+    "Classify final budget expiration separately from an earlier transient context rejection"
+  ],
+  "preserved": [
+    "Exact original evaluate expression",
+    "Original command order and number of CDP reads/actions/listeners",
+    "Pre/post original renderer ownership checks",
+    "Absolute startup deadline and original CDP timeout",
+    "Existing transient-context wait/continue behavior",
+    "READY predicate",
+    "Original rejection object"
+  ],
+  "independentReview": {
+    "owner": "/root/pr_graph",
+    "status": "PASS",
+    "finalHashesMatch": true
+  },
+  "targetedRegression": {
+    "command": [
+      "resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=startup diagnostics retain the final call and completed observation after the original 24 history cap",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "caseElapsedMs": 2564.241686,
+    "wallSeconds": 9.404,
+    "exitCode": 0,
+    "sourceBeforeAfterEqual": true,
+    "logBytes": 238,
+    "logSha256": "6c635c2ff127feacdaa830f3a1456f5b5863b5b278c654f2d21c4f312689a84d",
+    "coverage": "25 completed observations,26th original same-object rejection; original24 cap, no extra commands/discovery, no private error payload; fixed final record below2048 bytes"
+  },
+  "strictTypes": {
+    "compiler": "Pinned Node24.21.0 and installed native TypeScript7",
+    "commandOptions": [
+      "--noEmit",
+      "--singleThreaded",
+      "-p",
+      "scoped configuration extending tsconfig.legacy-agent-host-scripts.json"
+    ],
+    "entrypoints": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "transitiveImports": "Original imports included; original strict options unchanged",
+    "exitCode": 0,
+    "elapsedSeconds": 4.244,
+    "sourceBeforeAfterEqual": true,
+    "logBytes": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "qualification": "Affected script typecheck only; not full workspace qualification"
+  },
+  "recovery": {
+    "method": "Exact immutable GitHub base plus reviewed replacements; root and reviewflow independently restored final bytes and matched recorded SHA256",
+    "newBehaviorIntroducedDuringRecovery": false
+  },
+  "nextOriginalRun": {
+    "mode": "emulated-retained-original-ui",
+    "status": "NOT_RUN",
+    "reason": "Environment became unavailable before original GUI GO"
+  },
+  "qualification": "Diagnostic verification only. No native, GUI, full E2E, release or default activation PASS."
+}

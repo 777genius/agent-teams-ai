@@ -1,0 +1,35 @@
+{
+  "stage": "D",
+  "commandName": "D-scripts-types",
+  "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+  "parents": [
+    "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/@typescript/native/bin/tsc",
+    "--project",
+    "tsconfig.legacy-agent-host-scripts.json"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:49:56.563884+00:00",
+  "finishedAtUTC": "2026-11-15T20:49:57.944935+00:00",
+  "elapsedSeconds": 1.3810248099907767,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "04299ce311d276b59f8147c50ba3cf15544a001deb36d9e8f5152e8d83e1c862",
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "outputInventoryBefore": null,
+  "outputInventoryAfter": null,
+  "builtOutputsCountAfter": 1446,
+  "freshSelectedOutputs": null,
+  "selectedSourceCount": 31,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17
+}

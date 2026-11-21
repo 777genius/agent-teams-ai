@@ -1,0 +1,817 @@
+{
+  "kind": "INERT_P10_B2_FIVE_SOURCE_DATA_ONLY_PRESERVATION",
+  "execution": false,
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "before": {
+        "gitBlob": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+        "bytes": 12509,
+        "sha256": "c797fe0d8e9c9f9819a79dbcc638bd4d96d5e56f32f4101a85e4f2d7ff3ae917",
+        "lines": 200
+      },
+      "after": {
+        "gitBlob": "369505df3d6a37b5833550954f4ef2a1c501b342",
+        "bytes": 17743,
+        "sha256": "ba42719bae92fb4c5a6e6a307100e873b096a03594a2c6755b1fddd15ed695a8",
+        "lines": 269
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "opcodes": [
+        [
+          "equal",
+          0,
+          38,
+          0,
+          38
+        ],
+        [
+          "replace",
+          38,
+          39,
+          38,
+          40
+        ],
+        [
+          "equal",
+          39,
+          41,
+          40,
+          42
+        ],
+        [
+          "replace",
+          41,
+          42,
+          42,
+          44
+        ],
+        [
+          "equal",
+          42,
+          46,
+          44,
+          48
+        ],
+        [
+          "insert",
+          46,
+          46,
+          48,
+          50
+        ],
+        [
+          "equal",
+          46,
+          52,
+          50,
+          56
+        ],
+        [
+          "insert",
+          52,
+          52,
+          56,
+          57
+        ],
+        [
+          "equal",
+          52,
+          76,
+          57,
+          81
+        ],
+        [
+          "insert",
+          76,
+          76,
+          81,
+          84
+        ],
+        [
+          "equal",
+          76,
+          110,
+          84,
+          118
+        ],
+        [
+          "insert",
+          110,
+          110,
+          118,
+          174
+        ],
+        [
+          "equal",
+          110,
+          117,
+          174,
+          181
+        ],
+        [
+          "insert",
+          117,
+          117,
+          181,
+          182
+        ],
+        [
+          "equal",
+          117,
+          154,
+          182,
+          219
+        ],
+        [
+          "replace",
+          154,
+          156,
+          219,
+          223
+        ],
+        [
+          "equal",
+          156,
+          158,
+          223,
+          225
+        ],
+        [
+          "replace",
+          158,
+          159,
+          225,
+          227
+        ],
+        [
+          "equal",
+          159,
+          166,
+          227,
+          234
+        ],
+        [
+          "replace",
+          166,
+          167,
+          234,
+          236
+        ],
+        [
+          "equal",
+          167,
+          200,
+          236,
+          269
+        ]
+      ],
+      "addedLines": 75,
+      "removedLines": 6
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": {
+        "gitBlob": "507b2e4243e99a2285822ea8bce8103760c43022",
+        "bytes": 43481,
+        "sha256": "cf7f4fd9661ffaccac2b520bda40c455f0ec3954f4c5c1efbcaf74270f3c9fe7",
+        "lines": 600
+      },
+      "after": {
+        "gitBlob": "a910209438b29f04ea4a30f28e69620d98802183",
+        "bytes": 54340,
+        "sha256": "df5a4d103e63525991854ce8054588b2fcd9d56e21e90efd7ebd6d95414432bc",
+        "lines": 727
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "opcodes": [
+        [
+          "equal",
+          0,
+          518,
+          0,
+          518
+        ],
+        [
+          "replace",
+          518,
+          519,
+          518,
+          521
+        ],
+        [
+          "equal",
+          519,
+          541,
+          521,
+          543
+        ],
+        [
+          "replace",
+          541,
+          542,
+          543,
+          545
+        ],
+        [
+          "equal",
+          542,
+          544,
+          545,
+          547
+        ],
+        [
+          "insert",
+          544,
+          544,
+          547,
+          549
+        ],
+        [
+          "equal",
+          544,
+          566,
+          549,
+          571
+        ],
+        [
+          "insert",
+          566,
+          566,
+          571,
+          683
+        ],
+        [
+          "equal",
+          566,
+          567,
+          683,
+          684
+        ],
+        [
+          "replace",
+          567,
+          568,
+          684,
+          686
+        ],
+        [
+          "equal",
+          568,
+          591,
+          686,
+          709
+        ],
+        [
+          "replace",
+          591,
+          592,
+          709,
+          712
+        ],
+        [
+          "equal",
+          592,
+          596,
+          712,
+          716
+        ],
+        [
+          "insert",
+          596,
+          596,
+          716,
+          723
+        ],
+        [
+          "equal",
+          596,
+          600,
+          723,
+          727
+        ]
+      ],
+      "addedLines": 131,
+      "removedLines": 4
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": {
+        "gitBlob": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+        "bytes": 37580,
+        "sha256": "2930df9471446610ed3cf4a5642bc6d6314b8f946a5669e343ffee7058a205d9",
+        "lines": 577
+      },
+      "after": {
+        "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+        "bytes": 49147,
+        "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+        "lines": 727
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "opcodes": [
+        [
+          "equal",
+          0,
+          366,
+          0,
+          366
+        ],
+        [
+          "replace",
+          366,
+          367,
+          366,
+          372
+        ],
+        [
+          "equal",
+          367,
+          368,
+          372,
+          373
+        ],
+        [
+          "replace",
+          368,
+          369,
+          373,
+          374
+        ],
+        [
+          "equal",
+          369,
+          378,
+          374,
+          383
+        ],
+        [
+          "insert",
+          378,
+          378,
+          383,
+          385
+        ],
+        [
+          "equal",
+          378,
+          380,
+          385,
+          387
+        ],
+        [
+          "insert",
+          380,
+          380,
+          387,
+          388
+        ],
+        [
+          "equal",
+          380,
+          431,
+          388,
+          439
+        ],
+        [
+          "insert",
+          431,
+          431,
+          439,
+          502
+        ],
+        [
+          "equal",
+          431,
+          492,
+          502,
+          563
+        ],
+        [
+          "replace",
+          492,
+          493,
+          563,
+          564
+        ],
+        [
+          "equal",
+          493,
+          494,
+          564,
+          565
+        ],
+        [
+          "insert",
+          494,
+          494,
+          565,
+          588
+        ],
+        [
+          "equal",
+          494,
+          496,
+          588,
+          590
+        ],
+        [
+          "replace",
+          496,
+          497,
+          590,
+          604
+        ],
+        [
+          "equal",
+          497,
+          503,
+          604,
+          610
+        ],
+        [
+          "replace",
+          503,
+          504,
+          610,
+          611
+        ],
+        [
+          "equal",
+          504,
+          507,
+          611,
+          614
+        ],
+        [
+          "insert",
+          507,
+          507,
+          614,
+          615
+        ],
+        [
+          "equal",
+          507,
+          508,
+          615,
+          616
+        ],
+        [
+          "replace",
+          508,
+          509,
+          616,
+          617
+        ],
+        [
+          "equal",
+          509,
+          518,
+          617,
+          626
+        ],
+        [
+          "replace",
+          518,
+          519,
+          626,
+          628
+        ],
+        [
+          "equal",
+          519,
+          520,
+          628,
+          629
+        ],
+        [
+          "replace",
+          520,
+          521,
+          629,
+          632
+        ],
+        [
+          "equal",
+          521,
+          528,
+          632,
+          639
+        ],
+        [
+          "insert",
+          528,
+          528,
+          639,
+          678
+        ],
+        [
+          "equal",
+          528,
+          530,
+          678,
+          680
+        ],
+        [
+          "replace",
+          530,
+          531,
+          680,
+          681
+        ],
+        [
+          "equal",
+          531,
+          560,
+          681,
+          710
+        ],
+        [
+          "replace",
+          560,
+          561,
+          710,
+          711
+        ],
+        [
+          "equal",
+          561,
+          577,
+          711,
+          727
+        ]
+      ],
+      "addedLines": 160,
+      "removedLines": 10
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "before": {
+        "gitBlob": "053b6c09383aeae5186322b2e8b0b17fc8cd1021",
+        "bytes": 10565,
+        "sha256": "1eb5e8a3e14eee4babe9102074fc17b1c1dffee5e1a04ae4993319fefc6f3336",
+        "lines": 178
+      },
+      "after": {
+        "gitBlob": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+        "bytes": 14802,
+        "sha256": "4088858201c2ba46b2c6d2d0957340f7b313ec1a5cfb391240c1a759ada926d7",
+        "lines": 236
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "opcodes": [
+        [
+          "equal",
+          0,
+          178,
+          0,
+          178
+        ],
+        [
+          "insert",
+          178,
+          178,
+          178,
+          236
+        ]
+      ],
+      "addedLines": 58,
+      "removedLines": 0
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "gitBlob": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+        "bytes": 189024,
+        "sha256": "b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4",
+        "lines": 2818
+      },
+      "after": {
+        "gitBlob": "4e4554ec3330d0c06b0736e861348d7279511361",
+        "bytes": 199733,
+        "sha256": "76e4d2d8e21ba6d2fefdc7aa8c06eb24cc831caa0c2d08939a6a66ec378dc66b",
+        "lines": 2927
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/.github/workflows/ci.yml",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/.github/workflows/ci.yml",
+      "forwardExact": true,
+      "reverseExact": true,
+      "opcodes": [
+        [
+          "equal",
+          0,
+          616,
+          0,
+          616
+        ],
+        [
+          "replace",
+          616,
+          617,
+          616,
+          619
+        ],
+        [
+          "equal",
+          617,
+          925,
+          619,
+          927
+        ],
+        [
+          "replace",
+          925,
+          926,
+          927,
+          928
+        ],
+        [
+          "equal",
+          926,
+          928,
+          928,
+          930
+        ],
+        [
+          "insert",
+          928,
+          928,
+          930,
+          953
+        ],
+        [
+          "equal",
+          928,
+          933,
+          953,
+          958
+        ],
+        [
+          "insert",
+          933,
+          933,
+          958,
+          964
+        ],
+        [
+          "equal",
+          933,
+          944,
+          964,
+          975
+        ],
+        [
+          "replace",
+          944,
+          945,
+          975,
+          977
+        ],
+        [
+          "equal",
+          945,
+          946,
+          977,
+          978
+        ],
+        [
+          "replace",
+          946,
+          947,
+          978,
+          979
+        ],
+        [
+          "equal",
+          947,
+          948,
+          979,
+          980
+        ],
+        [
+          "replace",
+          948,
+          949,
+          980,
+          981
+        ],
+        [
+          "equal",
+          949,
+          953,
+          981,
+          985
+        ],
+        [
+          "insert",
+          953,
+          953,
+          985,
+          1016
+        ],
+        [
+          "equal",
+          953,
+          969,
+          1016,
+          1032
+        ],
+        [
+          "replace",
+          969,
+          970,
+          1032,
+          1039
+        ],
+        [
+          "equal",
+          970,
+          981,
+          1039,
+          1050
+        ],
+        [
+          "insert",
+          981,
+          981,
+          1050,
+          1053
+        ],
+        [
+          "equal",
+          981,
+          986,
+          1053,
+          1058
+        ],
+        [
+          "insert",
+          986,
+          986,
+          1058,
+          1089
+        ],
+        [
+          "equal",
+          986,
+          1007,
+          1089,
+          1110
+        ],
+        [
+          "insert",
+          1007,
+          1007,
+          1110,
+          1116
+        ],
+        [
+          "equal",
+          1007,
+          2818,
+          1116,
+          2927
+        ]
+      ],
+      "addedLines": 115,
+      "removedLines": 6
+    }
+  ],
+  "patch": {
+    "gitBlob": "00113be820c82452468f40c43e18833aba9aab72",
+    "bytes": 63740,
+    "sha256": "f703b2b8aa75e0b4064d9c21024d72c45fe1c1d8130cba2fc45c374cf2042d6f",
+    "lines": 798
+  },
+  "caps": {
+    "sourceLimit": 800,
+    "CIWorkflowExcludedFromSourceLimit": true
+  },
+  "invariants": {
+    "modelTestWhole178LinePrefix": true,
+    "standard0158RunnerWholePrefix": true,
+    "sharedAppAndNativeReaderWholePrefix": true,
+    "CIAllOtherJobsWholePrefixSuffix": true,
+    "noNewJobOrTopLevelWorkflowRunCommand": true,
+    "originalModelTestCommand": true,
+    "originalNative900s": true,
+    "originalRetainedJob30min": true,
+    "oldLintOperandsPreservedPlusModelAndTest": true,
+    "newGitFixtureAndReadonlyPinCallsUseClosedEnvironment": true,
+    "appAttachmentReadChecksActualHeaderState": true,
+    "respondedUserMessageIdRequiredAfterPendingDeferral": true
+  }
+}

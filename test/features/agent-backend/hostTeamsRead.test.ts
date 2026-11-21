@@ -8,6 +8,7 @@ import {
   createHostTeamsApi,
   hostTeamSelectionKey,
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
+import { TeamProductReadOrder } from '../../../src/features/agent-backend/renderer/TeamProductReadOrder';
 import { translateHostTaskReferences } from '../../../src/features/agent-backend/renderer/translateHostTaskReferences';
 import { selectResolvedMembersForTeamName } from '../../../src/renderer/store/team/teamResolvedMembers';
 import {
@@ -397,7 +398,9 @@ describe('ordinary Host team read selection', () => {
       taskCount: 1,
     });
     expect(removed.config.members?.map((member) => member.name)).toEqual(['alice']);
-    expect((await teams.list()).find((team) => team.teamName === f.key)?.memberCount).toBe(0);
+    const removedTeams = await teams.list();
+    if (!Array.isArray(removedTeams)) throw new Error('Expected the original complete Team array');
+    expect(removedTeams.find((team) => team.teamName === f.key)?.memberCount).toBe(0);
     const resolved = selectResolvedMembersForTeamName(
       {
         selectedTeamName: f.key,
@@ -433,7 +436,9 @@ describe('ordinary Host team read selection', () => {
       model: 'gpt-5.5',
     });
     expect(restored.members.some((member) => member.removedAt)).toBe(false);
-    expect((await teams.list()).find((team) => team.teamName === f.key)?.memberCount).toBe(1);
+    const restoredTeams = await teams.list();
+    if (!Array.isArray(restoredTeams)) throw new Error('Expected the original complete Team array');
+    expect(restoredTeams.find((team) => team.teamName === f.key)?.memberCount).toBe(1);
     expect(f.legacy.getData).not.toHaveBeenCalled();
   });
 
@@ -482,7 +487,9 @@ describe('ordinary Host team read selection', () => {
       if (version === 'unversioned') delete f.snapshot.configurationRevision;
       expect(f.snapshot.revision).not.toBe(configuration.revision);
       const teams = createHostTeamsApi(f.legacy, f.backend);
-      const summary = (await teams.list()).find((team) => team.teamName === f.key);
+      const rows = await teams.list();
+      if (!Array.isArray(rows)) throw new Error('Expected the original complete Team array');
+      const summary = rows.find((team) => team.teamName === f.key);
       expect(summary?.description).toBe(configuration.savedSettings!.description);
       expect(f.backend.invoke).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -501,7 +508,9 @@ describe('ordinary Host team read selection', () => {
       color: 'purple',
     });
     const teams = createHostTeamsApi(f.legacy, f.backend);
-    expect((await teams.list()).find((team) => team.teamName === f.key)).toMatchObject({
+    const rows = await teams.list();
+    if (!Array.isArray(rows)) throw new Error('Expected the original complete Team array');
+    expect(rows.find((team) => team.teamName === f.key)).toMatchObject({
       displayName: 'TEST edited team',
       color: 'purple',
     });
@@ -510,8 +519,10 @@ describe('ordinary Host team read selection', () => {
       color: 'purple',
       description: configuration.savedSettings!.description,
     });
+    const tasks = await teams.getAllTasks();
+    if (!Array.isArray(tasks)) throw new Error('Expected the original complete Task array');
     expect(
-      (await teams.getAllTasks()).find((task) => task.teamName === f.key)?.teamDisplayName
+      tasks.find((task) => task.teamName === f.key)?.teamDisplayName
     ).toBe('TEST edited team');
     expect(f.legacy.getData).not.toHaveBeenCalled();
   });
@@ -531,7 +542,9 @@ describe('ordinary Host team read selection', () => {
         );
       }
       const teams = createHostTeamsApi(f.legacy, f.backend);
-      const summary = (await teams.list()).find((team) => team.teamName === f.key);
+      const rows = await teams.list();
+      if (!Array.isArray(rows)) throw new Error('Expected the original complete Team array');
+      const summary = rows.find((team) => team.teamName === f.key);
       expect(summary).toMatchObject({ teamName: f.key, description: '', memberCount: 0 });
     }
   );
@@ -559,7 +572,9 @@ describe('ordinary Host team read selection', () => {
         }))
       );
       const teams = createHostTeamsApi(f.legacy, f.backend);
-      const summary = (await teams.list()).find((team) => team.teamName === f.key);
+      const rows = await teams.list();
+      if (!Array.isArray(rows)) throw new Error('Expected the original complete Team array');
+      const summary = rows.find((team) => team.teamName === f.key);
       expect(summary).toMatchObject({
         memberCount: count,
         leadName: 'alice',
@@ -583,7 +598,9 @@ describe('ordinary Host team read selection', () => {
     });
     const teams = createHostTeamsApi(bridge, f.backend);
     expect(await teams.aliveList()).toEqual(['legacy-alive']);
-    expect((await teams.list()).map((team) => team.teamName)).toEqual(['same-display-team', f.key]);
+    const rows = await teams.list();
+    if (!Array.isArray(rows)) throw new Error('Expected the original complete Team array');
+    expect(rows.map((team) => team.teamName)).toEqual(['same-display-team', f.key]);
     expect((await teams.getData(f.key)).tasks[0].subject).toBe('Actual task');
     expect(await teams.getData('same-display-team')).toEqual({ legacy: true });
     await expect(teams.stop(f.key)).rejects.toThrow('unsupported');
@@ -609,7 +626,9 @@ describe('ordinary Host team read selection', () => {
   it('merges sidebar discovery and loads actual roster/task board without adopting equal legacy names', async () => {
     const f = fixture();
     const teams = createHostTeamsApi(f.legacy, f.backend);
-    expect((await teams.list()).map((team) => team.teamName)).toEqual(['same-display-team', f.key]);
+    const rows = await teams.list();
+    if (!Array.isArray(rows)) throw new Error('Expected the original complete Team array');
+    expect(rows.map((team) => team.teamName)).toEqual(['same-display-team', f.key]);
     const data = await teams.getData(f.key);
     expect(data.config.name).toBe('Host');
     expect(data.tasks[0].subject).toBe('Actual task');
@@ -666,7 +685,9 @@ describe('ordinary Host team read selection', () => {
       'Actual task', 'Task from continued page',
     ]);
     expect(data.members[0]?.taskCount).toBe(2);
-    expect((await teams.getAllTasks()).map((task) => task.id)).toEqual(['1', '2']);
+    const tasks = await teams.getAllTasks();
+    if (!Array.isArray(tasks)) throw new Error('Expected the original complete Task array');
+    expect(tasks.map((task) => task.id)).toEqual(['1', '2']);
     expect(f.backend.invoke).toHaveBeenCalledWith(
       expect.objectContaining({ operation: 'team.snapshot', payload: { cursor } })
     );
@@ -687,7 +708,9 @@ describe('ordinary Host team read selection', () => {
     const cross = task!.descriptionTaskRefs![1].teamName;
     await expect(teams.getData(cross)).rejects.toThrow('unavailable');
     expect(f.legacy.getData).not.toHaveBeenCalled();
-    expect((await teams.getAllTasks())[0].teamName).toBe(f.key);
+    const tasks = await teams.getAllTasks();
+    if (!Array.isArray(tasks)) throw new Error('Expected the original complete Task array');
+    expect(tasks[0].teamName).toBe(f.key);
     const page = await teams.getMessagesPage(f.key, { limit: 1 });
     expect(page.messages[0].messageId).toBe('m2');
     const older = await teams.getMessagesPage(f.key, { limit: 1, cursor: page.nextCursor });
@@ -959,4 +982,127 @@ describe('authoritative never-launched Host teams', () => {
         'runtime history'
       );
   });
+});
+
+describe('Host aggregate refusal publication fences', () => {
+  it.each(['busy', 'unavailable', 'shutting-down'] as const)(
+    'keeps the original selected-Team %s message instead of returning a partial view', async (code) => {
+      const f = fixture(), teams = createHostTeamsApi(f.legacy, f.backend);
+      vi.mocked(f.backend.invoke).mockResolvedValue({ ok: false, code, outcome: 'unknown' });
+      await expect(teams.getData(f.key)).rejects.toThrow('Host team read ' + code);
+      expect(f.backend.invoke).toHaveBeenCalledTimes(1);
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['hold', 'invalid', 'conflict', 'forbidden'] as const)(
+    'keeps the original %s result fatal for both aggregate reads', async (code) => {
+      const f = fixture(), teams = createHostTeamsApi(f.legacy, f.backend);
+      vi.mocked(f.backend.invoke).mockResolvedValue({ ok: false, code, outcome: 'unknown' });
+      await expect(teams.list()).rejects.toThrow('Host team read ' + code);
+      await expect(teams.getAllTasks()).rejects.toThrow('Host team read ' + code);
+      expect(f.backend.invoke).toHaveBeenCalledTimes(2);
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['missing', 'revision', 'feed', 'incomplete-task'] as const)(
+    'does not downgrade %s snapshot failure to partial availability', async (failure) => {
+      const f = fixture(), invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      const cursor = '1.' + 'a'.repeat(64);
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        if (request.operation !== 'team.snapshot') return invoke(request);
+        if (failure === 'missing') return { ok: true, value: null };
+        const page = structuredClone(f.snapshot);
+        if (failure === 'incomplete-task')
+          return { ok: true, value: { ...page, taskTotal: 1, taskParts: [{ index: 0, part: 0, total: 2 }] } };
+        if (!request.payload.cursor) return { ok: true, value: { ...page, nextCursor: cursor } };
+        if (failure === 'revision') page.revision = 'b'.repeat(64);
+        else page.feed.sequence++;
+        return { ok: true, value: page };
+      });
+      const teams = createHostTeamsApi(f.legacy, f.backend);
+      const error = failure === 'missing' ? 'Invalid Host team snapshot'
+        : failure === 'incomplete-task' ? 'Incomplete Host task history' : 'Host team changed during paged read';
+      await expect(teams.list()).rejects.toThrow(error);
+      await expect(teams.getAllTasks()).rejects.toThrow(error);
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['context', false], ['mutation', false], ['read-order', false], ['read-order', true],
+  ] as const)('rejects %s crossing a negative snapshot with prior feed=%s', async (boundary, known) => {
+    const f = fixture(), order = new TeamProductReadOrder();
+    let current = true;
+    const teams = createHostTeamsApi(f.legacy, f.backend, () => () => current, order);
+    if (known) await teams.getData(f.key);
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    let release!: () => void, entered!: () => void;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    let snapshots = 0;
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+      if (request.operation === 'team.snapshot' && snapshots++ === 0) {
+        entered(); await blocked;
+        return { ok: false, code: 'unavailable', outcome: 'unknown' };
+      }
+      return invoke(request);
+    });
+    const pending = teams.list();
+    const rejected = expect(pending).rejects.toThrow(boundary === 'context' ? 'Team context changed'
+      : boundary === 'mutation' ? 'Host read crossed a mutation boundary' : 'Stale Host product snapshot');
+    await started;
+    try {
+      if (boundary === 'context') current = false;
+      else if (boundary === 'mutation') order.invalidateReads('TEST-original-A');
+      else {
+        if (known) { f.snapshot.feed.sequence++; f.snapshot.revision = 'b'.repeat(64); }
+        expect((await teams.getData(f.key)).tasks[0]?.subject).toBe('Actual task');
+      }
+    } finally { release(); }
+    await rejected;
+    expect(snapshots).toBe(boundary === 'read-order' ? 2 : 1);
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
+
+  it.each(['context', 'mutation', 'read-order'] as const)(
+    'rechecks an already classified refusal at final publication after %s changes', async (boundary) => {
+      const f = fixture(), order = new TeamProductReadOrder();
+      let current = true;
+      const teams = createHostTeamsApi(f.legacy, f.backend, () => () => current, order);
+      vi.mocked(f.backend.getConnections).mockResolvedValue({ state: 'ready', bindings: [
+        { handle: { handleId: 'TEST-original-A' }, label: 'Host A', ownerResourceRef: 'TEST-owner-A', members: [] },
+        { handle: { handleId: 'TEST-original-B' }, label: 'Host B', ownerResourceRef: 'TEST-owner-B', members: [] },
+      ] });
+      const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      let release!: () => void, entered!: () => void;
+      const blocked = new Promise<void>((resolve) => { release = resolve; });
+      const started = new Promise<void>((resolve) => { entered = resolve; });
+      let originalReads = 0, siblingReads = 0;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        if (request.operation === 'team.snapshot') {
+          if (request.handle.handleId === 'TEST-original-A' && originalReads++ === 0)
+            return { ok: false, code: 'busy', outcome: 'not-dispatched' };
+          if (request.handle.handleId === 'TEST-original-B') {
+            siblingReads++; entered(); await blocked;
+          }
+        }
+        return invoke(request);
+      });
+      const pending = teams.getAllTasks();
+      const rejected = expect(pending).rejects.toThrow(boundary === 'context' ? 'Team context changed'
+        : boundary === 'mutation' ? 'Host read crossed a mutation boundary' : 'Stale Host product snapshot');
+      await started;
+      try {
+        if (boundary === 'context') current = false;
+        else if (boundary === 'mutation') order.invalidateReads('TEST-original-A');
+        else expect((await teams.getData(f.key)).tasks[0]?.subject).toBe('Actual task');
+      } finally { release(); }
+      await rejected;
+      expect(originalReads).toBe(boundary === 'read-order' ? 2 : 1);
+      expect(siblingReads).toBe(1);
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
 });

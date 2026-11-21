@@ -1,0 +1,276 @@
+{
+  "scope": "Original608 V2 Settings source/provider bindings and cleanup only; UI predicate review belongs to frontend.",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "tree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "run": 43795234483,
+  "job": 133062441738,
+  "attempt": 1,
+  "artifactId": 14198086463,
+  "artifact": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/artifact-14198086463.zip",
+    "bytes": 846671,
+    "sha256": "63b4476c93a560913b99d363bf8c1ed112e81d6fbd09c57dcf6445494b21a2e0",
+    "gitBlob": "bd69c35c030e618a2287a9042480f498cd211830"
+  },
+  "jobLog": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/cohort-608-preservation-0442/v2-133062441738.log",
+    "bytes": 111977,
+    "sha256": "11f743a78d0efcfdb36343ceddff59c0dd05f1f6c81a417c6584a141ef842bbb",
+    "gitBlob": "337cb3d4eaa523bb2911473b25eb36135e1d0597"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/desktop-backend-receipt.json",
+    "bytes": 698424,
+    "sha256": "1ecfe58c9fc3b49a83e65cd31e83ba34c381f7e1980a78c83ee374d76bdefd46",
+    "gitBlob": "bf50b28cce01bfb953aa8d243d9d3bdae1e325eb"
+  },
+  "sourcePinAudit": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/source-pin-audit.json",
+    "bytes": 454583,
+    "sha256": "b59acebbd4fda9f1d104bb547d3015908bf2213cdc577db4cf42456882276578",
+    "gitBlob": "3652a1cc49221ac08523548af77ef4b7d4bff9b6"
+  },
+  "zip": {
+    "entries": 19,
+    "crcErrors": 0,
+    "redownloaded": false
+  },
+  "sourceBindings": {
+    "uniquePaths": 1769,
+    "beforeAfterEqual": true,
+    "immutable608AllMatch": true,
+    "lineEndingTransformation": "none",
+    "references": {
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts": {
+        "blob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+        "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77"
+      },
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-process.ts": {
+        "blob": "8463257cb866eed1f222e76aa4b23ae6b07440cf",
+        "sha256": "1a01a3b5538e2838f5926358c1c69bd0f0fe9b40537d26c355a457bc64451e92"
+      },
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-fixture.ts": {
+        "blob": "35518a67d9e6e9c987395bef9b4cb1012ac77bb2",
+        "sha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112"
+      },
+      "scripts/legacy-agent-host/desktop-captured-app.ts": {
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+      },
+      "scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts": {
+        "blob": "b7d447d7acea4c55fcb578b922194a528440e3b1",
+        "sha256": "1693e23f265b2d1e4024c5553e1577827ebe8e98c8a7e347346e6aa229bb7e72"
+      }
+    }
+  },
+  "providerBindings": {
+    "hostPackagePin": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+    "archivePath": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+    "archiveBlob": "7130609dd29851148c9e2106e2764b75982739b1",
+    "archiveBytes": 185996,
+    "archiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "archiveMatchesReceipt": true,
+    "profile": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/host-profile.json",
+      "bytes": 5011,
+      "sha256": "293b1c3db201b84b3259d539d9497e8d9205b3ed5cc292201e8020eada93cd12",
+      "gitBlob": "117fb7ee11f3e90aebfc3f263ebb5e997e50d8a5"
+    },
+    "descriptor": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/desktop-descriptor.json",
+      "bytes": 3319,
+      "sha256": "39958d0a98dee6020ad725dd6c9cf04fbf5f0979f602eaa7792d6a4c9690ec1e",
+      "gitBlob": "088a1ef6990ca208d17a3df8b2c5a585ad261416"
+    },
+    "nativeInputBeforeAfterEqual": true,
+    "nativeV2Input": {
+      "generation": "v2",
+      "version": "2.1.4",
+      "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+      "profileSha256": "293b1c3db201b84b3259d539d9497e8d9205b3ed5cc292201e8020eada93cd12",
+      "descriptorSha256": "39958d0a98dee6020ad725dd6c9cf04fbf5f0979f602eaa7792d6a4c9690ec1e",
+      "runtimeConfigured": false,
+      "managementConfigured": true,
+      "managementProfiles": 2,
+      "codexOrClaudeExecutable": false
+    },
+    "managementProfileCount": 2,
+    "descriptorRouteCount": 3,
+    "runtimeConfigured": false,
+    "finiteLocalModelOnly": true,
+    "managementTimeoutMs": 120000,
+    "modelProbeTimeoutMs": 120000,
+    "limit": "Original V2 management bounds do not qualify original15s V1 readiness. Bun/engine/Node/Host/Electron compiled payloads absent from ZIP, not independently locally rehashed."
+  },
+  "linuxChildExec": {
+    "manifest": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-emulated-ui-inputs-wicWZb/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517"
+    },
+    "binary": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-emulated-ui-inputs-wicWZb/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+    },
+    "matchesReceiptAndInput": true,
+    "receiptAfterCleanupVerified": true
+  },
+  "originalProgress": {
+    "status": "INCOMPLETE",
+    "failure": {
+      "name": "Error",
+      "message": "UI read timed out: original default inheritance; no mutation retry"
+    },
+    "expectedModelIntents": 5,
+    "actualModelRequests": [
+      {
+        "step": "reject-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "refused"
+      },
+      {
+        "step": "connect-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      }
+    ],
+    "actualEffects": [
+      {
+        "step": "reject-key",
+        "commandId": "12eca69e-d177-4a31-a241-d79fa1c873ad",
+        "kind": "credential.set",
+        "phase": "held",
+        "resourceHeld": false
+      },
+      {
+        "step": "connect-key",
+        "commandId": "84e90e2f-9a1e-4818-9a7f-3526415e9667",
+        "kind": "credential.set",
+        "phase": "completed",
+        "resourceHeld": false
+      }
+    ],
+    "persistedCommandCount": 3,
+    "runtimeSourcePublicationJoined": true,
+    "runtimeSourceId": "e4bbac32a66f15eeffd482b72430ab70bc92c1926a2f48032f4f80e0f2ad022a",
+    "runtimeSourceRevision": "4a5b522d220b70d480bdaedff975df3c43f1d40e2d10522dfce524590c40dbc5",
+    "runtimeSourcePreviousRevision": "22abb8f4305012053ec52de62433462ce0d9588a0530995442d568897ff56be9",
+    "runtimeSourceCommandId": "ebddf58e-5072-4cdf-8108-67440f6e034b",
+    "effectCommandRowsJoined": true,
+    "nativeProcesses": {
+      "children": [
+        {
+          "pid": 7835,
+          "ppid": 5023,
+          "pgid": 7835,
+          "birth": "85440",
+          "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+          "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-dpoqO5/providers/opencode-v2/data/agent-teams-v2-probe-91e526c074a826fd-iGIaYa",
+          "role": "probe"
+        },
+        {
+          "pid": 7926,
+          "ppid": 5023,
+          "pgid": 7926,
+          "birth": "85840",
+          "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+          "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-dpoqO5/providers/opencode-v2/data/agent-teams-v2-catalog-PAwIKc",
+          "role": "catalog"
+        },
+        {
+          "pid": 8751,
+          "ppid": 5023,
+          "pgid": 8751,
+          "birth": "89480",
+          "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+          "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-dpoqO5/providers/opencode-v2/data/agent-teams-v2-probe-c37c2429e5b28b3b-NQCei2",
+          "role": "probe"
+        }
+      ],
+      "probes": [
+        {
+          "step": "reject-key",
+          "pid": 7835,
+          "birth": "85440",
+          "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-dpoqO5/providers/opencode-v2/data/agent-teams-v2-probe-91e526c074a826fd-iGIaYa",
+          "absentAfterReceipt": true
+        },
+        {
+          "step": "connect-key",
+          "pid": 8751,
+          "birth": "89480",
+          "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-dpoqO5/providers/opencode-v2/data/agent-teams-v2-probe-c37c2429e5b28b3b-NQCei2",
+          "absentAfterReceipt": true
+        }
+      ]
+    },
+    "finiteModelFailures": [],
+    "finiteModelCompleteAfterCleanup": false,
+    "modelServerClosed": true
+  },
+  "cleanup": {
+    "appWrapper": {
+      "pid": 4659,
+      "processGroup": 4659,
+      "identity": "Mon Nov 16 04:34:52 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-wicWZb/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-wicWZb/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "electronMainListenerPid": 4791,
+    "hostPid": 5023,
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanupReceipt": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 5023
+    },
+    "nativeRemaining": [],
+    "inferredFromExactSource": {
+      "groupSignalBranchEntered": false,
+      "reason": "The signal branch requires nonempty remaining; original beforeHarnessCleanup and final remaining are empty."
+    },
+    "limits": [
+      "Wrapper4659 exit0/no-signal is not Main4791 or Host5023 exit status.",
+      "Host5023 final absence is a PID census observation; success-only hostChild/originalClose were not reached, so original Host birth is not serialized.",
+      "Final nativeRemaining checks all three retained child original /proc birth identities; it does not provide per-child natural exit status or cover unobserved descendants.",
+      "Five-intent success proof, five screenshots, originalClose and full verifier qualification remain absent."
+    ]
+  },
+  "catalogTimelineLimit": "Catalog7926 has identity/namespace/role only, no operation/loadView ID or request start/settle/monotonic timestamp. Its existence cannot identify pending original Models loadView. The source permits passive directory owners to remain live until Host close.",
+  "execution": {
+    "apiCalls": 0,
+    "downloads": 0,
+    "projectImportsOrCommands": 0,
+    "nativeOrProviderInvocations": 0,
+    "workflowMutations": 0,
+    "auditOnly": true
+  }
+}

@@ -5,6 +5,11 @@ import {
 } from '@features/team-task-detail/core';
 import { isTaskDetailTab } from '@renderer/types/tabs';
 
+import {
+  captureTaskDetailReadScope,
+  taskDetailSnapshotReadDisposition,
+} from './taskDetailReadAuthority';
+
 import type { TaskDetailIdentity } from '@features/team-task-detail/core';
 import type { Pane } from '@renderer/types/panes';
 
@@ -95,7 +100,13 @@ export function selectTaskDetailReadDemands(
       contextId: identity.contextId,
       teamName: identity.teamName,
       taskId: identity.taskId,
-      needsRead: !entry || (entry.refreshPending && !entry.loading),
+      needsRead:
+        !entry ||
+        (entry.refreshPending &&
+          !entry.loading &&
+          taskDetailSnapshotReadDisposition(
+            captureTaskDetailReadScope(identity.teamName, identity.contextId)
+          ) !== 'failed'),
       visible,
     };
   });

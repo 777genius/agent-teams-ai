@@ -1,0 +1,58 @@
+{
+  "head": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "parents": [
+    "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+  ],
+  "tree": "4fd42ca2d74bfb29a834638b25675c51bfd6701a",
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "blob": "94f41cf156b3a4c76bf19786e83aea742fad22df",
+      "status": "modified",
+      "additions": 66,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "blob": "755158699496506a62132c540f19b225c5a6222d",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+      "status": "modified",
+      "additions": 30,
+      "deletions": 0
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 4
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "status": "modified",
+      "additions": 20,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "8164e614ca3f6e6cb01013ea3ec1fc723b5d5c30",
+      "status": "modified",
+      "additions": 24,
+      "deletions": 3
+    }
+  ]
+}

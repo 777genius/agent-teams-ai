@@ -1,0 +1,37 @@
+{
+  "decision": "GO_PLAN84_PROSPECTIVE_SELECTION",
+  "blockers": [],
+  "document": {
+    "gitBlob": "426ed32477fd2278d2c2f304ef7338bef07a272d",
+    "bytes": 2747,
+    "lf": 31,
+    "sha256": "9ea25bae86e6b4e8c9ab75050833f6261e38573c9e4a6a17de5f2fcc6cfe9179"
+  },
+  "parent": {
+    "head": "2bba31bdae95c2d60df2d78e47d0043e9da255ea",
+    "tree": "45d4ca9020380fd8d0e843590844bb4c936e26c6"
+  },
+  "writable": {
+    "path": "src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts",
+    "blob": "80fb692b7e05afec6ddc30a2bc13a0185b071daf",
+    "bytes": 18859,
+    "lf": 371,
+    "sha256": "26395dde5ad01c5259b1cae985eed5351d49b8fa5b19bc148d52ba6eceac1b2d"
+  },
+  "readonly": {
+    "path": "packages/legacy-agent-host/src/composition/applyOpenCodeRuntimeSource.ts",
+    "blob": "958e53a9d61cb007b25d2614b8587f5956bf3dcc",
+    "bytes": 2610,
+    "lf": 55,
+    "sha256": "a9d537ee66a38c75945e45a10809b6f55b5e2a9e693bd1027993341b08af9c10"
+  },
+  "review": {
+    "provenance": "Exactly two authorized immutable blob reads; full 371-line target and 55-line producer read, independently hashed and joined to the held complete actual parent tree. Exact full supplied plan also rehashed.",
+    "interface": "LimitChange is one object declaration with three occurrences: declaration, function return and array type. Five-line interface preserves providerId/modelId strings and both numeric limit fields; no runtime change or wider type selected.",
+    "branches": "Keep both original kind/provider guards and both narrowed overload calls. Producer clones raw profile at line 19 and mutates only that clone; caller assigns recipe.profile, never recipe.kind. Management remains management, so the subsequent kind!=management condition is false. Other branch behavior, throws and shared environment copy remain unchanged; no unsupported union overload call.",
+    "wordingPrecision": "Corrected document says the second branch body cannot execute; its condition is evaluated and false. Only that wording changed; exact inverse recovered the prior draft.",
+    "assertions": "Remove only five runtime-erased assertions at address[2], entries[index] and the three keys[0] occurrences. Preserve preceding validation/loop/length/type guards and every other byte, including added[0]! and match[1]!. Do not claim a compiler result.",
+    "boundary": "Seven selected diagnostic corrections; only interface layout adds three LF, yielding 374 LF. No afterimage authored. Producer, tests, workflows, predicates, budgets, rules and baselines remain outside writable scope."
+  },
+  "limits": "Prospective source-only GO. Root's original evidence is typed ESLint failure, not a proven typecheck failure; full original raw was not reviewed here. No execution, Actions, filesystem or mutations. Actual-document gate must precede authoring; exact source/patch/inverse/tree and actual publication review remain required, followed by resulting-head typecheck and typed-lint CI."
+}

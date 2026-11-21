@@ -1,0 +1,37 @@
+{
+  "head": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "parents": [
+    "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+  ],
+  "tree": "a08e7739da5bc8a31c921ca106565bc9167a9b3b",
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+      "status": "modified",
+      "additions": 50,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "blob": "ec26615042c4723c42ed3feb3e5e55accdc46556",
+      "status": "modified",
+      "additions": 95,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "blob": "4265b26ef0bab3a741e0e31631149b289bfe2337",
+      "status": "modified",
+      "additions": 44,
+      "deletions": 5
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+      "status": "modified",
+      "additions": 21,
+      "deletions": 8
+    }
+  ]
+}

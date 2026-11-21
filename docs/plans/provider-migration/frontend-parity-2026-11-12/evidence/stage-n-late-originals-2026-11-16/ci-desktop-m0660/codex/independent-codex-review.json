@@ -1,0 +1,2649 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T03:04:13.558226+00:00",
+  "scope": "Independent original M0660 finite Codex Runtime Desktop actual R2. Approves evidence publication with corrected v2 branch wording; no new execution, privacy GREEN, native or later-source transfer.",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916085,
+  "artifactId": 14191868975,
+  "originalConclusion": "success",
+  "independentReadbackExact": true,
+  "findings": [],
+  "canonicalInputs": {
+    "auditV2": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/audit-v2.json",
+      "bytes": 188341,
+      "blob": "2fe72e4e1b587653a79b0e75761af09526d6ef4a",
+      "sha256": "9d90456549dad4f81e0d691a04428a5d767505e5c18c1b9e8f5c01e46a17de90"
+    },
+    "appendixV2": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/Plan29-codex-runtime-appendix-v2.md",
+      "bytes": 7473,
+      "blob": "21e0743198562d391604c7ea618c8664b84f75e9",
+      "sha256": "e7a6e4bf71534b3b2f34a8018431d48e20e837752be854b9fb7c75c262496634"
+    },
+    "checkpointV2": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/checkpoint-codex-v2.json",
+      "bytes": 15356,
+      "blob": "e908de4ee4ab0eb62f729723fc542843b51b314f",
+      "sha256": "e07815bc1d5c4e67a9cf28aa0c55f274592bab8a6ce0737cb1eee5f2a19b69cc"
+    },
+    "payloads": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/job-133017916085.log",
+        "bytes": 180844,
+        "blob": "b97c19e90d2a63649fedc1cb0b427c03fdfb97e1",
+        "sha256": "2e923500da4e2fdea1cc1b29d1fd0dd67094240c05b05287e0bb1aa7b91dad19"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/artifact-14191868975.zip",
+        "bytes": 2936019,
+        "blob": "72ff248027622d3c5c82a9236e76c8faa0797b6e",
+        "sha256": "be39fc91ee01290570c892823c8595db58ea8bde0126a5e015ae65bda95c3cff"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/archive-audit.json",
+        "bytes": 10151,
+        "blob": "c5854d31330a62ad9e9c8534c22520f76f09c8db",
+        "sha256": "440438ac9d242c49de6b335daf63562247576fc2c53e4177691d9c0d235ddf6a"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+        "bytes": 19753,
+        "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+        "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0225.json",
+        "bytes": 210964,
+        "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+        "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+        "bytes": 583301,
+        "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+        "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/audit-v2.json",
+        "bytes": 188341,
+        "blob": "2fe72e4e1b587653a79b0e75761af09526d6ef4a",
+        "sha256": "9d90456549dad4f81e0d691a04428a5d767505e5c18c1b9e8f5c01e46a17de90"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/Plan29-codex-runtime-appendix-v2.md",
+        "bytes": 7473,
+        "blob": "21e0743198562d391604c7ea618c8664b84f75e9",
+        "sha256": "e7a6e4bf71534b3b2f34a8018431d48e20e837752be854b9fb7c75c262496634"
+      }
+    ],
+    "payloadCount": 8,
+    "payloadBytes": 4136846,
+    "originalReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/desktop-backend-receipt.json",
+      "bytes": 846785,
+      "blob": "611cb2b80bbf9e7b6d94a883632b253790b9799b",
+      "sha256": "b2eb60917dae032e9cba17f5ecd48ce3b5bb4e08715c7cf1fc35653de1454c41"
+    }
+  },
+  "resolvedProseFinding": {
+    "kind": "Only provider-branch exclusivity wording corrected",
+    "originalsRetained": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/audit.json",
+        "bytes": 188324,
+        "blob": "ea68dc74489df2fef343d95a735b35cfdf1a94f6",
+        "sha256": "366144ba23fb074ab7682563b81dfda5714c53150de0d7f2e9c967113546ed80"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/Plan29-codex-runtime-appendix.md",
+        "bytes": 7503,
+        "blob": "246320dc6dbf186e2e7ef9ae641d4641890f0de3",
+        "sha256": "0e0887fd9a1ff855f41c55338017a5e50e289d5c52f92e1010f85c685fc86397"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/checkpoint-codex.json",
+        "bytes": 14152,
+        "blob": "7a8b43989b92bc2b1b4fddf919e188d633cd9c46",
+        "sha256": "903a04c71554364e4a96ad25939e78895ce258a791ab15b2ff6e4c1b1e7d7782"
+      }
+    ],
+    "auditOneSentenceForwardInverseExact": true,
+    "appendixOneSentencePlusV2AuditReferenceForwardInverseExact": true,
+    "checkpointOnlyMappedV2IdentitiesLimitAndHistoryMetadata": true,
+    "sourceFacts": "Thinking is null for Codex (RuntimeUI193); rich-tool guard excludes Codex (325); standalone remains separately Claude-only (494). v2 now states that these branches were not executed for Codex without falsely describing all as Claude-exclusive.",
+    "noSourceResultCountOrArtifactChange": true
+  },
+  "officialCustody": {
+    "artifact": {
+      "id": 14191868975,
+      "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-codex",
+      "size_in_bytes": 2936019,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191868975",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191868975/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:08:23Z",
+      "expires_at": "2026-11-30T02:08:22Z",
+      "updated_at": "2026-11-16T02:08:23Z",
+      "digest": "sha256:be39fc91ee01290570c892823c8595db58ea8bde0126a5e015ae65bda95c3cff",
+      "workflow_run": {
+        "id": 43780997237,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+      }
+    },
+    "terminalJob": {
+      "id": 133017916085,
+      "name": "Offline Host Desktop (linux-x64, codex)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43780997237,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 60
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        }
+      ]
+    },
+    "originalLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/job-133017916085.log",
+      "bytes": 180844,
+      "blob": "b97c19e90d2a63649fedc1cb0b427c03fdfb97e1",
+      "sha256": "2e923500da4e2fdea1cc1b29d1fd0dd67094240c05b05287e0bb1aa7b91dad19"
+    },
+    "fullLogRead": true,
+    "actualCheckoutAndUploadJoin": true,
+    "originalSelectedLaneLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/host-emulated-emulated-codex-runtime-ui.log",
+      "bytes": 225,
+      "blob": "48aeac40a79bb471984d7a5a7df1694d0e68910f",
+      "sha256": "ff2684904f863f27526d1b8ed47cafd8eebb9c0f18b6f7c332ecf9be61201fdc"
+    },
+    "bothLaneLogLinesInOriginalJob": true,
+    "summary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "codex",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "completed": [
+        {
+          "mode": "emulated-codex-runtime-ui",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-IcZVQ1/desktop-backend-receipt.json",
+          "screenshots": [
+            "615a20e0d7f96fc2f14df2c97b83c01ef7ec8b056caec2db5129741c1c177b8b",
+            "9ca14c2ef0eff6677fd708327634f8fed4757ce14b24a996acfd7359f238fa3d",
+            "d44a5a429098ed4887d4292200eff8cd707bc20f5a5461827b0c13a8031dd922",
+            "90d1509ef8d1a32a86cb53b776b9b91bbe60fea6ca4a084448d05471dfebd52c",
+            "4eec69f11ef931d52bf6a751d59d3a5649587c730a9696eee398435ab210efc8",
+            "3500e129f173f48dd90899b6c90c8adbfddcde0167325a8a2f1c261e433a5460",
+            "dcd394bb5170941a8362fc2961417cfb3011e53a4382d9dea188b8bf7411147e",
+            "9e0fdd4644ac3527913571bd83721ed9bbaea540e92fbd203eeb1b162dc9c6ad",
+            "90d633969de7656beaad227d1d87a9aa5136f82240a75d48788d20245d46fff0",
+            "31596e8086c5c7429f3acd9031c2839e8bd0afd1abf0f020d8a6b93da49fa1a9",
+            "798cac726ba9336036e77ddc4c7d52da00fe795d3c2b6db8b2f0c7a4cc638f8d",
+            "bdb492026ef399d5b60319919d7b3f840f803f12b8ac69830edd4e0a93d2ae53",
+            "74ae827b232856ec772c9e4daa871ffb151e6362de5c2a0765936d9814d0c866",
+            "22c51a82914f3a65dd1010920cb54cca38adfa5c1c59f2437e28f6f608be074b",
+            "a9dec868d2b2150433d3f962c538318cc1759a7bf3fb475bece699a61749e8d2"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    },
+    "retainedApiOnly": true,
+    "noNewCiPollOrDownload": true
+  },
+  "archive": {
+    "originalZip": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/artifact-14191868975.zip",
+      "bytes": 2936019,
+      "blob": "72ff248027622d3c5c82a9236e76c8faa0797b6e",
+      "sha256": "be39fc91ee01290570c892823c8595db58ea8bde0126a5e015ae65bda95c3cff"
+    },
+    "all35UniqueSafeRegularPaths": true,
+    "allCrcPassed": true,
+    "allExtractedBytesExact": true,
+    "count": 35,
+    "expandedBytes": 4172960,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/TEST-peer-codex-scope/effects.ndjson",
+        "crc32": "daaaafd3",
+        "bytes": 15193,
+        "blob": "e144c48908176c313d8b77364b68c84d1568c0f9",
+        "sha256": "9449e37ec60d95b0e02368982557b11e8359ae718afd864994e0c4395696728c"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/desktop-app.log",
+        "crc32": "92cd741c",
+        "bytes": 42770,
+        "blob": "dc24e232de9bb2f4019615fd66a5d0354809c713",
+        "sha256": "7ba94fdc44fe741763c51fe9144637d76853e1c44875e88764b9c41577b486e1"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/desktop-backend-receipt.json",
+        "crc32": "b1ac84cb",
+        "bytes": 846785,
+        "blob": "611cb2b80bbf9e7b6d94a883632b253790b9799b",
+        "sha256": "b2eb60917dae032e9cba17f5ecd48ce3b5bb4e08715c7cf1fc35653de1454c41"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/desktop-descriptor.json",
+        "crc32": "5646a8ce",
+        "bytes": 2635,
+        "blob": "1e406d575b96abb1efdc7e358d70872cfd81b404",
+        "sha256": "05203804f383c6144621363ffc38c4c4e2bf5466840f836384c2f0915b73a6b4"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/host-profile.json",
+        "crc32": "c36ddef9",
+        "bytes": 7265,
+        "blob": "3f82fb3e3291d2cfb5f424838b08eb0745d09570",
+        "sha256": "e06bcf2167e6ed72df973f10da7565236153fbb1dc4d3b3d98b3c6a2a0816114"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/hoststore/management-commands/f97253b86aa092aa545a2836ae0dbfcb17b34e4af6bcc7794ae8b2384a1c2278.json",
+        "crc32": "984caca1",
+        "bytes": 904,
+        "blob": "41ae75599cd27b8f650740b281283d1e3bd84a73",
+        "sha256": "d9d7fe4e64fc918606ea2bc67fb1f6e5e9e2b288267a76ee843b25bced6ecabd"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "crc32": "46199d23",
+        "bytes": 4637,
+        "blob": "57f181f95a5689f246e5572ae1b60b6ca3c0b33f",
+        "sha256": "dddfbbad5449c06cb8383e0dac76bcac46bd4ab636afb4bb01575e978f015018"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/hoststore/teams/test-desktop-backend/inboxes/user.json",
+        "crc32": "29b12113",
+        "bytes": 822,
+        "blob": "2182ef2d9742cb2ad705a2f8450ddecbbb646e57",
+        "sha256": "26d8b98fadf1b4933aa842843aa2dd645947b07248aadd01e0772f565c584da5"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/sentinel-invocations.ndjson",
+        "crc32": "9fc3bdb4",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-allow-pending.png",
+        "crc32": "064466b8",
+        "bytes": 145638,
+        "blob": "f31621c842b3c8ebf2162a6380f2c5429545c5f5",
+        "sha256": "4eec69f11ef931d52bf6a751d59d3a5649587c730a9696eee398435ab210efc8"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-completed.png",
+        "crc32": "3e2233a3",
+        "bytes": 134324,
+        "blob": "9167334893346ae0c51d546a9f5cce511016b514",
+        "sha256": "d44a5a429098ed4887d4292200eff8cd707bc20f5a5461827b0c13a8031dd922"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-cost.png",
+        "crc32": "fc584e70",
+        "bytes": 150458,
+        "blob": "37922fa05f94d8879d6eef8f669a5ba444a7b4da",
+        "sha256": "22c51a82914f3a65dd1010920cb54cca38adfa5c1c59f2437e28f6f608be074b"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-deny-pending.png",
+        "crc32": "9921a2d9",
+        "bytes": 146136,
+        "blob": "b942b36d451134601aa0b0f98bb4e4453e513cc0",
+        "sha256": "90d1509ef8d1a32a86cb53b776b9b91bbe60fea6ca4a084448d05471dfebd52c"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-effects.json",
+        "crc32": "227cf032",
+        "bytes": 21077,
+        "blob": "01efd76883109ba56520fa1da821c742a1af4139",
+        "sha256": "ccd0f8f8b7831e58aa91bd8ba67a44d5c6f9f0c4804ca234fc2f46566c4709b7"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-held.png",
+        "crc32": "0fb65977",
+        "bytes": 117681,
+        "blob": "3828c9fbb553346f639e60a87b465f3967694c5f",
+        "sha256": "31596e8086c5c7429f3acd9031c2839e8bd0afd1abf0f020d8a6b93da49fa1a9"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-launch.png",
+        "crc32": "a4eb4132",
+        "bytes": 101879,
+        "blob": "c906b3d0255e431c35f79a99c4724ddcc0a8f9a3",
+        "sha256": "615a20e0d7f96fc2f14df2c97b83c01ef7ec8b056caec2db5129741c1c177b8b"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-lead-logs.png",
+        "crc32": "841bbbe5",
+        "bytes": 62191,
+        "blob": "fc3c359e0f11d9e8cbd7a3ea41f5ff13c75e391e",
+        "sha256": "faa578dca9bb6dd42d447cf04aea32da1e1a85ad15ec3ee59c2745585dddd125"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-logs.png",
+        "crc32": "703d887f",
+        "bytes": 146316,
+        "blob": "4e3057d06f91d06c0e38266e201178fff373d1e4",
+        "sha256": "3500e129f173f48dd90899b6c90c8adbfddcde0167325a8a2f1c261e433a5460"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-partial.png",
+        "crc32": "9ac51868",
+        "bytes": 106306,
+        "blob": "40e1fa8b72af18a651396a1b3cdb2699c12a796a",
+        "sha256": "9ca14c2ef0eff6677fd708327634f8fed4757ce14b24a996acfd7359f238fa3d"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-question-decline-pending.png",
+        "crc32": "4d4f7a36",
+        "bytes": 153035,
+        "blob": "f639a75e77dd1270ade24d24b63ce8b5e9898be3",
+        "sha256": "74ae827b232856ec772c9e4daa871ffb151e6362de5c2a0765936d9814d0c866"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-question-pending.png",
+        "crc32": "4f698d91",
+        "bytes": 154621,
+        "blob": "f091dc866e91daa1681578b68dcf7ea395e81f84",
+        "sha256": "bdb492026ef399d5b60319919d7b3f840f803f12b8ac69830edd4e0a93d2ae53"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-reloaded.png",
+        "crc32": "7ef2b9c5",
+        "bytes": 141495,
+        "blob": "e4dff70190fa2de2c85b5bb70db6862ea983a9d8",
+        "sha256": "9e0fdd4644ac3527913571bd83721ed9bbaea540e92fbd203eeb1b162dc9c6ad"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-schedule-automatic.png",
+        "crc32": "e2cddd8f",
+        "bytes": 135648,
+        "blob": "369fdff2802895881491c6b328b3ea94011905c3",
+        "sha256": "a9dec868d2b2150433d3f962c538318cc1759a7bf3fb475bece699a61749e8d2"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-schedule.png",
+        "crc32": "3a82703a",
+        "bytes": 119237,
+        "blob": "7cc0645dffe1dab1b50bb75daed6352707d03797",
+        "sha256": "90d633969de7656beaad227d1d87a9aa5136f82240a75d48788d20245d46fff0"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-stats.png",
+        "crc32": "61fdd8b5",
+        "bytes": 148783,
+        "blob": "1872b630d0d9b927a5964fed1a3878c6fc6c730a",
+        "sha256": "dcd394bb5170941a8362fc2961417cfb3011e53a4382d9dea188b8bf7411147e"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-stopped.png",
+        "crc32": "374fa6e7",
+        "bytes": 137386,
+        "blob": "d4b6c22596221167d803cd5eb2eda0852ef1dc0f",
+        "sha256": "798cac726ba9336036e77ddc4c7d52da00fe795d3c2b6db8b2f0c7a4cc638f8d"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-task-log-stream.png",
+        "crc32": "8016fd12",
+        "bytes": 151818,
+        "blob": "9c3c28580f89df6e3080bc0007eae15fb6948cb9",
+        "sha256": "3119a0fe630e77f97483ccbaa88dacd2b4a6a1676b45004b64f715ff853ecfc2"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-task-activity.png",
+        "crc32": "e5056b8c",
+        "bytes": 178516,
+        "blob": "55bafb6e2ffb4c590df94b3e501df7e7a0bf5a8e",
+        "sha256": "52898f9afb03552db5958e87891e2469f8a9877f08a865da8b36d4a6227b486e"
+      },
+      {
+        "path": "TEST-desktop-backend-IcZVQ1/ui-seed-receipt.json",
+        "crc32": "c5d69fe2",
+        "bytes": 2335,
+        "blob": "6c2e8f9da8f573b9ac367ac5633d7a7a3f7c4281",
+        "sha256": "bfa9d31ecd34e00e59df9ea9c43794fa0a51f18d47b2d19c8546ddf2fb22d2db"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-HEldKq/linux-child-exec/linux-child-exec",
+        "crc32": "ed0ca14b",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-HEldKq/linux-child-exec/manifest.json",
+        "crc32": "e06f2443",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      {
+        "path": "host-emulated-emulated-codex-runtime-ui.log",
+        "crc32": "c8bca50c",
+        "bytes": 225,
+        "blob": "48aeac40a79bb471984d7a5a7df1694d0e68910f",
+        "sha256": "ff2684904f863f27526d1b8ed47cafd8eebb9c0f18b6f7c332ecf9be61201fdc"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "crc32": "d7d9e3c9",
+        "bytes": 1803,
+        "blob": "356f58e8be6a4207dd28c498c93ef9cc9733066b",
+        "sha256": "1f21ee0e391831ac0e4889865b0f1b290c634aae2d88d8cd213139a30d66a515"
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "crc32": "6b689c1c",
+        "bytes": 271,
+        "blob": "322b38cb3412e9c1386297664b8b452b095e10ff",
+        "sha256": "da736e774db6d26988440c1362a0b79708b6136bca543afcca157568ad652de7"
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "crc32": "e142eff4",
+        "bytes": 1658,
+        "blob": "d605c1c490030d236dd7d6a9f2486bd48dec1816",
+        "sha256": "8aac46f341355877bce65f5a5398f82cd770215d2e2fc27904bc8af730c7fb5a"
+      }
+    ],
+    "all18PngHashesBound": true,
+    "actualRepresentativePngViews": 8,
+    "summaryImageBoundary": "Original workflow summary enumerates 15 images. The additional Lead Logs and two Task-view images are separately present in the actual Runtime proof, source assertions and archive and independently verified here.",
+    "additional3ProofImages": [
+      "ui-emulated-runtime-lead-logs.png",
+      "ui-emulated-runtime-task-activity.png",
+      "ui-emulated-runtime-task-log-stream.png"
+    ]
+  },
+  "source": {
+    "all1757OrderedBeforeAfterAndSelectionLifecycleArraysExact": true,
+    "all1757ActualGitBytesFreshlyRehashed": true,
+    "count": 1757,
+    "bytes": 20308016,
+    "orderedContentTableSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+    "tableEncoding": "UTF-8 compact JSON array of {path,bytes,blob,sha256}, original receipt order",
+    "census": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "independentLifecycleFullGitBasis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/claude-lifecycle/independent-claude-lifecycle-review.json",
+      "bytes": 72041,
+      "blob": "32fcb590aa28331b93c2ee9189a9bd88e86ea52b",
+      "sha256": "11e875a39f7e186c283f40a4e866ad74e1d0dbe20cecaa7e4ed0e6595c50aeb6"
+    },
+    "criticalJoins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "bytes": 68760,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 22082,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "bytes": 9569,
+        "blob": "44c8cba99e4932905da77539a59c904a39da4e36",
+        "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "bytes": 39026,
+        "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "bytes": 9633,
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb"
+      }
+    ],
+    "additionalExactSourceJoins": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host-cost.ts",
+        "mode": "100644",
+        "bytes": 4557,
+        "blob": "6cd39d1fdadddc3705c80b4f246cde341925951e",
+        "sha256": "b75e6cb2bcbaec356cb101b1149fdd328590b6efd51518ac86e2096e8862bc3e"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/identity.ts",
+        "mode": "100644",
+        "bytes": 1184,
+        "blob": "e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63",
+        "sha256": "e42ca92261537a5882e2bd9ec456e257042f9ad42bbc465fb5bc020c2ac4cc3c"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "mode": "100644",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      }
+    ],
+    "runtimeUiBlob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+    "runtimeUiLines": 788,
+    "executedSemanticSourceRead": [
+      "Runtime UI launch, per-input command/terminal joins, retained-fact identity/anchor/header, Logs filters/disclosure/fullscreen/actual clipboard, Codex branch exclusions, permission/question responses, local /cost, schedule operations/cron, exact Task delivery/activity chain and no-mutation checks, Stop/custody/PID-before-image",
+      "Original native-host-cost fixture including unique command/reply, source binding, token-only/unknown-price and no-delivery assertion",
+      "Runtime binding JSON digest; finite protocol sources and effect journal validation/absence cleanup; passive Main trace; original workflow lane/skip selection"
+    ],
+    "noOtherLaneAcceptanceTransfer": true
+  },
+  "originalPrerequisites": {
+    "node": "24.21.0",
+    "recordedNodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "exactCommands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    ],
+    "reporterBlocks": [
+      {
+        "tests": 115,
+        "suites": 0,
+        "pass": 115,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 10385.92624
+      },
+      {
+        "tests": 7,
+        "suites": 0,
+        "pass": 7,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 243.297157
+      }
+    ],
+    "TeamTenFilePrivacyAndFullTypesTypedLintStepsSkipped": true,
+    "compiledBundleHashes": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "compiledBundleCount": 14,
+    "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+    "compiledCopiesNotIncludedInThisCodexArchive": true,
+    "independentSourceToOutputRebuild": false
+  },
+  "finiteFixture": {
+    "fixturePins": {
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-IcZVQ1/bin/TEST-codex-peer.mjs",
+        "sha256": "73524b09230c5030810b1f6b408d3a8cec13cb9f2a127c50f2c95abac5e177e2"
+      },
+      "sources": [
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerPeer.mjs",
+          "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd"
+        },
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+          "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+        }
+      ],
+      "provider": "codex",
+      "protocolRevision": "0.162.0",
+      "runtimeConfigured": true,
+      "managementConfigured": true,
+      "vendorsAllowed": false
+    },
+    "profile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/host-profile.json",
+      "bytes": 7265,
+      "blob": "3f82fb3e3291d2cfb5f424838b08eb0745d09570",
+      "sha256": "e06bcf2167e6ed72df973f10da7565236153fbb1dc4d3b3d98b3c6a2a0816114"
+    },
+    "descriptor": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/desktop-descriptor.json",
+      "bytes": 2635,
+      "blob": "1e406d575b96abb1efdc7e358d70872cfd81b404",
+      "sha256": "05203804f383c6144621363ffc38c4c4e2bf5466840f836384c2f0915b73a6b4"
+    },
+    "inputPins": {
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "761c54b53772e170210e1efd5f48e19579ffb1ece817a04cd937164bc6f0ea27",
+      "profileSha256": "e06bcf2167e6ed72df973f10da7565236153fbb1dc4d3b3d98b3c6a2a0816114",
+      "descriptorSha256": "05203804f383c6144621363ffc38c4c4e2bf5466840f836384c2f0915b73a6b4",
+      "sentinelSha256": "f47efd0a5e64576cfe2aad25cfb080b81772f4df1034137a999efa86b6d93286",
+      "shellProbeSha256": "8feb198028d092140cfae0e73f9a6912668fa0ca2aa620088419bd57455812ba",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "linuxChildSelection": {
+      "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-HEldKq/linux-child-exec/manifest.json",
+      "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "linuxChildManifest": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-emulated-ui-inputs-HEldKq/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    "linuxChildExecutable": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-emulated-ui-inputs-HEldKq/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "afterCleanupChildInputCheckRetained": true
+  },
+  "originalActions": {
+    "steps": 228,
+    "composerInputs": [
+      {
+        "text": "TEST_UI_STREAM",
+        "commandId": "3fb141eb-c677-465b-832b-9f0a66122663",
+        "inputId": "7fb7a9ad-9fc0-556e-905b-8d215242c60f"
+      },
+      {
+        "text": "TEST_UI_APPROVAL_DENY",
+        "commandId": "ef4972d6-7175-4fae-bc65-04bf53b2c973",
+        "inputId": "5b061754-d3b1-5392-870b-ee034d4fea0a"
+      },
+      {
+        "text": "TEST_UI_APPROVAL_ALLOW",
+        "commandId": "3b6b8107-bba6-4610-8164-611018beac39",
+        "inputId": "fffbaaf9-ca24-58b9-838c-796907221f92"
+      },
+      {
+        "text": "TEST_UI_QUESTION",
+        "commandId": "1e88a82a-39a4-4e9a-91f5-39e0d7ef2a0d",
+        "inputId": "f99b87d8-9f6a-58ca-bc92-c872f604c74d"
+      },
+      {
+        "text": "TEST_UI_QUESTION_DECLINE",
+        "commandId": "70cff1cd-8bc1-49ab-81ab-740f29f1270a",
+        "inputId": "20713ba9-ba9b-52c4-8dee-0f0693c31e39"
+      },
+      {
+        "text": "TEST_UI_HOLD",
+        "commandId": "312eb148-67bb-4131-b0aa-59039caec654",
+        "inputId": "d73dba8a-67d8-5636-bdc8-a2d4c92714d1"
+      }
+    ],
+    "mouseClickLabels": {
+      "sidebar task": 2,
+      "Open team": 2,
+      "open original saved Team Launch": 1,
+      "expand original saved launch settings": 1,
+      "focus original input": 14,
+      "launch saved TEST selection once": 1,
+      "open original lead conversation": 1,
+      "original Composer Send once": 6,
+      "expand original Lead Logs": 2,
+      "expand original output": 7,
+      "clear original Logs search": 1,
+      "open original Logs filters": 5,
+      "select stderr while native protocol facts remain unmarked": 1,
+      "save original stream filter": 1,
+      "restore stdout": 1,
+      "select stdout while native protocol facts remain unmarked": 1,
+      "save original stdout filter": 1,
+      "exclude Output": 1,
+      "save original content filter": 1,
+      "exclude Thinking independently": 1,
+      "save original Thinking filter": 1,
+      "reset original Logs filters": 1,
+      "close restored Logs filters": 1,
+      "open original fullscreen Logs": 1,
+      "copy actual retained output": 1,
+      "collapse original output": 1,
+      "restore original expanded output": 1,
+      "restore unfiltered Lead Logs": 1,
+      "original permission decision once": 2,
+      "choose original Alpha option": 1,
+      "submit original finite answer once": 1,
+      "focus original Question Sheet": 1,
+      "focus original lead Composer": 1,
+      "choose actual native /cost": 1,
+      "Send original /cost once": 1,
+      "open original member detail": 1,
+      "original Member Logs": 1,
+      "original Member Stats": 1,
+      "close original member detail": 1,
+      "reopen original lead conversation": 1,
+      "expand original Schedules section": 1,
+      "open original Add Schedule": 1,
+      "acknowledge original saved prompt without replay once": 1,
+      "create original future schedule once": 1,
+      "open original schedule menu": 6,
+      "original schedule Edit": 2,
+      "save original schedule edit once": 1,
+      "original schedule Pause": 2,
+      "original schedule Resume": 1,
+      "dispatch scheduled task once": 1,
+      "return to original chats before scheduled reply": 1,
+      "show original scheduled reply": 1,
+      "expand original schedule history": 1,
+      "save original real cron occurrence once": 1,
+      "original schedule Delete": 1,
+      "confirm original schedule deletion": 1,
+      "open original completed Task detail": 1,
+      "expand original Task Logs": 1,
+      "select original Task Activity": 1,
+      "open original Task Activity facts": 1,
+      "select original Task Log Stream": 1,
+      "open original Task Log Stream facts": 1,
+      "close original Task detail": 1,
+      "return to original chat list before held input": 1,
+      "open original lead chat before stop": 1,
+      "stop original Team once": 1
+    },
+    "oneLaunchOneTeamStop": true,
+    "oneManualScheduleRunNow": true,
+    "automaticRunNowClicks": 0,
+    "leadCapture": {
+      "commandId": "capture:launch:roster:cd3557bf-c817-4d00-aab9-4aea3a5c1b66",
+      "configurationRevision": "82190479ee776f6c36b4a8df7c2fcb472d80ffe0debe0954ff6d4a7c7e63f92d",
+      "launchId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "principalId": "agent:2e3d89c2-5795-5cba-a133-606106fb98f5",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-IcZVQ1",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+            "memberId": "alice-id",
+            "generation": "capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d"
+          }
+        }
+      ],
+      "principalId": "TEST-human",
+      "fingerprint": "33a8a3227979e939b9aa3299ae82527ae4d49582525d0c0b79dc4c893fc0e640"
+    }
+  },
+  "leadLogs": {
+    "proof": {
+      "partial": {
+        "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:14",
+        "sequence": 14,
+        "text": "TEST stream partial"
+      },
+      "complete": {
+        "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:16",
+        "sequence": 16,
+        "text": "TEST stream partial complete"
+      },
+      "fullscreen": {
+        "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:15",
+        "sequence": 15,
+        "text": "TEST selected member stderr"
+      },
+      "actualClipboard": true,
+      "thinking": null,
+      "stderr": {
+        "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:15",
+        "sequence": 15,
+        "text": "TEST selected member stderr",
+        "inputId": null
+      },
+      "defaultLeadRoute": true,
+      "filtersAndSearch": true,
+      "addedInputs": 0,
+      "addedBusinessCommands": 0
+    },
+    "sameBindingEventDigestRecomputed": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b",
+    "partialSequence": 14,
+    "unattributedStderrSequence": 15,
+    "completeSequence": 16,
+    "actualClipboardEqualityOriginalAssertion": true,
+    "afterReload": {
+      "complete": {
+        "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:16",
+        "sequence": 16,
+        "text": "TEST stream partial complete"
+      },
+      "stderr": {
+        "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:15",
+        "sequence": 15,
+        "text": "TEST selected member stderr"
+      },
+      "reloadWithoutReplay": true
+    },
+    "CodexThinkingDisplayedOrCopied": false,
+    "CodexRichToolBranchQualified": false,
+    "CodexStandaloneBranchQualified": false,
+    "ThinkingFilterToggleDoesNotCreateThinkingProof": true,
+    "storedEventBoundary": "Full event-store/session snapshots are not archived here; retained event IDs/sequences and rendered/header values are checked against the original exact source assertions and receipt, not reconstructed from an absent live store."
+  },
+  "interactionDecisions": {
+    "requests": [
+      {
+        "event": "interaction",
+        "marker": "TEST_UI_APPROVAL_DENY",
+        "turnId": "TEST-turn-5983-3",
+        "requestId": "TEST-interaction-5983-3",
+        "kind": "permission",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "interaction",
+        "marker": "TEST_UI_APPROVAL_ALLOW",
+        "turnId": "TEST-turn-5983-4",
+        "requestId": "TEST-interaction-5983-4",
+        "kind": "permission",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "interaction",
+        "marker": "TEST_UI_QUESTION",
+        "turnId": "TEST-turn-5983-5",
+        "requestId": "TEST-interaction-5983-5",
+        "kind": "question",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "interaction",
+        "marker": "TEST_UI_QUESTION_DECLINE",
+        "turnId": "TEST-turn-5983-6",
+        "requestId": "TEST-interaction-5983-6",
+        "kind": "question",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "replies": [
+      {
+        "event": "interaction-reply",
+        "marker": "TEST_UI_APPROVAL_DENY",
+        "requestId": "TEST-interaction-5983-3",
+        "decision": "decline",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "interaction-reply",
+        "marker": "TEST_UI_APPROVAL_ALLOW",
+        "requestId": "TEST-interaction-5983-4",
+        "decision": "accept",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "interaction-reply",
+        "marker": "TEST_UI_QUESTION",
+        "requestId": "TEST-interaction-5983-5",
+        "decision": "Alpha",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "interaction-reply",
+        "marker": "TEST_UI_QUESTION_DECLINE",
+        "requestId": "TEST-interaction-5983-6",
+        "decision": "deny",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "eachOriginalRequestRepliedExactlyOnce": true,
+    "decisions": [
+      "decline",
+      "accept",
+      "Alpha",
+      "deny"
+    ],
+    "pendingScreenshotsPrecedeDecision": true,
+    "terminalEffectsJoined": true
+  },
+  "costAndStats": {
+    "cost": {
+      "commandId": "70ec109e-fa33-4504-bad2-fc372bee4243",
+      "receipt": {
+        "schemaVersion": 1,
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-IcZVQ1",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "commandId": "70ec109e-fa33-4504-bad2-fc372bee4243",
+        "principalId": "TEST-human",
+        "fingerprint": "c4cefbcec6c3ab2da2058d8305a0506cad1a2332b9ec72a156ee0f05920585a3",
+        "command": {
+          "operation": "message.send",
+          "payload": {
+            "to": "alice",
+            "text": "/cost",
+            "nativeCommand": true,
+            "messageId": "70ec109e-fa33-4504-bad2-fc372bee4243",
+            "summary": "/cost",
+            "actionMode": "do",
+            "taskRefs": []
+          },
+          "commandId": "70ec109e-fa33-4504-bad2-fc372bee4243"
+        },
+        "hostCommand": {
+          "kind": "cost",
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-IcZVQ1",
+            "teamId": "TEST-desktop-team",
+            "runId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+            "memberId": "alice-id",
+            "generation": "capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d"
+          },
+          "capturedAt": "2026-11-16T02:06:17.652Z",
+          "inputTokens": 720,
+          "outputTokens": 42,
+          "partial": false,
+          "launchId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+          "elapsedMs": 53708,
+          "text": "Codex usage reported to this Host\nScope: retained activity for the captured session.\nInput tokens reported: 720\nOutput tokens reported: 42\nPrice: not reported by Codex.\nElapsed since this launch: 53s"
+        },
+        "messageRecipientRole": "lead",
+        "effects": {
+          "taskId": "40acbe60-7a58-55e3-a60c-ebafd0e20208",
+          "commentId": "8424514b-16ae-5b5f-94a6-62579afdbf34",
+          "messageId": "70ec109e-fa33-4504-bad2-fc372bee4243",
+          "deliveryId": "6a8bce13-bc27-5a32-8d0a-1d417bd3741c"
+        },
+        "createdAt": "2026-11-16T02:06:17.654Z",
+        "phase": "completed",
+        "authorityRevision": 1,
+        "deliveryBinding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-IcZVQ1",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend",
+          "runId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+          "memberId": "alice-id",
+          "generation": "capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d"
+        },
+        "result": {
+          "messageId": "70ec109e-fa33-4504-bad2-fc372bee4243",
+          "message": {
+            "from": "user",
+            "to": "alice",
+            "text": "/cost",
+            "timestamp": "2026-11-16T02:06:17.654Z",
+            "messageId": "70ec109e-fa33-4504-bad2-fc372bee4243",
+            "read": false,
+            "summary": "/cost",
+            "actionMode": "do"
+          }
+        }
+      },
+      "reply": {
+        "from": "alice",
+        "to": "user",
+        "text": "Codex usage reported to this Host\nScope: retained activity for the captured session.\nInput tokens reported: 720\nOutput tokens reported: 42\nPrice: not reported by Codex.\nElapsed since this launch: 53s",
+        "timestamp": "2026-11-16T02:06:17.654Z",
+        "read": false,
+        "summary": "/cost",
+        "messageId": "26562329-2292-56fd-9180-7d669e77a826"
+      },
+      "snapshot": {
+        "kind": "cost",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-IcZVQ1",
+          "teamId": "TEST-desktop-team",
+          "runId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+          "memberId": "alice-id",
+          "generation": "capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d"
+        },
+        "capturedAt": "2026-11-16T02:06:17.652Z",
+        "inputTokens": 720,
+        "outputTokens": 42,
+        "partial": false,
+        "launchId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+        "elapsedMs": 53708,
+        "text": "Codex usage reported to this Host\nScope: retained activity for the captured session.\nInput tokens reported: 720\nOutput tokens reported: 42\nPrice: not reported by Codex.\nElapsed since this launch: 53s"
+      }
+    },
+    "stats": {
+      "kind": "host_activity_stats",
+      "memberName": "alice",
+      "scope": "retained_runtime_activity",
+      "generations": 1,
+      "observedMessages": 7,
+      "compactions": 0,
+      "toolUsage": {},
+      "inputTokens": 720,
+      "outputTokens": 42,
+      "costUsd": null,
+      "gaps": [],
+      "computedAt": "2026-11-16T02:06:18.769Z"
+    },
+    "replyExactlyInOriginalUserInbox": true,
+    "localHostCommandNotProviderInput": true,
+    "priceNotReportedRatherThanZero": true,
+    "noLifetimeOrNativeTimestampClaim": true,
+    "noDeliveryProofBoundary": "The retained completed Host command and actual source assertions check absent native outbox delivery; this audit does not recreate missing outbox files."
+  },
+  "schedulesAndTaskViews": {
+    "manual": {
+      "scheduleId": "2d471bd7-1445-4000-a781-adfe87231707",
+      "runId": "46bae3d8-3cca-466c-ae84-72bce5a19b6a",
+      "taskId": "58b4ccdd-8ac0-54c3-8f0a-b90887f511ac",
+      "status": "dispatched",
+      "savedPromptAcknowledged": true,
+      "savedPromptNotReplayed": true
+    },
+    "automatic": {
+      "scheduleId": "2d471bd7-1445-4000-a781-adfe87231707",
+      "runId": "62bc4bb0-1f6d-4884-9359-f3083f76c119",
+      "taskId": "beae6a18-ba17-5275-82b0-61b87e1ecf68",
+      "cronExpression": "59 7 2 16 11 *",
+      "timezone": "UTC",
+      "armedAt": "2026-11-16T02:07:02.102Z",
+      "selectedNextRunAt": "2026-11-16T02:07:59.000Z",
+      "scheduledFor": "2026-11-16T02:07:59.003Z",
+      "startedAt": "2026-11-16T02:07:59.003Z",
+      "status": "dispatched",
+      "trigger": "real-cron-tick",
+      "runNowClicks": 0,
+      "taskCompleted": true,
+      "savedPromptNotReplayed": true,
+      "peerEffect": {
+        "event": "scheduled-effect",
+        "taskId": "beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "taskCommandId": "TEST-complete-5983-beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "messageCommandId": "TEST-reply-5983-beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      "paused": true,
+      "screenshot": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-schedule-automatic.png",
+        "sha256": "a9dec868d2b2150433d3f962c538318cc1759a7bf3fb475bece699a61749e8d2"
+      }
+    },
+    "effects": [
+      {
+        "event": "scheduled-effect",
+        "taskId": "58b4ccdd-8ac0-54c3-8f0a-b90887f511ac",
+        "taskCommandId": "TEST-complete-5983-58b4ccdd-8ac0-54c3-8f0a-b90887f511ac",
+        "messageCommandId": "TEST-reply-5983-58b4ccdd-8ac0-54c3-8f0a-b90887f511ac",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "scheduled-effect",
+        "taskId": "beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "taskCommandId": "TEST-complete-5983-beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "messageCommandId": "TEST-reply-5983-beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "sixMcpCalls": [
+      {
+        "event": "mcp-call",
+        "name": "task_list",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "mcp-call",
+        "name": "task_lifecycle",
+        "commandId": "TEST-complete-5983-58b4ccdd-8ac0-54c3-8f0a-b90887f511ac",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "mcp-call",
+        "name": "message_send",
+        "commandId": "TEST-reply-5983-58b4ccdd-8ac0-54c3-8f0a-b90887f511ac",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "mcp-call",
+        "name": "task_list",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "mcp-call",
+        "name": "task_lifecycle",
+        "commandId": "TEST-complete-5983-beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "mcp-call",
+        "name": "message_send",
+        "commandId": "TEST-reply-5983-beae6a18-ba17-5275-82b0-61b87e1ecf68",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "twoDistinctTaskAndRunIds": true,
+    "oneOriginalManualRunNowAndZeroAutomaticRunNow": true,
+    "automaticRecordedWallClockDifferenceMs": 3,
+    "clockLimit": "The 3 ms difference joins the retained selected/actual wall-clock timestamps; it is not an independently measured monotonic latency or SLO.",
+    "savedBootNotReplayed": true,
+    "taskActivity": {
+      "taskId": "beae6a18-ba17-5275-82b0-61b87e1ecf68",
+      "taskStartCommandId": "62bc4bb0-1f6d-4884-9359-f3083f76c119:start:beae6a18-ba17-5275-82b0-61b87e1ecf68",
+      "deliveryId": "ccf5ff79-3f9a-5b30-957d-73fcf0acf47d",
+      "inputId": "ccf5ff79-3f9a-5b30-957d-73fcf0acf47d",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-IcZVQ1",
+        "teamId": "TEST-desktop-team",
+        "runId": "ed4ff5eb-bc67-5a05-a5cf-a81d926226b5",
+        "memberId": "alice-id",
+        "generation": "capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d"
+      },
+      "operationRef": "d64830d6-6261-4c0d-a288-97b802cb6b76",
+      "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:74",
+      "sequence": 74,
+      "activityDigest": "e649526da885526d724cd854bf149001c88e3bd579004924a67a132c5fae4b6a",
+      "views": [
+        {
+          "tab": "Task Activity",
+          "rendered": {
+            "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:74",
+            "sequence": 74,
+            "text": "TEST scheduled complete",
+            "source": "alice · Captured Task input · generation capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d · 3 retained facts"
+          },
+          "screenshot": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-task-activity.png",
+            "sha256": "52898f9afb03552db5958e87891e2469f8a9877f08a865da8b36d4a6227b486e"
+          }
+        },
+        {
+          "tab": "Task Log Stream",
+          "rendered": {
+            "eventId": "d45e5db8fa65fde216c0c1c93469fa3542c26558fc44590c32de7944aff9e27b:74",
+            "sequence": 74,
+            "text": "TEST scheduled complete",
+            "source": "alice · Captured runtime activity · generation capture-3b21f8aa-b5cb-5cb4-b433-9d9704f8447d1 observed messages · timestamps unavailable"
+          },
+          "screenshot": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-task-log-stream.png",
+            "sha256": "3119a0fe630e77f97483ccbaa88dacd2b4a6a1676b45004b64f715ff853ecfc2"
+          }
+        }
+      ],
+      "addedInputs": 0,
+      "addedBusinessCommands": 0,
+      "addedProviderActions": 0
+    },
+    "bothViewsMatchSameActualEventAndFreshExpandedHeader": true,
+    "unattributedStderrExcludedByOriginalPredicate": true,
+    "noAdditionalRuntimeInputsBusinessCommandsOrProviderActions": true,
+    "originalTaskAndActivityDigestUnchangedAssertionsPreserved": true,
+    "storeLimit": "Task/start/outbox/session/activity-store join and unchanged-state comparisons are original successful source assertions summarized in the raw proof; those store directories are not fully archived, so no duplicate external recomputation is claimed."
+  },
+  "stopAndMixedFrame": {
+    "stoppedInput": {
+      "inputId": "d73dba8a-67d8-5636-bdc8-a2d4c92714d1",
+      "phase": "unknown",
+      "terminalConfirmed": false
+    },
+    "originalRuntimePids": [
+      5983
+    ],
+    "stopReleasedOriginalProof": true,
+    "exactSourceOrder": "RuntimeUI778 one Stop; 779 closed/released read; 780–782 held unknown and no terminal; 783 original PID absence; 784 screenshot.",
+    "stoppedImage": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-stopped.png",
+      "bytes": 137386,
+      "blob": "d4b6c22596221167d803cd5eb2eda0852ef1dc0f",
+      "sha256": "798cac726ba9336036e77ddc4c7d52da00fe795d3c2b6db8b2f0c7a4cc638f8d",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Team is offline / Launch and alice offline coexist with green Team launched - lead online and four completed launch steps. This single frame gives no duration, persistent-latch, cause or repair proof."
+    },
+    "strongerSelectionConvergenceInvoked": false,
+    "unknown": [
+      "elapsed duration of mixed frame",
+      "delivered current progress state at screenshot",
+      "permanent stale-ready latch",
+      "causal stage",
+      "production repair"
+    ],
+    "heldNotPromotedToSuccessOrCancelled": true
+  },
+  "effectsAndCleanup": {
+    "raw": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 15193,
+      "blob": "e144c48908176c313d8b77364b68c84d1568c0f9",
+      "sha256": "9449e37ec60d95b0e02368982557b11e8359ae718afd864994e0c4395696728c"
+    },
+    "json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-effects.json",
+      "bytes": 21077,
+      "blob": "01efd76883109ba56520fa1da821c742a1af4139",
+      "sha256": "ccd0f8f8b7831e58aa91bd8ba67a44d5c6f9f0c4804ca234fc2f46566c4709b7"
+    },
+    "rawProofJsonFinalCleanupExact": true,
+    "total": 133,
+    "counts": {
+      "launch": 42,
+      "exit": 28,
+      "input": 10,
+      "terminal": 9,
+      "mcp-catalog": 14,
+      "managed-configuration-read": 12,
+      "connected": 1,
+      "partial": 1,
+      "interaction": 4,
+      "interaction-reply": 4,
+      "mcp-call": 6,
+      "scheduled-effect": 2
+    },
+    "inputRows": [
+      {
+        "event": "input",
+        "marker": "TEST_MODEL_PROBE",
+        "turnId": "TEST-turn-5826-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5826
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_BOOT",
+        "turnId": "TEST-turn-5983-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_STREAM",
+        "turnId": "TEST-turn-5983-2",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_APPROVAL_DENY",
+        "turnId": "TEST-turn-5983-3",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_APPROVAL_ALLOW",
+        "turnId": "TEST-turn-5983-4",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_QUESTION",
+        "turnId": "TEST-turn-5983-5",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_QUESTION_DECLINE",
+        "turnId": "TEST-turn-5983-6",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_SCHEDULE_DONE",
+        "turnId": "TEST-turn-5983-7",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_SCHEDULE_DONE",
+        "turnId": "TEST-turn-5983-8",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_HOLD",
+        "turnId": "TEST-turn-5983-9",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "terminalRows": [
+      {
+        "event": "terminal",
+        "marker": "TEST_MODEL_PROBE",
+        "turnId": "TEST-turn-5826-1",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5826
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_BOOT",
+        "turnId": "TEST-turn-5983-1",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_STREAM",
+        "turnId": "TEST-turn-5983-2",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_APPROVAL_DENY",
+        "turnId": "TEST-turn-5983-3",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_APPROVAL_ALLOW",
+        "turnId": "TEST-turn-5983-4",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_QUESTION",
+        "turnId": "TEST-turn-5983-5",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_QUESTION_DECLINE",
+        "turnId": "TEST-turn-5983-6",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_SCHEDULE_DONE",
+        "turnId": "TEST-turn-5983-7",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_UI_SCHEDULE_DONE",
+        "turnId": "TEST-turn-5983-8",
+        "status": "completed",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "launchRows": [
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5602
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5786
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5795
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5806
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5826
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5859
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5874
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5967
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5975
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 7,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5991
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5999
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6007
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6015
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6028
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6137
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6242
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6403
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6682
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6951
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 7196
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 7505
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 7646
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 7830
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 8010
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 8506
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 8888
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 8900
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9178
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9187
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9202
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9437
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 9468
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9611
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9662
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9677
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9769
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9778
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9788
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9796
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 9810
+      },
+      {
+        "event": "launch",
+        "parentPid": 4797,
+        "argc": 3,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 10520
+      }
+    ],
+    "explicitExitRows": [
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5602
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5786
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5795
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5806
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5826
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5859
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5874
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6028
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6242
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6403
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6682
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6951
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 7196
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 8506
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 8888
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 8900
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9178
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9187
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9202
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9437
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9611
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9662
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9677
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9769
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9778
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9788
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9796
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5983
+      }
+    ],
+    "capturedPeerPids": [
+      5602,
+      5786,
+      5795,
+      5806,
+      5826,
+      5859,
+      5874,
+      5967,
+      5975,
+      5983,
+      5991,
+      5999,
+      6007,
+      6015,
+      6028,
+      6137,
+      6242,
+      6403,
+      6682,
+      6951,
+      7196,
+      7505,
+      7646,
+      7830,
+      8010,
+      8506,
+      8888,
+      8900,
+      9178,
+      9187,
+      9202,
+      9437,
+      9468,
+      9611,
+      9662,
+      9677,
+      9769,
+      9778,
+      9788,
+      9796,
+      9810,
+      10520
+    ],
+    "capturedPeerPidCount": 42,
+    "all42Absent": true,
+    "explicitExit0Count": 28,
+    "not42RecordedNaturalExits": true,
+    "app": {
+      "pid": 4468,
+      "processGroup": 4468,
+      "identity": "Mon Nov 16 02:03:57 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-HEldKq/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-HEldKq/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "hostChild": {
+      "pid": 4797,
+      "ppid": 4598,
+      "pgid": 4468,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 4468,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "passiveMainHostTrace": [
+      {
+        "line": 89,
+        "record": {
+          "mainPid": 4598,
+          "event": "async-spawn",
+          "pid": 4797,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "18384",
+            "parentPid": 4598,
+            "processGroupId": 4468
+          },
+          "atomic": false,
+          "observedAtMs": 1794794669722
+        }
+      },
+      {
+        "line": 304,
+        "record": {
+          "mainPid": 4598,
+          "event": "async-exit",
+          "pid": 4797,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794900876
+        }
+      },
+      {
+        "line": 314,
+        "record": {
+          "mainPid": 4598,
+          "event": "trace-summary",
+          "rows": 32,
+          "droppedObservations": 0,
+          "observedChildren": 14,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      }
+    ],
+    "passiveTraceLimit": "Main4598 separately observes Host4797 spawn, startTicks18384, atomic:false, then exit0/null. Dedicated receipt exposes no separate Host transport exit code; this does not create a native custody certificate.",
+    "appLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/desktop-app.log",
+      "bytes": 42770,
+      "blob": "dc24e232de9bb2f4019615fd66a5d0354809c713",
+      "sha256": "7ba94fdc44fe741763c51fe9144637d76853e1c44875e88764b9c41577b486e1"
+    },
+    "globalErrorFreeLogClaim": false,
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    }
+  },
+  "visualReview": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-allow-pending.png",
+      "bytes": 145638,
+      "blob": "f31621c842b3c8ebf2162a6380f2c5429545c5f5",
+      "sha256": "4eec69f11ef931d52bf6a751d59d3a5649587c730a9696eee398435ab210efc8",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-completed.png",
+      "bytes": 134324,
+      "blob": "9167334893346ae0c51d546a9f5cce511016b514",
+      "sha256": "d44a5a429098ed4887d4292200eff8cd707bc20f5a5461827b0c13a8031dd922",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-cost.png",
+      "bytes": 150458,
+      "blob": "37922fa05f94d8879d6eef8f669a5ba444a7b4da",
+      "sha256": "22c51a82914f3a65dd1010920cb54cca38adfa5c1c59f2437e28f6f608be074b",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-deny-pending.png",
+      "bytes": 146136,
+      "blob": "b942b36d451134601aa0b0f98bb4e4453e513cc0",
+      "sha256": "90d1509ef8d1a32a86cb53b776b9b91bbe60fea6ca4a084448d05471dfebd52c",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Original pending Terminal permission card with Allow/Deny controls; no decision result is inferred from this pre-decision frame."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-held.png",
+      "bytes": 117681,
+      "blob": "3828c9fbb553346f639e60a87b465f3967694c5f",
+      "sha256": "31596e8086c5c7429f3acd9031c2839e8bd0afd1abf0f020d8a6b93da49fa1a9",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-launch.png",
+      "bytes": 101879,
+      "blob": "c906b3d0255e431c35f79a99c4724ddcc0a8f9a3",
+      "sha256": "615a20e0d7f96fc2f14df2c97b83c01ef7ec8b056caec2db5129741c1c177b8b",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-lead-logs.png",
+      "bytes": 62191,
+      "blob": "fc3c359e0f11d9e8cbd7a3ea41f5ff13c75e391e",
+      "sha256": "faa578dca9bb6dd42d447cf04aea32da1e1a85ad15ec3ee59c2745585dddd125",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Fullscreen Logs show selected-member stderr, actual alice/generation header and query; the inline pane says viewing in fullscreen. Clipboard equality is the original source assertion, not visually inferred."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-logs.png",
+      "bytes": 146316,
+      "blob": "4e3057d06f91d06c0e38266e201178fff373d1e4",
+      "sha256": "3500e129f173f48dd90899b6c90c8adbfddcde0167325a8a2f1c261e433a5460",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-partial.png",
+      "bytes": 106306,
+      "blob": "40e1fa8b72af18a651396a1b3cdb2699c12a796a",
+      "sha256": "9ca14c2ef0eff6677fd708327634f8fed4757ce14b24a996acfd7359f238fa3d",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-question-decline-pending.png",
+      "bytes": 153035,
+      "blob": "f639a75e77dd1270ade24d24b63ce8b5e9898be3",
+      "sha256": "74ae827b232856ec772c9e4daa871ffb151e6362de5c2a0765936d9814d0c866",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-question-pending.png",
+      "bytes": 154621,
+      "blob": "f091dc866e91daa1681578b68dcf7ea395e81f84",
+      "sha256": "bdb492026ef399d5b60319919d7b3f840f803f12b8ac69830edd4e0a93d2ae53",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Original pending Question Alpha/Beta with Submit/Deny controls; later answer comes from original effects and receipt."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-reloaded.png",
+      "bytes": 141495,
+      "blob": "e4dff70190fa2de2c85b5bb70db6862ea983a9d8",
+      "sha256": "9e0fdd4644ac3527913571bd83721ed9bbaea540e92fbd203eeb1b162dc9c6ad",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-schedule-automatic.png",
+      "bytes": 135648,
+      "blob": "369fdff2802895881491c6b328b3ea94011905c3",
+      "sha256": "a9dec868d2b2150433d3f962c538318cc1759a7bf3fb475bece699a61749e8d2",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Two completed same-title Task cards with distinct IDs; original paused schedule/history is visible. Dispatched schedule status is distinct from Task completion."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-schedule.png",
+      "bytes": 119237,
+      "blob": "7cc0645dffe1dab1b50bb75daed6352707d03797",
+      "sha256": "90d633969de7656beaad227d1d87a9aa5136f82240a75d48788d20245d46fff0",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-stats.png",
+      "bytes": 148783,
+      "blob": "1872b630d0d9b927a5964fed1a3878c6fc6c730a",
+      "sha256": "dcd394bb5170941a8362fc2961417cfb3011e53a4382d9dea188b8bf7411147e",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "720 reported input tokens, 42 reported output tokens, Unknown USD, seven observed messages, zero observed tool calls/compactions and explicit retained-activity limitations."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-stopped.png",
+      "bytes": 137386,
+      "blob": "d4b6c22596221167d803cd5eb2eda0852ef1dc0f",
+      "sha256": "798cac726ba9336036e77ddc4c7d52da00fe795d3c2b6db8b2f0c7a4cc638f8d",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Team is offline / Launch and alice offline coexist with green Team launched - lead online and four completed launch steps. This single frame gives no duration, persistent-latch, cause or repair proof."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-task-activity.png",
+      "bytes": 178516,
+      "blob": "55bafb6e2ffb4c590df94b3e501df7e7a0bf5a8e",
+      "sha256": "52898f9afb03552db5958e87891e2469f8a9877f08a865da8b36d4a6227b486e",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Task status history, captured Task-input generation and expanded TEST scheduled complete are visible in the original Activity view."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex/extracted/TEST-desktop-backend-IcZVQ1/ui-emulated-runtime-task-log-stream.png",
+      "bytes": 151818,
+      "blob": "9c3c28580f89df6e3080bc0007eae15fb6948cb9",
+      "sha256": "3119a0fe630e77f97483ccbaa88dacd2b4a6a1676b45004b64f715ff853ecfc2",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Completed Task detail, captured Runtime generation and expanded same TEST scheduled complete in Task Log Stream."
+    }
+  ],
+  "qualificationLimits": [
+    "Finite TEST Codex protocol0.162.0 peer through original Host/D and Desktop only; vendorsAllowed:false. No real Codex authentication/inference/native-root qualification.",
+    "Codex leadLogs.thinking is null. Thinking replacement/copy, rich-tool and standalone branches are not executed for Codex. Merely toggling the Thinking filter does not establish a displayed or copied Codex Thinking fact.",
+    "All18 PNGs were hashed and bound; exactly8 listed representative originals were actually viewed. Pending permission/question images precede their decisions.",
+    "The stopped PNG is mixed: Offline/Launch plus the completed green launch banner. RuntimeUI778-784 checks original closed/released state and PID absence before screenshot, not the Selection cd4 accepted-disconnected/empty-wrapper convergence predicate. No persistent latch, duration, cause or production fix is established.",
+    "The held input remains unknown with terminalConfirmed:false after Stop. Signal/absence and release do not manufacture a succeeded/cancelled terminal input.",
+    "133 raw effects match proof/cleanup; all42original peer PIDs are absent, but only28 exit0 callbacks are retained. Do not claim42 natural exits or infer individual unrecorded exit codes.",
+    "The full common1757pin census and compiled input identities are source/record joins, not an audit-time rebuild or complete rearchive of all installed dependencies/runtime-store files.",
+    "The dedicated receipt does not expose a Host transport exit code; a separate passive Main original-child callback reports0/null. No new native custody certificate follows.",
+    "No Team privacy GREEN, other Desktop lane/stronger Selection convergence, packaged P08, real provider, overall merge or release qualification transfers.",
+    "v1 audit/appendix/checkpoint remain unchanged and are historical; canonical approval attaches to separately frozen v2 wording and identities.",
+    "No strict completed elapsed-time bound is inferred from the unchanged poll loop or isolated images.",
+    "No current608efb privacy GREEN or later-source qualification is inferred from this old0660 packet.",
+    "No tests, compiler, lint, install, provider/native execution, source/ref changes, CI actions or new network observations were performed; only immutable evidence/Git reads and pure integrity checks."
+  ],
+  "newExecution": false,
+  "nativeQualification": false,
+  "vendorQualification": false,
+  "privacyGreenQualified": false,
+  "sourceMutated": false,
+  "originalInputsModified": false,
+  "scopeApprovedForEvidencePublication": true
+}

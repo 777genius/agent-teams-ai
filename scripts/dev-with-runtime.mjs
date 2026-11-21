@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
+import { normalizeDesktopDevNodeOptions } from './lib/desktop-finite-node-options.ts';
 import {
   extractArchive,
   findExtractedBinary,
@@ -28,6 +29,7 @@ import {
 } from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
 import { resolveElectronViteArgs } from './lib/dev-remote-debugging.ts';
+import { stageLinuxNodeExec } from './build/buildLinuxNodeExec.mjs';
 
 const runAndCapture = createRuntimeCommandCapture(spawnSyncWithWindowsShell);
 
@@ -696,6 +698,8 @@ async function main() {
     );
   }
 
+  stageLinuxNodeExec();
+
   const uiEnv = {
     ...process.env,
     UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE?.trim() || '16',
@@ -703,7 +707,7 @@ async function main() {
       ? { CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath }
       : {}),
   };
-  ensureMinimumNodeOldSpaceEnv(uiEnv);
+  normalizeDesktopDevNodeOptions(uiEnv, ensureMinimumNodeOldSpaceEnv);
   delete uiEnv.CLAUDE_CLI_PATH;
   const uiPackageManager = readPackageManagerCommand(uiRepoRoot);
   const resolvedElectronViteArgs = await resolveElectronViteArgs(electronViteArgs);

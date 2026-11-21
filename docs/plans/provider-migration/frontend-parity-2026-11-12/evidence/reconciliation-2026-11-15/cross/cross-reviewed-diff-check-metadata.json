@@ -1,0 +1,28 @@
+{
+  "label": "cross-reviewed-diff-check",
+  "sourceHead": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "sourceTree": "1db97f452abcd5996f061a8a3ed476a44cf33302",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "git",
+    "diff",
+    "--check",
+    "09ca13a2c36de1a40bf39fa78fdd6ea97e633d5d",
+    "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+    "--",
+    "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    ".github/workflows/host-emulated-acceptance.yml"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T17:54:36.842421+00:00",
+  "finishedAtUTC": "2026-11-15T17:54:36.851670+00:00",
+  "elapsedSeconds": 0.009248594011296518,
+  "exitCode": 0,
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceHeadAfter": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "statusAfter": ""
+}

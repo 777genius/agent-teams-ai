@@ -1,16 +1,73 @@
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { runtimeDigest } from '../runtime/identity.js';
-import { publishRuntimeSourceSchema } from './runtimeSourceContracts.js';
+import { publishRuntimeSourceSchema, runtimeSourceGrantSchema } from './runtimeSourceContracts.js';
 import type { FileRuntimeSourceIndex } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import type { ManagementCommandStore, StoredRuntimeSourceCommand } from '../management/commandRecords.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
-import type { PublishRuntimeSource, RuntimeSourceGrant } from './runtimeSourceContracts.js';
+import type { PublishRuntimeSource, RuntimeSourceGrant, RuntimeSourceCandidate, RuntimeSourceTeamScope } from './runtimeSourceContracts.js';
 
 const held = (): never => { throw new ManagementCommandError('held'); };
 
 /** Only current private recipe/authority absence may isolate already validated original history. */
 export class RuntimeSourceUnavailable extends ManagementCommandError {
   constructor() { super('held'); }
+}
+
+export interface RuntimeSourceSeedProfile {
+  owner: { ownerId: string; revision: string };
+  teams: readonly { scope: RuntimeSourceTeamScope }[];
+  management?: readonly ProviderManagementProfile[] | undefined;
+}
+
+/** The same private seed/grant predicate serves Host publication and independent Main admission. */
+export function selectRuntimeSourceSeed(
+  profile: RuntimeSourceSeedProfile, raw: RuntimeSourceGrant, retained = false
+): ProviderManagementProfile {
+  const unavailable = (): never => {
+    if (retained) throw new RuntimeSourceUnavailable();
+    throw new ManagementCommandError('conflict');
+  };
+  const grant = runtimeSourceGrantSchema.parse(raw);
+  if (grant.ownerId !== profile.owner.ownerId || grant.ownerRevision !== profile.owner.revision)
+    return unavailable();
+  if (grant.teamScopes.some(scope => !profile.teams.some(team =>
+    team.scope.teamId === scope.teamId && team.scope.projectId === scope.projectId &&
+    team.scope.workspaceId === scope.workspaceId))) return unavailable();
+  const seeds = profile.management?.filter(row => row.profileId === grant.profileId &&
+    row.configRevision === grant.configRevision && row.provider === grant.runtimeId) ?? [];
+  if (seeds.length > 1) throw new ManagementCommandError('conflict');
+  const seed = seeds[0];
+  if (!seed || (grant.projectPath !== null && grant.projectPath !== seed.cwd)) return unavailable();
+  return seed;
+}
+
+export function runtimeSourceNativeIdentityMatches(
+  seed: ProviderManagementProfile, candidate: RuntimeSourceCandidate,
+  identity: { nativeVersion?: string | undefined; seedNativeVersion?: string | undefined } | undefined
+): boolean {
+  return candidate.nativeCli !== undefined && identity?.nativeVersion === candidate.nativeCli.version &&
+    (seed.provider !== 'claude' || candidate.executable.sha256 === seed.executable.sha256 ||
+      identity?.seedNativeVersion === candidate.nativeCli.version);
+}
+
+/** Shared original Team/project association; a current source pointer supplies no authority. */
+export function runtimeSourceGrantMatchesScope(
+  grant: RuntimeSourceGrant, scope: RuntimeSourceTeamScope, projectPath: string
+): boolean {
+  return (grant.projectPath === null || grant.projectPath === projectPath) &&
+    (grant.teamScopes.some(row => row.teamId === scope.teamId &&
+      row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) ||
+      (scope.projectId === grant.contextId && scope.workspaceId === grant.contextId));
+}
+
+export function assertRuntimeSourceScopeAvailable(
+  profile: { creation?: { contextIds: readonly string[] } | undefined },
+  grant: RuntimeSourceGrant, scope: RuntimeSourceTeamScope, projectPath: string
+): void {
+  if (!runtimeSourceGrantMatchesScope(grant, scope, projectPath)) held();
+  if (!grant.teamScopes.some(row => row.teamId === scope.teamId &&
+    row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) &&
+    !profile.creation?.contextIds.includes(grant.contextId)) throw new RuntimeSourceUnavailable();
 }
 
 /** Aliases may repeat a scope; every other authority field and the exact scope set must match. */

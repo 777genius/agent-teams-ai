@@ -1,0 +1,92 @@
+from pathlib import Path
+import datetime
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+
+repo = Path('/workspace/scratch/82d3f9ba6b85/agent-teams-e2e')
+out = Path('/workspace/scratch/82d3f9ba6b85/merged-coverage-local')
+node = '/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node'
+stage, expected_head = sys.argv[1:3]
+gate = 'tools/owned-process-broker/nativeWindowsAppGate.mjs'
+test = 'scripts/legacy-agent-host/desktop-native-process-ui.test.ts'
+workflow = '.github/workflows/host-emulated-acceptance.yml'
+cross_files = [
+    'scripts/legacy-agent-host/desktop-backend-observations.test.ts',
+    'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts',
+    'scripts/legacy-agent-host/test-child-process-trace.test.ts',
+    'scripts/legacy-agent-host/desktop-emulated-settings.test.ts',
+    'scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts',
+    'scripts/legacy-agent-host/desktop-resume-records.test.ts',
+    'scripts/legacy-agent-host/desktop-captured-app-exit.test.ts',
+    'scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts',
+]
+team_test = 'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts'
+commands = {
+    'cross': [node, '--test', *cross_files],
+    'process': [node, '--test', test],
+    'helpers': [node, '--test', 'scripts/e2e/opencode-diagnostics/platform.test.mjs', 'scripts/e2e/opencode-diagnostics/packaged.test.mjs'],
+    'parser': [node, '--check', gate],
+    'types': [node, 'node_modules/@typescript/native/bin/tsc', '--project', 'tsconfig.legacy-agent-host-scripts.json'],
+    'lint': [node, 'node_modules/eslint/bin/eslint.js', '--config', 'eslint.fast.config.js', '--cache', '--cache-location', '.eslintcache-fast', '--cache-strategy', 'content', '--', team_test, test],
+    'size': [node, './scripts/ci/check-source-file-size.mjs'],
+    'architecture': [node, './scripts/ci/check-team-provisioning-architecture.mjs'],
+}
+if stage == 'diff':
+    commands[stage] = ['git', 'diff', '--check', sys.argv[3] + '..' + expected_head, '--', team_test, test]
+argv = commands[stage]
+
+def git(*args):
+    return subprocess.check_output(['git', *args], cwd=repo, text=True).strip()
+
+def digest(path):
+    data = path.read_bytes()
+    return {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+
+assert git('rev-parse', 'HEAD') == expected_head
+assert git('status', '--short') == ''
+version = subprocess.check_output([node, '--version'], text=True).strip()
+node_digest = digest(Path(node))
+assert version == 'v24.21.0'
+assert node_digest['sha256'] == '7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c'
+prior = json.loads(Path('/workspace/scratch/82d3f9ba6b85/reconciliation-local/local-gates-dependency-postflight.json').read_text())
+inputs = []
+for original in prior['inputs']:
+    current = {'path': original['path'], 'realpath': str((repo / original['path']).resolve()), **digest(repo / original['path'])}
+    assert current == original, 'Selected frozen dependency/configuration input changed: ' + original['path']
+    inputs.append(current)
+selected = []
+for name in [gate, test, workflow, *cross_files, 'scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts', 'scripts/legacy-agent-host/desktop-ui-controls.ts', 'scripts/e2e/opencode-diagnostics/platform.mjs', 'scripts/e2e/opencode-diagnostics/packaged.mjs', 'scripts/e2e/opencode-diagnostics/platform.test.mjs', 'scripts/e2e/opencode-diagnostics/packaged.test.mjs', 'scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts', 'tsconfig.legacy-agent-host-scripts.json', 'eslint.fast.config.js']:
+    data = (repo / name).read_bytes()
+    blob = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+    assert git('rev-parse', 'HEAD:' + name) == blob
+    selected.append({'path': name, 'blob': blob, **digest(repo / name)})
+preflight = {'sourceHead': expected_head, 'sourceTree': git('rev-parse', 'HEAD^{tree}'), 'clean': True, 'nodePath': node,
+    'nodeVersion': version, 'nodeSHA256': node_digest['sha256'], 'selectedLeaves': selected, 'selectedDependencyInputs': inputs,
+    'nativeProcessCapturePresent': 'LEGACY_DESKTOP_PROCESS_CAPTURE_PATH' in os.environ,
+    'dependencyLimit': 'Same nine selected frozen inputs; not a complete package payload census.'}
+out.mkdir(exist_ok=True)
+pre_path = out / (stage + '-preflight.json')
+assert not pre_path.exists(), 'Do not overwrite an earlier execution record'
+pre_path.write_text(json.dumps(preflight, indent=2) + '\n')
+log_path = out / (stage + '.log')
+start = datetime.datetime.now(datetime.timezone.utc).isoformat()
+clock = time.monotonic()
+with log_path.open('xb') as log:
+    result = subprocess.run(argv, cwd=repo, stdout=log, stderr=subprocess.STDOUT)
+elapsed = time.monotonic() - clock
+end = datetime.datetime.now(datetime.timezone.utc).isoformat()
+metadata = {'stage': stage, 'sourceHead': expected_head, 'sourceTree': preflight['sourceTree'], 'cwd': str(repo), 'argv': argv,
+    'nodeVersion': version, 'nodeSHA256': node_digest['sha256'], 'startedAtUTC': start, 'finishedAtUTC': end,
+    'elapsedSeconds': elapsed, 'exitCode': result.returncode, 'preflightMetadataSHA256': digest(pre_path)['sha256'],
+    'logBytes': log_path.stat().st_size, 'logSHA256': digest(log_path)['sha256'], 'sourceHeadAfter': git('rev-parse', 'HEAD'),
+    'statusAfter': git('status', '--short'),
+    'selectedLeavesUnchanged': all(digest(repo / row['path']) == {'bytes': row['bytes'], 'sha256': row['sha256']} for row in selected),
+    'selectedDependencyInputsUnchanged': all(digest(repo / row['path']) == {'bytes': row['bytes'], 'sha256': row['sha256']} for row in inputs)}
+(out / (stage + '-metadata.json')).write_text(json.dumps(metadata, indent=2) + '\n')
+print(json.dumps(metadata, indent=2))
+print(log_path.read_text(errors='replace')[-14000:])
+raise SystemExit(result.returncode)

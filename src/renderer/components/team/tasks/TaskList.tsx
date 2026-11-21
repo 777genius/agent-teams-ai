@@ -48,7 +48,7 @@ export const TaskList = ({ tasks }: TaskListProps): React.JSX.Element => {
     <div className="overflow-hidden rounded-md border border-[var(--color-border)]">
       <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] p-2">
         <select
-          className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text)]"
+          className="rounded border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1 text-xs text-[var(--color-text)]"
           value={ownerFilter}
           aria-label={t('tasks.list.filters.ownerAria')}
           onChange={(event) => setOwnerFilter(event.target.value)}
@@ -62,7 +62,7 @@ export const TaskList = ({ tasks }: TaskListProps): React.JSX.Element => {
         </select>
         {showStatusFilter ? (
           <select
-            className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text)]"
+            className="rounded border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1 text-xs text-[var(--color-text)]"
             value={statusFilter}
             aria-label={t('tasks.list.filters.statusAria')}
             onChange={(event) => setStatusFilter(event.target.value)}

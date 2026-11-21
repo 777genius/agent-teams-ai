@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "kind": "TEST-only-existing-driver-close-diagnostic-capture-red-green",
+  "status": "FINITE_RED_GREEN_PASS",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "createdAt": "2026-11-19T00:14:32.319344+00:00",
+  "change": "Capture the existing provider failure-only driver-close diagnostic with own-data closed-vocabulary projection at both original Host emitter and parent receipt boundary. No producer/runtime/verdict/timeout change.",
+  "originalGap": {
+    "jobId": 135167674010,
+    "originalProofBlob": "c15b39e1a79bd5f6b679eb446e05457a1925e4fb",
+    "observation": "Original credential epoch3 Host close remained unconfirmed after read-cut after-log transport_failure. Existing provider emits driver-close-failed with finer close stage, but exact030 passive fixture has no subscription or receipt projector for it.",
+    "originalCleanup": "INCOMPLETE, cleanup=false, held/resourceHeld; not changed by this fix."
+  },
+  "producer": {
+    "archive": {
+      "repositoryPath": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 191145,
+      "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+      "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3",
+      "equalsOriginalReceiptProviderDigest": true
+    },
+    "member": {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+      "bytes": 18264,
+      "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+      "gitBlob": "1a0cdb0a9c7a7a390907eae2cf1903d6d104aadc"
+    },
+    "channel": "agent-teams:opencode-v2:driver-close-failed",
+    "vocabulary": {
+      "stage": [
+        "original-work",
+        "protocol-dispose",
+        "confirm-stopped"
+      ],
+      "outcome": [
+        "threw",
+        "unconfirmed"
+      ],
+      "trustedBinding": "Opaque64lowercasehex; producer validates it. Receiver does not invent a probeDigest equality selector or authority grant."
+    }
+  },
+  "candidateManifest": {
+    "path": "candidate-manifest.json",
+    "gitBlob": "2089e98881978e5518a2fff7a102816467d340f9",
+    "sha256": "a5a3921d373d7c1dd261f97e9a3a7d5e09bace02b243878fc9e7ab364241f6f5",
+    "bytes": 1434
+  },
+  "execution": {
+    "runtime": {
+      "version": "v24.22.3",
+      "platform": "linux",
+      "arch": "x64",
+      "executable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "sha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa"
+    },
+    "method": "Intrinsic Node TypeScript stripping evaluates the complete actual fixture body. Real node:diagnostics_channel receives publications; only the process streams/version/entry-view are in-memory TEST bindings. No Host/native/app/transport is executed. Subscriptions and stdin listeners are removed after each finite fixture.",
+    "before": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-name-pattern=^original driver close failure reaches",
+        "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts"
+      ],
+      "cwd": "/workspace/scratch/c714f5bce554/credential-diagnostics-030-candidate/verify-before",
+      "exitCode": 1,
+      "completedAt": "2026-11-19T00:11:00.607073+00:00",
+      "nodeSha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "logSha256": "e2105e6dff057fdd8ba8357a3fa12c2df8bf55547ea2ff53aa6b08d32fa201d1",
+      "selected": 1,
+      "pass": 0,
+      "fail": 1,
+      "skip": 0,
+      "durationMs": 313.569826,
+      "failure": "Missing existing producer channel observation: actual0 emitted rows, expected1",
+      "log": {
+        "gitBlob": "952ae12f29d82cd8207399aedb4b384c1f7599cf",
+        "sha256": "e2105e6dff057fdd8ba8357a3fa12c2df8bf55547ea2ff53aa6b08d32fa201d1",
+        "bytes": 1332
+      }
+    },
+    "after": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts"
+      ],
+      "cwd": "/workspace/scratch/c714f5bce554/credential-diagnostics-030-candidate/verify-after",
+      "exitCode": 0,
+      "completedAt": "2026-11-19T00:11:07.355183+00:00",
+      "nodeSha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "logSha256": "66372f6625182acde94cb412958d50e0d951052e338db0806b706fdbfe5cce65",
+      "selected": 6,
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 303.934467,
+      "log": {
+        "gitBlob": "bba246f4b6bd2021eef224950142217b439d6a30",
+        "sha256": "66372f6625182acde94cb412958d50e0d951052e338db0806b706fdbfe5cce65",
+        "bytes": 949
+      }
+    },
+    "sameNewTestBytesBothSnapshots": true,
+    "cases": [
+      "All3stage labels x2outcomes reach emitter and receipt; two valid different hashes remain opaque observations.",
+      "Missing/malformed/array/accessor/foreign-format bindings, invalid stages/outcomes and descriptor traps do not consume a failure slot; getters never execute.",
+      "Extra unknown fields are projected away; receiver independently rejects malformed/overlong rows and preserves first-only capture across epochs.",
+      "Real ordinary channel traffic reaches cap; new and all existing failure families plus trace-limit remain captured within unchanged total bounds.",
+      "Byte-pressure receiver exhausts ordinary budget before row quota while reserved driver failure still fits.",
+      "Import remains passive; activation is explicit in the finite harness and all its actual subscriptions are removed after verification."
+    ]
+  },
+  "limitsPreserved": {
+    "totalRowsPerEmitterAndParent": 257,
+    "maximumTraceBytes": 65536,
+    "maximumRawLineBytes": 512,
+    "maximumSerializedEntryBytesIncludingNewline": 513,
+    "firstOnlyAcrossParentEpochs": true,
+    "ordinaryQuotaChange": {
+      "emitter": {
+        "before": 252,
+        "after": 251
+      },
+      "parent": {
+        "before": 251,
+        "after": 250
+      }
+    },
+    "explanation": "One additional reserved failure family takes one ordinary observation slot at each boundary. Existing failure reserves and the original byte/line/total-row limits remain intact."
+  },
+  "discovery": {
+    "workflow": ".github/workflows/ci.yml",
+    "step": "Test workspace packages",
+    "condition": "matrix.shard == 1 inside the original conditional root-test job",
+    "command": "PATH=\"$(dirname \"$AGENT_BACKEND_TEST_NODE\"):$PATH\" pnpm --filter @agent-teams/legacy-agent-host test",
+    "packageScript": "Existing package test script builds/types then node --test --test-concurrency=1 tests/*.test.ts ...",
+    "newPath": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+    "limit": "Discovery is canonical but conditional; not claimed to execute in every workflow or bypass a prior build/typecheck failure."
+  },
+  "sourceFreeze": {
+    "schemaVersion": 1,
+    "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "unmodifiedParentComposite": {
+      "gitBlob": "741dbdc6f296a7a67a8639b7a928e6664886cab2",
+      "sha256": "d3a459914d1bcf231bc5ee44daec991a252f1c2d2fc57ca94d0377a8b58fd992",
+      "bytes": 25644,
+      "lines": 396
+    },
+    "anchorLiteral": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+    "addImmediatelyAfter": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+    "reason": "The actual observer/projection helper is absent from the finite source roster. Desktop source assembly only Set-deduplicates literal lists, without recursive import discovery. Preserve all existing literals and bodies.",
+    "sharedFileEdited": false,
+    "newRegressionDiscovery": "Existing package tests/*.test.ts glob selects the new Node regression; no workflow mutation proposed."
+  },
+  "sourceClassifier": {
+    "runtime": "v24.22.3",
+    "guardGitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+    "rows": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "production": false,
+        "physicalLines": 690
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+        "production": false,
+        "physicalLines": 182
+      }
+    ]
+  },
+  "unchangedSourcePins": [
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "gitBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791",
+      "sha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+      "bytes": 12519
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "44c29a38fdf225aebe9eaa9eccdb4fe6cad40a94",
+      "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+      "bytes": 199891
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "gitBlob": "f5779600a7d38ae104b9ade8a261bf9342a634e7",
+      "sha256": "abc04da58e87a7ebc6e4f1a26925096ba2a4f54e299f0e549029627345d1d43c",
+      "bytes": 52174
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "gitBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+      "sha256": "a9de6fd64ac4e335d24e2454242454a6214e764374dea3b4903b389830bad645",
+      "bytes": 25230
+    }
+  ],
+  "remainingLimits": [
+    "This is observability improvement, not a proven fix of the original credential transport/cleanup defect.",
+    "Full original CI/typecheck and next native evidence are pending; no local full build/typecheck, dependency install, native/app run or CI rerun occurred.",
+    "The in-memory Host process view uses the admitted24.21.0 shape solely to exercise actual observer registration; executing Node is explicitly24.22.3.",
+    "No existing frozen12source candidate file or shared source-freeze roster was edited by this author.",
+    "Existing event quotas decrease by one ordinary diagnostic row, explicitly documented; functional acceptance/verdict paths and all deadlines remain unchanged."
+  ]
+}

@@ -12,8 +12,17 @@ export function verifyBrokerArchitecture(bytes: Buffer, arch: 'x64' | 'arm64'): 
     throw new Error('Broker architecture mismatch');
   }
 }
-export function buildAndStageBroker(repository: string, arch: 'x64' | 'arm64', buildDir: string, stageDir: string, cmakeExecutable: string): void {
+/** The scoped product is staged only by an explicit trusted build selection. */
+export function buildAndStageBroker(
+  repository: string,
+  arch: 'x64' | 'arm64',
+  buildDir: string,
+  stageDir: string,
+  cmakeExecutable: string,
+  capability?: 'service-scopes-v1'
+): void {
   if (process.platform !== 'win32') throw new Error('Use a Windows SDK/MSVC build host');
+  if (capability !== undefined && capability !== 'service-scopes-v1') throw new Error('Unsupported broker capability');
   if (!isAbsolute(cmakeExecutable) || cmakeExecutable.includes('\0') ||
     basename(cmakeExecutable).toLowerCase() !== 'cmake.exe' || !statSync(cmakeExecutable).isFile()) {
     throw new Error('Provide an absolute installed cmake.exe path');
@@ -25,19 +34,25 @@ export function buildAndStageBroker(repository: string, arch: 'x64' | 'arm64', b
   };
   run(['-S', source, '-B', buildDir, '-A', arch === 'x64' ? 'x64' : 'ARM64']);
   run(['--build', buildDir, '--config', 'Release']);
-  const built = join(buildDir, 'Release/owned-process-broker.exe');
+  const targetName = capability === 'service-scopes-v1' ? 'owned-process-broker-service-scopes' : 'owned-process-broker';
+  const built = join(buildDir, `Release/${targetName}.exe`);
   const bytes = readFileSync(built); verifyBrokerArchitecture(bytes, arch);
   mkdirSync(stageDir, { recursive: true });
   const target = join(stageDir, 'owned-process-broker.exe'); copyFileSync(built, target);
   const hash = createHash('sha256').update(bytes).digest('hex');
   if (createHash('sha256').update(readFileSync(target)).digest('hex') !== hash) throw new Error('Staged hash mismatch');
-  writeFileSync(join(stageDir, 'manifest.json'), `${JSON.stringify({ schema: 1, platform: 'win32', arch,
-    file: 'owned-process-broker.exe', sha256: hash, protocol: 1 }, null, 2)}\n`);
+  writeFileSync(join(stageDir, 'manifest.json'), `${JSON.stringify({
+    schema: capability === 'service-scopes-v1' ? 2 : 1, platform: 'win32', arch,
+    file: 'owned-process-broker.exe', sha256: hash, protocol: 1,
+    ...(capability === undefined ? {} : { capability }),
+  }, null, 2)}\n`);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [arch, buildDir, stageDir, cmakeExecutable] = process.argv.slice(2);
-  if ((arch !== 'x64' && arch !== 'arm64') || !buildDir || !stageDir || !cmakeExecutable) {
-    throw new Error('Usage: buildOwnedProcessBroker.ts x64|arm64 isolated-build-dir explicit-stage-dir absolute-cmake-exe');
+  const args = process.argv.slice(2);
+  const [arch, buildDir, stageDir, cmakeExecutable, capability] = args;
+  if ((arch !== 'x64' && arch !== 'arm64') || !buildDir || !stageDir || !cmakeExecutable ||
+      args.length > 5 || (capability !== undefined && capability !== 'service-scopes-v1')) {
+    throw new Error('Usage: buildOwnedProcessBroker.ts x64|arm64 isolated-build-dir explicit-stage-dir absolute-cmake-exe [service-scopes-v1]');
   }
-  buildAndStageBroker(resolve(dirname(fileURLToPath(import.meta.url)), '../..'), arch, resolve(buildDir), resolve(stageDir), cmakeExecutable);
+  buildAndStageBroker(resolve(dirname(fileURLToPath(import.meta.url)), '../..'), arch, resolve(buildDir), resolve(stageDir), cmakeExecutable, capability);
 }

@@ -2,9 +2,22 @@ import type { BackendConnectionSnapshot } from '../contracts/connections';
 import type { AgentBackendApi } from '../contracts/operations';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { TeamProductReadOrder } from './TeamProductReadOrder';
+import type { TeamReadUnavailable } from '@shared/types/team';
 
 type Connection = BackendConnectionSnapshot['bindings'][number];
 type CurrentScope = () => boolean;
+
+/** Only original finite snapshot refusals carry their captured publication assertion. */
+export class HostTeamReadUnavailableError extends Error {
+  constructor(
+    readonly code: TeamReadUnavailable['code'],
+    readonly outcome: TeamReadUnavailable['outcome'],
+    readonly assertCurrent: () => void
+  ) {
+    super('Host team read ' + code);
+    this.name = 'HostTeamReadUnavailableError';
+  }
+}
 
 const MAX_PAGES = 128;
 const TASK_TEXT_FIELDS = ['description', 'prompt'] as const;
@@ -149,6 +162,15 @@ export async function readHostPagedSnapshot(
   readOrder.capture(check);
   const handleId = connection.handle.handleId;
   const readFence = readOrder.readFence(handleId);
+  const refusedPosition = readOrder.position(handleId);
+  const assertRefusalCurrent = () => {
+    assertScope();
+    readFence();
+    const position = readOrder.position(handleId);
+    if (position?.streamId !== refusedPosition?.streamId ||
+        position?.sequence !== refusedPosition?.sequence)
+      throw new Error('Stale Host product snapshot');
+  };
   let cursor: string | undefined;
   let first: BackendTeamSnapshot | undefined;
   const tasks: BackendTeamSnapshot['tasks'] = [];
@@ -166,7 +188,12 @@ export async function readHostPagedSnapshot(
       payload: cursor ? { cursor } : {},
     });
     assertScope();
-    if (!result.ok) throw new Error('Host team read ' + result.code);
+    if (!result.ok) {
+      assertRefusalCurrent();
+      if (result.code === 'busy' || result.code === 'unavailable' || result.code === 'shutting-down')
+        throw new HostTeamReadUnavailableError(result.code, result.outcome, assertRefusalCurrent);
+      throw new Error('Host team read ' + result.code);
+    }
     if (!result.value || !('revision' in result.value) || !('kanbanState' in result.value))
       throw new Error('Invalid Host team snapshot');
     const page = result.value;

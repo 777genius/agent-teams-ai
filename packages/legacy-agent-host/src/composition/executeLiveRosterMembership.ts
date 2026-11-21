@@ -7,10 +7,12 @@ import { modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js
 import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
 import { capturedMcpSourceCurrent } from '../mcp-catalog/capturedSource.js';
 import { captureLiveRosterMember, liveRosterTargetTeam } from './captureLiveRosterMember.js';
+import { captureTeamAccountRead } from './captureTeamAccountRead.js';
 import { assertCapturedRosterCurrent } from './teamRoster.js';
 import { createMemberEntry } from './createMemberEntry.js';
 import { runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
+import { captureLiveRosterProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import { closeRuntimeMember } from './transitionRuntimeMember.js';
 import { attachMemberModelReadiness, prepareTeamModelReadiness } from './prepareTeamModelReadiness.js';
 import { envelopeSchema } from './teamHostEnvelope.js';
@@ -72,6 +74,7 @@ interface Flight {
   team: HostedTeam;
   retained: RetainedNativeLaunch;
   lead?: MemberEntry;
+  withTeamRead?: ReturnType<typeof captureTeamAccountRead>;
   owner: TeamLiveRosterMembership;
   original: LiveRosterOriginal;
   receipt: LiveRosterReceipt;
@@ -98,13 +101,19 @@ const code = (error: unknown): TeamOwnerErrorCode => error instanceof TeamOwnerE
   ? error.code : 'hold';
 
 function assertFlight(options: LiveRosterExecutionOptions, flight: Flight, fresh = false, checkCapture = true): void {
-  flight.owner.withOriginal(flight.original, () => {});
+  const assertTeam = () => {
+    flight.owner.withOriginal(flight.original, () => {});
+    if (fresh) {
+      if (Date.now() >= flight.cutoff || !flight.lead ||
+          options.capturedTeams.get(flight.input.teamId) !== flight.retained.team ||
+          !capturedMcpSourceCurrent(flight.lead.profile)) return held();
+      flight.team.owner.assertExecutionAllowed(options.profile.principalId);
+    }
+  };
+  if (fresh && flight.withTeamRead) flight.withTeamRead(assertTeam); else assertTeam();
+  // The original Runtime fence and recursive captured-source check never borrow this Team lock.
   if (fresh) {
-    if (Date.now() >= flight.cutoff || !flight.lead ||
-        options.capturedTeams.get(flight.input.teamId) !== flight.retained.team ||
-        !capturedMcpSourceCurrent(flight.lead.profile)) return held();
-    flight.team.owner.assertExecutionAllowed(options.profile.principalId);
-    const observed = options.runtime.readCapturedSession(flight.lead.binding);
+    const observed = options.runtime.readCapturedSession(flight.lead!.binding);
     if (!observed.attached || observed.record?.phase !== 'allocated' ||
         observed.record.custody !== 'owned' || observed.record.sealed) return held();
     if (checkCapture) flight.captured?.assertCurrent();
@@ -306,10 +315,13 @@ async function prepareModel(options: LiveRosterExecutionOptions, flight: Flight,
   const cutoff = Math.min(flight.cutoff, prepared.anchor.expiresAt);
   const current = () => { try { assertFlight(options, flight, true); return Date.now() < cutoff; }
     catch { return false; } };
+  const processOrigin = captureLiveRosterProcessOrigin(options.profile, flight.retained.team,
+    captured.capture, captured.profile, options.sources);
   // Publish the exact group identity in this first flight before its original ModelProbeOwner call.
   flight.probe = { commandId, context };
   flight.reference = await prepareTeamModelReadiness({ management, profile: captured.profile,
     commandId, context, cutoff,
+    ...(processOrigin ? { processOrigin } : {}),
     scope: { schemaVersion: 1, kind: 'team', teamBindingDigest: runtimeDigest(flight.team.definition.binding),
       actionDigest: runtimeDigest({ commandId: flight.input.commandId, context }),
       selectionDigest: runtimeDigest({ payload: flight.input.payload, capture: captured.view }),
@@ -410,12 +422,15 @@ function firstFlight(options: LiveRosterExecutionOptions, input: LiveRosterOpera
   owner: TeamLiveRosterMembership, preview: LiveRosterPreview, requestDigest: string,
   selected: { retained: RetainedNativeLaunch; lead?: MemberEntry }, targets: Target[], admittedAt: number): Flight {
   if (input.conversation.phase !== 'capture') return held();
-  const retained = selected.retained, sourceCaptureDigest = runtimeDigest(retained.team.capture ?? null);
+  const retained = selected.retained, teamOwner = team.owner;
+  const sourceCaptureDigest = runtimeDigest(retained.team.capture ?? null);
   const source = { launchId: runId(retained.team), sourceCaptureDigest,
     hostIncarnation: options.hostIncarnation, cutoff: admittedAt + input.conversation.remainingMs,
     assertCurrent() {
       options.assertCurrent(input.teamId);
-      if (retained.team.owner !== team.owner || runtimeDigest(retained.team.capture ?? null) !== sourceCaptureDigest ||
+      if (team.owner !== teamOwner || retained.team.owner !== teamOwner ||
+          selected.lead && selected.lead.team.owner !== teamOwner ||
+          runtimeDigest(retained.team.capture ?? null) !== sourceCaptureDigest ||
           options.retainedLaunches.get(runtimeDigest({ teamId: input.teamId, launchId: runId(retained.team) })) !== retained)
         return held();
     } };
@@ -437,7 +452,9 @@ function firstFlight(options: LiveRosterExecutionOptions, input: LiveRosterOpera
     source: selectedMember, previous };
   if (!launch.begin(intent)) return held();
   return { input: structuredClone(input), requestDigest, bindingDigest: runtimeDigest(input.binding), team,
-    retained, ...(selected.lead ? { lead: selected.lead } : {}), owner, original, receipt: admitted.record, launch, targets, intent,
+    retained, ...(selected.lead ? { lead: selected.lead, withTeamRead: captureTeamAccountRead({
+      entry: selected.lead, principalId: options.profile.principalId, assertCurrent: source.assertCurrent }) } : {}),
+    owner, original, receipt: admitted.record, launch, targets, intent,
     cutoff: source.cutoff, continuation: false, openingInvoked: false, closed: new Map(), readinessCleanup: new Map() };
 }
 

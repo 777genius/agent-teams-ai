@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { execFileWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 
 import { TmuxPackageManagerResolver } from '../platform/TmuxPackageManagerResolver';
 import { TmuxWslService } from '../wsl/TmuxWslService';
@@ -351,7 +352,7 @@ export class TmuxPlatformCommandExecutor {
 
   async #execNativePs(): Promise<ExecResult> {
     return new Promise((resolve) => {
-      execFile(
+      execFileWithLinuxChildLaunch(
         'ps',
         ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
         { env: process.env, timeout: 3_000, maxBuffer: 2 * 1024 * 1024 },

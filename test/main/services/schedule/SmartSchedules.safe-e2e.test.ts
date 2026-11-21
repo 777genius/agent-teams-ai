@@ -3,12 +3,12 @@
  * dispatch, with provider/process side effects replaced by deterministic ports.
  * Runs without credentials, installed agent CLI, or network access.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JsonScheduleRepository } from '../../../../src/main/services/schedule/JsonScheduleRepository';
 import { SchedulerService } from '../../../../src/main/services/schedule/SchedulerService';
@@ -46,7 +46,7 @@ describe('Smart schedules filesystem safe E2E', () => {
       model: 'sonnet',
       members: [{ name: 'alice' }],
     };
-    let running = true;
+    const running = true;
     port = {
       isTeamAlive: vi.fn(() => running),
       isTeamLaunching: vi.fn(() => false),
@@ -261,6 +261,57 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(savedSchedule?.taskFirst).toBe(true);
   });
 
+  it('dispatches a fresh real cron occurrence after a completed manual run and cron edit', async () => {
+    const tasks = new Map<string, TeamTask>();
+    port.getPreviousRuns = async (id, runId) =>
+      (await repository.listRuns(id)).filter((run) => run.id !== runId);
+    port.getTask = async (_team, taskId) => tasks.get(taskId) ?? null;
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.hasActiveOwnedTask = vi.fn(async () => false);
+    port.createTask = vi.fn(async (_team, request) => {
+      const task: TeamTask = {
+        id: request.command!.commandId,
+        subject: request.subject,
+        owner: request.owner,
+        status: 'pending',
+      };
+      tasks.set(task.id, task);
+      return task;
+    });
+    port.startTaskByUser = vi.fn(async (_team, taskId, admission) => {
+      expect(await admission!.canStart()).toBe(true);
+      tasks.get(taskId)!.status = 'completed';
+      return { notifiedOwner: true };
+    });
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    });
+    await scheduler.updateSchedule(schedule.id, { label: 'Edited schedule' });
+    await scheduler.pauseSchedule(schedule.id);
+    await scheduler.resumeSchedule(schedule.id);
+    await scheduler.triggerNow(schedule.id);
+    const manual = await waitForRun(schedule.id, 'dispatched');
+    expect(tasks.get(manual.linkedTaskId!)?.status).toBe('completed');
+
+    const at = new Date(Math.ceil((Date.now() + 2000) / 1000) * 1000);
+    const cronExpression = `${at.getUTCSeconds()} ${at.getUTCMinutes()} ${at.getUTCHours()} ${at.getUTCDate()} ${at.getUTCMonth() + 1} *`;
+    const armed = await scheduler.updateSchedule(schedule.id, { cronExpression });
+    expect(armed.nextRunAt).toBe(at.toISOString());
+    await vi.waitFor(
+      async () => {
+        const runs = await repository.listRuns(schedule.id);
+        expect(runs).toHaveLength(2);
+        expect(runs.find((run) => run.id !== manual.id)?.status).toBe('dispatched');
+      },
+      { timeout: 5000 }
+    );
+    await scheduler.pauseSchedule(schedule.id);
+    expect(tasks.size).toBe(2);
+    expect(port.createTask).toHaveBeenCalledTimes(2);
+    expect(port.startTaskByUser).toHaveBeenCalledTimes(2);
+    expect(oneShot).not.toHaveBeenCalled();
+  });
+
   it('carries the unfinished task through more skips than the retained run history', async () => {
     const unfinished = { id: 'e2e-task', subject: 'Long-running work', status: 'in_progress' } as TeamTask;
     port.getPreviousRuns = async (id, runId) =>
@@ -434,13 +485,14 @@ describe('Smart schedules filesystem safe E2E', () => {
     let releaseWrite!: () => void;
     const writeGate = new Promise<void>((resolve) => { releaseWrite = resolve; });
     let writeStarted = false;
-    const saveSchedule = repository.saveSchedule.bind(repository);
-    vi.spyOn(repository, 'saveSchedule').mockImplementation(async (candidate) => {
-      if (candidate.id === schedule.id && candidate.lastRunAt) {
+    const metadata = repository as unknown as { writeSchedulesFile(rows: Schedule[]): Promise<void> };
+    const writeSchedulesFile = metadata.writeSchedulesFile.bind(repository);
+    vi.spyOn(metadata, 'writeSchedulesFile').mockImplementation(async (rows) => {
+      if (rows.some((candidate) => candidate.id === schedule.id && candidate.lastRunAt)) {
         writeStarted = true;
         await writeGate;
       }
-      return saveSchedule(candidate);
+      return writeSchedulesFile(rows);
     });
 
     await scheduler.triggerNow(schedule.id);

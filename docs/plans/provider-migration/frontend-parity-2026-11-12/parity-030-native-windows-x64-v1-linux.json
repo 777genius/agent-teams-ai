@@ -1,0 +1,902 @@
+{
+  "schemaVersion": 1,
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826476,
+  "runAttempt": 1,
+  "scope": "Original current-head native Windows x64 V2.1.4 manual/auto and Linux V1 TEST-version witnesses only",
+  "jobs": [
+    {
+      "id": 135167673593,
+      "run_id": 44407826476,
+      "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826476",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAfeJ8E-Q",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135167673593",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826476/job/135167673593",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-18T22:03:45Z",
+      "started_at": "2026-11-18T23:30:59Z",
+      "completed_at": "2026-11-18T23:41:44Z",
+      "name": "Embedded V2.1.4 original Host (win32-x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-18T23:31:01Z",
+          "completed_at": "2026-11-18T23:31:03Z"
+        },
+        {
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-18T23:31:03Z",
+          "completed_at": "2026-11-18T23:31:05Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-18T23:31:05Z",
+          "completed_at": "2026-11-18T23:31:24Z"
+        },
+        {
+          "name": "Require immutable source HEAD and record actual runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-18T23:31:24Z",
+          "completed_at": "2026-11-18T23:31:25Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-18T23:31:25Z",
+          "completed_at": "2026-11-18T23:31:40Z"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-18T23:31:40Z",
+          "completed_at": "2026-11-18T23:32:21Z"
+        },
+        {
+          "name": "Install exact source workspace dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-18T23:32:21Z",
+          "completed_at": "2026-11-18T23:33:00Z"
+        },
+        {
+          "name": "Build original Host and its pinned provider implementation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-18T23:33:00Z",
+          "completed_at": "2026-11-18T23:33:05Z"
+        },
+        {
+          "name": "Check original graph and custody boundaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-18T23:33:05Z",
+          "completed_at": "2026-11-18T23:33:15Z"
+        },
+        {
+          "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-18T23:33:15Z",
+          "completed_at": "2026-11-18T23:33:27Z"
+        },
+        {
+          "name": "Prepare exact Bun, engine graph and original-process artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-18T23:33:27Z",
+          "completed_at": "2026-11-18T23:34:10Z"
+        },
+        {
+          "name": "Prove actual Darwin executable custody and adversarial cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-18T23:34:10Z",
+          "completed_at": "2026-11-18T23:34:10Z"
+        },
+        {
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-18T23:34:10Z",
+          "completed_at": "2026-11-18T23:34:10Z"
+        },
+        {
+          "name": "Prove original Windows Job custody and surviving descendant cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-11-18T23:34:10Z",
+          "completed_at": "2026-11-18T23:34:30Z"
+        },
+        {
+          "name": "Require exact Windows original-process evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-11-18T23:34:30Z",
+          "completed_at": "2026-11-18T23:34:30Z"
+        },
+        {
+          "name": "Check original Desktop private recipe composition",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-18T23:34:30Z",
+          "completed_at": "2026-11-18T23:34:30Z"
+        },
+        {
+          "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-11-18T23:34:30Z",
+          "completed_at": "2026-11-18T23:38:11Z"
+        },
+        {
+          "name": "Exercise Windows automatic approval and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-11-18T23:38:11Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Exercise native catalog and model probe without tool allocation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Exercise effective permissions and active Stop with a surviving sibling",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Exercise captured external MCP and app-only through the native Host",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Require complete native management and permission evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Require product-path Host proof after exact candidate qualification",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:37Z"
+        },
+        {
+          "name": "Preserve exact native evidence or candidate HOLD",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-11-18T23:41:37Z",
+          "completed_at": "2026-11-18T23:41:38Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 50,
+          "started_at": "2026-11-18T23:41:38Z",
+          "completed_at": "2026-11-18T23:41:38Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 51,
+          "started_at": "2026-11-18T23:41:38Z",
+          "completed_at": "2026-11-18T23:41:38Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 52,
+          "started_at": "2026-11-18T23:41:38Z",
+          "completed_at": "2026-11-18T23:41:40Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 53,
+          "started_at": "2026-11-18T23:41:40Z",
+          "completed_at": "2026-11-18T23:41:40Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135167673593",
+      "labels": [
+        "windows-2022"
+      ],
+      "runner_id": 1000395410,
+      "runner_name": "GitHub Actions 1000395410",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 135167673782,
+      "run_id": 44407826476,
+      "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826476",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAfeJ8Ftg",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135167673782",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826476/job/135167673782",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-18T22:03:45Z",
+      "started_at": "2026-11-18T23:32:35Z",
+      "completed_at": "2026-11-18T23:36:59Z",
+      "name": "Static V01 source test (ubuntu-24.04)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-18T23:32:35Z",
+          "completed_at": "2026-11-18T23:32:36Z"
+        },
+        {
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-11-18T23:32:36Z",
+          "completed_at": "2026-11-18T23:32:37Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-18T23:32:37Z",
+          "completed_at": "2026-11-18T23:32:47Z"
+        },
+        {
+          "name": "Require immutable PR source HEAD",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-18T23:32:47Z",
+          "completed_at": "2026-11-18T23:32:47Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-18T23:32:47Z",
+          "completed_at": "2026-11-18T23:32:48Z"
+        },
+        {
+          "name": "Record exact current product commit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-18T23:32:48Z",
+          "completed_at": "2026-11-18T23:32:48Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-18T23:32:48Z",
+          "completed_at": "2026-11-18T23:32:51Z"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-18T23:32:51Z",
+          "completed_at": "2026-11-18T23:33:06Z"
+        },
+        {
+          "name": "Prove retry classification on the exact source HEAD",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-18T23:33:06Z",
+          "completed_at": "2026-11-18T23:33:06Z"
+        },
+        {
+          "name": "Install pinned workspace dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-18T23:33:06Z",
+          "completed_at": "2026-11-18T23:33:30Z"
+        },
+        {
+          "name": "Build Stage1 Host without launching providers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-18T23:33:30Z",
+          "completed_at": "2026-11-18T23:33:33Z"
+        },
+        {
+          "name": "Typecheck Host TEST contracts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-11-18T23:33:33Z",
+          "completed_at": "2026-11-18T23:33:38Z"
+        },
+        {
+          "name": "Verify captured and native model variants through Host SPI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-11-18T23:33:38Z",
+          "completed_at": "2026-11-18T23:33:38Z"
+        },
+        {
+          "name": "Verify generation-preserving install and update policy",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-11-18T23:33:38Z",
+          "completed_at": "2026-11-18T23:33:46Z"
+        },
+        {
+          "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-11-18T23:33:46Z",
+          "completed_at": "2026-11-18T23:33:53Z"
+        },
+        {
+          "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-11-18T23:33:53Z",
+          "completed_at": "2026-11-18T23:36:56Z"
+        },
+        {
+          "name": "Preserve native V1 version evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-11-18T23:36:56Z",
+          "completed_at": "2026-11-18T23:36:57Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31,
+          "started_at": "2026-11-18T23:36:57Z",
+          "completed_at": "2026-11-18T23:36:57Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-11-18T23:36:57Z",
+          "completed_at": "2026-11-18T23:36:57Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-11-18T23:36:57Z",
+          "completed_at": "2026-11-18T23:36:57Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34,
+          "started_at": "2026-11-18T23:36:57Z",
+          "completed_at": "2026-11-18T23:36:57Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35,
+          "started_at": "2026-11-18T23:36:57Z",
+          "completed_at": "2026-11-18T23:36:57Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135167673782",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000395416,
+      "runner_name": "GitHub Actions 1000395416",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ],
+  "artifactVerifications": [
+    {
+      "artifactId": 14482218721,
+      "expectedDigestProvenance": "original job upload log",
+      "fileId": "file_000000005c0481f4acb149ab2ffdcc8b",
+      "zipBytes": 14650,
+      "zipSha256": "04a4518f12d70f37797c327517ecfc0105a9948cf8a04ac9d905b37c909f3f23",
+      "members": [
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-embedded-inputs.json",
+          "bytes": 780,
+          "sha256": "f8c38b04f4863a834c0c011af3f7eaa8fdd15f67a0bf05ed18618f61e7de4dfd"
+        },
+        {
+          "name": "opencode-v2-windows-custody.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-windows-custody.json",
+          "bytes": 907,
+          "sha256": "8b7533f1c63d2a60d0fbb949d59eafd7a9398c0ca1fde1bc09ed6da2b4a09ce9"
+        },
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-embedded-host.json",
+          "bytes": 96981,
+          "sha256": "373dee1dc65339ae97adae94949ca2d4efce1d6c050ba021787ef40b9e20c946"
+        },
+        {
+          "name": "opencode-v2-embedded-host-auto.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-embedded-host-auto.json",
+          "bytes": 96798,
+          "sha256": "a218b89d2ace2efcff1134334489e926e66988cfa154dd30f1c009fd9ecb3f8b"
+        }
+      ],
+      "verifiedAt": "2026-11-18T23:44:36.259305+00:00"
+    },
+    {
+      "artifactId": 14483145075,
+      "expectedDigestProvenance": "original job upload log",
+      "fileId": "file_00000000aac881f48daf140b8e803dbe",
+      "zipBytes": 3983,
+      "zipSha256": "73badc3cf70e5100f0b5abe27c0b2411e74f884538af0092fcf1c0e7eeb9ffb6",
+      "members": [
+        {
+          "name": "native-v1-1.19.5.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483145075/native-v1-1.19.5.json",
+          "bytes": 1723,
+          "sha256": "e03a65abf0dea4ddb43a5ce713aae0799c1a4df805d380d353a0b62cf722765f"
+        },
+        {
+          "name": "native-v1-1.19.4.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483145075/native-v1-1.19.4.json",
+          "bytes": 4479,
+          "sha256": "1af658a30c3cef225818b427862e6040625d5ddb8e67f6a8225bdcfaf8534f6b"
+        },
+        {
+          "name": "native-v1-latest.json",
+          "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483145075/native-v1-latest.json",
+          "bytes": 1723,
+          "sha256": "170dcf9aad009dd11ef1b6b133a2c9c99a952cac8a38ebfe6b7261160763348d"
+        }
+      ],
+      "verifiedAt": "2026-11-18T23:44:36.481823+00:00"
+    }
+  ],
+  "receipts": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-embedded-inputs.json",
+      "artifactId": 14482218721,
+      "sha256": "f8c38b04f4863a834c0c011af3f7eaa8fdd15f67a0bf05ed18618f61e7de4dfd",
+      "bytes": 780,
+      "gitBlob": "eceacfa32718dc9ac699d7308b4cebabed4d8540",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+        "status": "READY",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "win32-x64",
+        "nodeVersion": "v24.21.0"
+      }
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-windows-custody.json",
+      "artifactId": 14482218721,
+      "sha256": "8b7533f1c63d2a60d0fbb949d59eafd7a9398c0ca1fde1bc09ed6da2b4a09ce9",
+      "bytes": 907,
+      "gitBlob": "983855f7dd91d7ea9aad7aabd61cdff01a5cc073",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+        "status": "PASS",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "win32-x64",
+        "nodeVersion": "v24.21.0",
+        "cleanup": true,
+        "desktopQualified": false,
+        "captureBeforeInput": true,
+        "descendantSurvivedRootExit": true,
+        "originalJobCleanup": "confirmed",
+        "neighborSurvivedTargetStop": true,
+        "neighborJobCleanup": "confirmed"
+      }
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-embedded-host.json",
+      "artifactId": 14482218721,
+      "sha256": "373dee1dc65339ae97adae94949ca2d4efce1d6c050ba021787ef40b9e20c946",
+      "bytes": 96981,
+      "gitBlob": "c918a8a3361e8e5b3b94db8e20a05d85950af106",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "manual",
+        "nodeVersion": "v24.21.0",
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "elapsedMs": 220430,
+        "cancelled": false,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14482218721/opencode-v2-embedded-host-auto.json",
+      "artifactId": 14482218721,
+      "sha256": "a218b89d2ace2efcff1134334489e926e66988cfa154dd30f1c009fd9ecb3f8b",
+      "bytes": 96798,
+      "gitBlob": "f576bc489ca51eb581104317983952f5121766a5",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "auto",
+        "nodeVersion": "v24.21.0",
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "elapsedMs": 205249,
+        "cancelled": false,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483145075/native-v1-1.19.5.json",
+      "artifactId": 14483145075,
+      "sha256": "e03a65abf0dea4ddb43a5ce713aae0799c1a4df805d380d353a0b62cf722765f",
+      "bytes": 1723,
+      "gitBlob": "44d4f2e729ddecf32f881d3d53be1aeb4c1d6f29",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_NATIVE_V1_VERSION_HOST",
+        "status": "PASS",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "linux-x64",
+        "nodeVersion": "v24.21.0",
+        "selectedCliVersion": "1.19.5",
+        "nativeVersion": "1.19.5",
+        "nativeDigest": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+        "nativeIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+        "wireProtocolRevision": "1.19.4",
+        "steps": [
+          "native_version_package_integrity_and_source_measured",
+          "original_host_native_runtime_and_mcp_ready",
+          "native_model_tools_permission_task_and_reply_completed_once",
+          "original_host_runtime_stop_and_cleanup_confirmed",
+          "cold_receipt_readback_without_native_replay_or_source_mutation"
+        ],
+        "cleanup": true,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 8,
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483145075/native-v1-1.19.4.json",
+      "artifactId": 14483145075,
+      "sha256": "1af658a30c3cef225818b427862e6040625d5ddb8e67f6a8225bdcfaf8534f6b",
+      "bytes": 4479,
+      "gitBlob": "3b6f5ae5c152e1c182aed7bdcde9fc61f15858cc",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_NATIVE_V1_VERSION_HOST",
+        "status": "PASS",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "linux-x64",
+        "nodeVersion": "v24.21.0",
+        "selectedCliVersion": "1.19.4",
+        "nativeVersion": "1.19.4",
+        "nativeDigest": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+        "nativeIntegrity": "sha512-rQ/l3jmJoxf8ZYnBargg9alURlz6buEilysGODtzkcmcYtcZ91LOgF034oUUHHQl8/y1hbRTDvg6ujqUjQsMXw==",
+        "wireProtocolRevision": "1.19.4",
+        "steps": [
+          "native_version_package_integrity_and_source_measured",
+          "original_host_native_runtime_and_mcp_ready",
+          "managed_update_preserved_pending_native_session",
+          "native_model_tools_permission_task_and_reply_completed_once",
+          "original_host_runtime_stop_and_cleanup_confirmed",
+          "cold_receipt_readback_without_native_replay_or_source_mutation"
+        ],
+        "cleanup": true,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 8,
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false,
+        "managedUpdate": {
+          "before": {
+            "native": {
+              "pid": 5067,
+              "parent": 5059,
+              "birth": "25831",
+              "device": "66305",
+              "inode": "9702783",
+              "executableSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+            },
+            "binarySha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+            "profileSha256": "7d6fafb02844dcaf2c74e41b4a1236359a3f0998101c08092bfc40dc48fcd182",
+            "sessionSha256": "a7a1f0f78844b398ee96f37e78739358872388bce04d72599656b403fc3af4cc",
+            "runtimeStateSha256": "c07d61ef36ff818f4af594654227164f3ba939f4b146ecf5e080880090dde5a9",
+            "projectionSha256": "5ae1e1543bccbb275da1095892e8d308194dcc96e430c16ba0cc955bb2d10a7f",
+            "checkpointSha256": "d7aa49bbfa97ca61a6393973fcb47770003e2ae3a12d0471dcf6e468702898d0"
+          },
+          "after": {
+            "native": {
+              "pid": 5067,
+              "parent": 5059,
+              "birth": "25831",
+              "device": "66305",
+              "inode": "9702783",
+              "executableSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+            },
+            "binarySha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+            "profileSha256": "7d6fafb02844dcaf2c74e41b4a1236359a3f0998101c08092bfc40dc48fcd182",
+            "sessionSha256": "a7a1f0f78844b398ee96f37e78739358872388bce04d72599656b403fc3af4cc",
+            "runtimeStateSha256": "c07d61ef36ff818f4af594654227164f3ba939f4b146ecf5e080880090dde5a9",
+            "projectionSha256": "5ae1e1543bccbb275da1095892e8d308194dcc96e430c16ba0cc955bb2d10a7f",
+            "checkpointSha256": "d7aa49bbfa97ca61a6393973fcb47770003e2ae3a12d0471dcf6e468702898d0"
+          },
+          "fromVersion": "1.19.4",
+          "toVersion": "1.19.6",
+          "source": "app-managed",
+          "updatedBinarySha256": "aab0a58cd7fc5a1f17495b76c08e79989d331653d8b63156aca2f6e9e36d1173",
+          "updatedIntegrity": "sha512-SUQS023u46+2+wMUej1Cm8VSFpHUd2c6cO4m2r7suRaCgrdIjR1iXr7ebl31xb/gHzaYS65xnj1fxRqHpzhU1A==",
+          "oldManifestSha256": "9ccc06bd53ddd4697e2eb49b11ed95976e08f32943352c595d43a2d3b2581599",
+          "newManifestSha256": "99f48edea84668416c0d510c7e785366f176dcbe664f0a455f2922f07bfdc90e",
+          "installerBundleSha256": "5e16ed7f7afff7588fe53c526cff9b67d54b0b79f408a5969a366f1bb03ea1e5",
+          "installerSourceSha256": "adf7f7a336db153a85b41579437f21d7f27fe5b1d020ceff393a7750167f686f",
+          "electronVersion": "44.10.1",
+          "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+          "installerProcesses": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "cleanup": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "cleanup": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14483145075/native-v1-latest.json",
+      "artifactId": 14483145075,
+      "sha256": "170dcf9aad009dd11ef1b6b133a2c9c99a952cac8a38ebfe6b7261160763348d",
+      "bytes": 1723,
+      "gitBlob": "a8172db30e07bc1cbb949651911fb2a451c517e4",
+      "exactImmutableReadback": true,
+      "summary": {
+        "kind": "TEST_NATIVE_V1_VERSION_HOST",
+        "status": "PASS",
+        "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "platform": "linux-x64",
+        "nodeVersion": "v24.21.0",
+        "selectedCliVersion": "1.19.6",
+        "nativeVersion": "1.19.6",
+        "nativeDigest": "aab0a58cd7fc5a1f17495b76c08e79989d331653d8b63156aca2f6e9e36d1173",
+        "nativeIntegrity": "sha512-SUQS023u46+2+wMUej1Cm8VSFpHUd2c6cO4m2r7suRaCgrdIjR1iXr7ebl31xb/gHzaYS65xnj1fxRqHpzhU1A==",
+        "wireProtocolRevision": "1.19.4",
+        "steps": [
+          "native_version_package_integrity_and_source_measured",
+          "original_host_native_runtime_and_mcp_ready",
+          "native_model_tools_permission_task_and_reply_completed_once",
+          "original_host_runtime_stop_and_cleanup_confirmed",
+          "cold_receipt_readback_without_native_replay_or_source_mutation"
+        ],
+        "cleanup": true,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 8,
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    }
+  ],
+  "logReferences": [
+    {
+      "jobId": 135167673593,
+      "requestedAt": "2026-11-18T23:43:21.097487+00:00",
+      "status": "captured-permanently-retired",
+      "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167673593-terminal.log",
+      "sha256": "b3cf8c450fca80fea8e6550c1a56e8c16829ac69b7170f27d89e755ee2d2aefa",
+      "bytes": 92483,
+      "capturedAt": "2026-11-18T23:43:48.572540+00:00",
+      "gitBlob": "b6f157db6bd070f7d61534167ac285211eecb04e",
+      "exactImmutableReadback": true
+    },
+    {
+      "jobId": 135167673782,
+      "requestedAt": "2026-11-18T23:43:21.097487+00:00",
+      "status": "captured-permanently-retired",
+      "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167673782-terminal.log",
+      "sha256": "71458f690871ea3958c34cdeb5b72c31a329ed1b82bfff6e0146d3c73215eb04",
+      "bytes": 121444,
+      "capturedAt": "2026-11-18T23:43:48.572540+00:00",
+      "gitBlob": "aebc8a4644e752ac173976fa02062fd4d8527f46",
+      "exactImmutableReadback": true
+    }
+  ],
+  "limits": [
+    "Windows native management steps19\u201323 skipped; Desktop private composition skipped.",
+    "Native TEST-model receipts do not establish vendor credentials, Desktop, release qualification or remaining platforms.",
+    "V1 latest label resolved once to1.19.6 in this original job only."
+  ],
+  "noManualRerun": true,
+  "noLocalNativeExecution": true
+}

@@ -5,7 +5,7 @@ import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
 } from './teamModelProbeRecipe.js';
-import { captureRuntimeSource, compileRuntimeCapture, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
+import { captureRuntimeSource, compileRuntimeCapture, runtimeCaptureCwd, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import {
   captureTeamModelProbe,
   teamModelProbeProfile,
@@ -17,6 +17,7 @@ import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { JsonValue } from '../contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
@@ -131,7 +132,9 @@ export function captureSavedTeamModelProbe(
     input.rosterRevision !== saved.captured.configurationRevision
   )
     throw new TeamLaunchError('conflict', 'saved-model-source');
-  const recipe = () =>
+  let processOrigin: RuntimeSourceProcessOrigin | undefined;
+  const savedMember = saved.captured.members.find(member => member.memberId === input.memberId);
+  const recipe = (captureOrigin = false) =>
     resolveTeamModelProbeRecipe({
       runtime: profile.runtime,
       team,
@@ -139,8 +142,10 @@ export function captureSavedTeamModelProbe(
       saved: saved.profiles.find((member) => member.memberId === input.memberId),
       ...(options.sources ? { sources: options.sources } : {}),
       sourceReference: saved.captured.recipeSources?.find(reference => reference.memberId === input.memberId),
+      sourceProjectPath: savedMember ? runtimeCaptureCwd({ savedSettings: saved.captured.savedSettings }, savedMember) : undefined,
+      ...(captureOrigin ? { onProcessOrigin: (value: RuntimeSourceProcessOrigin | undefined) => { processOrigin = value; } } : {}),
     });
-  const selected = recipe();
+  const selected = recipe(true);
   const selectionDigest = runtimeDigest(selected);
   const effective = applyTeamModelProbeSelection(selected, input);
   const current = () => {
@@ -159,6 +164,7 @@ export function captureSavedTeamModelProbe(
   };
   return {
     profile: teamModelProbeProfile(effective.provider === 'claude' ? selected : effective),
+    ...(processOrigin ? { processOrigin } : {}),
     provenance: { teamBindingDigest: runtimeDigest(team.definition.binding),
       selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
       destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
@@ -225,13 +231,15 @@ export function captureTeamModelProbeSelection(options: {
       } });
   }
   if (action !== 'cancel') assertCapturedRosterCurrent(team);
+  const source = team.capture === undefined ? undefined : runtimeCaptureSourceSchema.parse(team.capture);
+  const sourceMember = source?.members.find(member => member.memberId === input.memberId);
   return captureTeamModelProbe({
     launch,
     team,
     runtime: options.profile.runtime,
     ...(options.sources ? { sources: options.sources } : {}),
-    sourceReference: team.capture === undefined ? undefined : runtimeCaptureSourceSchema.parse(team.capture)
-      .recipeSources?.find(reference => reference.memberId === input.memberId),
+    sourceReference: source?.recipeSources?.find(reference => reference.memberId === input.memberId),
+    sourceProjectPath: source && sourceMember ? runtimeCaptureCwd({ savedSettings: source.savedSettings }, sourceMember) : undefined,
     input,
     action,
     principalId: options.profile.principalId,

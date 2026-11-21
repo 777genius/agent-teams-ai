@@ -1,3 +1,8 @@
+export type { RetainedLegacyLaunchAuthority } from '../core/application/RetainedLegacyLaunchCoordinator';
+export {
+  RetainedLegacyLaunchCoordinator,
+  RetainedLegacyLaunchRefusal,
+} from '../core/application/RetainedLegacyLaunchCoordinator';
 export { BackendOperationsFacade } from './adapters/input/BackendOperationsFacade';
 export {
   type CapturedReviewWatch,
@@ -32,6 +37,10 @@ export {
 } from './application/captureHostScheduleTarget';
 export { createConfiguredHostTeam } from './application/createConfiguredHostTeam';
 export { createLaunchedHostTeam, prepareCreatedHostTeam } from './application/createdHostTeam';
+export {
+  type CapturedRetainedLegacyRuntime,
+  createRetainedLegacyLaunchScope,
+} from './application/createRetainedLegacyLaunchScope';
 export { ForegroundModelChecks } from './application/ForegroundModelChecks';
 export {
   importStoppedLegacyTeam,
@@ -45,6 +54,7 @@ export {
   type HostNotificationSource,
   prepareHostNotification,
 } from './application/prepareHostNotification';
+export { validateRetainedLegacyLaunchRequest } from './application/validateRetainedLegacyLaunchRequest';
 export { createCapturedHostClient } from './composition/createCapturedHostClient';
 export {
   DesktopBackendFeature,
@@ -67,6 +77,11 @@ export {
   type DesktopBackendDescriptorSelection,
   loadDesktopBackendDescriptor,
 } from './infrastructure/loadDesktopBackendDescriptor';
+export {
+  captureRetainedLegacyRuntimeIdentity,
+  captureRetainedLegacySourceConfiguration,
+  retainedLegacySourceOperationKey,
+} from './infrastructure/RetainedLegacyRuntimeScope';
 export { HostClientError, type SelectedHostProfile } from './infrastructure/selectedHostProfile';
 export { CapturedStoppedTeamImport } from './infrastructure/stopped-import/CapturedStoppedTeamImport';
 export { captureLegacyStoppedSource } from './infrastructure/stopped-import/captureLegacyStoppedSource';
@@ -79,4 +94,15 @@ export {
   createLegacyStoppedTeamSource,
   LegacyStoppedImportHold,
 } from './infrastructure/stopped-import/createLegacyStoppedTeamSource';
+export { createRetainedLegacyOpenDiagnostic } from './infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic';
+export type {
+  StoppedImportDiagnostic,
+  StoppedImportDiagnosticPhase,
+} from './infrastructure/stopped-import/createStoppedImportDiagnostic';
+export { createStoppedImportDiagnostic } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
 export { prepareStoppedLegacyImport } from './infrastructure/stopped-import/prepareStoppedLegacyImport';
+export {
+  RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE,
+  type RetainedLegacyOpenDiagnostic,
+  type RetainedLegacyOpenDiagnosticPhase,
+} from './infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract';

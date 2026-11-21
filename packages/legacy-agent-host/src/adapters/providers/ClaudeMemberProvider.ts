@@ -6,6 +6,7 @@ import { createClaudeDriverFactory } from '@agent-teams/provider-implementations
 
 import { ClaudeSubagentLogProjection } from './ClaudeSubagentLogProjection.js';
 import { CapturedProcess } from './CapturedProcess.js';
+import { observeMemberProcessStderr } from './observeMemberProcessStderr.js';
 import { createClaudeCloseDiagnostic } from './createClaudeCloseDiagnostic.js';
 import { claudeSessionExists } from './claudeSessionExists.js';
 import { claudeMcpServers } from './claudeMcpServers.js';
@@ -34,13 +35,20 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
   const environment = context.promptSuggestions
     ? { ...profile.environment, CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: 'true' }
     : { ...profile.environment };
+  const launchProfile = Object.freeze({ ...profile, environment: Object.freeze(environment) });
   const custody = new CapturedProcess(
-    { ...profile, environment },
+    launchProfile,
     () => context.canAllocate() && capturedMcpSourceCurrent(profile),
     context.processCustody,
     () =>
       (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
-      capturedMcpSourceCurrent(profile)
+      capturedMcpSourceCurrent(profile),
+    undefined,
+    context.retainedWindowsLaunch?.port(launchProfile,
+      () => context.canAllocate() && capturedMcpSourceCurrent(profile),
+      context.canCaptureRegisteredProcess
+        ? () => context.canCaptureRegisteredProcess!() && capturedMcpSourceCurrent(profile) : undefined,
+      context.processOrigin)
   );
   let ready = false;
   let sealed = false;
@@ -107,7 +115,11 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
       if (!directory) return false;
       return claudeSessionExists(directory.normalize('NFC'), profile.cwd, nativeSession);
     },
-    custody: { launch: custody.launch, confirmStopped: () => custody.confirmStopped() },
+    custody: { launch: (request) => {
+      const child = custody.launch(request);
+      observeMemberProcessStderr(child, context, request.args);
+      return child;
+    }, confirmStopped: () => custody.confirmStopped() },
   };
   const native = createClaudeDriverFactory({
     capabilities: ['session.conversation', ...(context.subagents ? ['session.subagents'] : [])],
@@ -167,6 +179,8 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     ...(custody.captureRegisteredProcess
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),
+    ...(profile.windowsBroker?.capability === 'service-scopes-v1' && context.retainedWindowsLaunch
+      ? { prepareRegisteredWindowsProcess: custody.prepareRegisteredWindowsProcess.bind(custody) } : {}),
     isReady: () => ready && !sealed && context.isCurrent(),
     sessionCommands: () => ready && !sealed && context.isCurrent() && capturedMcpSourceCurrent(profile) ? commands : [],
     initialContextEvidence: () =>

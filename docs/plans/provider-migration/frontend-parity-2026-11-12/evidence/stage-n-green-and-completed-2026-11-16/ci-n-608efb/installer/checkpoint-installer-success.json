@@ -1,0 +1,114 @@
+{
+  "kind": "original-N608efb-Installer-success-checkpoint",
+  "frozenAtUTC": "2026-11-16T03:38:43.355540+00:00",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "runId": 43795234483,
+  "jobId": 133062441546,
+  "artifactId": 14195690062,
+  "result": "PASS / original selected Installer lane only",
+  "qualification": {
+    "nativeProvider": false,
+    "vendorAuthentication": false,
+    "release": false,
+    "TeamTenFile177OrStderr24": false,
+    "historicalNavigationCauseEstablished": false,
+    "navigationRepairClaim": false
+  },
+  "payloadCount": 11,
+  "payloadBytes": 2370615,
+  "payloads": [
+    {
+      "path": "ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "blob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "ci-n-608efb/host-original-jobs-0258.json",
+      "bytes": 5979,
+      "blob": "51a062454451795329f7862b2015da9b7794a02a",
+      "sha256": "377962b151b28eec4ad54d783b03a6fea3f119250a48642fa1b5ca489a0c7c0f"
+    },
+    {
+      "path": "ci-n-608efb/owned-api-jobs-0326.json",
+      "bytes": 25860,
+      "blob": "f4e8e08650058e8da028e0a4aab0436edb2e2d13",
+      "sha256": "980c9241de33106881e373ddd117ff994233aa84fa520aebde1e5f125687b9f4"
+    },
+    {
+      "path": "ci-n-608efb/installer/official-artifact-response.json",
+      "bytes": 823,
+      "blob": "4ffc315081f5cafecb83d5d548cc1ab36357feee",
+      "sha256": "89bebce995c19c14667d7d53ab53f1204d3577cbd6e67b616afc16539475f7c4"
+    },
+    {
+      "path": "ci-n-608efb/installer/original-job-log-response.json",
+      "bytes": 188259,
+      "blob": "2514898f15ac9035450b258d441bdff7150614a4",
+      "sha256": "da28db425dbc654f35a4366c37e4a010c3b16336b6d5a5d68febe18318c7f134"
+    },
+    {
+      "path": "ci-n-608efb/installer/job-133062441546.log",
+      "bytes": 178429,
+      "blob": "4fbe5c93f44f77b7fe006822f96072e1d403a3eb",
+      "sha256": "a1913f183d6266181d668f3819ccdd521a123e61ea9b704236c6d4bb3e7a229d"
+    },
+    {
+      "path": "ci-n-608efb/installer/artifact-14195690062.zip",
+      "bytes": 1149462,
+      "blob": "c6761c72ec106e15d716dc85d49594f936d3cb30",
+      "sha256": "1458223457d9339293a14a237cf0d36b717de801c4da67b9227276ee8a7f17f6"
+    },
+    {
+      "path": "ci-n-608efb/installer/archive-retention.json",
+      "bytes": 8575,
+      "blob": "091ab56178a7170e8168ef324895e4def06a49ac",
+      "sha256": "9845a5bdf0c89accdfed8da181855c701792f37f5ec839fb96da2bc8721eeaa1"
+    },
+    {
+      "path": "ci-n-608efb/installer/source-pin-audit.json",
+      "bytes": 584102,
+      "blob": "0137c167ea0345dcfc0fa93b547863102bc4bea5",
+      "sha256": "53145a3e6e6863daa3e035ee3d8a6566161321ac7835f07871e2bb3d8accb39d"
+    },
+    {
+      "path": "ci-n-608efb/installer/audit.json",
+      "bytes": 187742,
+      "blob": "909e2bd6365c6e37bf8b3ccf2d84fd529cfe4fcd",
+      "sha256": "db13cfdc5a16150f58a4d6468a88016a8b8bbb2d93cce9d2426da7839122ed3c"
+    },
+    {
+      "path": "ci-n-608efb/installer/Plan29-installer-success-appendix.md",
+      "bytes": 11296,
+      "blob": "27b206a0216b2a011b663c32fb7220b710abe1f4",
+      "sha256": "21c0c3ff2c39e2bcf9f5b4eb398886690ea903559821af62438de11666448239"
+    }
+  ],
+  "recoverability": {
+    "originalZIPRetained": true,
+    "safeCRCCheckedMemberCount": 34,
+    "expandedBytes": 1883393,
+    "originalPNGCount": 11,
+    "actuallyViewedSingly": 11,
+    "memberIdentitiesIn": {
+      "path": "ci-n-608efb/installer/archive-retention.json",
+      "bytes": 8575,
+      "blob": "091ab56178a7170e8168ef324895e4def06a49ac",
+      "sha256": "9845a5bdf0c89accdfed8da181855c701792f37f5ec839fb96da2bc8721eeaa1"
+    },
+    "originalMCPResponseRetained": true,
+    "fullRawLogMatchesDecodedMCPContent": true,
+    "extractedMembersDuplicatedInCheckpointPayload": false
+  },
+  "historyComparison": {
+    "MFailurePreserved": true,
+    "onlyNonDocumentationDelta": [
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+    ],
+    "unchangedSelectedTeamWaitAndFinalStopConjunction": true,
+    "noHistoricalCauseOrNavigationRepairClaim": true,
+    "dormantNavigationDiagnosticsApplied": false
+  },
+  "independentReview": "Pending; this is the author evidence packet."
+}

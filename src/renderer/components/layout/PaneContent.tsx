@@ -14,12 +14,21 @@ import { isOrdinaryTeamTab, isTaskDetailTab, type Tab } from '@renderer/types/ta
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { useShallow } from 'zustand/react/shallow';
 
-import { DashboardView } from '../dashboard/DashboardView';
 import { TeamListSkeleton } from '../team/TeamListSkeleton';
 import { TeamLoadingSkeleton } from '../team/TeamLoadingSkeleton';
 
 import type { Pane } from '@renderer/types/panes';
 
+const DashboardView = lazy(() =>
+  import('../dashboard/DashboardView').then((module) => ({
+    default: module.DashboardView,
+  }))
+);
+const SettingsView = lazy(() =>
+  import('../settings/SettingsView').then((module) => ({
+    default: module.SettingsView,
+  }))
+);
 const ExtensionStoreView = lazy(() =>
   import('../extensions/ExtensionStoreView').then((module) => ({
     default: module.ExtensionStoreView,
@@ -38,11 +47,6 @@ const SessionReportTab = lazy(() =>
 const SchedulesView = lazy(() =>
   import('../schedules/SchedulesView').then((module) => ({
     default: module.SchedulesView,
-  }))
-);
-const SettingsView = lazy(() =>
-  import('../settings/SettingsView').then((module) => ({
-    default: module.SettingsView,
   }))
 );
 const TeamDetailView = lazy(() =>
@@ -240,7 +244,9 @@ export const PaneContent = ({ pane, isPaneFocused }: PaneContentProps): React.JS
     <div className="relative flex flex-1 overflow-hidden">
       {showDefaultDashboard && (
         <div className="absolute inset-0 flex">
-          <DashboardView />
+          <Suspense fallback={<PaneLazyFallback />}>
+            <DashboardView />
+          </Suspense>
         </div>
       )}
 

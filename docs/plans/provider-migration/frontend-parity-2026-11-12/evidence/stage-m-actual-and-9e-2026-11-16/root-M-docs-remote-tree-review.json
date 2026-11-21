@@ -1,0 +1,13 @@
+{
+  "result": "APPROVE_COMPLETE_REMOTE_TREE",
+  "tree": "dfc7c99ede984603c3b7f0dabf18ac11211f78c6",
+  "apiEntries": 11497,
+  "truncated": false,
+  "completeLeaves": 10031,
+  "allLeavesEqualIndependentLocalProjection": true,
+  "selectedDocumentationPaths": 45,
+  "unchangedLLeaves": 9986,
+  "sourceChanges": false,
+  "projectExecution": false,
+  "observedUtc": "2026-11-16T00:11:57.098443+00:00"
+}

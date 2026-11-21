@@ -182,7 +182,7 @@ export const TaskFoldersHost = ({
           className="flex w-full flex-wrap items-center gap-1"
           data-testid="task-folders-task-controls"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border px-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border bg-[var(--color-form-control-bg)] px-1.5">
             <Search className="size-3 shrink-0 text-text-muted" />
             <input
               type="search"

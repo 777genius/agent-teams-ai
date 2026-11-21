@@ -12,6 +12,7 @@ export function projectHostMemberAttachmentCapabilities(
     const product = { ...member };
     delete product.nativeInboxAttachmentsSupported;
     delete product.nativeInboxTextAttachmentsSupported;
+    delete product.nativeMediaTransport;
     delete product.sessionCommands;
     if (product.removedAt || !state) return product;
     const configured = configuration.members.filter((row) => row.name === product.name);
@@ -43,6 +44,9 @@ export function projectHostMemberAttachmentCapabilities(
       session.phase !== 'allocated'
     )
       return product;
+    if (session.attachmentCapabilities?.nativeMedia) {
+      product.nativeMediaTransport = structuredClone(session.attachmentCapabilities.nativeMedia);
+    }
     if (configured[0].role === 'lead') return { ...product, sessionCommands: session.sessionCommands ?? [] };
     if (!session.attachmentCapabilities) return product;
     return {

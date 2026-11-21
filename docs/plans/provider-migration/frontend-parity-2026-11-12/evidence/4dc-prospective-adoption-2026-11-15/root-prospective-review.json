@@ -1,0 +1,68 @@
+{
+  "verdict": "APPROVE prospective source/manifest/recorder; no application or project execution",
+  "referenceH": {
+    "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+    "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+    "parents": [
+      "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+    ]
+  },
+  "incoming": {
+    "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+    "tree": "13d33c2d2462278df5c7503c4fa55a6b175793f7",
+    "parents": [
+      "3957f2b28417647578d71a465cd61d4e09b5deb9"
+    ]
+  },
+  "artifacts": {
+    "/workspace/scratch/82d3f9ba6b85/a02-reconciliation-r1/canonical-R1.md": {
+      "bytes": 22527,
+      "blob": "d62f158878d992d43b71bb0071f7a4561d149c9c",
+      "sha256": "5baad28fabf56507fce52de64757e8ad278ec02b6657d072d803b408e296837e"
+    },
+    "/workspace/scratch/82d3f9ba6b85/a02-reconciliation-r1/integration-4dc-git-metadata.json": {
+      "bytes": 13481,
+      "blob": "409fe1d2bc6da5d7544cadcc23fd984452bbc5ce",
+      "sha256": "baa1c5c9586ac620f5d7a8d6087dd92e5fcd9e0992b45fabaf9d6f5d679730f4"
+    },
+    "/workspace/scratch/82d3f9ba6b85/a02-reconciliation-r1/integration-4dc-git.patch": {
+      "bytes": 99306,
+      "blob": "f1f7782e497ef4ff9a09a64a4f6875db82ffd305",
+      "sha256": "44c9faaea863edcf26c467cc1601ebb8eed53ef15384635eb059eb094438f68d"
+    },
+    "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/validation-manifest.json": {
+      "bytes": 114714,
+      "blob": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+      "sha256": "bbc34c4aea78ce3cec706a8be9ffeb47d39e5fa76e9b5eaea834f9a69e0277e6"
+    },
+    "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/run_check.py": {
+      "bytes": 26293,
+      "blob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+      "sha256": "acdea416258ae569c7d0891115697ffae201d799537d229fb775dc71c463aeb1"
+    },
+    "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/execution-plan.md": {
+      "bytes": 11350,
+      "blob": "9b0f070ce3b45adb5305b3e6f128613fec5f9464",
+      "sha256": "72b0f371581a472b4f613ece997606028740c217c47abefd5b7ad9d8915308fa"
+    },
+    "/workspace/scratch/82d3f9ba6b85/native-4dc-diagnostic-adoption-r1/R1-appendix.md": {
+      "bytes": 14376,
+      "blob": "f895615bb6dadb270bc44b47ae04cfd31b99d089",
+      "sha256": "2df00ef5e77ad4a70f30f71cdbe42e85ac4d87dbcddf6bad49746abb032dede8"
+    }
+  },
+  "integrationPaths": 20,
+  "selectedSources": 76,
+  "hostSources": 615,
+  "originalDependencies": 17,
+  "additionalYamlDependencies": 77,
+  "builtOutputs": 1446,
+  "newBuildPerformed": false,
+  "fullRecorderRead": true,
+  "fullComponentProposalsAndPatchesRead": true,
+  "allTenLiteralArgvReviewed": true,
+  "sourceTreeAndPublishedReadbackStillRequired": true,
+  "canonicalIndependentReviewStillRequired": true,
+  "sourceApplied": false,
+  "projectExecution": false
+}

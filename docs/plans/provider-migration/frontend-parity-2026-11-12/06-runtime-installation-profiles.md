@@ -1779,6 +1779,76 @@ Also join the already-required selected source index and its exact published man
 
 The seven-file journey, four business inputs, 32 model-request cap, original physical cleanup/cold boundaries, default extraction and the declared CI recipe remain unchanged. Only the TEST observation helper and this one transitive inventory line change after publication of this clarification. Independent source review and the normal candidate-head compiler/native gates remain required; no execution PASS is transferred to the revised bytes.
 
+
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
+## 23. Codex installer → exact captured source, with permitted protocol emulation (2026-11-13)
+
+### R1 — concrete remaining functionality and exact source comparison
+
+The current user explicitly permits subscription-free emulation for Codex/Claude and forbids executing their real binaries. This implementation therefore uses actual Main/Host/source owners with disposable TEST CLI/protocol actors, and labels that evidence as emulated. It does not claim a vendor login, inference or platform-native qualification receipt. The earlier §22 requirement to execute a real Codex candidate is not a reason to leave the existing Install/Update control disconnected under this instruction.
+
+`codexRuntime.ts` still composes the stock installer only: successful acquisition changes `current.json`, but never calls `CapturedRuntimeSources.publish`. New Host captures keep the old seed. Separately, same-version repair removes its old `versionDir`, which can destroy bytes referenced by a retained capture. Both are concrete product gaps. General discovery remains read-only; only existing explicit Install/Update/Refresh actions select a new source.
+
+Official current release read on 2026-11-13 identifies [rust-v0.169.0](https://github.com/openai/codex/releases/tag/rust-v0.169.0). The immutable official source pair is old [c1382380de69521303b416720a52f42d51af6248](https://github.com/openai/codex/tree/c1382380de69521303b416720a52f42d51af6248) and new [d32063f96c2dff1dc96af839b3952abb6acfeda4](https://github.com/openai/codex/tree/d32063f96c2dff1dc96af839b3952abb6acfeda4). Generated schemas under `codex-rs/app-server-protocol/schema/json` were compared by immutable blob SHA and parsed structure, not by the release number alone:
+
+| Existing D/Host route | Exact 0.162 → 0.169 schema observation | Required bounded proof |
+| --- | --- | --- |
+| Initialize/model catalog | Initialize response and ModelList response are byte-identical; new initialization capability and model-provider query fields are optional | Existing initialize/catalog fixtures, with absent optional capability and new optional metadata |
+| Browser/device login, cancel/logout | Login params/response, cancel params/response and completion notification are byte-identical | Existing account IPC → Host/D → TEST child browser/device/cancel/recovery journeys |
+| Account/read, quotas | Existing API-key/ChatGPT cases retain required fields; optional workspace/user fields and new account/plan variants are added | Existing finite public projection ignores private/new optional fields; no new GCP/Bedrock UI capability is promised |
+| Config/MCP | Existing config/read and MCP status request shapes are unchanged; optional search-provider and tool-list metadata are added | Existing selected configuration/census and exact runtime readiness tests |
+| Thread start/resume, input | ThreadStart params are byte-identical; ThreadResume's selected thread/model/config fields and TurnStart's existing text/image inputs retain their required shapes; additions concern optional audio/context/tool metadata | Existing public D/Host open, selected model/effort, original checkpoint Resume and non-replay scenarios |
+| Approval/Stop/terminal | Command/file approval responses and turn/interrupt request/response are byte-identical; command approval adds a human-command kind; item/turn payloads add timestamps, metadata and new error variants | Existing explicit permission flow and original interrupt/cancelled terminal checks; no automatic grant for new actions |
+
+No arbitrary latest/range admission follows. The intended finite version set is `0.162.0` and `0.169.0`, conditioned on the existing actual executable digest, version readback, platform/process-custody and source grant checks. Unknown later versions remain visibly unqualified. A new accepted source derives its own protocol revision from its verified native CLI version; prior profiles, source records, running captures and checkpoint compatibility bytes remain unchanged.
+
+### R2 — smallest implementation and authority boundaries
+
+Reuse the stock `CodexRuntimeInstallerService` for package metadata, SRI, complete vendor-layout extraction, version observation and progress. Give every successful acquisition a fresh immutable instance directory; update only the existing current manifest, retaining earlier instance paths. Do not add a second installer, source registry or pruning policy.
+
+A feature-private captured installer uses the existing `current/recover/publish/lookup` port. Capture the sender's original Codex grant before the first asynchronous acquisition. Coalesce only the same original source and operation; another source cannot borrow its install result. Recover the original durable publication before new acquisition; lost ACK reads only its original command ID. Recheck the original source revision after acquisition and before publication. A foreground change refuses publication and must not select a replacement account/project. Capture the selected CLI through a bounded retained file handle, not a renderer-supplied pathname; changed bytes fail before publication. Supported Windows wrappers retain their original identity and use the independently captured shared Windows launcher recipe, rather than an artificial `.exe`-only restriction.
+
+The existing service's terminal progress is accepted only after the captured publication callback completes. Downloading/extracting may be shown normally; a physical install alone must not emit the UI's final `ready`/100% success while Host publication is held. General GET_STATUS remains installation discovery, with no new source effect; explicit Refresh/invalidations route through the same captured selection. A refusal reports that the installed version is not selected for new launches and preserves the old capture. The existing flow has no public installer cancellation action: this slice does not invent one; abandoned UI/context cannot authorize a late source publication.
+
+Exact production files proposed:
+
+- `src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller.ts` (new small feature-local consumer).
+- `src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection.ts` (new bounded private image capture; no execution).
+- `src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService.ts` (immutable instance and terminal-result acceptance; retain its source-file cap).
+- `src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts`, `main/adapters/input/ipc/registerCodexRuntimeInstallerIpc.ts`, `src/main/ipc/codexRuntime.ts` (existing facade/IPC wiring only).
+- `src/main/ipc/agentBackend.ts` (existing private runtime-source capture also accepts Codex).
+- `packages/legacy-agent-host/src/management/profile.ts`, `src/composition/runtimeProfile.ts`, `src/composition/runtimeSourceQualification.ts`, `src/composition/RuntimeSourceIndex.ts` (finite 0.169 schema admission and new-source derivation; no edits to process custody or old records).
+
+Verification extends existing `test/main/features/codex-runtime-installer/CodexRuntimeInstallerService.test.ts` (same-version repair preserves old bytes and no final Ready before accepted result), `test/features/agent-backend/desktopRuntimeSources.test.ts` (real Main/Host A0.162 → B0.169 publication, original A retained and cold restoration, original lost-ACK/recovery), and `packages/legacy-agent-host/tests/codex-member-provider.test.ts` (existing emulator at the finite second revision; model/effort, permission, input, interrupt and checkpoint identity). Reuse existing account/model source suites and D fixtures; add no broad helper-test matrix. Root owns `CodexLoginConversation` and its direct custody test. Windows member-provider wiring is owned separately and is not changed here.
+
+Approximate bounded addition: 250–400 production lines and 150–300 focused acceptance lines, principally extending existing fixtures. Complexity 7/10: acquisition progress, source admission and old running identity are separate states. Expected reliability after exact-source fixture acceptance 8/10; confidence before implementation 7/10. Official schemas plus protocol emulation establish the requested functional boundary, while paid vendor execution remains intentionally unperformed.
+
+### R3 — independent review before implementation
+
+The coordinator reviews the exact finite qualification and installer/publication plan before source edits. Review must reject arbitrary semver acceptance, changing old checkpoint/profile revisions, source publication from a different foreground context, deleting retained package instances, lost-ACK retry that redownloads blindly, or final Ready before the original Host receipt. Implementation results will be recorded separately from this plan.
+
+### R4 — accepted source boundaries and observed emulated verification
+
+The coordinator approved the finite version set after independently reading the exact official schemas. Independent review required two compatibility fixes in D before admission: preserve explicit nullable ChatGPT email without exposing new workspace/user fields, and decline `humanCommand` or unknown command-approval kinds before any policy callback. Initialization does not opt into `requiredHumanApproval`. These changes are published in provider commit `68dca527b779ebb82923f30d7b08441085d8b579`; its checked package passed both Node 24 and 26 CI, and the retained local package was byte-identical to the checked artifact. No old checkpoint or profile is relabelled.
+
+Physical installation and selected Host readiness remain separate facts. When acquisition succeeds but original publication is refused or unknown, `installed` remains true and state is `failed`, with an explicit not-selected error. The original renderer records success and performs its automatic Refresh only for `installed && state === 'ready'`. A thrown capture/publication error also exits the checking state. General GET_STATUS never publishes. A later independent source publication cannot be overwritten by the previous install's automatic Refresh. Recovery uses only the original durable receipt, without inventing a current binary path or redownloading.
+
+Observed local verification uses the pinned Node 24.21.0 and checked D archive. It executes actual Main IPC, Host, D and disposable protocol/version actors; it never executes real Codex or Claude, including version discovery:
+
+| Existing acceptance route | Observed result and scope |
+| --- | --- |
+| Codex member provider, runtime-source selection and native identity suites | 45 passed, 0 skipped. Both exact protocol revisions cover selected config/MCP, input/tool flow, original interruption and cold checkpoint identity; 0.162 → 0.169 derives a new recipe while retained 0.162 remains unchanged; 0.170 refuses. |
+| Desktop runtime sources plus captured Codex browser/device login | 13 passed, 0 skipped before the additional original-IPC assertions. The 0.169 account actor includes nullable email, new plan and private optional fields; projection remains finite. |
+| Installer service, captured Codex DTO and original renderer consumers | 121 passed, 0 skipped. Immutable same-version instances, delayed final Ready, truthful failed publication, no success Refresh and capture-error recovery are exercised. |
+| Final installer service and source-owner regression after exclusive temp acquisition and recovery refinement | 39 passed, 0 skipped. Original durable preparation recovers before acquisition; a foreground change and unknown version cannot replace the old selection. |
+| Final Desktop runtime-source suite through the actual registered installer IPC | 9 passed, 0 skipped. Private capture failure has no legacy fallback; lost ACK looks up the original command; later source publication survives automatic Refresh; cold original management target is preserved. |
+| Compiler boundaries | Host and all Host-test TypeScript projects pass after the existing event predicate was narrowed. A focused Main TypeScript project covering the affected owners and integration tests passes. Full Main typecheck previously exhausted local memory; this focused result does not replace the full CI gate. |
+
+The suite counts describe successive affected-source checks and are not summed as distinct cases. Original logs are retained beside the checkout (`integration-codex-0169-host.log`, `integration-codex-0169-main-host.log`, `integration-codex-installer-consumers.log`, `integration-codex-source-final.log`, `integration-codex-ipc-source-final.log`, `integration-codex-focused-typecheck.log`). Source changes are frozen for coordinator publication after these checks.
+
+Windows scoped source execution is a separate concrete remaining seam: `RuntimeSourceNativeVersion` and later source-selected launches need the original Main port plus an independently verified source admission. P08 §15 owns that work and its real Windows Node/C++ fixture receipts. This POSIX/emulated acceptance does not claim those Windows paths or paid-vendor execution passed. The supported-wrapper source capture is preserved so the P08 owner can connect the existing launcher without changing installer or profile authority.
+
 ### §22.1 — original metadata callback evidence for the actual 0.169.0 candidate refusal
 
 **Status: PLAN ONLY / source 0.** This amendment leaves §23 reserved for the
@@ -2101,6 +2171,16 @@ B's connected amendment must freeze one explicit mode in an already existing Cod
 Root and independent peer review the exact phase-A two-file candidate, its before/after filesystem assertions and the post-rename uncertainty behavior. Verify the full P06 prefix/readback, exact working-head preimages and existing size/type/lint/test gates. Root publishes normal reviewed commits; no active CI is cancelled or replaced. Phase A may proceed independently once authorized, while §§22/22.1 and B remain open.
 
 A complete fix requires immutable retained packages **and** the later qualified original-source consumer/ordinary Desktop acceptance. Archive/dependency consumption, native protocol qualification, source review, synthetic filesystem verification and real retained-A/B behavior are separate evidence. Current source-only work claims none of the pending executions.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
 
 ### 22.2 Codex connection notifications are typed native connection facts, not Session output
 

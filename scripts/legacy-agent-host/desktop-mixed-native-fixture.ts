@@ -23,6 +23,7 @@ import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } fr
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
+import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
 
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -345,6 +346,7 @@ export async function prepareDesktopMixedNativeFixture(
     openCodeV2?: Pick<DesktopOpenCodeV2Selection,
       'bunPath' | 'bunSha256' | 'engineDirectory' | 'processCustody'>;
     models: DesktopMixedModels;
+    finiteInitialPeers?: DesktopFiniteMembership;
   }
 ) {
   assert.match(basename(base.root), /^TEST-desktop-backend-/);
@@ -358,6 +360,12 @@ export async function prepareDesktopMixedNativeFixture(
   assert.equal(options.models.openCodeGeneration, options.openCodeV2 ? 'v2' : 'v1',
     'the native oracle and selected engine must use the same protocol');
   assert.equal(profile.runtime!.providerTemplates!.length, 1);
+  if (options.finiteInitialPeers) {
+    assert.equal(options.finiteInitialPeers.kind, 'finite-initial-peers-native-v2');
+    assert.ok(options.openCodeV2 && options.models.membership);
+    assert.equal(process.env.LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP, '1');
+    assert.deepEqual(claude.executable, options.finiteInitialPeers.peers.find(row => row.provider === 'claude')!.executable);
+  }
   // Metadata-only TEST rows feed the ordinary project picker before any app exists.
   // These are neither native history nor an imported product corpus.
   for (const name of ['workspace', 'workspace-other']) {
@@ -381,7 +389,7 @@ export async function prepareDesktopMixedNativeFixture(
     assert.ok(endpoint.port);
   }
   for (const [path, sha] of [
-    [options.codexPath, codeXHash],
+    [options.codexPath, options.finiteInitialPeers?.codex.executable.sha256 ?? codeXHash],
     ...(!options.openCodeV2 ? [[options.openCodePath, openCodeHash]] : []),
   ]) {
     assert.ok(path && sha);
@@ -402,12 +410,12 @@ export async function prepareDesktopMixedNativeFixture(
       SHELL: '/bin/sh',
     };
   };
-  const codexEnvironment = {
+  const codexEnvironment = options.finiteInitialPeers?.codex.environment ?? {
     ...(await environment('codex')),
     CODEX_HOME: join(base.root, 'providers/codex/config'),
     TEST_CODEX_FIXTURE_KEY: 'TEST-LOCALHOST-ONLY',
   };
-  await writeFile(
+  if (!options.finiteInitialPeers) await writeFile(
     join(codexEnvironment.CODEX_HOME, 'config.toml'),
     `model = "mock-model"
 model_provider = "TEST_fixture"
@@ -457,7 +465,7 @@ stream_max_retries = 0
     accountBinding: `TEST-${provider}-localhost-only`,
     limits: { ...claude.limits },
   });
-  const codex = {
+  const codex = options.finiteInitialPeers?.codex ?? {
     ...common('codex'),
     provider: 'codex' as const,
     protocolRevision: '0.162.0' as const,
@@ -569,7 +577,7 @@ stream_max_retries = 0
   assert.ok(Array.isArray(descriptor.management) && descriptor.management.length === 1);
   const selected = record(descriptor.management[0]);
   const management: NonNullable<TeamHostProfile['management']> = [
-    {
+    options.finiteInitialPeers?.codexManagement ?? {
       provider: 'codex',
       protocolRevision: '0.162.0',
       profileId: `${profile.owner.profileId}:codex`,
@@ -629,17 +637,19 @@ stream_max_retries = 0
   return {
     ...base,
     ...(membershipProject ? { membershipProject } : {}),
+    ...(options.finiteInitialPeers ? { finiteInitialPeers: options.finiteInitialPeers } : {}),
     pins: {
       ...base.pins,
       profileSha256: digest(profileBytes),
       descriptorSha256: digest(descriptorBytes),
     },
-    appEnvironment: desktopBackendEnvironment(
+    appEnvironment: { ...desktopBackendEnvironment(
       base.root,
       base.node,
       base.descriptorPath,
-      digest(descriptorBytes)
-    ),
+      digest(descriptorBytes),
+      options.finiteInitialPeers ? base.linuxChildExec : undefined
+    ), ...(options.finiteInitialPeers ? { CODEX_CLI_PATH: options.finiteInitialPeers.codex.executable.path } : {}) },
   };
 }
 

@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "kind": "INDEPENDENT_INERT_ARM_CURRENT_QUERY_OBSERVER_SOURCE_R2",
+  "reviewer": "migration_scope",
+  "disposition": "APPROVE exact three-source proposal as inert, subject to separate current-parent R1/R2 and original resulting-source CI; no actual ARM acceptance or historical-cause claim",
+  "baseCommit": "e45c5a73f106d7e71936426c923171adcd27f5b9",
+  "baseTree": "47866d2d9478b2e105bb72a4fa322752f1970f9f",
+  "package": {
+    "bytes": 174785,
+    "lines": 101,
+    "gitBlob": "36cf459b41aaa45cee0602588294bed9af4e4e4d",
+    "sha256": "e175961db89d8bb2e6480a9f0cbf6335da5c0d48a94ff5139a315ee6d855851c"
+  },
+  "patch": {
+    "bytes": 19239,
+    "lines": 318,
+    "gitBlob": "e00ee90bdb34177f941eb6281619d72b1f0cb5d3",
+    "sha256": "990f584c2d6156d6b65a23e8b4906e2eadbd06f6162d9807c713bde934fb4dd4"
+  },
+  "files": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "bytes": 12614,
+        "lines": 315,
+        "gitBlob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4"
+      },
+      "after": {
+        "bytes": 15906,
+        "lines": 374,
+        "gitBlob": "d4ad4e8976da305cc6fb4b0d5f7ff62007130782",
+        "sha256": "e803175c8a272e8d5abe9b4c5f7a395321c16d08e64f9adcc535bf8211335a4b"
+      },
+      "current": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "before": {
+        "bytes": 34285,
+        "lines": 597,
+        "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc"
+      },
+      "after": {
+        "bytes": 35552,
+        "lines": 615,
+        "gitBlob": "82cb4a4e10f7367ea3f5387e746a34c29c11fa33",
+        "sha256": "55020ed6035f8592676c3f05b01c466bdd22e7698f605be67738e9fbf2141d47"
+      },
+      "current": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "bytes": 20150,
+        "lines": 396,
+        "gitBlob": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b"
+      },
+      "after": {
+        "bytes": 29201,
+        "lines": 532,
+        "gitBlob": "c6799de1bfb3450a265dcd4c6856275fc72c30a4",
+        "sha256": "36e65f4d54923dbd0f2876bc9c70fdd399d1c2cf8d39fcb9220c25442c9d8316"
+      },
+      "current": true
+    }
+  ],
+  "union": {
+    "hypotheticalTree": "e7564aff3771f7a6a0045a91bdb2cfda73ec74fa",
+    "leaves": 11017,
+    "sourceChanges": 3,
+    "newPaths": 0,
+    "deletions": 0,
+    "allOtherLeavesExact": true
+  },
+  "preservation": {
+    "files": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "hunks": 3,
+        "forward": true,
+        "inverse": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "hunks": 5,
+        "forward": true,
+        "inverse": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "hunks": 2,
+        "forward": true,
+        "inverse": true
+      }
+    ],
+    "originalObservedWrapperExact": true,
+    "originalDeadlineAndActionBodyExactFromReadJson": true,
+    "originalReadHelpersExact": true,
+    "originalAllPlatformAfterListenerHelperExact": true,
+    "tests": {
+      "oldNames": 13,
+      "newNames": 16,
+      "fullBeforeViaInverse": true
+    },
+    "addedClockReads": 0,
+    "sourceImportOrExecution": false
+  },
+  "sourceFindings": [
+    "The executing PowerShell process returns its own $PID in the same command envelope as the original process census. No second process query is introduced. The returned ID must resolve to exactly one row in that census; missing, duplicate, nonpositive/noninteger IDs, invalid self parent and noncanonical birth refuse.",
+    "The original driver is retained at Gate startup under the existing executable/controller checks. Each later observer check requires current driver PID/birth equality, the same original driver parent and observer.parent equal to driver.pid. It rejects observer PID equal to the driver or its parent.",
+    "All current census PID entries must be unique. The self row must equal the supplied closed three-field observer. Candidate children must be directly parented to this current observer and have safe positive PID and canonical seven-fraction UTC birth strictly later than observer birth.",
+    "The generic packagedOrphanObservation implementation is unchanged and still produces ambiguous-parent-identity for the reproduced reused-parent case. Gate filters only candidates that simultaneously join the same current parent PID/birth and the validated current-query direct child PID/parent/birth.",
+    "Every remaining unexplained candidate refuses under the original assertion. No executable/name exemption, retained historical query authority, fallback query or broad timestamp-only removal is introduced.",
+    "The query observer is explicitly forbidden from current App lineage. Query children and explanation records never enter App lineage, retained cleanup ownership or signal authority. The original full census remains the returned value.",
+    "The original listener ownership assertion is unchanged and still requires every listener PID/current birth to join original App lineage. Explaining a query child does not make it an eligible CDP listener.",
+    "The original read observer wrapper, all deadline/action/cleanup code from readJson onward, generic process/listener functions and downstream platform helpers remain byte-identical.",
+    "Legacy two-argument combined reads retain their original script, envelope keys and result fields by literal concatenation with captureObserver=false. Explicit observer mode requires a boolean before invoking the executor. The Windows Gate is the opted-in consumer.",
+    "No wall-clock or performance.now call, external observation, RPC, retry, wait, action, timeout, signal operation or process-creation callsite is added."
+  ],
+  "historicalEvidenceBoundary": {
+    "artifact": "Original 72e packaged Windows ARM job133207234398/run43831885834, independently reviewed in winarm72e/independent-arm72-source-audit.json",
+    "evidence": "The retained child10236/current parent3068 chronology was compatible with the current-query explanation but lacked query-self $PID binding.",
+    "noRetrospectiveProof": true,
+    "interpretation": "The candidate obtains a missing prospective provenance join; it does not establish that the old child was the observer's child and does not qualify the old or new original journey."
+  },
+  "guardsAndBounds": {
+    "censusMaximum": 10000,
+    "genericCandidateMaximum": 500,
+    "positiveExplanationEntriesMaximum": 512,
+    "overflow": "The next positive explanation when length is already512 refuses before final remaining()/caller admission. No eviction, silent truncation or cached authority.",
+    "explanationShape": "phase; observer pid/parent/birth; original driver pid/parent/birth; exact explained child pid/parent/birth list; observationOnly:true and signalAuthorized:false.",
+    "worstCaseStoredChildRows": 256000,
+    "cost": "Adds envelope serialization/parsing, linear census uniqueness/identity projection, canonical-date parsing and bounded candidate joins plus receipt bookkeeping. This time and output size are charged to the unchanged original timeout/max-buffer/deadline environment.",
+    "birthMeaning": "Canonical textual precision and strict ordering are preserved, but CIM remains an ordered non-atomic observation. Date parsing is validation, not a current clock read; the code does not create a native handle lease or establish external clock accuracy."
+  },
+  "regressionReview": {
+    "oldTopLevelCases": 13,
+    "newTopLevelCases": 16,
+    "allOriginalCaseBodiesAndAssertionsPreserved": true,
+    "authoredNotExecuted": true,
+    "newTests": [
+      {
+        "name": "Windows observer capture binds the executing query inside each original read",
+        "checks": "Actual process-only and optional combined helpers; exactly one original Win32_Process query each; original listener query ordered afterward only for combined; explicit self PID; no alternate process/start/sleep command; exact returned observations and no input mutation."
+      },
+      {
+        "name": "Windows observer envelopes reject absent, ambiguous and malformed query identities",
+        "checks": "Both actual helper paths reject missing/null/string/zero/fractional/absent/duplicate self IDs, invalid parent, invalid or noncanonical birth, extra/wrong envelope fields and nonboolean mode; executor failure identity propagates and invalid data makes no second query."
+      },
+      {
+        "name": "actual Windows census guard explains only current query children without App or signal authority",
+        "checks": "Extracts the actual unchanged surrounding Gate census closure and supplies actual ownership/generic classifier helpers. Positive ambiguous reused-parent explanation preserves full census and App lineage. Negative cases cover missing/forged/extra/duplicate self, reused driver birth/parent, foreign observer parent, equal/earlier/invalid child birth, mixed unexplained candidates, other current query, full/frozen explanation storage, and attempted reuse of a previous explanation."
+      }
+    ],
+    "retainedLiveGuardTests": "The existing actual assertOwnedRenderer extraction tests still use the unchanged listener parser/controlled census seam. They retain empty/foreign/mixed/reused-listener and original error identity/final-cutoff refusals; the new optional argument does not change their underlying legacy injected wrapper.",
+    "boundary": "Tests are controlled source-seam checks, not live CIM/PowerShell execution, native custody or Windows timing evidence. No native success or test result is claimed here."
+  },
+  "closure": {
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "b9f7f33d7752f0029c970268ac82d7598746ea7e",
+      "currentOperands": 98,
+      "allThreePathsAlreadyPresentExactlyOnce": true,
+      "noWorkflowAmendment": true
+    },
+    "unchangedClassifier": {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "bytes": 27780,
+      "lines": 749,
+      "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+      "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5"
+    },
+    "moduleImports": "New platform.test import uses existing packaged helpers; no new module/path/dependency is added. Actual-source extraction is a test seam only.",
+    "sourceCaps": {
+      "platform": 374,
+      "gate": 615,
+      "test": 532
+    },
+    "futureOriginalValidation": "Existing whole platform/packaged suites, original static/type/lint gates and both original Windows packaged architectures remain necessary. There is no automatic extra test-only RED cycle.",
+    "phaseBoundaries": "P11 B Team/current-source typed actual R2 remains prior to C selection/primary progression. This package is neither selected nor published and grants no native/P08/P09/M16/vendor qualification."
+  },
+  "concreteBlockers": [],
+  "method": "Full immutable package/hash/source reads; pure-data patch forward/inverse and complete current Merkle reconstruction. No project source import or execution, no test/compiler/lint/native/GUI, no new API log/archive/status retrieval, no source/Git-index/ref mutation."
+}

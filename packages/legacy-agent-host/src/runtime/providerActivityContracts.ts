@@ -6,3 +6,8 @@ export interface RuntimeProviderActivity {
   operationRef?: string;
   data: RuntimeActivityEvent['data'] & { kind: 'subagent' };
 }
+
+/** Original member process diagnostic only; deliberately has no input or task attribution. */
+export type RuntimeProcessOutput =
+  | { kind: 'process-output'; stream: 'stderr'; text: string }
+  | { kind: 'gap'; reason: 'oversized' };

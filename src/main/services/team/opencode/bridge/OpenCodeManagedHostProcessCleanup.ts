@@ -2,10 +2,10 @@ import {
   listRuntimeProcessTableForCurrentPlatform,
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
+import { execFileTextWithLinuxChildLaunch as execFileText } from '@main/utils/linuxChildLaunch';
 import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
 import { readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
-import { execFile, type ExecFileException } from 'child_process';
 
 import {
   OPENCODE_APP_PROFILE_FRAGMENT_KEY,
@@ -694,31 +694,4 @@ function isNativeProcessAlive(pid: number): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function execFileText(
-  command: string,
-  args: string[],
-  timeout: number,
-  maxBuffer: number
-): Promise<string | null> {
-  return new Promise((resolve) => {
-    execFile(
-      command,
-      args,
-      {
-        encoding: 'utf8',
-        timeout,
-        maxBuffer,
-        windowsHide: true,
-      },
-      (error: ExecFileException | null, stdout: string | Buffer) => {
-        if (error) {
-          resolve(null);
-          return;
-        }
-        resolve(String(stdout));
-      }
-    );
-  });
 }

@@ -1,0 +1,18 @@
+{
+  "kind": "PURE_DATA_PRESERVATION",
+  "beforeGitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+  "afterGitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+  "oldWindow": "            assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,\n              'Every original physical Job retains confirmed Stop/drain/release');\n            assert.equal(await job.witness.wait(), 0);\n            job.handleAbsent = true;\n",
+  "newWindow": "            const custodyConfirmed = job.root && job.witness && job.resumed && job.stopped && job.drained && job.released;\n            assert.equal(await job.witness?.wait(), 0);\n            job.handleAbsent = true;\n            assert.ok(custodyConfirmed, 'Every original physical Job retains confirmed Stop/drain/release');\n",
+  "oldWindowCount": 1,
+  "newWindowCount": 1,
+  "exactInverse": true,
+  "beforeLines": 800,
+  "afterLines": 800,
+  "sourcePaths": 1,
+  "oldConjunctionTextUnchanged": true,
+  "conjunctionEvaluatedBeforeAwait": true,
+  "outsideWindowByteIdentical": true,
+  "existingMessageExact": true,
+  "projectExecution": false
+}

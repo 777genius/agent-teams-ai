@@ -1,0 +1,34 @@
+{
+  "sourceHead": "68b1c0177044835d4700f2111b1c4179a25842d1",
+  "sourceTree": "548a5b20b2bc2fbeeeb077fba8c37204ac3b120d",
+  "clean": true,
+  "selectedLeaves": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "blob": "2bb4e05d5cbcb6c476cd1bc07dc6d9dbb0edaaf0",
+      "bytes": 11630,
+      "sha256": "38af7b5093f2f16883c1827019610ffe65524d5c83bf673e142794fd211c79b5"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "blob": "28dc887aa3b27284a43b5253632c56765618f876",
+      "bytes": 87280,
+      "sha256": "5ce2ec9458c35b9a9352b50868ec9b62b917f6de7bd96dbebcfcb16cc6fce9ce"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "blob": "55b4b827ca2c10c93669ea1aede604c5bf228974",
+      "bytes": 17136,
+      "sha256": "34be8880ef59f952cad2a82d8d64958e7b02317db81ea2a47d96765cf024f85e"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "blob": "d04991adb0ac6aabad7218904cc210062b30317e",
+      "bytes": 96162,
+      "sha256": "bea7a413592254143ff2d35380e6d89e1aef17b7987cbb029478b199c557e35d"
+    }
+  ],
+  "nodePath": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+}

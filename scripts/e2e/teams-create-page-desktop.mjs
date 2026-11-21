@@ -3,7 +3,7 @@
 // team/project, exercises Back/resume, tab switches, process restart, copy and
 // config-only creation, and verifies launch still opens its original dialog.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
@@ -17,6 +17,11 @@ import WebSocket from 'ws';
 
 import { processes } from './opencode-diagnostics/platform.mjs';
 import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
+import {
+  observeScheduleTeamSelection,
+  prepareScheduleOptionClick,
+  scheduleOptionObservationSource,
+} from './teams-create-page-schedule-observation.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
@@ -91,12 +96,16 @@ async function seedFixture() {
       root, process.platform === 'win32' ? 'fixture-runtime-deny.cmd' : 'fixture-runtime-deny.cjs'
     ),
     runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),
+    providerLedgerPath: path.join(root, 'fixture-provider-ledger.ndjson'),
+    providerCliPaths: {},
+    codexHome: path.join(root, 'codex-home'),
     deliveryRuntimeVersion: runtimeLock.version,
   };
   for (const key of [
     'claudeRoot',
     'userDataRoot',
     'claudeConfigDir',
+    'codexHome',
     'multimodelDataHome',
     'multimodelCacheHome',
     'xdgConfigHome',
@@ -118,6 +127,10 @@ async function seedFixture() {
       `  process.stdout.write(${JSON.stringify(`${runtimeLock.version}\n`)});\n` +
       `  process.exit(0);\n` +
       `}\n` +
+      `if (args.length === 1 && args[0] === '--help') {\n` +
+      `  process.stdout.write('Usage: fixture\\n  -p, --print\\n');\n` +
+      `  process.exit(0);\n` +
+      `}\n` +
       `fs.appendFileSync(${JSON.stringify(fixture.runtimeLedgerPath)}, JSON.stringify({ args, at: Date.now() }) + '\\n');\n` +
       `process.stderr.write('fixture runtime denies all lifecycle and provider commands\\n');\n` +
       `process.exit(77);\n`
@@ -133,6 +146,44 @@ async function seedFixture() {
     await chmod(fixture.runtimeScriptPath, 0o755);
   }
   await writeFile(fixture.runtimeLedgerPath, '');
+  // Native installer/account checks do not use the orchestrator override.
+  // Fence them with explicit TEST metadata peers and a private managed-source seed.
+  await writeFile(fixture.providerLedgerPath, '', { flag: 'wx', mode: 0o600 });
+  for (const [provider, version] of [
+    ['codex', 'codex-cli 0.164.0'], ['claude', '2.1.0 (Claude Code)'],
+  ]) {
+    const script = path.join(root, `fixture-${provider}-deny.cjs`);
+    const wrapper = process.platform === 'win32' ? script.replace(/\.cjs$/u, '.cmd') : script;
+    await writeFile(script, `#!${nodeBinary}\n'use strict';\n` +
+      `const fs = require('node:fs');\n` +
+      `const args = process.argv.slice(2);\n` +
+      `const accepted = args.length === 1 && args[0] === '--version';\n` +
+      `fs.appendFileSync(${JSON.stringify(fixture.providerLedgerPath)}, JSON.stringify({ provider: ${JSON.stringify(provider)}, kind: accepted ? 'version' : 'refused', args }) + '\\n');\n` +
+      `if (accepted) { process.stdout.write(${JSON.stringify(version + '\n')}); process.exit(0); }\n` +
+      `process.stderr.write(${JSON.stringify('TEST ' + provider + ' refuses non-version commands\n')}); process.exit(77);\n`,
+      { flag: 'wx', mode: 0o700 });
+    if (process.platform === 'win32')
+      await writeFile(wrapper, `@echo off\r\n"${nodeBinary}" "${script}" %*\r\n`, { flag: 'wx' });
+    else await chmod(script, 0o700);
+    for (const [args, status, stdout] of [
+      [['--version'], 0, version + '\n'], [['TEST-forbidden-native-command'], 77, ''],
+    ]) {
+      const observed = spawnSync(nodeBinary, [script, ...args], {
+        cwd: fixture.projectPath, encoding: 'utf8', timeout: 5000, windowsHide: true,
+      });
+      assert.equal(observed.error, undefined); assert.equal(observed.signal, null);
+      assert.equal(observed.status, status); assert.equal(observed.stdout, stdout);
+    }
+    fixture.providerCliPaths[provider] = wrapper;
+  }
+  // This is initial TEST configuration, not an installed vendor package or Host receipt.
+  // The installer status path ignores CODEX_CLI_PATH and would otherwise scan ambient PATH.
+  await json(path.join(fixture.userDataRoot, 'data/runtimes/codex/current.json'), {
+    schemaVersion: 1, rootVersion: '0.164.0', platformVersion: '0.164.0',
+    platformTarget: `TEST-${process.platform}-${process.arch}`,
+    binaryPath: fixture.providerCliPaths.codex, integrity: 'TEST-finite-metadata-only',
+    installedAt: new Date().toISOString(),
+  });
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Teams Creation Page E2E\n');
   const member = {
     name: fixture.memberName,
@@ -248,6 +299,9 @@ async function startApp(fixture) {
     CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
+    CODEX_CLI_PATH: fixture.providerCliPaths.codex,
+    CLAUDE_CLI_PATH: fixture.providerCliPaths.claude,
+    CODEX_HOME: fixture.codexHome,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   };
@@ -318,6 +372,140 @@ async function startApp(fixture) {
   return { port, renderer, inspectorWebSocketDebuggerUrl };
 }
 
+function installTaskTabObservation(browser, document, element, identity) {
+  const slot = '__teamsTaskTabObservation';
+  if (Object.getOwnPropertyDescriptor(browser, slot)) return false;
+  const data = (value, key, optional = false) => {
+    if (!value || typeof value !== 'object' || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+      throw new Error('Unavailable diagnostic data');
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor && optional) return undefined;
+    if (!descriptor || !('value' in descriptor) || descriptor.value === undefined) throw new Error('Unavailable diagnostic field');
+    return descriptor.value;
+  };
+  const id = value => {
+    if (typeof value !== 'string' || value.length > 256 || !value.trim()) throw new Error('Unavailable diagnostic identity');
+    return value;
+  };
+  const list = (value, limit) => {
+    if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype)
+      throw new Error('Unavailable diagnostic collection');
+    const length = Object.getOwnPropertyDescriptor(value, 'length')?.value;
+    if (!Number.isInteger(length) || length < 0 || length > limit) throw new Error('Unavailable diagnostic size');
+    const rows = [];
+    for (let index = 0; index < length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !('value' in descriptor)) throw new Error('Unavailable diagnostic row');
+      rows.push(descriptor.value);
+    }
+    return rows;
+  };
+  const record = { version: 1, before: null, first: null, last: null, samples: 0,
+    samplesCapped: false, events: [], eventsCapped: false, finished: 'pending' };
+  const listeners = [];
+  let context, key, beforeOwner, disposed = false;
+  const dispose = status => {
+    if (disposed) return;
+    disposed = true; record.finished = status;
+    for (const [kind, listener, capture] of listeners)
+      try { document.removeEventListener(kind, listener, capture); } catch { /* Diagnostic only. */ }
+    listeners.length = 0; element = null;
+  };
+  const snapshot = (state, initial = false) => { try {
+    if (!context || !key) return null;
+    const global = data(state, 'globalTaskDetail');
+    const globalIdentity = global == null ? null : ['contextId', 'teamName', 'taskId'].map(field => id(data(global, field)).trim());
+    const globalDialog = globalIdentity === null ? 'absent' :
+      globalIdentity[0] === context && globalIdentity[1] === identity.teamName && globalIdentity[2] === identity.taskId ? 'target' : 'other';
+    const session = data(data(state, 'taskDetailSessionById'), key, true), detail = data(data(state, 'taskDetailById'), key, true);
+    const owner = session === undefined ? undefined : data(session, 'ownerSurfaceId');
+    if (owner !== undefined && owner !== null) id(owner);
+    const revision = session === undefined ? null : data(session, 'ownerRevision');
+    if (session !== undefined && (!Number.isInteger(revision) || revision < 0 || revision > 2147483647)) return null;
+    const layout = data(state, 'paneLayout'), focused = data(layout, 'focusedPaneId'), rootActive = data(state, 'activeTabId');
+    if (focused != null) id(focused);
+    if (rootActive != null) id(rootActive);
+    let targetTabs = 0, activeTargetTabs = 0, focusedTarget = false, rootActiveTarget = false, ownerMatchesTarget = false;
+    for (const pane of list(data(layout, 'panes'), 8)) {
+      const paneId = id(data(pane, 'id')), active = data(pane, 'activeTabId');
+      if (active != null) id(active);
+      for (const tab of list(data(pane, 'tabs'), 32)) {
+        const tabId = id(data(tab, 'id')), task = data(tab, 'taskDetail', true);
+        if (task == null) continue;
+        const taskIdentity = [id(data(tab, 'teamName')).trim(), id(data(task, 'contextId')).trim(), id(data(task, 'taskId')).trim()];
+        if (taskIdentity[0] !== identity.teamName || taskIdentity[1] !== context || taskIdentity[2] !== identity.taskId) continue;
+        targetTabs++; activeTargetTabs += tabId === active ? 1 : 0;
+        focusedTarget ||= paneId === focused && tabId === active;
+        rootActiveTarget ||= tabId === rootActive; ownerMatchesTarget ||= tabId === owner;
+      }
+    }
+    const activeContext = id(data(state, 'activeContextId')).trim(), switching = data(state, 'isContextSwitching');
+    if (typeof switching !== 'boolean') return null;
+    if (detail !== undefined && typeof data(detail, 'phase') !== 'string') return null;
+    if (initial) beforeOwner = owner;
+    return { contextMatches: activeContext === context, switching, globalDialog,
+      detailReady: detail === undefined ? false : data(detail, 'phase') === 'ready', sessionPresent: session !== undefined,
+      ownerPresent: owner != null, ownerChanged: owner == null || beforeOwner == null ? null : owner !== beforeOwner,
+      ownerMatchesTarget, ownerRevision: revision, targetTabs, activeTargetTabs, focusedTarget, rootActiveTarget };
+  } catch { return null; } };
+  const observe = (event, kind, phase) => { try {
+    if (disposed) return;
+    if (record.events.length >= 8) { record.eventsCapped = true; return; }
+    let sameMeasured = false, taskTabTarget = false, inDialog = false, node = event.target, count = 0;
+    try {
+      for (; node && count < 16; count++, node = node.parentElement) {
+        sameMeasured ||= node === element;
+        taskTabTarget ||= node.hasAttribute('data-task-detail-open-tab') === true;
+        inDialog ||= node.getAttribute('role') === 'dialog';
+        if (sameMeasured && taskTabTarget && inDialog) { node = null; break; }
+      }
+      if (node) { if (!sameMeasured) sameMeasured = null; if (!taskTabTarget) taskTabTarget = null; if (!inDialog) inDialog = null; }
+    } catch { sameMeasured = null; taskTabTarget = null; inDialog = null; }
+    const trusted = event.isTrusted, connected = element?.isConnected, prevented = event.defaultPrevented;
+    record.events.push({ kind, phase, trusted: typeof trusted === 'boolean' ? trusted : null,
+      sameMeasured, taskTabTarget, inDialog, measuredConnected: typeof connected === 'boolean' ? connected : null,
+      prevented: typeof prevented === 'boolean' ? prevented : null });
+  } catch { /* A failed observation cannot affect input delivery. */ } };
+  const recorder = Object.freeze({
+    sample(state, activeTab, visible, result) { try {
+      if (disposed) return;
+      if (record.samples < 65535) record.samples++; else record.samplesCapped = true;
+      const sample = { state: snapshot(state), predicate: {
+        activeTab: typeof activeTab === 'boolean' ? activeTab : null, visible: typeof visible === 'boolean' ? visible : null,
+        result: result === true ? 'true' : result === false ? 'false' : result === null ? 'null' : result === undefined ? 'undefined' : 'other',
+      } };
+      record.first ??= sample; record.last = sample;
+      if (result) dispose('success');
+    } catch { /* Preserve the original predicate result. */ } },
+    read() { try {
+      dispose('failure');
+      const raw = JSON.stringify(record);
+      return raw.length <= 4096 && /^[\x20-\x7e]*$/.test(raw) ? JSON.parse(raw) : null;
+    } catch { return null; } },
+  });
+  try {
+    identity = { teamName: id(data(identity, 'teamName')).trim(), taskId: id(data(identity, 'taskId')).trim() };
+    const store = Object.getOwnPropertyDescriptor(browser, '__agentTeamsDevStore');
+    if (!store || !('value' in store) || !store.value) return false;
+    const getState = Object.getOwnPropertyDescriptor(store.value, 'getState');
+    if (!getState || !('value' in getState) || typeof getState.value !== 'function') return false;
+    const initial = Reflect.apply(getState.value, store.value, []);
+    try {
+      const global = data(initial, 'globalTaskDetail');
+      if (id(data(global, 'teamName')).trim() === identity.teamName && id(data(global, 'taskId')).trim() === identity.taskId) {
+        context = id(data(global, 'contextId')).trim(); key = JSON.stringify([context, identity.teamName, identity.taskId]);
+      }
+    } catch { /* The before identity remains unavailable. */ }
+    record.before = snapshot(initial, true);
+    Object.defineProperty(browser, slot, { value: recorder });
+    for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
+      const listener = event => observe(event, kind, capture ? 'capture' : 'bubble');
+      listeners.push([kind, listener, capture]); document.addEventListener(kind, listener, { capture, passive: true });
+    }
+    return true;
+  } catch { dispose('setup-failed'); return false; }
+}
+
 class CdpClient {
   constructor(socket) {
     this.socket = socket;
@@ -365,13 +553,13 @@ class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
@@ -396,7 +584,10 @@ class CdpClient {
     let lastTransientError = null;
     while (Date.now() < deadline) {
       try {
-        if (await this.evaluate(`Boolean(${expression})`)) return;
+        if (await this.evaluate(`Boolean(${expression})`)) {
+          try { if (label === 'fully hydrated visible localized task detail in active native tab') this.taskTabObservationInstalled = false; } catch { /* Diagnostic only. */ }
+          return;
+        }
         lastTransientError = null;
       } catch (error) {
         if (
@@ -415,24 +606,57 @@ class CdpClient {
     );
   }
 
-  async click(expression) {
-    await this.waitFor(expression, expression);
-    const target = await this.evaluate(`(() => {
+  async click(expression, taskTab = null, scheduleTeam = null) {
+    const cutoff = Date.now() + 30_000;
+    const remaining = () => Math.max(0, cutoff - Date.now());
+    await this.waitFor(expression, expression, remaining());
+    assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+    let taskTabObservation = '';
+    try {
+      const team = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'teamName'), task = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'taskId');
+      if (team && task && 'value' in team && 'value' in task && typeof team.value === 'string' && typeof task.value === 'string' &&
+          team.value.length <= 256 && task.value.length <= 256)
+        taskTabObservation = `if (target) { try { target.taskTabObserved = (${installTaskTabObservation.toString()})(window, document, element, ${JSON.stringify({ teamName: team.value, taskId: task.value })}); } catch {} }`;
+    } catch { /* An unavailable diagnostic cannot prevent the original measurement/input. */ }
+    const scheduleObservation = scheduleTeam === null ? '' : scheduleOptionObservationSource(scheduleTeam);
+    await this.evaluate(`(() => {
       const element = ${expression};
-      if (!element || element.disabled) return null;
-      element.scrollIntoView({ block: 'center', inline: 'nearest' });
-      const rect = element.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0
-        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-        : null;
+      if (element && !element.disabled) {
+        element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      }
     })()`);
-    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
+    const hitTarget = (observation = '') => `(() => {
+      const element = ${expression};
+      if (!element?.isConnected || element.disabled) return null;
+      for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+        if (ancestor.getAnimations().some(animation => animation.playState === 'running')) return null;
+      }
+      const rect = element.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      const target = rect.width > 0 && rect.height > 0 &&
+        x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
+        hit && element.contains(hit) ? { x, y } : null;
+      ${observation}
+      return target;
+    })()`;
+    await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
+    let prepared;
+    try {
+      if (scheduleTeam !== null)
+        prepared = await prepareScheduleOptionClick(this, expression, scheduleTeam, cutoff, scheduleObservation);
+      const target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
+      try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
+      assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+      assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+    } finally { if (prepared) await prepared.release(); }
   }
 
   async fill(selector, value) {
@@ -580,7 +804,7 @@ async function cleanup(fixture) {
     const deadline = Date.now() + 12_000;
     let remaining = [];
     let debugStillListening = false;
-    do {
+    for (;;) {
       current = processes();
       history = extendOwnedHistory(history, current);
       remaining = remainingOwned(history, current);
@@ -601,7 +825,7 @@ async function cleanup(fixture) {
         );
       }
       await new Promise((resolve) => setTimeout(resolve, 250));
-    } while (true);
+    }
     windowsTeardowns.push({
       launcherPid: launcher.pid,
       taskkillAttempted: taskkillExitCode !== null,
@@ -643,6 +867,7 @@ async function dumpRenderer(client, label) {
         dialog: Boolean(dialog),
         creationPageName: document.querySelector('[data-testid="create-team-page"] #team-name')?.value ?? null,
         bodyText: (document.body?.innerText ?? '').slice(0, 800),
+        ${client.taskTabObservationInstalled === true ? "taskTabObservation: (() => { try { return window.__teamsTaskTabObservation.read(); } catch { return null; } })()," : ''}
       };
     })()`);
     process.stderr.write(`${JSON.stringify(snapshot, null, 2)}\n`);
@@ -739,6 +964,34 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
+/**
+ * Use a genuine CDP mouse click only after the nested Advanced toggle is in
+ * view. Offscreen CDP clicks can be silently ignored on Linux.
+ */
+async function expandCreateAdvancedCli(client, toggle, inputSelector) {
+  const input = `document.querySelector(${JSON.stringify(inputSelector)})`;
+  if (await client.evaluate(`Boolean(${input})`)) return;
+  await client.waitFor(toggle, 'create-page Advanced CLI toggle');
+  // The Radix optional section animates its height with overflow hidden.
+  // A button can have a viewport rect yet be clipped and miss CDP mouse input.
+  await client.waitFor(`(() => {
+    const button = (${toggle});
+    if (!button) return false;
+    button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+    const content = button.closest('.optional-settings-content');
+    if (content?.getAnimations().some(animation => animation.playState === 'running')) return false;
+    const rect = button.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return rect.width > 0 && rect.height > 0 &&
+      x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
+      Boolean(hit && button.contains(hit));
+  })()`, 'Advanced CLI toggle fully visible and receiving pointer events');
+  await client.click(toggle);
+  await client.waitFor(`Boolean(${input})`, 'Advanced CLI input expanded');
+}
+
 async function setBrowserWindowZoom(inspector, factor) {
   return inspector.evaluate(
     "(() => {" +
@@ -792,12 +1045,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
 
   log('select the fixture team and review its saved one-time startup prompt');
   await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
-  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
-    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
-  await client.click(teamOption);
-  await client.waitFor(
-    "document.querySelector('#schedule-saved-prompt-reviewed')",
-    'saved prompt acknowledgement visible before Save', 45_000);
+  await observeScheduleTeamSelection(client, fixture.teamName);
   await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
 
   await client.fill('#schedule-label', scheduleLabel);
@@ -993,7 +1241,16 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",
     'schedule deletion confirmation');
   await captureScreenshot(client, fixture, 'schedules-delete-confirm');
-  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
+  await client.click(`(() => {
+    const dialogs = document.querySelectorAll('[role=dialog][aria-label=Delete]');
+    if (dialogs.length !== 1) return null;
+    const buttons = dialogs[0].querySelectorAll('button:not([data-confirm-btn])');
+    if (buttons.length !== 1 || buttons[0].disabled) return null;
+    const button = buttons[0], rect = button.getBoundingClientRect();
+    if (!(rect.width > 0 && rect.height > 0)) return null;
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit && button.contains(hit) ? button : null;
+  })()`);
   assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
     'Cancel deleted a scheduled task');
   await client.waitFor("!document.querySelector('[role=dialog]')",
@@ -1013,6 +1270,152 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   );
   await captureScreenshot(client, fixture, 'schedules-deleted');
   return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
+}
+
+/**
+ * Real Electron zh-TW acceptance after the English create/launch/schedules
+ * scenarios. Use a fresh startup with a persisted locale setting, then exercise
+ * the actual member-row MCP selector, input, and screenshot through CDP.
+ * Never invoke a model or relax the normal create-page assertions.
+ */
+async function exerciseTraditionalChineseMcpUi(fixture, log) {
+  log('restart isolated native Electron in zh-TW for member MCP UI qualification');
+  await cleanup({ ...fixture, root: null });
+  const configPath = path.join(fixture.claudeRoot, 'agent-teams-config.json');
+  const config = JSON.parse(await readFile(configPath, 'utf8'));
+  assert(config.general && typeof config.general === 'object',
+    'Persistent native app config missing general settings');
+  config.general.appLocale = 'zh-TW';
+  await writeFile(configPath, JSON.stringify(config, null, 2) + '\n');
+
+  // A real task from the disposable on-disk team board is needed to inspect
+  // the translated task-detail dialog/tab. No provider or teammate is started.
+  const taskId = '77';
+  await json(path.join(fixture.claudeRoot, 'tasks', fixture.teamName, `${taskId}.json`), {
+    id: taskId,
+    displayId: taskId,
+    subject: 'TEST zh-TW task detail',
+    status: 'pending',
+    owner: 'team-lead',
+    createdBy: 'user',
+    createdAt: new Date().toISOString(),
+    projectPath: fixture.projectPath,
+    description: 'Disposable UI localization test. Do not run a model.',
+    prompt: 'No execution requested.',
+    blocks: [],
+    blockedBy: [],
+    related: [],
+    comments: [],
+    historyEvents: [],
+  });
+
+  const started = await startApp(fixture);
+  cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
+  await initializeTeams(cdp, fixture, { afterRestart: true });
+  await cdp.waitFor("document.documentElement.lang === 'zh-TW'",
+    'persisted Traditional Chinese locale in real renderer', 45_000);
+
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsCreationPage()');
+  await cdp.waitFor("document.querySelector('[data-testid=create-team-page] #team-name')",
+    'native zh-TW create-team page', 45_000);
+  // The name input appears before asynchronous draft state is fully restored.
+  // Match the same enabled template-selector hydration gate as the original
+  // English E2E, using its actual Traditional Chinese accessible label.
+  await cdp.waitFor(
+    `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="團隊範本"]'); return button && !button.disabled; })()`,
+    'hydrated native zh-TW create-team form', 45_000
+  );
+  // A previous config-only draft may persist Solo team; use the real toggle to
+  // make the member roster visible instead of mutating component state directly.
+  const solo = "document.querySelector('[data-testid=create-team-page] #solo-team')";
+  if (await cdp.evaluate(`${solo}?.getAttribute('data-state') === 'checked'`))
+    await cdp.click(solo);
+  const add = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"新增成員\"]')";
+  await cdp.click(add);
+  const row = '[data-testid=create-team-page] [data-role=member-row]';
+  await cdp.waitFor(`document.querySelector(${JSON.stringify(row)})`,
+    'member row created through translated UI');
+  const mcpToggle = `Array.from(document.querySelectorAll(${JSON.stringify(row + ' button')}))
+    .find(button => button.getAttribute('aria-label')?.includes('MCP')
+      && !button.disabled && button.getBoundingClientRect().width > 0)`;
+  await cdp.click(mcpToggle);
+
+  const mode = `${row} [id$="-mcp-mode"]`;
+  await cdp.click(`document.querySelector(${JSON.stringify(mode)})`);
+  const strict = "Array.from(document.querySelectorAll('[role=option]'))" +
+    ".find(option => option.textContent?.includes('嚴格的許可名單'))";
+  await cdp.click(strict);
+
+  const servers = `${row} input[id$="-mcp-servers"]`;
+  await cdp.waitFor(
+    `document.querySelector(${JSON.stringify(servers)})?.placeholder === 'github, sentry'`,
+    'literal MCP server IDs and ASCII separator in rendered placeholder'
+  );
+  const label = await cdp.evaluate(`(() => {
+    const input = document.querySelector(${JSON.stringify(servers)});
+    const associated = input && document.querySelector('label[for="' + input.id + '"]');
+    return { label: associated?.textContent?.trim() ?? null,
+      placeholder: input?.placeholder ?? null };
+  })()`);
+  assert.equal(label.label, '伺服器名稱', 'Traditional Chinese MCP label not rendered');
+  assert.equal(label.placeholder, 'github, sentry', 'MCP IDs localized into invalid names');
+
+  await cdp.fill(servers, 'github, sentry');
+  await cdp.waitFor(
+    `document.querySelector(${JSON.stringify(servers)})?.value === 'github, sentry'`,
+    'controlled strict allowlist input retains two actual server IDs'
+  );
+  const enteredValue = await cdp.evaluate(
+    `document.querySelector(${JSON.stringify(servers)}).value`
+  );
+  assert.deepEqual(enteredValue.split(',').map(name => name.trim()), ['github', 'sentry'],
+    'Native controlled MCP input did not retain two literal server IDs');
+  await captureScreenshot(cdp, fixture, 'zh-tw-member-mcp-strict-allowlist');
+
+  log('inspect native zh-TW task detail dialog and separate task tab');
+  await cdp.evaluate(
+    `window.__agentTeamsDevStore.getState().openGlobalTaskDetail(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(taskId)})`
+  );
+  await cdp.waitFor(
+    "document.querySelector('[role=dialog] [data-task-detail-open-tab]')?.textContent?.trim() === '在獨立分頁中開啟'",
+    'localized task detail dialog and open-tab action', 60_000
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
+  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')", { teamName: fixture.teamName, taskId: '77' });
+  await cdp.waitFor(
+    `(() => {
+      const s = window.__agentTeamsDevStore.getState();
+      const activeTab = s.paneLayout.panes.some(p => p.tabs.some(t =>
+        t.id === p.activeTabId && t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)}));
+      const page = document.querySelector('[data-task-detail-page][data-task-detail-task-id="77"]');
+      const visible = page && page.getClientRects().length > 0 && page.getBoundingClientRect().height > 0;
+      const result = !s.globalTaskDetail && activeTab && visible &&
+        page.getAttribute('data-task-detail-team') === ${JSON.stringify(fixture.teamName)} &&
+        page.getAttribute('data-origin-current') === 'true' &&
+        page.querySelector('h1')?.textContent?.includes('TEST zh-TW task detail');
+      try { if (${cdp.taskTabObservationInstalled === true}) window.__teamsTaskTabObservation.sample(s, activeTab, visible, result); } catch { /* Diagnostic only. */ }
+      return result;
+    })()`,
+    'fully hydrated visible localized task detail in active native tab', 60_000
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-tab');
+  const taskDetailUiEvidence = {
+    taskId,
+    locale: await cdp.evaluate('document.documentElement.lang'),
+    dialogOpenTabAction: '在獨立分頁中開啟',
+    dialogScreenshot: 'teams-create-zh-tw-task-detail-dialog.png',
+    tabScreenshot: 'teams-create-zh-tw-task-detail-tab.png',
+    nativeTaskTabVisible: true,
+  };
+  return {
+    locale: await cdp.evaluate('document.documentElement.lang'),
+    taskDetailUiEvidence,
+    strictAllowlistVisible: true,
+    placeholder: label.placeholder,
+    parsedServerNames: enteredValue.split(',').map(name => name.trim()),
+    screenshot: 'teams-create-zh-tw-member-mcp-strict-allowlist.png',
+    controlEditedThroughNativeCdp: true,
+  };
 }
 
 async function main() {
@@ -1049,19 +1452,102 @@ async function main() {
     // A settings dialog is allowed later, but Create itself must not trap focus.
     assert.equal(shot.dialogOpen, false, 'Create opened a dialog instead of a page');
     await captureScreenshot(cdp, fixture, 'opened');
+    // The input can render before the asynchronous persisted form and prompt drafts hydrate.
+    // Wait for the real UI's hydration gate before testing per-name defaults.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'create-team form and prompt draft hydration'
+    );
 
-    log('enter team name with real Chromium keyboard events');
+    log('restore unedited Advanced CLI defaults for a saved team name');
+    const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
+    const preferencesTeamName = `${unique}-saved-defaults`;
+    await cdp.evaluate(`localStorage.setItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}, '--max-turns 2')`);
+    assert.equal(
+      await cdp.evaluate(`localStorage.getItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)})`),
+      '--max-turns 2', 'E2E setup did not persist the saved CLI preference'
+    );
+    await cdp.fill('#team-name', preferencesTeamName);
+    const optionalSettingsButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.includes('Optional launch settings')
+        && button.getBoundingClientRect().width > 0)`;
+    await cdp.click(optionalSettingsButton);
+    const createAdvancedToggle = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.trim() === 'Advanced' && !button.disabled
+        && button.getBoundingClientRect().width > 0)`;
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    try {
+      await cdp.waitFor(
+        `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
+        'untouched per-name Advanced CLI defaults restored'
+      );
+    } catch (error) {
+      const observed = await cdp.evaluate(`(() => ({
+        name: document.querySelector('#team-name')?.value,
+        stored: localStorage.getItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}),
+        actual: document.querySelector(${JSON.stringify(customArgsSelector)})?.value ?? null,
+      }))()`);
+      throw new Error(`Advanced CLI preference mismatch: ${JSON.stringify(observed)}`, { cause: error });
+    }
+
+    log('edit Advanced CLI while the team name is explicitly empty');
+    await cdp.fill('#team-name', '');
+    await cdp.waitFor("document.querySelector('#team-name')?.value === ''", 'unnamed editor ready');
+    await cdp.fill(customArgsSelector, '--max-turns 5');
+    log('naming and renaming a team preserves in-progress Advanced CLI overrides');
     await cdp.fill('#team-name', unique);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'unnamed Advanced CLI edits retained after naming the team'
+    );
     await captureScreenshot(cdp, fixture, 'edited');
+    await cdp.fill('#team-name', unique + '-renamed');
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI input retained after team-name change'
+    );
+    await cdp.fill('#team-name', unique);
 
+    await cdp.evaluate("(() => { window.__createPageBeforeBack = document.querySelector('[data-testid=create-team-page]'); return true; })()");
     log('Back to Teams and resume saved draft');
     await cdp.click("document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')");
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
       'creation page closed on Back');
+    await cdp.waitFor('!window.__createPageBeforeBack?.isConnected', 'original editor unmounted after Back');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'Continue creating button');
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'same team name restored after Back');
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]') !== window.__createPageBeforeBack",
+      'new editor node created on resume'
+    );
+    await cdp.evaluate('delete window.__createPageBeforeBack');
+    // Resume hydrates the form and text drafts independently of restoring its name.
+    // Do not open the optional controls while they may still remount.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'resumed creation form and text drafts hydrated'
+    );
+    const optionalExpandedAfterResume = await cdp.evaluate(
+      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
+    );
+    if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    try {
+      await cdp.waitFor(
+        `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+        'Advanced CLI edit retained after real editor unmount and resume'
+      );
+    } catch (error) {
+      const observed = await cdp.evaluate(`(() => ({
+        name: document.querySelector('#team-name')?.value,
+        actual: document.querySelector(${JSON.stringify(customArgsSelector)})?.value ?? null,
+        advancedButtonCount: [...document.querySelectorAll('[data-testid=create-team-page] button')].filter(b => b.textContent?.trim() === 'Advanced').length,
+        optionalOpen: document.querySelector('[data-testid=create-team-page] button[aria-expanded="true"]')?.textContent?.trim().slice(0, 50) ?? null,
+      }))()`);
+      throw new Error(`Advanced CLI resume mismatch: ${JSON.stringify(observed)}`, { cause: error });
+    }
     await captureScreenshot(cdp, fixture, 'resumed');
 
     log('open Providers Settings through the real model picker and resume the draft');
@@ -1219,6 +1705,31 @@ async function main() {
           getComputedStyle(back).visibility === 'visible';
       })()`);
       assert(visibleAtZoom, 'Back button disappeared at native Electron 200% zoom');
+      const headerLayout = await cdp.evaluate(`(() => {
+        const header = document.querySelector('[data-testid="create-team-page"] > header');
+        const title = header?.querySelector('h1')?.getBoundingClientRect();
+        const parent = header?.getBoundingClientRect();
+        const actions = Array.from(header?.querySelectorAll('button') ?? [])
+          .filter((button) => button.getAttribute('aria-label') !== 'Back to teams')
+          .map((button) => button.getBoundingClientRect())
+          .filter((rect) => rect.width > 0 && rect.height > 0);
+        const intersects = (a, b) =>
+          a.left < b.right - 1 && a.right > b.left + 1 &&
+          a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        return {
+          titleVisible: Boolean(title && title.width > 0 && title.height > 0),
+          actionsVisible: actions.length,
+          overlap: Boolean(title && actions.some((rect) => intersects(title, rect))),
+          overflow: Boolean(parent && actions.some((rect) =>
+            rect.left < parent.left - 1 || rect.right > parent.right + 1)),
+        };
+      })()`);
+      assert(
+        headerLayout.titleVisible && headerLayout.actionsVisible >= 2 &&
+          !headerLayout.overlap && !headerLayout.overflow,
+        'Create Team header title/actions overlap or overflow at native 200% zoom: ' +
+          JSON.stringify(headerLayout)
+      );
       await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
       assert(Math.abs((await setActualZoom(1)) - 1) <= 0.05,
         'BrowserWindow did not restore 100% zoom');
@@ -1253,6 +1764,22 @@ async function main() {
       "window.__agentTeamsDevStore.getState().getAllPaneTabs().filter(t => t.teamsCreationPage).length"
     );
     assert.equal(editorCount, 1, 'A second writable creation editor was opened');
+    // A pane split can remount CreateTeamDialog: verify session-only CLI edits survive.
+    const inputStillMounted = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
+    if (!inputStillMounted) {
+      const optionalButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+        .find(button => button.textContent?.includes('Optional launch settings')
+          && button.getBoundingClientRect().width > 0)`;
+      const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
+      if (!expanded) await cdp.click(optionalButton);
+      await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    }
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI edits survived pane split / editor remount'
+    );
+    // Clear the test-only override before the actual process restart and native save.
+    await cdp.fill(customArgsSelector, ' ');
     await captureScreenshot(cdp, fixture, 'split-pane');
     await cdp.evaluate("(() => { " +
       "const s = window.__agentTeamsDevStore.getState(); " +
@@ -1315,6 +1842,49 @@ async function main() {
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'restored creation draft for config-only save');
+    // Verify the documented debug override survives actual renderer -> IPC ->
+    // persisted metadata. The fixture never launches tmux or a paid provider.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'hydrated form before native teammate-mode override'
+    );
+    const overrideSettingsExpanded = await cdp.evaluate(
+      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
+    );
+    if (!overrideSettingsExpanded) await cdp.click(optionalSettingsButton);
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    const allowedTeammateArgs = '--max-turns 5 --teammate-mode tmux';
+    await cdp.fill(customArgsSelector, allowedTeammateArgs);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === ${JSON.stringify(allowedTeammateArgs)}`,
+      'documented teammate override in real Advanced CLI editor'
+    );
+    await captureScreenshot(cdp, fixture, 'teammate-mode-override');
+    // Press the real optional Validate control; the isolated runtime supplies
+    // --help only, never a paid provider or a lifecycle command.
+    const validateButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.trim() === 'Validate' &&
+        button.getClientRects().length > 0)`;
+    await cdp.click(validateButton);
+    await cdp.waitFor(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] .text-emerald-400'))" +
+        ".some(el => el.textContent?.includes('All flags valid') && el.getClientRects().length > 0)",
+      'supported teammate override accepted by real Validate IPC'
+    );
+    await captureScreenshot(cdp, fixture, 'teammate-mode-validated');
+    await cdp.fill(customArgsSelector, '--max-turns=');
+    await cdp.click(validateButton);
+    await cdp.waitFor(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] span'))" +
+        ".some(span => span.textContent?.trim() === 'Missing value: --max-turns' && span.getClientRects().length > 0)",
+      'required-value error returned through real Validate IPC'
+    );
+    await captureScreenshot(cdp, fixture, 'missing-cli-value-validated');
+    await cdp.fill(customArgsSelector, allowedTeammateArgs);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === ${JSON.stringify(allowedTeammateArgs)}`,
+      'restore admitted extra args after real Validate error'
+    );
     // The fixture has no project-list entries. Choose the disposable path
     // through the real UI rather than relying on the app's config-only fallback.
     await cdp.click(createButtonExpression('Custom path'));
@@ -1362,6 +1932,8 @@ async function main() {
     const createdMembers = JSON.parse(await readFile(path.join(teamDir, 'members.meta.json'), 'utf8'));
     assert.equal(createdMeta.version, 1, 'Native team metadata has the wrong schema');
     assert.equal(createdMeta.cwd, fixture.projectPath, 'Saved working directory differs');
+    assert.equal(createdMeta.extraCliArgs, allowedTeammateArgs,
+      'Native create IPC rejected or dropped the documented teammate-mode override');
     // A config-only team may use the implicit lead without additional members.
     // Prove the typed roster metadata exists, not that it contains extra agents.
     assert.equal(createdMembers.version, 1, 'Native roster metadata has the wrong schema');
@@ -1410,24 +1982,51 @@ async function main() {
     const copiedDescription = await cdp.evaluate(
       "document.querySelector('#team-description')?.value"
     );
-    assert(copiedDescription, 'Copied team description did not hydrate');
+    assert.equal(
+      copiedDescription,
+      'Disposable Teams creation E2E fixture',
+      'Copied team description did not hydrate from its persisted config'
+    );
+    const templateConfirmationExpression =
+      "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
+      ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
-      await cdp.click(
-        "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
-      );
-      await cdp.click(
-        "Array.from(document.querySelectorAll('[role=option]'))" +
-        ".find(option => option.textContent?.includes('Software Product Team'))"
-      );
-      await cdp.waitFor(
-        "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"]')",
-        'template replacement confirmation'
-      );
+      const trigger = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')";
+      const option = "Array.from(document.querySelectorAll('[role=option]'))" +
+        ".find(item => item.textContent?.includes('Software Product Team'))";
+      // A ready Radix trigger can miss one native click while the creation form
+      // commits its restored draft. Re-check the real hit target before retrying.
+      const triggerReady = "(() => { const button = " + trigger +
+        "; if (!button?.isConnected || button.disabled) return false;" +
+        " button.scrollIntoView({block:'center',inline:'nearest'});" +
+        " const rect=button.getBoundingClientRect();" +
+        " const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);" +
+        " return rect.width>0 && rect.height>0 && (hit===button || button.contains(hit)); })()";
+      let optionReady = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await cdp.waitFor(triggerReady, 'visible unobstructed team template trigger', 15_000);
+        await cdp.click(trigger);
+        try {
+          await cdp.waitFor(option, 'Software Product Team option', 4_000);
+          optionReady = true;
+          break;
+        } catch (error) {
+          const open = await cdp.evaluate(
+            trigger + "?.getAttribute('aria-expanded') === 'true'"
+          );
+          // An open menu without the expected item is a genuine catalog/locale
+          // mismatch, not a missed click. Do not toggle it closed to hide it.
+          if (open || attempt === 2) throw error;
+        }
+      }
+      assert(optionReady, 'Team template options did not open');
+      await cdp.click(option);
+      await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };
     await selectTemplate();
     // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
     await cdp.waitFor(
-      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      `(${templateConfirmationExpression})?.contains(document.activeElement)`,
       'template confirmation initial keyboard focus'
     );
     // A destructive confirmation must not expose background form fields to Tab.
@@ -1439,18 +2038,20 @@ async function main() {
     });
     assert(
       await cdp.evaluate(
-        "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"]')?.contains(document.activeElement)"
+        `(${templateConfirmationExpression})?.contains(document.activeElement)`
       ),
       'Template confirmation focus escaped into the background form'
     );
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Cancel')"
     );
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button[data-confirm-btn]')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Apply template')"
     );
     await cdp.waitFor(
       "document.querySelector('#team-description')?.value === " +
@@ -1460,9 +2061,36 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
-    await cdp.click(
-      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
-    );
+    const backToTeams =
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')";
+    const backHitTest = "(() => { const button=" + backToTeams +
+      "; if (!button?.isConnected || button.disabled) return false;" +
+      " button.scrollIntoView({block:'center',inline:'nearest'});" +
+      " const r=button.getBoundingClientRect();" +
+      " const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+      " return r.width>0 && r.height>0 && (hit===button || button.contains(hit)); })()";
+    // Radix confirmation can still be retiring when the create-page header
+    // becomes visible. A missed native click should not silently strand the
+    // draft, but never issue a second click once the page actually navigated.
+    let navigatedBack = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await cdp.waitFor(backHitTest, 'unobstructed Back to teams', 15_000);
+      await cdp.click(backToTeams);
+      try {
+        await cdp.waitFor(
+          "!document.querySelector('[data-testid=create-team-page]')",
+          'Back to teams navigation', 4_000
+        );
+        navigatedBack = true;
+        break;
+      } catch (error) {
+        const stillOnForm = await cdp.evaluate(
+          "Boolean(document.querySelector('[data-testid=create-team-page]'))"
+        );
+        if (!stillOnForm || attempt === 2) throw error;
+      }
+    }
+    assert(navigatedBack, 'Back to teams did not navigate after bounded native clicks');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'template draft retained');
     const organizationName = 'e2e-org-' + randomUUID().slice(0, 8);
     const organization = await cdp.evaluate(
@@ -1572,15 +2200,25 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'organization-created');
 
     const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
+    const zhTwMcpUiEvidence = await exerciseTraditionalChineseMcpUi(fixture, log);
 
     qualifiedResult = {
       success: true,
       scheduleUiEvidence,
+      zhTwMcpUiEvidence,
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
       manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
+      advancedCliRetainedAcrossRename: true,
+      teammateModeOverridePersistedThroughNativeUi: true,
+      teammateModeOverrideValidatedThroughNativeUi: true,
+      missingRequiredCliValueRejectedThroughNativeUi: true,
+      advancedCliRetainedAcrossPaneSplit: true,
+      advancedCliRetainedAcrossBackRemount: true,
+      advancedCliRestoresUneditedDefaults: true,
+      unnamedAdvancedCliEditsRetained: true,
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,
@@ -1622,7 +2260,7 @@ async function main() {
     windowsTaskkillExitedZero: process.platform === 'win32'
       ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,
     windowsExactOwnedProcessesAbsent: process.platform === 'win32'
-      ? windowsTeardowns.length === 2 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
+      ? windowsTeardowns.length === 3 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
     windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,
     temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',
   };

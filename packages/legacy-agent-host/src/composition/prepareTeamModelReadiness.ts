@@ -1,4 +1,7 @@
+import { channel } from 'node:diagnostics_channel';
 import { z } from 'zod';
+import { createModelReadinessTiming } from '../diagnostics/modelReadinessTiming.js';
+import type { ModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
 import { teamModelProbeProfile, teamModelProbeEffort, teamModelProbeActionDigest } from './teamLaunchModelProbe.js';
@@ -14,6 +17,9 @@ import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
 import { managementDigest } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { inspectInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
+import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 import type { ModelProbeInput } from '../management/ModelProbeOwner.js';
 import type { ModelReadinessProbeScope, ModelReadinessReference, ReadinessPreparationAnchor,
@@ -30,6 +36,7 @@ import type { LaunchReadinessCaptureAdmission } from '../team-launch/launchReadi
 import type { CreateTeamLaunchPreparationInput } from '../team-registry/createLaunchContracts.js';
 import type { RuntimeBinding } from '../runtime/contracts.js';
 
+const readinessRefusal = channel('agent-teams.legacy-host.first-refusal');
 const id = z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value));
 
 /** Main resolves these exact retained intents; Host validates every receipt and publication join. */
@@ -100,17 +107,29 @@ function captureOpenCodeProbeAccountInspection(
   input: Pick<ModelProbeInput, 'providerId' | 'modelId'>,
   ownerCurrent: () => boolean,
   original?: Readonly<StoredModelProbe>,
-  capturedOrigin = original?.localModelReadinessOrigin
+  capturedOrigin = original?.localModelReadinessOrigin,
+  memberTarget?: () => ReturnType<ProviderManagementCoordinator['readinessTarget']>
 ): {
   account: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>>;
   origin: ReturnType<typeof captureOpenCodeReadinessOrigin> | undefined;
+  memberReference?: {
+    target: ReturnType<ProviderManagementCoordinator['readinessTarget']>;
+    originCurrent: boolean; accountDigest: string;
+  };
 } | undefined {
-  const source = captureOpenCodeConfigurationSource(profile,
-    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent);
-  const policy = capturedOrigin
+  // The original declaration is only a hint; the complete source observation below
+  // must confirm it before grouping this private, synchronous, read-only inspection.
+  const workspace = memberTarget && capturedOrigin?.workspaces.find(row => row.path === profile.cwd);
+  const declared = workspace && ((!workspace.project.invalid &&
+    workspace.project.providers.find(row => row.providerId === input.providerId)) ||
+    (!('notConsulted' in workspace.global) &&
+      workspace.global.providers.find(row => row.providerId === input.providerId)));
+  const bracket = memberTarget !== undefined && profile.nativeGeneration !== 'v2' &&
+    original !== undefined && original.nativeFileKeyWitness === undefined &&
+    !!declared && declared.hasConfiguredApiKey === true;
+  const before = bracket && capturedOrigin
     ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
-  const raw = source.read(), provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
-  const options = object(provider) && object(provider.options) ? provider.options : {};
+  if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
   const resolve = (value: unknown): unknown => {
     if (typeof value !== 'string') return value;
     if (value.includes('{file:')) return held();
@@ -121,8 +140,22 @@ function captureOpenCodeProbeAccountInspection(
         return selected;
       });
   };
-  const configuredKey = (policy || profile.nativeGeneration === 'v2') &&
-    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey);
+  let capturedConfig: Record<string, unknown> | undefined, capturedConfiguredKey: unknown;
+  const source = captureOpenCodeConfigurationSource(profile,
+    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
+    bracket ? value => {
+      capturedConfig = value;
+      const provider = object(value.provider) ? value.provider[input.providerId] : undefined;
+      const apiKey = object(provider) && object(provider.options) ? provider.options.apiKey : undefined;
+      capturedConfiguredKey = typeof apiKey === 'string' && apiKey.includes('{file:') ? apiKey : resolve(apiKey);
+    } : undefined);
+  const policy = before ?? (capturedOrigin
+    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
+  const raw = bracket ? capturedConfig ?? held() : source.read();
+  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
+  const options = object(provider) && object(provider.options) ? provider.options : {};
+  const configuredKey = bracket ? capturedConfiguredKey : ((policy || profile.nativeGeneration === 'v2') &&
+    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey));
   const selectedUrl = policy ? policy.policy?.baseUrl
     : object(provider) && provider.npm === '@ai-sdk/openai-compatible' ? resolve(options.baseURL) : undefined;
   const configured = policy?.policy?.hasConfiguredApiKey ??
@@ -135,11 +168,18 @@ function captureOpenCodeProbeAccountInspection(
     ? configuration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
     : undefined;
   let fileProof: AcceptedOpenCodeV2FileKey | undefined;
-  const current = () => {
-    try { return ownerCurrent() && source.isCurrent() && (configuration?.isCurrent() ?? true) &&
-      (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true) && (policy?.isCurrent() ?? true); } catch { return false; }
+  const nativeCurrent = () => {
+    try {
+      // The private V1 bracket enters the same full owner check in source.isCurrent().
+      if (!bracket && !ownerCurrent()) return false;
+      return source.isCurrent() && (configuration?.isCurrent() ?? true) &&
+        (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true);
+    } catch { return false; }
   };
-  if (!current()) held();
+  const current = () => {
+    try { return nativeCurrent() && (policy?.isCurrent() ?? true); } catch { return false; }
+  };
+  if (!bracket && !current()) held();
   if (configuration?.selectedFile) {
     // Initial scope commits the original source/selection but cannot invent its future native key.
     if (!original) return undefined;
@@ -165,6 +205,15 @@ function captureOpenCodeProbeAccountInspection(
     isCurrent: current,
     ...(profile.nativeGeneration === 'v2' && nativeCredentialScopeDigest !== undefined ? { nativeCredentialScopeDigest } : {}),
   };
+  if (bracket) {
+    // The pure configured-key read is inside source capture's closing freshness check.
+    // No source effect/await intervenes; future account checks still use nativeCurrent.
+    if (configuration || key || fileProof) held();
+    const target = memberTarget!();
+    return { account, origin: policy, memberReference: {
+      target, originCurrent: policy!.isCurrent(), accountDigest: account.digest,
+    } };
+  }
   return { account, origin: policy };
 }
 
@@ -176,22 +225,41 @@ export function capturePreparedModelReference(options: {
   context: string;
   kind?: 'native';
   isCurrent(): boolean;
+  withAccountRead?: <T>(read: () => T) => T;
   observeAccount?(account: ReturnType<typeof captureOpenCodeProbeAccount>): void;
 }): ModelReadinessReference {
-  const original = options.management.probes.readRetainedProbe(options.commandId, options.context);
-  const candidate = { ...teamModelProbeProfile(options.profile),
-    profileId: original.profileId, configRevision: original.configRevision };
-  if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
-      original.providerId !== options.profile.nativeOptions.providerId ||
-      openCodeModelId(original.providerId, original.modelId) !==
-        openCodeModelId(original.providerId, options.profile.model) ||
-      original.effort !== options.profile.nativeOptions.variant ||
-      (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
-      (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
-      modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
+  return readPreparedModelReference(options);
+}
+
+function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0],
+  memberInspection = false, accountTiming?: () => () => void): ModelReadinessReference {
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
-    const inspected = saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined
-      ? captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved) : undefined;
+    const inspect = () => {
+    // The qualified invocation's fresh receipt also supplies candidate validation.
+    // Its source/authority checks share the account fence before every expiry gate.
+    const original = saved;
+    const candidate = { ...teamModelProbeProfile(options.profile),
+      profileId: original.profileId, configRevision: original.configRevision };
+    if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
+        original.providerId !== options.profile.nativeOptions.providerId ||
+        openCodeModelId(original.providerId, original.modelId) !==
+          openCodeModelId(original.providerId, options.profile.model) ||
+        original.effort !== options.profile.nativeOptions.variant ||
+        (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
+        (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
+        modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
+    let inspected: ReturnType<typeof captureOpenCodeProbeAccountInspection> = undefined;
+    if (saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined) {
+      const endAccount = accountTiming?.();
+      try {
+        inspected = captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved,
+          saved.localModelReadinessOrigin, memberInspection ? () => options.management.readinessTarget(candidate) : undefined);
+      } finally { endAccount?.(); }
+    }
+    if (inspected?.memberReference) {
+      options.observeAccount?.(inspected.account);
+      return inspected.memberReference;
+    }
     const account = inspected?.account;
     const origin = inspected?.origin ?? (saved.localModelReadinessOrigin
       ? captureOpenCodeReadinessOrigin(saved.localModelReadinessOrigin, candidate, saved.providerId,
@@ -201,6 +269,8 @@ export function capturePreparedModelReference(options: {
     return { target: options.management.readinessTarget(candidate),
       originCurrent: (!origin || origin.isCurrent()) && options.isCurrent(),
       ...(account ? { accountDigest: account.digest } : {}) };
+    };
+    return options.withAccountRead ? options.withAccountRead(inspect) : inspect();
   });
 }
 
@@ -278,6 +348,8 @@ export async function prepareCapturedLaunchReadiness(options: {
 export function inspectMemberModelReadiness(options: {
   management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
+  withAccountRead?: <T>(read: () => T) => T;
+  authorityTiming?: ModelReadinessAuthorityTiming;
   hostIncarnation: string; phase?: 'preclaim' | 'allocation';
 }): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
@@ -288,25 +360,67 @@ export function inspectMemberModelReadiness(options: {
   if (original.consumer.initialProfile) return inspectInitialRuntimeModelAdmission({ ...options,
     phase: options.phase ?? 'preclaim' });
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
+  let refusalObserved = false;
+  const timings = createModelReadinessTiming(readinessRefusal);
+  let authorityTiming: ModelReadinessAuthorityTiming | undefined;
+  try { authorityTiming = options.authorityTiming; } catch { /* Optional observation cannot replace an authority check. */ }
   const current = () => {
-    options.assertCurrent();
-    const current = launch.readModelReadiness(selected), consumer = current.consumer;
-    if (consumer.consumerId !== original.consumer.consumerId ||
-        consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) held();
-    if (consumer.continuation) {
-      const restore = entry.selection?.restore;
-      if (!restore || restore.reference !== consumer.continuation.reference ||
-          runtimeDigest(restore.sourceBinding) !== runtimeDigest(consumer.continuation.sourceBinding)) held();
-      return;
+    let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
+    let cutoff: number | null = null, observedAt: number | null = null;
+    let failed = false;
+    const timing = timings.begin(!refusalObserved, authorityTiming);
+    const { boundary, beginAccount } = timing;
+    try {
+      options.assertCurrent(); phase = 'read-consumer';
+      boundary?.('readConsumer');
+      const current = launch.readModelReadiness(selected), consumer = current.consumer;
+      boundary?.();
+      phase = 'identity';
+      if (consumer.consumerId !== original.consumer.consumerId ||
+          consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) { reason = 'held'; held(); }
+      phase = 'continuation';
+      if (consumer.continuation) {
+        const restore = entry.selection?.restore;
+        if (!restore || restore.reference !== consumer.continuation.reference ||
+            runtimeDigest(restore.sourceBinding) !== runtimeDigest(consumer.continuation.sourceBinding)) { reason = 'held'; held(); }
+        return;
+      }
+      phase = 'requirements';
+      if (!options.management || !current.reference || consumer.cutoff === undefined) { reason = 'held'; held(); }
+      phase = 'cutoff';
+      if ((observedAt = Date.now()) >= (cutoff = consumer.cutoff)) { reason = 'held'; held(); }
+      phase = 'reference';
+      boundary?.('reference');
+      const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
+        commandId: current.reference.commandId, context: current.reference.context,
+        ...(options.withAccountRead ? { withAccountRead: options.withAccountRead } : {}),
+        ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
+        observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
+        isCurrent: () => {
+          const endAuthority = timing.beginAccountAuthority();
+          try { options.assertCurrent(); return true; } catch { return false; }
+          finally { endAuthority(); }
+        } }, true, beginAccount);
+      boundary?.();
+      phase = 'equality';
+      if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }
+      boundary?.('finalAuthority');
+      phase = 'final-authority'; options.assertCurrent();
+    } catch (error) {
+      failed = true; throw error;
+    } finally {
+      timing.finish();
+      if (failed && !refusalObserved) {
+        refusalObserved = true;
+        try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({
+          kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),
+          groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),
+            contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),
+          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt,
+          currentCalls: timings.snapshot(),
+        }); } catch { /* Original TEST subscriber handles its own errors; preserve this refusal. */ }
+      }
     }
-    if (!options.management || !current.reference || consumer.cutoff === undefined || Date.now() >= consumer.cutoff) held();
-    const observed = capturePreparedModelReference({ management: options.management, profile: entry.profile,
-      commandId: current.reference.commandId, context: current.reference.context,
-      ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
-      observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
-      isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } });
-    if (runtimeDigest(observed) !== runtimeDigest(current.reference)) held();
-    options.assertCurrent();
   };
   current();
   return { assertCurrent: current, consumerId: original.consumer.consumerId,
@@ -316,7 +430,10 @@ export function inspectMemberModelReadiness(options: {
       assertReadinessCredential(scopeDigest: string) {
         current();
         const account = observedAccount.value;
-        if (!account || !account.isCurrent() || account.nativeCredentialScopeDigest !== scopeDigest) held();
+        if (!account) held();
+        const read = () => account.isCurrent();
+        if (!(options.withAccountRead ? options.withAccountRead(read) : read()) ||
+            account.nativeCredentialScopeDigest !== scopeDigest) held();
       },
     } : {}) };
 }
@@ -393,6 +510,7 @@ export function captureActionModelReadiness(options: {
   targets: readonly { entry: MemberEntry; profile: RuntimeMemberProfile; binding: RuntimeBinding }[];
   commandId: string; payload: unknown; actorDigest: string; readiness?: LocalModelReadinessAction;
   nativeSource?: ReturnType<typeof captureNativeRestartReadiness>;
+  captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
   authorized?: <T>(operation: () => T) => T;
   assertCurrent(): void;
 }) {
@@ -400,9 +518,13 @@ export function captureActionModelReadiness(options: {
   const targets = options.targets.filter(row => row.profile.provider === 'opencode');
   if (!targets.length || targets.length > 256 || options.readiness && options.nativeSource) held();
   options.assertCurrent();
-  const captured = targets.map(row => ({ ...row, profile: structuredClone(row.profile),
-    binding: structuredClone(row.binding), sourceBinding: structuredClone(row.entry.binding),
-    sourceProfile: runtimeDigest(row.entry.profile) }));
+  const captured = targets.map(row => {
+    const processOrigin = options.captureProcessOrigin?.(row.entry);
+    return { ...row, profile: structuredClone(row.profile),
+      binding: structuredClone(row.binding), sourceBinding: structuredClone(row.entry.binding),
+      sourceProfile: runtimeDigest(row.entry.profile),
+      ...(processOrigin ? { processOrigin: structuredClone(processOrigin) } : {}) };
+  });
   const firstTeam = runtimeDigest(captured[0]!.entry.team.definition.binding);
   if (captured.some(row => runtimeDigest(row.entry.team.definition.binding) !== firstTeam ||
       options.launch.readModelReadinessAction(options.commandId, row.entry.profile.memberId))) held();
@@ -476,6 +598,7 @@ export function captureActionModelReadiness(options: {
       if (origin && !anchor) held();
       const reference = await prepareTeamModelReadiness({ management: options.management, profile,
         commandId, context, cutoff, isCurrent: current,
+        ...(target.processOrigin ? { processOrigin: target.processOrigin } : {}),
         ...(anchor && origin ? { prepared: { anchor: { ...anchor, expiresAt: cutoff }, origin } } : {}),
         scope: { schemaVersion: 1, kind: options.nativeSource ? 'native' : 'team',
           teamBindingDigest: firstTeam, actionDigest: runtimeDigest({ commandId: options.commandId,
@@ -496,13 +619,14 @@ export function captureActionModelReadiness(options: {
 
 /** One original explicit Host action; no polling, renewal, latest selection or cold admission. */
 export async function prepareTeamModelReadiness(options: {
-  management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+  management: TeamProbeManagement & Pick<ProviderManagementCoordinator, 'readinessTarget'>;
   profile: RuntimeMemberProfile;
   commandId: string;
   context: string;
   cutoff: number;
   scope: ModelReadinessProbeScope;
   prepared?: { anchor: ReadinessPreparationAnchor; origin?: LocalModelReadinessOrigin };
+  processOrigin?: RuntimeSourceProcessOrigin;
   isCurrent(): boolean;
 }): Promise<ModelReadinessReference> {
   const profile = teamModelProbeProfile(options.profile);
@@ -520,7 +644,8 @@ export async function prepareTeamModelReadiness(options: {
   const account = options.prepared?.origin || profile.nativeGeneration === 'v2'
     ? captureOpenCodeProbeAccount(profile, input, current, undefined, options.prepared?.origin) : undefined;
   const scope = { ...options.scope, ...(account ? { accountDigest: account.digest } : {}) };
-  options.management.probes.startPrepared(input, current, options.prepared, scope);
+  options.management.probes.startPrepared(input, current, options.prepared, scope,
+    captureTeamProbePreparation(options.management, profile, options.processOrigin));
   await options.management.probes.awaitPrepared(input.commandId, input.context);
   if (!current()) held();
   return capturePreparedModelReference({ ...options,

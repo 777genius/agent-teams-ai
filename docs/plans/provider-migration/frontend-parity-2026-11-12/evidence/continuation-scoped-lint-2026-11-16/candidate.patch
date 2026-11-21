@@ -1,0 +1,7 @@
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -209,1 +209,3 @@
+-            tools/owned-process-broker/nativeDebugServiceScenario.ts
++            tools/owned-process-broker/nativeDebugServiceScenario.ts \
++            scripts/e2e/teams-create-page-desktop.mjs \
++            tools/owned-process-broker/nativeWindowsAppFixture.ts

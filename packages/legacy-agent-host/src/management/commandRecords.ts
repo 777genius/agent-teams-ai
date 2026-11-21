@@ -285,7 +285,7 @@ export const storedRuntimeSourceCommandSchema = z.object({
   (value.reason === undefined || value.phase === 'held'));
 export type StoredRuntimeSourceCommand = z.infer<typeof storedRuntimeSourceCommandSchema>;
 
-export const storedManagementCommandSchema = z.union([
+export const storedManagementCommandSchema = z.discriminatedUnion('kind', [
   storedSkillCommandSchema,
   storedCredentialCommandSchema,
   storedOAuthCommandSchema,

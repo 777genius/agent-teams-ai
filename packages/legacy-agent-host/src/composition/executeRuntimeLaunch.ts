@@ -25,6 +25,7 @@ import type { CaptureModelReadinessTransfer, LocalModelReadinessAction } from '.
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { applyLaunchConfiguration, launchConfigurationSchema } from './launchConfiguration.js';
 import { attachInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
+import { captureMemberProcessOrigin } from './captureRuntimeProcessOrigin.js';
 
 export type RuntimeLaunchAsyncOperation = 'capture' | 'start' | 'retry';
 export type RuntimeLaunchSyncOperation =
@@ -185,6 +186,7 @@ export function executeRuntimeLaunch(
       return { entry, profile, binding: entry.binding };
     });
     action = captureActionModelReadiness({ management: options.modelReadiness, launch, targets,
+      captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
       commandId, payload: raw, actorDigest, readiness, assertCurrent: assertStartCurrent });
   } else if (pendingOpenCode.length && !readiness && pendingOpenCode.every(entry =>
       entry.initialModelAdmission !== undefined && entry.selection === undefined)) {

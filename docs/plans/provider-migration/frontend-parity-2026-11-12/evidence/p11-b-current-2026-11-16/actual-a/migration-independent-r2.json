@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T09:32:03.986867+00:00",
+  "disposition": "APPROVE_ACTUAL_P11_A_SEMANTIC_RED_R2",
+  "scope": "Independent read-only review of the once-retained original A job; no B selection, application, execution or publication is performed by this record.",
+  "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "tree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "run": 43831885807,
+  "job": 133178913159,
+  "attempt": 1,
+  "event": "pull_request",
+  "lane": "linux-x64/taskboard",
+  "rawLog": {
+    "path": "p11-a-72e-taskboard-original/job-133178913159.log",
+    "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+    "bytes": 94289,
+    "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+  },
+  "captureMetadata": {
+    "path": "p11-a-72e-taskboard-original/capture-metadata.json",
+    "blob": "9a21d51466a6156d474e383100f5116f406b256c",
+    "bytes": 21812,
+    "sha256": "05a8b235cd79d0feb4c95ab5a6fb58670d3eba2de4ce57b2896d79677222f35d"
+  },
+  "binding": {
+    "runMetadataHeadAndTreeMatch": true,
+    "jobRunMembershipMatches": true,
+    "rawCheckoutLines": [
+      38,
+      109,
+      154,
+      157
+    ],
+    "rawBuildSourceEnvironmentLine": 694,
+    "rawRunStatusCaveat": "The retained rawRun status is the initial queued snapshot; it binds source/attempt/event, not terminal whole-run outcome. Terminal jobMetadata and raw exit establish this job failure.",
+    "currentPRLeaseNotRefreshedByReviewer": true
+  },
+  "preparation": {
+    "originalSteps1Through7": "SUCCESS",
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "electron": "44.10.1",
+    "installLogLines": [
+      308,
+      678
+    ],
+    "electronInstallAndRebuildLines": [
+      679,
+      682
+    ],
+    "linuxHelperAndHostLedgerControllerMcpBuildLines": [
+      683,
+      714
+    ],
+    "buildCompletionBasis": "Original set -euo pipefail commands, actual ledger/Host compiler and controller/MCP output, MCP Build success, then entry into the complete test command. No independent installed binary/dist census or separate silent compiler receipt is claimed.",
+    "fullWorkspaceTypesAreNotHostBuild": true
+  },
+  "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+  "workflowBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+  "workflowCommandLine": 103,
+  "rawCommandLine": 689,
+  "rawSummaryLine": 840,
+  "actualSummary": {
+    "tests": 123,
+    "suites": 0,
+    "pass": 120,
+    "fail": 3,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 9107.032314
+  },
+  "parsedDistinctResults": 123,
+  "onlyFailureNames": [
+    "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+    "P11 keeps the original 90-second cutoff for first result after the cutoff",
+    "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+  ],
+  "p11Results": [
+    {
+      "rawLine": 830,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff"
+    },
+    {
+      "rawLine": 831,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff"
+    },
+    {
+      "rawLine": 832,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+    },
+    {
+      "rawLine": 833,
+      "outcome": "PASS",
+      "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity"
+    }
+  ],
+  "semanticClassification": {
+    "kind": "Three actual expected-rejection failures on late returned true observations from the unchanged original poll",
+    "observedError": "AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+    "operator": "rejects",
+    "actual": "undefined",
+    "sourceFailureLine": "desktop-team-ui-smoke.test.ts:1937:3",
+    "rawFailureBlocks": [
+      [
+        851,
+        862
+      ],
+      [
+        864,
+        875
+      ],
+      [
+        877,
+        888
+      ]
+    ],
+    "originalDriver": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+    "actualTest": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+    "uniqueSourceMarkersReached": true,
+    "setupImportMissingMarkerOrSyntaxFailure": false,
+    "observationTimesMs": [
+      90000,
+      90001,
+      90001
+    ],
+    "polledCaseRetainsOriginal100msShadowDelay": true,
+    "tailsNotReached": "The three read-count/trace/delay assertions at source line1938 follow the failed assert.rejects and were not reached in any failing case. Their predicted values are not separate PASS facts.",
+    "controlScope": "The passing fourth actual-source control covers timely immediate/later acceptance, original guard/read/100ms cadence, exact observer and currentness Error identity, and false-at-cutoff refusal."
+  },
+  "priorCases": {
+    "count": 119,
+    "allPassing": true,
+    "orderedNamesEqualBaseline578": true,
+    "orderedNamesJsonSha256": "0de0f3b954a4f6718cb3cca7f329d0703cf3e49305d23a05b9b2e47c3fe98b91",
+    "baselineRaw": {
+      "path": "team-578-original/job-133150851331.log",
+      "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "bytes": 2709748,
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    "baselineCommandLine": 684,
+    "baselineSummaryLine": 831,
+    "baselineCount": 119,
+    "fullOldTeamPrefixPreserved": true,
+    "sevenOtherOriginalCommandInputsByteIdenticalTo578": true,
+    "noHistoricalResultTransfer": "These119 current A result rows actually passed; equality to578 verifies preserved identities and does not substitute historical results."
+  },
+  "downstream": {
+    "jobFailureStep": 8,
+    "exitCode": 1,
+    "rawExitLine": 889,
+    "originalInstallRetryCommandPrintedButNotExecuted": true,
+    "reason": "set -e exits at the preceding full8 command; the command echo at line690 is not an execution receipt.",
+    "steps9Through30": "SKIPPED",
+    "typedAndRuntimeTeamScope": "Not executed here. Steps9/10 are also explicitly conditional on matrix.lane == team; this Taskboard job cannot qualify them even independently of its earlier failure. Retain actual578 typed baseline without relabelling it A.",
+    "actualTaskboardUiStep14": "SKIPPED",
+    "inputCaptureUiNativeReceiptCleanupQualification": false,
+    "alwaysUploadStep31": "SUCCESS with No files were found warning; no app receipt/PNG/cleanup or artifact verification is claimed.",
+    "noOverallCurrentHeadGreen": true
+  },
+  "sourcePins": [
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+      "bytes": 53683,
+      "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "path": "p11-current-inert-proposal/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "bytes": 115936,
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "bytes": 8676,
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "bytes": 24968,
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "bytes": 20305,
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "bytes": 3804,
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "bytes": 2115,
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "bytes": 20040,
+      "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "path": "agent-teams-public-0660/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "repositoryPath": ".github/workflows/host-emulated-acceptance.yml",
+      "path": "agent-teams-public-0660/.github/workflows/host-emulated-acceptance.yml",
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "bytes": 101741,
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    }
+  ],
+  "preservedGates": [
+    "Actual A semantic RED/R2 is established for the exact unchanged driver and published A test.",
+    "B still needs its separate current-parent/full-prefix/evidence R1, publication/readback/R2 and original complete GREEN/R2.",
+    "C remains a separately selected later phase after B GREEN/R2; original V2 Settings runner/verifier remains before P11 journey.",
+    "All original native/P08/P09/15s/I386-root/M16/vendor and Draft limits remain unchanged."
+  ],
+  "reviewActions": {
+    "apiRequests": 0,
+    "downloads": 0,
+    "projectExecutions": 0,
+    "gitIndexOrRefWrites": 0,
+    "canonicalSourceChanges": 0,
+    "artifactDownloads": 0,
+    "pureDataReadsHashesAndScratchReportOnly": true
+  }
+}

@@ -139,6 +139,12 @@ export function resolveMemberRuntimeSummary(
   runtimeEntry?: TeamAgentRuntimeEntry,
   isTeamAlive?: boolean
 ): string | undefined {
+  // Captured members may inherit defaults only after Host configuration is resolved.
+  // An empty settings object represents inheritance; an absent one is unavailable.
+  if (member.runtimeOwner === 'captured-host' && member.configuredRuntimeSettings === undefined) {
+    return undefined;
+  }
+
   const leadLaunchParams = isLeadMember(member) ? launchParams : undefined;
   const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
     .providerBackendId;

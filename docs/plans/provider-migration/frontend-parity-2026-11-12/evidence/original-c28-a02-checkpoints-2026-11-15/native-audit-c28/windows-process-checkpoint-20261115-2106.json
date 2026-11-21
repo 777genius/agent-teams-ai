@@ -1,0 +1,100 @@
+{
+  "kind": "frozen-original-c28-Windows-Process-checkpoint",
+  "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "runId": 43759098052,
+  "jobIds": [
+    132949618051,
+    132949618151
+  ],
+  "artifactIds": [
+    14179847488,
+    14179294406
+  ],
+  "scope": "Official original Windows Process leaves only; corrected composition, desktop, P08, P09 and release remain unqualified.",
+  "fileCount": 13,
+  "bytes": 1229131,
+  "archiveCount": 2,
+  "archiveMembers": 38,
+  "files": [
+    {
+      "localPath": "c28-process-win32-x64.zip",
+      "bytes": 70615,
+      "gitBlob": "a9db0217554ac27d569086047693d05039f5a90e",
+      "sha256": "b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736"
+    },
+    {
+      "localPath": "c28-process-win32-arm64.zip",
+      "bytes": 70776,
+      "gitBlob": "c5477fbd51bdb6d45257c0d6144f439f9eb01f78",
+      "sha256": "cc403b00257f38946f0888905bfcf46842fe892685fede6f8e0433bbedf4767e"
+    },
+    {
+      "localPath": "job-132949618051.log",
+      "bytes": 392398,
+      "gitBlob": "8a0815102fb86e8bae68101426eef0e610fb8619",
+      "sha256": "c24268c1881ddf5f2b394f28d12654eeac6ddee5ddbc44262c3d04739e8384c4"
+    },
+    {
+      "localPath": "job-132949618151.log",
+      "bytes": 422323,
+      "gitBlob": "ef79e459d5bec09e1f15679d97f4a48c6dc83b97",
+      "sha256": "d5cd48859cd830d62786967560c50892cba1542a66de78b87075f0fea8245356"
+    },
+    {
+      "localPath": "archive-audit-process-x64.json",
+      "bytes": 7505,
+      "gitBlob": "4b559ac051487acc762dadde4296a36a7473bb01",
+      "sha256": "e2398468a07c70a25fed5559ace82955ffed92717fbea25962ffb7048db40c43"
+    },
+    {
+      "localPath": "archive-audit-process-arm.json",
+      "bytes": 7509,
+      "gitBlob": "c38b0e78a03805805e73d903ef443c7802dcd5a6",
+      "sha256": "f53aab363b430a054b498423fd4bf6b25b8f2ce3c3b3b567a665832a659c780d"
+    },
+    {
+      "localPath": "source-pins-process-x64.json",
+      "bytes": 37007,
+      "gitBlob": "7eedb0cfd4bc1889d26b312ecda5e3b261a49165",
+      "sha256": "53dcf02be9f7913322179665b7993287d34e6bd7db9e66fdcff4342dc995efce"
+    },
+    {
+      "localPath": "source-pins-process-arm.json",
+      "bytes": 35432,
+      "gitBlob": "248c78bdbe83f1ea7197787c4bc00dda888d6074",
+      "sha256": "6c6fda443f6de27f1dba2ac8baea8316ecedc2f2b3e9852bf858efd3434ae9c2"
+    },
+    {
+      "localPath": "receipt-audit-process-windows-compact.json",
+      "bytes": 144148,
+      "gitBlob": "622c35f2c32743cb2d53bf2e49b9e75eb0f36642",
+      "sha256": "f85d80b22935ed52f83dbdc07723cadb8b1d8f2c82c95ba85aece007916f8815"
+    },
+    {
+      "localPath": "source-c28-four-path-delta.json",
+      "bytes": 1101,
+      "gitBlob": "61b17e60a4a9ce3b31bf2af675673769f223eede",
+      "sha256": "1be745baf6bb4b696b378f00252a8359154e9082b9bdf400afcc217e199aa214"
+    },
+    {
+      "localPath": "process-jobs-snapshot-20261115-2102.json",
+      "bytes": 30243,
+      "gitBlob": "3fe942074d8193263502badb4e61e099ac1cb9a0",
+      "sha256": "6347ef5887913fd1a304bf1bca6b3ac27a46e16886e3ca7405237b71a912619d"
+    },
+    {
+      "localPath": "plan29-c28-windows-process-appendix.md",
+      "bytes": 8348,
+      "gitBlob": "fca3d08d92b6a1e7ea9fd6f0e3fd3146281086e3",
+      "sha256": "1b6753cde76dfbbd7c6fac7fe19535b5d94c0d0d57e691f33610a801b935acad"
+    },
+    {
+      "localPath": "../native-audit-2cb/source-2cb-seven-path-delta.json",
+      "bytes": 1726,
+      "gitBlob": "72a2f7ca850def9ba5e2b5fb77d92d4f570e235c",
+      "sha256": "46e1691a10fd57cb8eedf0b4336738fd7c5fe7379372f84af752b6dccf4367eb"
+    }
+  ],
+  "recoverability": "Original ZIPs carry all exact extracted members; archive audits give member identities. Temporary signed URLs/download inputs/base64 staging files and duplicate source/extracted payloads are intentionally excluded. The one relative source-delta dependency is an exact previously audited immutable source inventory, included here by hash.",
+  "excludedDraftAudit": "receipt-audit-process-windows.json was a verbose scratch derivation; publish only the compact audit listed here."
+}

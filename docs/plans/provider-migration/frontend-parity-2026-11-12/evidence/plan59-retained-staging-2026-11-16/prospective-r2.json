@@ -1,0 +1,109 @@
+{
+  "decision": "ACCEPT_PROSPECTIVE_PLAN59_EXACT_DRAFT",
+  "reviewer": "/root/installer_review",
+  "plan": {
+    "path": "retained-staging-proposal/plan.md",
+    "bytes": 11833,
+    "lines": 64,
+    "sha256": "941b7a3a9f7b0189024716cea59e0a6637504187d1d8332c26fccac12f321580",
+    "gitBlob": "cd2982fbe37de9ae46aef247e0d3f6856c328a88",
+    "targetParentDeclared": "4900dcd71399b118b9dcc0a2e525280da9a06be0"
+  },
+  "independentSourceEvidenceReview": {
+    "path": "native-proposal/b2-retained-pin-3be-r1/installer-review/prospective-r2.json",
+    "sha256": "9a6b0be2f87b06aed3577e2fd8ce3e94c6ebcd1418a27f3139824ef7f374aa32",
+    "sourceBindings": 22,
+    "stagingImportClosureFiles": 11,
+    "staticChecks": 63
+  },
+  "conclusion": "Full selected draft accurately preserves the two historical/current acceptance roles and fixes the proven three-consumer preparation mismatch. It binds the old runtime through canonical historical app source, immutable lock/stager and release/binary pins, then joins those measurements across existing preparation/runtime/final receipts. It keeps current Host V2 and donor4a160 separate, including existing source-selector early return and source-built helper qualification. No blocker or scope expansion is identified.",
+  "implementationReviewPoints": [
+    "The new canonical historical-root reads belong only to the normal coexistence branch. Keep both native source-selector flags returning before this branch and both input-preparer selector branches independent of the new root.",
+    "The runner must compare independently measured historical identity to the prepared retainedRuntime receipt, then carry that same identity into proof.inputs.retainedRuntime. Merely echoing environment/receipt fields does not satisfy the selected plan.",
+    "Keep existing current-source checks and helperSource verification when extending retainedSourceGuard. New provenance cannot replace the current source or old helper checks.",
+    "Retain exact158/f5/archive/b9binary pins, current160/e13 lock/resources/Bun/graph, and donor4a160/e13. No release-tag-only override, current lock mutation or borrowed donor payload.",
+    "Actual source R2 still must confirm all old actions/assertions and physical line caps with an exact three-path delta. Parent must freshly bind unchanged preimages and preserve unrelated incoming leaves before publication."
+  ],
+  "precision": [
+    "The same stager and full bounded local/Node import graph justify isolated historical staging without a historical workspace build. This does not claim successful staging or budget fit.",
+    "Official release API metadata matches the selected archive digest; archive bytes were not downloaded or verified locally. Future original stager/pin checks remain mandatory.",
+    "The pre-business failure observed no native coexistence or B2 UI outcome. This plan review does not qualify those or any Windows/P08/P09/vendor/release path."
+  ],
+  "staticCheckCount": 18,
+  "staticChecks": [
+    {
+      "name": "three complete existing source paths",
+      "ok": true
+    },
+    {
+      "name": "original mismatch and pre-business limit",
+      "ok": true
+    },
+    {
+      "name": "historical closed root",
+      "ok": true
+    },
+    {
+      "name": "canonical fork within exact root",
+      "ok": true
+    },
+    {
+      "name": "exact historical app and tree",
+      "ok": true
+    },
+    {
+      "name": "head top-level tree clean before after and source guard",
+      "ok": true
+    },
+    {
+      "name": "old lock/stager/archive/binary exact constants",
+      "ok": true
+    },
+    {
+      "name": "old untouched same stager without workspace reinstall",
+      "ok": true
+    },
+    {
+      "name": "metadata not bytes",
+      "ok": true
+    },
+    {
+      "name": "measured provenance in existing receipt",
+      "ok": true
+    },
+    {
+      "name": "runtime joins kind readiness current source head",
+      "ok": true
+    },
+    {
+      "name": "final validator joins same measured prepared/runtime identity",
+      "ok": true
+    },
+    {
+      "name": "current V2 root retained",
+      "ok": true
+    },
+    {
+      "name": "donor4a and both selector branches retained",
+      "ok": true
+    },
+    {
+      "name": "source-built helper qualification unchanged",
+      "ok": true
+    },
+    {
+      "name": "unchanged budgets and line cap",
+      "ok": true
+    },
+    {
+      "name": "publication first then inert afterimages and independent R2",
+      "ok": true
+    },
+    {
+      "name": "no local execution/new qualification",
+      "ok": true
+    }
+  ],
+  "execution": "Read-only source/log/metadata review plus inert hashes/text checks and report writing. No source afterimage, project/TypeScript/test/stager/provider/native/GUI execution, download, CI polling/action or remote mutation.",
+  "defects": []
+}

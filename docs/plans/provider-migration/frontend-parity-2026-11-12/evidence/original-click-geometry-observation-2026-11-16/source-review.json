@@ -1,0 +1,64 @@
+{
+  "kind": "geometry-passive-diagnostic-independent-source-r2",
+  "reviewer": "/root/migration_scope_audit",
+  "status": "GO_PROSPECTIVE_SOURCE_ONLY",
+  "parentBinding": {
+    "commit": "257ba1192278468aa618d4b924f1a6091925180f",
+    "tree": "ec3fc232b68e0f8d1e9451bab267b1e69c828c81",
+    "sourcePreimagesIndependentlyReadBack": true
+  },
+  "patch": {
+    "blob": "bc939cc77de7a5a819449a622fb6c14618255a6f",
+    "bytes": 19970,
+    "sha256": "48a28e3fc4fa8e8d0c0c7d8202d49709841708307a751807fe6e11984f4aede1",
+    "paths": 3,
+    "hunks": 8
+  },
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "after": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "bytes": 30733,
+      "lines": 548,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "hunks": 6
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": "5ea26752689cbf9ef4307816ad7c739eb1dd5f4c",
+      "after": "2017060db6ca7ef01d17ee3096ac994b288ff1aa",
+      "bytes": 134975,
+      "lines": 2286,
+      "sha256": "08860180456acd6b8202e632fe3dbc3080aba07ddcef6ebd49679eaaa4af3fde",
+      "hunks": 1
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": "d53a2fda2f60c12526b0457cf7d25858f43dd8f2",
+      "after": "09343faa479855d0425f0649e70db76af3ffdef2",
+      "bytes": 101869,
+      "lines": 1314,
+      "sha256": "bcf54d00b71a0b064efde920fbd7b85d5e549509380b6d3b0bbd44d8c09dbf70",
+      "hunks": 1
+    }
+  ],
+  "checks": [
+    "Independently fetched complete patch and postimages, applied every hunk against exact full preimages in memory, and verified Git blob/SHA-256/byte/line identities.",
+    "Helper preserves original target eligibility, hit test, exact x/y/tag equality, at most15 stable observations, final immediate refusal, post-await ownership/cutoff and one hover/press/release action order.",
+    "No new CDP command, target read, wait, timer, clock, retry, retarget, business action or deadline is introduced.",
+    "Optional geometry observations are best-effort; retained projection uses own data descriptors and reads each accepted value once, with bounded numeric/enumerated fields and at most18 samples.",
+    "Existing hover receipt retains the trace; final-target failure only echoes the same closed projection and rethrows the same original Error even when diagnostic stdout throws.",
+    "Complete prior Settings Team5ea bytes are an unchanged prefix; exactly three appended cases preserve all A, original final-refusal/owner/cutoff and Settings assertions.",
+    "New cases cover five original reads/no press/one bounded echo; metadata getter refusal and single descriptor reads with throwing stdout; actual generated target expression with successful and failed optional geometry APIs.",
+    "Existing Node/assert/vm imports and UiCdpPort types support the test structure by inspection; no test execution or compiler claim.",
+    "Workflow has exactly one extra existing controls operand after Settings collector:94 to95; removing that line reproduces complete Settings workflow bytes.",
+    "Helper548 lines remains below ordinary800 cap; original common source roster already contains the helper path; no cap/roster change."
+  ],
+  "limitations": [
+    "Source review only: no project execution, lint, typecheck, test, actual Electron/browser or native qualification.",
+    "Diagnostics do not establish the cause of the retained10px drift or repair a product/layout failure; old Cross/Installer causes remain unproved.",
+    "Additional synchronous observation work consumes the original budget; no zero-cost, atomic observation or click-atomicity claim.",
+    "Future C must retain the full resulting Team/workflow files and compose original five C lint operands after these95."
+  ]
+}

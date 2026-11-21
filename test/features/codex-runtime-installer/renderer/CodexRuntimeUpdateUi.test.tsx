@@ -160,6 +160,41 @@ describe('Codex runtime update UI', () => {
     await act(async () => root.unmount());
   });
 
+  it('shows a refresh error alongside completed installation without offering another install', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onInstall = vi.fn();
+    try {
+      await act(async () => {
+        root.render(
+          <CodexRuntimeUpdateDialog
+            open
+            onOpenChange={() => undefined}
+            status={{
+              ...staleStatus, updateAvailable: false, state: 'ready',
+              progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
+            }}
+            loading={false}
+            error="TEST original status refresh unavailable"
+            onInstall={onInstall}
+          />
+        );
+      });
+      const dialog = document.body.querySelector('[role="dialog"]');
+      expect(dialog?.textContent).toContain('Update Ready');
+      expect(dialog?.textContent).toContain('Codex is ready for new launches.');
+      expect(dialog?.textContent).toContain('TEST original status refresh unavailable');
+      expect(Array.from(dialog?.querySelectorAll('button') ?? []).some(button =>
+        /install|retry|update/i.test(button.textContent ?? '')
+      )).toBe(false);
+      expect(onInstall).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('falls back safely for non-finite progress and missing completion detail', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     expect(

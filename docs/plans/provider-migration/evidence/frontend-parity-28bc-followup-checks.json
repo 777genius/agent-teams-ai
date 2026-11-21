@@ -1,0 +1,236 @@
+{
+  "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+  "providerSource": "976905403b40078c3c2cfae3c442d5ec91056fc2",
+  "checks": {
+    "providerHost": {
+      "frontendBase": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+      "providerSource": "976905403b40078c3c2cfae3c442d5ec91056fc2",
+      "providerSha256": "73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8",
+      "status": "PASS",
+      "steps": [
+        {
+          "name": "build",
+          "exitCode": 0,
+          "seconds": 9.591
+        },
+        {
+          "name": "codex-host-existing-tests",
+          "exitCode": 0,
+          "seconds": 22.902
+        }
+      ],
+      "seconds": 32.494,
+      "logSha256": "a51481df3a400ca15e14963b0c6a23c3d5168490f04c1ce51c5a7826a35bbbf6",
+      "vendorsExecuted": false
+    },
+    "combinedAuthorityRuntime": {
+      "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+      "provider": "976905403b40078c3c2cfae3c442d5ec91056fc2",
+      "authoritySourceSha256": "0e06686906380ead87883fd20c3b94a53a92d3a5c34f0118ef88bec75eec946c",
+      "status": "PASS",
+      "steps": [
+        {
+          "name": "combined-host-build",
+          "exitCode": 0,
+          "seconds": 10.642
+        },
+        {
+          "name": "combined-authority-runtime",
+          "exitCode": 0,
+          "seconds": 9.462
+        }
+      ],
+      "seconds": 20.105,
+      "logSha256": "b773de9ae6078c43efadbcd00f1508d32add4120f819574429307ff24f88bcec",
+      "vendorsExecuted": false
+    },
+    "lazyFixture": {
+      "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+      "command": [
+        "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "/workspace/scratch/391e21b06e24/lazy-start-28bc/node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/features/agent-backend/desktopBackendFeature.test.ts"
+      ],
+      "exitCode": 0,
+      "durationSeconds": 34.739,
+      "sourceSha256": "1ac3815d2d499f567325df21ace3b3c7a942eaacc5210c042000dc8c075634ca",
+      "hostDist": "/workspace/scratch/391e21b06e24/phase2-e7c6/packages/legacy-agent-host/dist/index.js",
+      "hostDistSha256": "69838d1009c95c0fec008061450224e4d904cfd6ecfc1fd44e33d488a8adb095",
+      "ledgerDist": "/workspace/scratch/391e21b06e24/phase2-e7c6/packages/task-change-ledger/dist/index.js",
+      "ledgerDistSha256": "1ce49dfb30b0d3e69024559da9e36060c81e8fd3fb90300102a57858f85f5353",
+      "node": "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "nodeOptions": "--max-old-space-size=512",
+      "log": "/workspace/scratch/391e21b06e24/TEST-lazy-start-28bc-original-suite.log",
+      "qualification": "Original finite Node/Main fixture suite only; no vendor runtime"
+    },
+    "authority": {
+      "snapshot": {
+        "path": "/workspace/scratch/391e21b06e24/TEST-authority-28bc-frozen-source.json",
+        "sha256": "0e06686906380ead87883fd20c3b94a53a92d3a5c34f0118ef88bec75eec946c"
+      },
+      "verification": {
+        "ledgerProductionTypes": "PASS exit0, pinned TS7",
+        "hostProductionTypes": "PASS exit0, pinned TS7",
+        "hostTestTypes": "PASS exit0, pinned TS7",
+        "focusedAuthorityNamespace": {
+          "pass": 12,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0
+        },
+        "authorityRuntimeTeamRegression": {
+          "pass": 75,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0
+        },
+        "fastLint": "PASS exit0, exact8paths",
+        "sourceFileSize": "PASS exit0,4939files,800lineLimit",
+        "gitDiffCheck": "PASS exit0",
+        "filesystemCalls": {
+          "baseline": {
+            "lockPublications": 1,
+            "namespaceTraversals": 6,
+            "stateReads": 7
+          },
+          "closed": {
+            "lockPublications": 1,
+            "namespaceTraversals": 3,
+            "stateReads": 1
+          }
+        },
+        "nativeWindows": "PENDING; no elapsed-time or acceptance claim"
+      },
+      "logs": [
+        {
+          "path": "/workspace/scratch/391e21b06e24/TEST-authority-28bc-first.log",
+          "sha256": "2ca08896fe8d2f24fba32d6ed5da07f1910bef9e8796817372bafbb04be3f386",
+          "bytes": 1550
+        },
+        {
+          "path": "/workspace/scratch/391e21b06e24/TEST-authority-28bc-integration.log",
+          "sha256": "b6438c17aa90f13c27bf853a538dec39b45c80bb55e8397e1b2dc6e5d4a9262b",
+          "bytes": 9029
+        },
+        {
+          "path": "/workspace/scratch/391e21b06e24/TEST-authority-28bc-test-types.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": "/workspace/scratch/391e21b06e24/TEST-authority-28bc-fast-lint.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ],
+      "independentReviewer": "/root/pr_chain: exact7production+existingtest source approved"
+    },
+    "fullFrontendTypesSingleThreaded": {
+      "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+      "candidate": "provider976 + closed Team authority + lazy fixture",
+      "compiler": "pinned TypeScript7.0.2 native",
+      "additionalCompilerFlag": "--singleThreaded",
+      "sameAllProjectsAs": "package.json scripts.typecheck (8 projects)",
+      "prebuild": "separately passed TEST-combined-28bc-authority-provider.json",
+      "environment": {
+        "GOMAXPROCS": "1",
+        "GOMEMLIMIT": "1536MiB",
+        "GOGC": "75"
+      },
+      "status": "FAIL",
+      "steps": [
+        {
+          "project": "tsconfig.json",
+          "exitCode": -9,
+          "seconds": 168.229,
+          "command": [
+            "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+            "node_modules/@typescript/native/bin/tsc",
+            "--noEmit",
+            "--singleThreaded"
+          ]
+        }
+      ],
+      "seconds": 168.239,
+      "logSha256": "f24aa724c76d3ef1b0472997206395c7dd965d4e2399442070c5e9dbf179ffde",
+      "resourcesSha256": "f3bb04a3b268ba4463ab3e786bc08ec5d8f063283784af73996b14f2a49ec241",
+      "vendorsExecuted": false
+    },
+    "windowsSourceFixture": {
+      "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+      "sourceReview": "provider_parity approved exact5 files",
+      "typecheck": {
+        "command": "GOMAXPROCS=2 GOMEMLIMIT=384MiB pinnedNode24.21 node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json",
+        "exitCode": 0,
+        "distSource": "read-only phase2-e7c6:28bc/D68",
+        "compilerVersion": "7.0.2"
+      },
+      "workflowStructure": "original commands and admission unchanged; additive fixed3 receipt verifier",
+      "nativeWindowsExecuted": false,
+      "desktopExecuted": false,
+      "sourceFiles": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "sha256": "d27e796ce7a6121c17dabc689009363771cb1c97b4316395bfd7240dd7792625",
+          "lines": 170
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "sha256": "1f98e2299bf56f30926cfba88d79d76aef3b4a4dbed35eb48b77871dd115f8af",
+          "lines": 439
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+          "sha256": "5215b0ee865a5d31eb60bd08c2823b436ed471257d3b438c1dbd1b0841d21f04",
+          "lines": 208
+        },
+        {
+          "path": "tools/owned-process-broker/tsconfig.json",
+          "sha256": "c126d647bcd15ad387de70ac044826f9d668d6e055ad19f7a78d04ec96797217",
+          "lines": 6
+        },
+        {
+          "path": ".github/workflows/host-process-acceptance.yml",
+          "sha256": "6ee21f9814c8be1851138773b8d02cce75a2bbb0d076895642f828e792feb9df",
+          "lines": 331
+        }
+      ],
+      "publicationStatus": "HOLD; excluded from this commit",
+      "reason": "All three source journeys cannot inherit the single original controller120s/sentinel60s budget without an actual timing proof; no timeout increase permitted."
+    },
+    "combinedFinal": {
+      "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+      "provider": "976905403b40078c3c2cfae3c442d5ec91056fc2",
+      "candidate": "closed authority + provider pin + lazy fixture + launcher observation",
+      "status": "PASS",
+      "steps": [
+        {
+          "name": "retained-host-script-types",
+          "exitCode": 0,
+          "seconds": 1.769
+        },
+        {
+          "name": "source-size",
+          "exitCode": 0,
+          "seconds": 1.038
+        },
+        {
+          "name": "fast-lint-changed",
+          "exitCode": 0,
+          "seconds": 3.793
+        },
+        {
+          "name": "diff-check",
+          "exitCode": 0,
+          "seconds": 0.047
+        }
+      ],
+      "seconds": 6.65,
+      "logSha256": "bab6a4a540b3900cbb1645af3323f19cab263af2ff0f19af23a8e53460639854",
+      "vendorsExecuted": false
+    }
+  },
+  "qualification": "Controlled Host/Main fixtures only; no actual Codex/Claude runtime. Native Windows and complete Electron acceptance remain pending."
+}

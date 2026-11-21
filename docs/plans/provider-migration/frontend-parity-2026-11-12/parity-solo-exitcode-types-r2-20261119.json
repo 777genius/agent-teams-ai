@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-root-source-and-evidence-review",
+  "reviewer": "/root",
+  "author": "/root/composition_review_030",
+  "reviewedAt": "2026-11-19T01:56:19.101795+00:00",
+  "verdict": "PASS_LOCAL_TEST_TYPE_ONLY_AND_SCOPED_PROOFS",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate-manifest.json",
+    "bytes": 1183,
+    "sha256": "1d37ab907a6c6b5a60514945379a423431a432120d38e3d6b93982fac7ce982b",
+    "gitBlob": "5b5b231add2ca75b4821e613f2d2659392527954"
+  },
+  "authorVerification": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verification.json",
+    "bytes": 20414,
+    "sha256": "f4210a0e5dddb470b72ca36506d479dcfeb1206efa2212c67b2b214f5d992ad5",
+    "gitBlob": "b42720578a82efe00f968e1e2d3ea96b6553cc94"
+  },
+  "source": {
+    "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+    "mode": "100644",
+    "before": {
+      "bytes": 28169,
+      "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+      "gitBlob": "7ca326f89632042a98c5bc459250df221980bdd4",
+      "lines": 684
+    },
+    "after": {
+      "bytes": 28238,
+      "sha256": "1b6a05cb460ada5596bce3f2553a917777e86545e2af8e23995606c44cfd5900",
+      "gitBlob": "36728b28d564cac2d107f17be0add0ab5dafb43c",
+      "lines": 689
+    }
+  },
+  "independentFindings": {
+    "exactDelta": "Replacing the single candidate declaration with its exact original declaration reconstructs the entire published file byte for byte. Only the already-existing synthetic ChildProcess type assertion gains a local mutable exitCode intersection; formatting wraps that same declaration.",
+    "typeIntent": "The child is a plain object created and owned by the test. Explicitly mutable exitCode describes this test double; it does not alter Node ChildProcess declarations or production authority. No any, suppression, replacement object, new runtime operation or blanket writable type is introduced.",
+    "runtimeOracle": "The same child object remains bound to owned-process and run identity. recordVerifiedCliProcessRelease, exitCode assignment, processClosed, Stop completion and all positive/negative assertions remain unchanged and in the same order.",
+    "erasure": "Read both complete transformed JavaScript files and verified byte equality28578B SHA256c7ef76da83f0bfba7d9059e996b51c05c52405e35c7ab869c993e81a3b774246; no transform or runtime was rerun by reviewer.",
+    "typecheck": "Both exact source excerpts preserve the original async fixture-return/call shape and actual Node24.12.4 ChildProcess declaration. Before produces precisely one TS2540; after no diagnostics. Compiler options/excludes equal immutable root tsconfig; only include is narrowed. This is not complete-file/project typecheck.",
+    "finiteRuntime": "One existing positive Create/publication/owned-Stop case passed;16 other cases were intentionally unselected. The actual file and single test result were checked; no17-test/full-suite claim.",
+    "sourceInputs": "Independently compared all4779 source-input pins with exact42a4 tree and all copied source files after the selected test. Only the declared candidate test differs; every other copied source file remains byte-identical.",
+    "rawEvidence": "Verified20 local receipt/source-map/type-declaration pins and all17 raw gzip members including complete JS outputs, exact compiler excerpts/configs/logs/results, finite result and full4779 input roster. Original Ubuntu raw CI failure remains failed; blocked Electron E2E was not entered."
+  },
+  "verifiedProductionFilesUnchanged": "Candidate affects one existing __tests__ file only; no production or provider source changes.",
+  "rawBundle": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-receipts.json.gz",
+    "bytes": 400600,
+    "sha256": "820dff22b34148f2b5e4e6059a448292a607ceac4115b539689f44a4d2c9429b",
+    "gitBlob": "d592aeda8ecfa65ca1faf1a1f9cb65c36282d498"
+  },
+  "rawManifest": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-receipts-manifest.json",
+    "bytes": 4411,
+    "sha256": "05289151ce083b4540923cbcbb659b20dcba715fd4508b10c91f3cce286f68ff",
+    "gitBlob": "fbc6e62a295e4f2666925b673d0aa2825fdb5688"
+  },
+  "limits": [
+    "Source-excerpt type proof and one existing finite synthetic-child test only; no fullfile/project/typed-lint/native/GUI/E2E acceptance.",
+    "Prepared Node24.22.3/TS7.0.2 and dependency links were reused read-only; no build or installation.",
+    "Root performed file/hash/source review only; no compiler, runtime, native, app or CI fetch was rerun.",
+    "Current useful original42a4 job gate remains active; this review does not authorize a source push while useful jobs execute or are assigned."
+  ],
+  "verifiedLocalPinCount": 20
+}

@@ -22,6 +22,7 @@ export async function captureHostScheduleTarget(
   assertBackendRequestGuard(guard);
   const binding = snapshot.bindings.find((row) => row.handle.handleId === handleId);
   if (snapshot.state !== 'ready' || !binding?.ownerResourceRef || !binding.teamResourceRef ||
+    snapshot.unavailableOwners?.some(owner => owner.ownerResourceRef === binding.ownerResourceRef) ||
     !feature.authorizeHandle(contextId, binding.handle))
     throw new BackendRoutingError('forbidden');
   return Object.freeze({ kind: 'host', contextId, handleId,
@@ -48,7 +49,9 @@ export async function restoreHostScheduleTarget(
       row.teamResourceRef === target.teamResourceRef) &&
       feature.authorizeHandle(target.contextId, { handleId: target.handleId });
   };
-  await feature.discoverBindings(target.contextId, { isCurrent: ownerCurrent });
+  const discovered = await feature.discoverBindings(target.contextId, { isCurrent: ownerCurrent });
+  if (discovered.unavailableOwners?.some(owner => owner.ownerResourceRef === target.ownerResourceRef))
+    throw new BackendRoutingError('unavailable');
   assertBackendRequestGuard({ isCurrent: sameBinding });
   return Object.freeze({
     target,

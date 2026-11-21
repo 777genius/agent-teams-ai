@@ -46,6 +46,7 @@ import type {
   BackendResumePreparation,
   BackendResumePrepareRequest,
 } from './restorations';
+import type { RetainedLegacyLaunchApi } from './retainedLegacyLaunch';
 import type { BackendReviewOperationPayloads, BackendReviewValue } from './review';
 import type { AgentBackendReviewWatchApi } from './reviewWatch';
 import type {
@@ -125,8 +126,19 @@ export interface BackendOperationPayloads
     descriptionTaskRefs?: BackendTaskRef[];
   };
   'task.update': { taskId: string; subject?: string; description?: string };
-  'task.start': { taskId: string; notification: 'legacy' | 'user'; expectedRecipient?: BackendTaskRecipient };
+  'task.start': {
+    taskId: string;
+    notification: 'legacy' | 'user';
+    expectedRecipient?: BackendTaskRecipient;
+  };
   'task.board.clear': { taskId: string };
+  'team.review-flow.read': Record<string, never>;
+  'task.board.review-flow': {
+    settings: {
+      reviewFlow: 'agent_approval' | 'human_approval' | 'lead_then_human';
+      reviewFlowPrompt: string;
+    } | null;
+  };
   'task.board.order': {
     columnId: 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
     orderedTaskIds: string[];
@@ -147,6 +159,7 @@ export interface BackendOperationPayloads
     | { taskId: string; action: 'request'; reviewer?: string }
     | { taskId: string; action: 'start' }
     | { taskId: string; action: 'disapprove' }
+    | { taskId: string; action: 'complete'; expectedReviewRequestId: string; note?: string }
     | {
         taskId: string;
         action: 'approve';
@@ -154,7 +167,7 @@ export interface BackendOperationPayloads
         notifyOwner?: boolean;
         suppressTaskComment?: boolean;
       }
-    | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: BackendTaskRef[] };
+    | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: BackendTaskRef[]; expectedReviewRequestId?: string };
   'task.comment': {
     taskId: string;
     text: string;
@@ -183,7 +196,10 @@ export interface BackendOperationPayloads
   'team.roster.read': Record<string, never>;
   'team.roster.lookup': { expected?: BackendRosterReplacement };
   'team.roster.replace': BackendRosterReplacement;
-  'team.launch.capture': { rosterCommandId: string; modelPreparation?: BackendLaunchModelPreparation };
+  'team.launch.capture': {
+    rosterCommandId: string;
+    modelPreparation?: BackendLaunchModelPreparation;
+  };
   'team.launch.read': { launchId?: string };
   'team.launch.configuration.read': { launchId?: string };
   'team.launch.model.configuration.read': Record<string, never>;
@@ -207,6 +223,8 @@ export interface BackendOperationPayloads
     memberIds: string[];
   };
   'command.lookup': Record<string, never>;
+  'host.recovery.capture': Record<string, never>;
+  'host.recovery.start': { capability: string };
   'runtime.open': { memberId: string; expectedGeneration?: string };
   'runtime.read': {
     memberId: string;
@@ -251,6 +269,16 @@ export type BackendOperationRequest = {
   };
 }[BackendOperation];
 
+export type BackendHostRecoveryRequest = Extract<
+  BackendOperationRequest,
+  {
+    operation: 'host.recovery.capture' | 'host.recovery.start';
+  }
+>;
+export type BackendHostRecoveryResult =
+  | { phase: 'ready' }
+  | { phase: 'captured'; capability: string };
+
 export interface BackendComment {
   id: string;
   author?: string;
@@ -278,7 +306,7 @@ export interface BackendTask {
   id: string;
   status: string;
   needsClarification?: 'lead' | 'user';
-  reviewState?: 'none' | 'review' | 'approved' | 'needsFix';
+  reviewState?: 'none' | 'review' | 'reviewed' | 'approved' | 'needsFix';
   subject?: string;
   description?: string;
   displayId?: string;
@@ -320,6 +348,7 @@ export interface BackendCommandReceipt {
     | 'task.review'
     | 'task.board.clear'
     | 'task.board.order'
+    | 'task.board.review-flow'
     | 'task.relationship'
     | 'task.clarification'
     | 'message.send';
@@ -390,6 +419,14 @@ export type BackendActivityData =
       text: string;
       phase: 'snapshot' | 'complete';
     }
+  | {
+      kind: 'thinking';
+      messageRef: string;
+      block: number;
+      text: string;
+      phase: 'snapshot' | 'complete';
+    }
+  | { kind: 'process-output'; stream: 'stderr'; text: string }
   | { kind: 'tool'; messageRef: string; toolRef: string; name: string; input: BackendActivityValue }
   | { kind: 'tool-result'; toolRef: string; content: BackendActivityValue; isError: boolean }
   | { kind: 'usage'; inputTokens?: number; outputTokens?: number; cumulativeCostUsd?: number }
@@ -472,6 +509,7 @@ export type BackendOperationResult =
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot
+        | { kind: 'review-flow'; settings: BackendOperationPayloads['task.board.review-flow']['settings']; unreadable?: true }
         | BackendTeamMessagesPage
         | BackendRosterConfiguration
         | BackendRosterReceipt
@@ -485,6 +523,7 @@ export type BackendOperationResult =
         | BackendDeletedTasks
         | BackendCommandReceipt
         | BackendRuntimeSnapshot
+        | BackendHostRecoveryResult
         | BackendCheckpoint
         | BackendMemberCheckpoints
         | BackendLaunchRestorations
@@ -507,7 +546,11 @@ export type BackendOperationResult =
     };
 
 export interface AgentBackendApi
-  extends AgentBackendConnectionsApi, Partial<AgentBackendReviewWatchApi>, StoppedTeamImportApi {
+  extends
+    AgentBackendConnectionsApi,
+    Partial<AgentBackendReviewWatchApi>,
+    StoppedTeamImportApi,
+    RetainedLegacyLaunchApi {
   invoke(request: BackendOperationRequest): Promise<BackendOperationResult>;
 }
 

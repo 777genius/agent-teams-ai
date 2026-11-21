@@ -1,0 +1,160 @@
+{
+  "artifactId": 14191450696,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "originalZip": {
+    "bytes": 962884,
+    "blob": "0ceda93965afb70b088e14d7cb6d18e8e2bb3aaf",
+    "sha256": "0e39ceea999d4c2f560eeeb7eaa24a5e8f876d5dee82aa95c03ca1c7552b6d4c"
+  },
+  "entries": [
+    {
+      "path": "TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/effects.ndjson",
+      "crc32": "48b39cb8",
+      "bytes": 3855,
+      "blob": "c039a14825ddaa91d263abfb8e20c3b212e955a9",
+      "sha256": "69bb9cd7f63d1dbea1819223d4ee22472508bd56446dafb7d3052a43844aae72"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/desktop-backend-receipt.json",
+      "crc32": "1b693389",
+      "bytes": 703597,
+      "blob": "35d322eae4d43a0f68c079fca29e4180387de2c5",
+      "sha256": "8e59450f9214b0ccb3f1c962130fac9549bd50e41ed6b25054b6b3f0a01605a8"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/desktop-app.log",
+      "crc32": "df4c0d49",
+      "bytes": 20651,
+      "blob": "0614e2d4d0cfd8ef2f90d674dbfba63312731b15",
+      "sha256": "1782b830e9def55461f4b708e902e38bccf7b9443518f474f5e9d0592703e9db"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/desktop-descriptor.json",
+      "crc32": "f2462fe1",
+      "bytes": 2641,
+      "blob": "c3cb25d482989a51af4c9646d54ca9198dc967de",
+      "sha256": "0f91c5b1875ed1a81c644e77a7a41e40eb48b4728192b85badc5f75ac6e434c1"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/host-profile.json",
+      "crc32": "122bea5a",
+      "bytes": 7790,
+      "blob": "3b1e120f2c004ed2ecf8307d433bebdfde8cebc9",
+      "sha256": "11e94ef4cafa529e1749c5af1f7a3285c04a4121a008a42daebbf0688a06021e"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/32a45e49585c4f42848ba9d3f7f6f300e197c2007a5d166c2902fddbbbd07d82.json",
+      "crc32": "23e3447c",
+      "bytes": 881,
+      "blob": "8792001478e5d53da6bf4b2f4ee524b1846bc6ba",
+      "sha256": "22dc5a79122912690fd4c3bab43032d95af75936abc03caa22a3abe925cd41dc"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/476f8eca82a0c5f4f75ed1d08dc15e2669ebcf7d6fcc8ec1a9f1f77e1148fa72.json",
+      "crc32": "5f45c5a8",
+      "bytes": 882,
+      "blob": "1b77fe2e54c56d5422929b3843b697e3477cc2ea",
+      "sha256": "b47d4f19cdb38569e543d534082e8fc60c1534a9fc34032d71041cfea40d7f3c"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/6cd3efc14123e4c93fe4813eeef4506cf5ec11e9469fb6bfa9fd403e2df4a701.json",
+      "crc32": "7c152a05",
+      "bytes": 884,
+      "blob": "06d8338970db7b47271d90f85aee6c45d66935d1",
+      "sha256": "47458a55fea88b5409d48627abe4a84361f65f2dd6e371babbc40b4dca3bd607"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/e121eb281f684111eacc848bed31ce83e228db54898e549dcba90d732fc9fdd7.json",
+      "crc32": "21244303",
+      "bytes": 881,
+      "blob": "419082856980ba72d330583776a2b6bd993e34c0",
+      "sha256": "ec91a25016edf25dd2b67fc48f83c2c37e0e5eb8c4ecb836dcce63c7321483e5"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/native-extensions-mcp-installed.png",
+      "crc32": "dec90ad3",
+      "bytes": 179589,
+      "blob": "44094791deea8cf2f0f761cfc35198c0881624f0",
+      "sha256": "e177d3e8a0c5e65ae3d47e1524133dc817287dd90bf17b5670a16d093c446d94"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/native-extensions-plugin-installed.png",
+      "crc32": "5dba1a9e",
+      "bytes": 117777,
+      "blob": "8d9b86cb87423b84ca8c9a6bd4537190e9f0ea84",
+      "sha256": "ce2f81fb1a290c40b848e5ae281a4556d0b5c7293020da764b14e7656a455f27"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/native-extensions-plugin-uninstalled.png",
+      "crc32": "086f5a6f",
+      "bytes": 106427,
+      "blob": "806e7bedcf4bb9156044412b4f2d39ca4c116234",
+      "sha256": "7a72521b4475524cbb1c7df959425c37a8748b4bf39dec79c937887ff2ed816b"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/native-extensions-selection.json",
+      "crc32": "2a4b56e3",
+      "bytes": 2221,
+      "blob": "73bc4f9a5a7b688e6f3c3ba4a857b681fce36400",
+      "sha256": "795a90727f561faf6576f74629b35950c4be77ba8346340ce40d78ca4f15e18f"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-MqsL1W/ui-seed-receipt.json",
+      "crc32": "41245c90",
+      "bytes": 2335,
+      "blob": "0d975a0ba7b1b33d6e231311cbad6e04e2f53a00",
+      "sha256": "c59dd6636dfd347b7310bbaea3f670ec7215f393e5cd650b4759d32c804bd2a4"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-4is4lG/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-4is4lG/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-emulated-extensions-ui.log",
+      "crc32": "174c0b7f",
+      "bytes": 225,
+      "blob": "7cd9686b2cf9f9e526e55ee5769fa3920246befc",
+      "sha256": "9bf5e7691d015040cd0f08f1d4b4b975c476736247b1b00247bb0f3ef0f45a03"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "b0d2ec15",
+      "bytes": 1803,
+      "blob": "2329bfbabd8e49906d7dc9c0e6ffb4b5111f0915",
+      "sha256": "152337a30d11d0f4c09efe22d88e390f9e7c5b0c8f38e6b14e0ff8542cf0647a"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "51b8e7a3",
+      "bytes": 271,
+      "blob": "6838f94340f241cc087659a111a7716e034ec87c",
+      "sha256": "81bf39acce37e26f386d6262303ce827ac9ca1570cad930f853c053deab6322b"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "crc32": "c971ba21",
+      "bytes": 748,
+      "blob": "7b27e30b1688b02741ec2453482ec96235f1823b",
+      "sha256": "74b68a80c80c6bc5c9523de3aae61c79f26b8c9d9823b7d2d22102e4db5e1bda"
+    }
+  ]
+}

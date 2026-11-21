@@ -1,0 +1,258 @@
+{
+  "kind": "PLAN59_REVISION2_INDEPENDENT_SOURCE_R2",
+  "decision": "ACCEPT_SOURCE_ONLY",
+  "selection": {
+    "commit": "4e54064f1f6f82f4151ac4b22b1628d2b74ddf8c",
+    "tree": "1ebca595c1f303477bca48e7d3bcd8b871f2f84d",
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/59-retained-opencode-historical-runtime-staging-2026-11-16.md",
+    "blob": "cd2982fbe37de9ae46aef247e0d3f6856c328a88",
+    "sha256": "941b7a3a9f7b0189024716cea59e0a6637504187d1d8332c26fccac12f321580"
+  },
+  "candidateManifestSha256": "58f95738345c287d577e4fadf0edcf9a10382f736c914683d9872faffe34a963",
+  "candidatePatchSha256": "7e237f340d63743462a347025f163bbb634669cb0aa5dc7c26addccddf5fefa7",
+  "candidateInversePatchSha256": "e301fb5d0d259768d58a92cde6efa061af7f8f9abe3962eb3d43b2b7c45da0df",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "bytes": 199733,
+        "lines": 2927,
+        "sha256": "76e4d2d8e21ba6d2fefdc7aa8c06eb24cc831caa0c2d08939a6a66ec378dc66b",
+        "blob": "4e4554ec3330d0c06b0736e861348d7279511361"
+      },
+      "after": {
+        "bytes": 203111,
+        "lines": 2978,
+        "sha256": "3adb6243ca0d6562b47577daf544c8bd85aba1b309c8f94acb1d046ec98bf0bf",
+        "blob": "97a5aef8801b185d418b9c8c60764f7fcd32c5c0"
+      },
+      "originalAssertionLinesRetained": 754,
+      "added": 52,
+      "removed": 1,
+      "hunks": 4
+    },
+    {
+      "path": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts",
+      "before": {
+        "bytes": 26197,
+        "lines": 379,
+        "sha256": "ddf230ff582d01a6026f3dab5d752920a1afdb1d15defc95fe562c076b8493e4",
+        "blob": "9f9900c7f9166de2a14eaf840fd88d12ae49841d"
+      },
+      "after": {
+        "bytes": 28446,
+        "lines": 409,
+        "sha256": "9e904377c9020d54d8f2418a3612e6ab30f0273ceae39a94c94ff34631ec8ebb",
+        "blob": "99c8e76561a09eda865619c6e5bd7722d1f2f1e5"
+      },
+      "originalAssertionLinesRetained": 101,
+      "added": 34,
+      "removed": 4,
+      "hunks": 3
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": {
+        "bytes": 54340,
+        "lines": 727,
+        "sha256": "df5a4d103e63525991854ce8054588b2fcd9d56e21e90efd7ebd6d95414432bc",
+        "blob": "a910209438b29f04ea4a30f28e69620d98802183"
+      },
+      "after": {
+        "bytes": 56997,
+        "lines": 764,
+        "sha256": "62b222833b0d6b86706f84e92fbb0fe954bb0f62b7cd8b48a7e38c1724b4ed43",
+        "blob": "de1b4b77fa7b90bdeda9618da8f98ac20fdaaef5"
+      },
+      "originalAssertionLinesRetained": 148,
+      "added": 39,
+      "removed": 2,
+      "hunks": 3
+    }
+  ],
+  "totalAdded": 125,
+  "totalRemoved": 7,
+  "hunks": 10,
+  "checks": [
+    {
+      "name": "Revision2 manifest hash exact",
+      "passed": true
+    },
+    {
+      "name": "Revision2 patch hash exact",
+      "passed": true
+    },
+    {
+      "name": "Official published selection equals local bytes",
+      "passed": true
+    },
+    {
+      "name": "Selected plan blob exact",
+      "passed": true
+    },
+    {
+      "name": "Only three selected paths in trees and patches",
+      "passed": true
+    },
+    {
+      "name": ".github/workflows/ci.yml complete preimage",
+      "passed": true
+    },
+    {
+      "name": ".github/workflows/ci.yml complete postimage",
+      "passed": true
+    },
+    {
+      "name": ".github/workflows/ci.yml independent forward replay",
+      "passed": true
+    },
+    {
+      "name": ".github/workflows/ci.yml independent inverse replay",
+      "passed": true
+    },
+    {
+      "name": ".github/workflows/ci.yml every original assertion line retained in order",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts complete preimage",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts complete postimage",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts independent forward replay",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts independent inverse replay",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts every original assertion line retained in order",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts complete preimage",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts complete postimage",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts independent forward replay",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts independent inverse replay",
+      "passed": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts every original assertion line retained in order",
+      "passed": true
+    },
+    {
+      "name": "Regenerated forward patch exact",
+      "passed": true
+    },
+    {
+      "name": "Regenerated inverse patch exact",
+      "passed": true
+    },
+    {
+      "name": "All workflow bytes outside selected job exact",
+      "passed": true
+    },
+    {
+      "name": "Original five ordered fast-lint operands exact",
+      "passed": true
+    },
+    {
+      "name": "Original workflow 30min budget retained",
+      "passed": true
+    },
+    {
+      "name": "Preparation prior branches and donor helper prefix exact",
+      "passed": true
+    },
+    {
+      "name": "Runner source-selection early-return prefix exact",
+      "passed": true
+    },
+    {
+      "name": "Full donor and review helper suffix exact",
+      "passed": true
+    },
+    {
+      "name": "All model/UI/Stop/Quit/cold/cleanup body exact except selected provenance fields",
+      "passed": true
+    },
+    {
+      "name": "Retained helper build and validation unchanged",
+      "passed": true
+    },
+    {
+      "name": "Original test900000ms unchanged",
+      "passed": true
+    },
+    {
+      "name": "Both TypeScript files under800 physical lines",
+      "passed": true
+    },
+    {
+      "name": "Absolute receipt guard before read and model",
+      "passed": true
+    },
+    {
+      "name": "Preparation metadata canonical before normal branch reads",
+      "passed": true
+    },
+    {
+      "name": "Runner metadata canonical before reads",
+      "passed": true
+    },
+    {
+      "name": "Full measured READY receipt join before model",
+      "passed": true
+    },
+    {
+      "name": "Workflow byte-identical to reviewed revision1",
+      "passed": true
+    },
+    {
+      "name": "Preparation v2 reverses solely metadata guard",
+      "passed": true
+    },
+    {
+      "name": "Runner v2 reverses solely two requested guards",
+      "passed": true
+    }
+  ],
+  "checkCount": 39,
+  "resolvedFindings": [
+    {
+      "finding": "Early input receipt read preceded its old later absolute-path refusal.",
+      "resolution": "The same nonempty/isAbsolute guard now precedes the early JSON read; original later donor body is byte-identical."
+    },
+    {
+      "finding": "COMMIT_SHA and VERSION could follow redirected metadata paths despite the same-payload contract.",
+      "resolution": "Preparation and runner now require canonical equality for both metadata paths before reads; fixed fork/root/lock/stager checks remain."
+    }
+  ],
+  "reasoning": {
+    "cause": "Original3be staging correctly selected current0.0.160/e13 while the retained literal-bob row intentionally requires original0.0.158/f5. Separate immutable staging preserves the old runtime identity.",
+    "authority": "Original app HEAD/tree/clean source, canonical root/lock/stager/metadata/binary, original lock/stager SHA, archive and binary digests are checked. READY retainedRuntime equals independently measured runner fields before model allocation.",
+    "preservation": "Current Host V2 base/Bun/graph160, donor4a160, retained f5 helper/source-build qualification, source-selection early return and full business/cleanup body remain.",
+    "freshness": "Existing retainedSourceGuard additionally verifies original app HEAD/tree/clean state; no positive cache or retry.",
+    "size": "Workflow net+51 is six lines above approximate25\u201345 estimate, disclosed within the selected job. Preparation409 and runner764 remain below800 without reducing existing bodies."
+  },
+  "limits": [
+    "Only inert byte/source analysis; no project/compiler/linter/test/stager/provider/native/GUI execution.",
+    "No remote or CI mutation/poll.",
+    "This source review does not qualify coexistence, both Stop controls, donor Task/Changes, source-selection, cold no-replay or physical cleanup.",
+    "Root must rebind exact preimages at its publication parent and preserve unrelated work; normal exact-head CI remains required."
+  ]
+}

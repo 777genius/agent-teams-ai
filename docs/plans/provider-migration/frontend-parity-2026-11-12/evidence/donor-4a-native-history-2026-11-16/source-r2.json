@@ -1,0 +1,567 @@
+{
+  "kind": "INDEPENDENT_P10_FOUR_SOURCE_AND_EXACT_PROSPECTIVE_R1_R2",
+  "reviewer": "/root/native_failures",
+  "createdAtUtc": "2026-11-16T16:55:48.783895+00:00",
+  "verdict": "APPROVE_EXACT_PROSPECTIVE_SOURCE_AND_R1_STATIC_ONLY",
+  "finalRootR1Binding": {
+    "status": "APPROVE_EXACT_IMMUTABLE_PARENT_AND_APPENDIX",
+    "parent": "8996fee80282d1e17ecdaaf2dd537cec647026d3",
+    "parentTree": "d50b59c1328a7751db4689819bc412c97b9f1349",
+    "parentLeafCount": 11054,
+    "selection": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/selection.json",
+      "gitBlob": "b182ad67245a3605d651bf1dbbdf97014aff1ef0",
+      "bytes": 2631,
+      "sha256": "193eca9ae6b4a5ac051fed5a1c4fd1a17afb6d6d02049fedeca842a5923ccb38"
+    },
+    "appendix": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/r1-appendix.md",
+      "gitBlob": "ecae083485e74df3c8b50d6a08e3b072d6e20b72",
+      "bytes": 14750,
+      "sha256": "cf232f11d9d458be164a1adeddb31edd8767716986ee8140a3f2f58bcb7eb77f"
+    },
+    "fullP10Before": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/e384-completion-boundary/P10-69f6b93ff9.md",
+      "gitBlob": "69f6b93ff9a0bfddbbfc6fd783ce9d61dc06c80d",
+      "bytes": 142154,
+      "sha256": "44658f6a807d50ff720f247df692e4b30801d3e09c0bd14aa984c005a24d5c30"
+    },
+    "fullP10After": {
+      "gitBlob": "509311af179416e647f8571126746ab09333f5c0",
+      "bytes": 156904,
+      "sha256": "fc432aa050e41e27387e08fcc176880a0da86f7a475c20354d93b5988046bae0"
+    },
+    "prefixPreservedByteForByte": true,
+    "parent168": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/parent-tree-readback.json",
+      "gitBlob": "4bf68b963cb37f03c38cbca02cb8fff665192a6f",
+      "bytes": 2825065,
+      "sha256": "e97dcd97f88d1f27c79147b440a2ae50e417859200992a5c624625dff45bb876"
+    },
+    "parent274Delta": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/parent-274-delta.json",
+      "gitBlob": "e8213bf0ec5b595233fc40e60f2f5d948657d847",
+      "bytes": 76982,
+      "sha256": "a3df35bf4fa137c956727ded7748e02cb6f8c5b7de843e93492e90412b8388e7"
+    },
+    "merkle168": "4bdc48a85b663f66ddd963c87565e3e74b4a4c1c",
+    "merkle274": "6b1ad7484ebb81f480d846588740740e3a34496b",
+    "interveningExactlyThreeDocsNoSourceDelta": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/46-composer-command-availability-2026-11-16.md",
+        "gitBlob": "92b58dfe69da83c2571121a2d8d67065c4bfe0c3",
+        "bytes": 12469,
+        "sha256": "021379f20a9dbed39d2e758076b266ef2ad1951442c57faa9268eb2f3e5ea0da"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/47-windows-reference-passive-attribution-2026-11-16.md",
+        "gitBlob": "6b84ee1f3333bf7a4dbccf19ff4f3b806daa2794",
+        "bytes": 8279,
+        "sha256": "89c6b60359f5a6786d6c9f8f59a2103f6e707bbd95444904ce38541c58d41671"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/48-process-test-formatter-binding-2026-11-16.md",
+        "gitBlob": "1765f43b6c42ab4b43019539dfd13f48af367354",
+        "bytes": 3785,
+        "sha256": "6ca134c449f02815ee0c14201629c1944f3f14ee9a2c0819ae822f6702525f22"
+      }
+    ],
+    "allFourCurrentPreimagesExact": true,
+    "combinedPatch": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/candidate.patch",
+      "gitBlob": "9e6f193fe19cdeb7f3c91116b9a45cbabbb42f8f",
+      "bytes": 77201,
+      "sha256": "ecae2161a60402ab70c3a870e556f1230fd87a8434594c9ed40ed4d1d7fa81d7"
+    },
+    "combinedFullForwardAndInverseExact": true,
+    "allUnselectedCurrentLeavesPreservedByDeclaredFourSourceCut": true,
+    "sourceR2CanonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-native-history-2026-11-16/source-r2.json",
+    "publicationRemaining": "Root must freshly confirm the delivery lease, publish this exact P10/documentary evidence first, fully read back it and obtain independent actual published-R1 review before the four-source child. This is not approval of an unseen future parent or already-executed source.",
+    "priorApproved274RawR2": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-final-four-source-review/source-r2.json",
+      "gitBlob": "7b5527a6650af05500ba0858101c0d87535d6e1d",
+      "bytes": 30943,
+      "sha256": "3c51631fa96f67b6a3790a5471ac6418e22d70d17ae7b8dc6f76aa4b0e29fdd1"
+    },
+    "parent899Delta": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/parent-899-delta.json",
+      "gitBlob": "d5c524327e67c7c828ec12f490791a422449c4ba",
+      "bytes": 44080,
+      "sha256": "ba59fc8ecd51144d3aa68c90326ca99397e4f4ac38af013c1e6a6bc5b96d1362"
+    },
+    "incomingSourcePreserved": {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "before": "217b189f231af2ea39b290d70568a1ae42379a53",
+      "after": {
+        "gitBlob": "38efaed8954940698d93b40d9355332ea9f56d75",
+        "bytes": 25519,
+        "sha256": "ad8f8b5ae40f5fae5728ed6321819227969c32986f636e83e56af9ac67bf05d7"
+      },
+      "scope": "Unrelated existing Process unit-harness source only; preserved whole. This parent rebind is not a separate test-execution claim."
+    },
+    "r1OnlyBindingChangesInverseExact": true,
+    "merkle899": "d50b59c1328a7751db4689819bc412c97b9f1349"
+  },
+  "sourceBase": {
+    "commit": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+    "tree": "56b61eca335f951e6b53bd5c768bd586c5ec6c7b",
+    "fullMap": {
+      "path": "/tmp/migration-evidence-20261116/root/delivery-a07-leaf-map.json",
+      "gitBlob": "6cdbcaee77cfce6834ac33a2fde7cef7ee06b86b",
+      "bytes": 3230579,
+      "lines": 77317,
+      "sha256": "fd1641953222be2ce7918ea7258172fa593b415d1a31f96e032bb8850b0c169f"
+    },
+    "selectedFourPreimagesExact": true
+  },
+  "images": [
+    {
+      "path": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts",
+      "before": {
+        "gitBlob": "56436aac409d1a96d08ab47782483cfdf8f5391d",
+        "bytes": 16560,
+        "lines": 236,
+        "sha256": "ca57589b714f7edae4684cbb5e9e2f0a1b383994babbf2b13a51cf53cf696380"
+      },
+      "after": {
+        "gitBlob": "9f9900c7f9166de2a14eaf840fd88d12ae49841d",
+        "bytes": 26197,
+        "lines": 379,
+        "sha256": "ddf230ff582d01a6026f3dab5d752920a1afdb1d15defc95fe562c076b8493e4"
+      },
+      "baseA07IdentityExact": true,
+      "forwardPatchExact": true,
+      "inversePatchExact": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "gitBlob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "bytes": 175238,
+        "lines": 2633,
+        "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba"
+      },
+      "after": {
+        "gitBlob": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+        "bytes": 189024,
+        "lines": 2818,
+        "sha256": "b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4"
+      },
+      "baseA07IdentityExact": true,
+      "forwardPatchExact": true,
+      "inversePatchExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": {
+        "gitBlob": "5116a321fa2edda4ccb802fa80840be690259072",
+        "bytes": 31347,
+        "lines": 429,
+        "sha256": "ce152c62a88d6af291950f5d1f5d1124abb0a8c1f88cc5f1e82298e88ce8810b"
+      },
+      "after": {
+        "gitBlob": "507b2e4243e99a2285822ea8bce8103760c43022",
+        "bytes": 43481,
+        "lines": 600,
+        "sha256": "cf7f4fd9661ffaccac2b520bda40c455f0ec3954f4c5c1efbcaf74270f3c9fe7"
+      },
+      "baseA07IdentityExact": true,
+      "forwardPatchExact": true,
+      "inversePatchExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": {
+        "gitBlob": "e752dc2fcce988d50f8eb77a9afb90455373d8f0",
+        "bytes": 16686,
+        "lines": 281,
+        "sha256": "4eaefae40f52455580ca3007a5e922b3ab13a333d0f6423565866267d85d2618"
+      },
+      "after": {
+        "gitBlob": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+        "bytes": 37580,
+        "lines": 577,
+        "sha256": "2930df9471446610ed3cf4a5642bc6d6314b8f946a5669e343ffee7058a205d9"
+      },
+      "baseA07IdentityExact": true,
+      "forwardPatchExact": true,
+      "inversePatchExact": true
+    }
+  ],
+  "packages": [
+    {
+      "directory": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal",
+      "manifest": {
+        "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal/manifest.json",
+        "gitBlob": "f1a07d8c1260f08773e5de4ba4324acf51d6cfd1",
+        "bytes": 3452,
+        "lines": 101,
+        "sha256": "31bba9befd5c88ad96cba5991e479ccb0d12352aaec0e5c9187d4477fb54b845"
+      },
+      "patch": {
+        "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal/candidate.patch",
+        "gitBlob": "2d306da559f600dbd6a2a022cd63c22d6bb45ccf",
+        "bytes": 32127,
+        "lines": 452,
+        "sha256": "9e46ba7c21c1f02daa2ee750ade80bbd32870f99e3a79478d005a63323e4b42f"
+      },
+      "authorPreservationProof": {
+        "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal/preservation-proof.json",
+        "gitBlob": "ff0a604caf62a93b0ba9a7ef334a7cff9ed69dce",
+        "bytes": 2379,
+        "lines": 63,
+        "sha256": "7d3550e2a2d364ddaf51c846b52c4644106f47d3756f7e7604f3a7c612de5bbd"
+      }
+    },
+    {
+      "directory": "/tmp/migration-evidence-20261116/frontend/p10-donor-ui-inert-proposal",
+      "manifest": {
+        "path": "/tmp/migration-evidence-20261116/frontend/p10-donor-ui-inert-proposal/manifest.json",
+        "gitBlob": "4c5401b676216763d54b15cfca32fe6bca064be7",
+        "bytes": 2970,
+        "lines": 82,
+        "sha256": "f67b8639b3e870c4e07bb1d5c0746ad564736ac76378455d3ac1f3d064c5b269"
+      },
+      "patch": {
+        "path": "/tmp/migration-evidence-20261116/frontend/p10-donor-ui-inert-proposal/candidate.patch",
+        "gitBlob": "8e72b17e58406ae3f68548544ac9e8467bfb1e1f",
+        "bytes": 45074,
+        "lines": 644,
+        "sha256": "269e139c195d2c62190caeb9487cfc33f0d6a720095f89ede102d9ef08a288c6"
+      },
+      "authorPreservationProof": {
+        "path": "/tmp/migration-evidence-20261116/frontend/p10-donor-ui-inert-proposal/preservation-proof.json",
+        "gitBlob": "c0c1841fd13ca179f8643d6f570029255ee2413d",
+        "bytes": 1412,
+        "lines": 31,
+        "sha256": "a3a3b3801cfb6692e44068e13adf1a0808e870ce9ec9758f9188994b99d090bf"
+      }
+    }
+  ],
+  "references": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal/immutable-reference.json",
+      "gitBlob": "f8dd1636357c5324b36ba0d57892c735e92e3ee3",
+      "bytes": 1120119,
+      "lines": 208,
+      "sha256": "efbc27995683878daec35c3720e820897f937339bb01e0c9d46d97ca7f11188b"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-donor-ui-inert-proposal/additional-source-reference.json",
+      "gitBlob": "6bd3f53a18cf7e0c6632b641e04dd05baf5558db",
+      "bytes": 1103545,
+      "lines": 244,
+      "sha256": "16a7039a7613aaa06035a8fecece463b74da43afff79f9883df86c1a78087c5a"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-version-source-reference.json",
+      "gitBlob": "562dcab30d18b9fda15138f3f8a2ea548a189c15",
+      "bytes": 52866,
+      "lines": 37,
+      "sha256": "e491e440d8785381ad5d3e98770679e0dcfa7876fc922b190ea3b83ca3571cf9"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-inert-selection.md",
+      "gitBlob": "cab1e5ccea00f0a0ffed26eb943325ca45eb8abf",
+      "bytes": 9614,
+      "lines": 62,
+      "sha256": "b2224f7577646ebdb689a8f2b0d6dae1fce38d458878e5fc6e851befdc2872c5"
+    }
+  ],
+  "frontendReferenceRows": [
+    {
+      "path": "src/renderer/components/team/members/MemberCard.tsx",
+      "gitBlob": "c916a79ec44540cace8bb19364d2ce71618000a3",
+      "bytes": 61541,
+      "lines": 1578,
+      "sha256": "d30f788d27d42d32420e321f70122b790350d28ba7f8ce7432601756658904c6",
+      "expectedGitBlob": "c916a79ec44540cace8bb19364d2ce71618000a3"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/SendMessageDialog.tsx",
+      "gitBlob": "7f23ec62cdfe0188c630d83f6b4ae9f53f07f9cb",
+      "bytes": 25765,
+      "lines": 667,
+      "sha256": "e49a2fe114c630a58e9fe982a28041834cf1634761ddc12a805c2a641e6ca2db",
+      "expectedGitBlob": "7f23ec62cdfe0188c630d83f6b4ae9f53f07f9cb"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/CreateTeamSurface.tsx",
+      "gitBlob": "6b684eb50d9ae503efdd4ccd3d166101ec973a64",
+      "bytes": 3686,
+      "lines": 107,
+      "sha256": "28d94e902c1651e745468099e6a490171afca0824f8c140514bc1b250caacea6",
+      "expectedGitBlob": "6b684eb50d9ae503efdd4ccd3d166101ec973a64"
+    },
+    {
+      "path": "src/features/localization/renderer/locales/en/team.json",
+      "gitBlob": "7635f35d831e58846d51d6959e372faa9c92b9bc",
+      "bytes": 147102,
+      "lines": 3411,
+      "sha256": "f1bdbde79c40b1ecd2ff33995a208016faf81ef67cb45e8e9c3114ebea22f232",
+      "expectedGitBlob": "7635f35d831e58846d51d6959e372faa9c92b9bc"
+    },
+    {
+      "path": "src/renderer/components/layout/Sidebar.tsx",
+      "gitBlob": "249455fdfe1bf7962d3306e8f124f049caccdbac",
+      "bytes": 7224,
+      "lines": 194,
+      "sha256": "c227ca0d3be8489b32dadbf6df386e7b4f182607dde1858e965572555bf09885",
+      "expectedGitBlob": "249455fdfe1bf7962d3306e8f124f049caccdbac"
+    },
+    {
+      "path": "src/renderer/components/layout/MoreMenu.tsx",
+      "gitBlob": "a92e774f590657b1aaab69007b8898ffafa44334",
+      "bytes": 9254,
+      "lines": 330,
+      "sha256": "4a449220a7e5ffd8b6ef8eb6d9c4e59667a199af2b8d1ea7f0b5101004ecafa2",
+      "expectedGitBlob": "a92e774f590657b1aaab69007b8898ffafa44334"
+    },
+    {
+      "path": "src/renderer/utils/memberHelpers.ts",
+      "gitBlob": "2358402acc9d8e2df81f339fa036a9de7cf82df4",
+      "bytes": 56915,
+      "lines": 1627,
+      "sha256": "f6ec6a72eaf247aa434e1c7b46b7fa0476e986ef9830dcd1255768e49cd6b7ed",
+      "expectedGitBlob": "2358402acc9d8e2df81f339fa036a9de7cf82df4"
+    },
+    {
+      "path": "src/renderer/services/createTeamPreferences.ts",
+      "gitBlob": "d083e49c1dab28a000dbd7fff1871dcda5e4e2d8",
+      "bytes": 11310,
+      "lines": 361,
+      "sha256": "ed4581c65c80faf50d19a647cd4486087328ed038e74f29389e9c5f893a41aac",
+      "expectedGitBlob": "d083e49c1dab28a000dbd7fff1871dcda5e4e2d8"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberDetailDialog.tsx",
+      "gitBlob": "1711243898d348bc77dfec3479a36341345228e8",
+      "bytes": 19444,
+      "lines": 509,
+      "sha256": "bf6556d0ed227332da361a66924968dc1e94a33c6690812e9f7676ce2d014f65",
+      "expectedGitBlob": "1711243898d348bc77dfec3479a36341345228e8"
+    },
+    {
+      "path": "src/renderer/components/sidebar/SidebarTaskItem.tsx",
+      "gitBlob": "6d6589233e471cbb4714c665cfee2b04fdd2df29",
+      "bytes": 19365,
+      "lines": 461,
+      "sha256": "fb66d0574200e27e6a18685dfe376665aba7ad0f42842a542a6094a44779548d",
+      "expectedGitBlob": "6d6589233e471cbb4714c665cfee2b04fdd2df29"
+    },
+    {
+      "path": "src/features/member-log-stream/renderer/adapters/MemberLogStreamSection.tsx",
+      "gitBlob": "f44e5e115d693b1601e8018fff90f2fed4d2521d",
+      "bytes": 2889,
+      "lines": 79,
+      "sha256": "7e72f8f919d496698c7cede7d2dad2984e29acb4551ac84fe80a5c6f57fce429",
+      "expectedGitBlob": "f44e5e115d693b1601e8018fff90f2fed4d2521d"
+    },
+    {
+      "path": "src/features/member-log-stream/renderer/ui/ExecutionLogStreamView.tsx",
+      "gitBlob": "b8fb21922befb209417ccdcfaf013bac9bc85867",
+      "bytes": 11830,
+      "lines": 373,
+      "sha256": "750059dec1f8b6b7f1870617b085b95e70617dcf33c41a9ea20a2643b0113e8a",
+      "expectedGitBlob": "b8fb21922befb209417ccdcfaf013bac9bc85867"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberExecutionLog.tsx",
+      "gitBlob": "3f7b0dc33b149cb9f624f34daeda0bac9bd8770d",
+      "bytes": 10512,
+      "lines": 278,
+      "sha256": "76a82d5bfd8b8747b2187e3b969cf5378c141781e2c555cb24304dbc3a97f1e8",
+      "expectedGitBlob": "3f7b0dc33b149cb9f624f34daeda0bac9bd8770d"
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "gitBlob": "046c7452239fccb9d18858c86e9d075984888031",
+      "bytes": 4914,
+      "lines": 130,
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "expectedGitBlob": "046c7452239fccb9d18858c86e9d075984888031"
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailView.tsx",
+      "gitBlob": "47c0f2839206e052e4b03a44516870ce673db14f",
+      "bytes": 137391,
+      "lines": 3750,
+      "sha256": "8b781efea3ac2968c4f1e79d7734796b69bc08b525f741032eab7b6c07eb3a3d",
+      "expectedGitBlob": "47c0f2839206e052e4b03a44516870ce673db14f"
+    },
+    {
+      "path": "src/renderer/components/team/members/LeadModelRow.tsx",
+      "gitBlob": "6996f4ad0e9327f1ea4f3b7065d965cbde384d1d",
+      "bytes": 14599,
+      "lines": 349,
+      "sha256": "12474fb9a8e1843580e65c39ca6d16942114a335e2e89ed082b570a1034cf266",
+      "expectedGitBlob": "6996f4ad0e9327f1ea4f3b7065d965cbde384d1d"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "gitBlob": "df97ab3a5a56b43038e8f7c2489d83ff4d77d38f",
+      "bytes": 157769,
+      "lines": 3606,
+      "sha256": "a4d5f156cf2eec1181cdfd43bff514f663b4a58e4ff06b609c0a0b86fa29481a",
+      "expectedGitBlob": "df97ab3a5a56b43038e8f7c2489d83ff4d77d38f"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/CreateTaskDialog.tsx",
+      "gitBlob": "1d9752949be26a19422b8ccb7130f5975610b72d",
+      "bytes": 24180,
+      "lines": 570,
+      "sha256": "066f832abade3ef6a267b05b984b3cf91d9299be1b348136633bff01c40db0da",
+      "expectedGitBlob": "1d9752949be26a19422b8ccb7130f5975610b72d"
+    },
+    {
+      "path": "src/shared/utils/leadDetection.ts",
+      "gitBlob": "5d6e14946ea2cf64cb6c3c20e9eb92a17e164266",
+      "bytes": 4837,
+      "lines": 129,
+      "sha256": "3b37d21a9c79b61d67873bd05ab53878fded26a272d9eabe9abecb0acd664924",
+      "expectedGitBlob": "5d6e14946ea2cf64cb6c3c20e9eb92a17e164266"
+    },
+    {
+      "path": null,
+      "gitBlob": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+      "bytes": 12509,
+      "lines": 200,
+      "sha256": "c797fe0d8e9c9f9819a79dbcc638bd4d96d5e56f32f4101a85e4f2d7ff3ae917",
+      "expectedGitBlob": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87"
+    },
+    {
+      "path": "src/services/opencode/OpenCodeManagedPaths.ts",
+      "gitBlob": "f9e8e87358a675db2195c83add5d5307a1a31a78",
+      "bytes": 2518,
+      "lines": 59,
+      "sha256": "53166eb5ea252c1b6bae80d8ecbe86f96ae4d886a632489c582535e7610868de",
+      "expectedGitBlob": "f9e8e87358a675db2195c83add5d5307a1a31a78"
+    },
+    {
+      "path": "src/services/opencode/OpenCodeOfflineSessionReader.ts",
+      "gitBlob": "895ed1875d232d2f21e6c0540462da28339fe697",
+      "bytes": 25281,
+      "lines": 739,
+      "sha256": "a86b338b80a33230b55f4f9f835aa169924984791e572b0e78cab7c4ea7d9980",
+      "expectedGitBlob": "895ed1875d232d2f21e6c0540462da28339fe697"
+    },
+    {
+      "path": "src/services/opencode/OpenCodeProfileManager.ts",
+      "gitBlob": "da2b5b54b0053edd6e5ae40fc9bc09d464be0837",
+      "bytes": 167799,
+      "lines": 4052,
+      "sha256": "8a3f9913cc26c46f6fe7f6c812d2fa22e96036ce37430e6fade09d8b57dfd74e",
+      "expectedGitBlob": "da2b5b54b0053edd6e5ae40fc9bc09d464be0837"
+    },
+    {
+      "path": "src/services/opencode/OpenCodeSessionBridge.ts",
+      "gitBlob": "6498d7e1663a52f83ea61e398220747bd7b6dc25",
+      "bytes": 115574,
+      "lines": 2751,
+      "sha256": "60f93dcecc64839ef9ee2bff3771d262d062c02855ce2e16c6a2dbfb4cd43c4c",
+      "expectedGitBlob": "6498d7e1663a52f83ea61e398220747bd7b6dc25"
+    }
+  ],
+  "verificationMethod": [
+    "Python stdlib only: full image byte/hash readback, exact forward unified-hunk application and independent reverse reconstruction of both patches. No Git, YAML parser, TypeScript import/compiler, test, lint or application execution.",
+    "Read the entire new 379-line preparer and all changed runner/app functions, the original startup/ownership/ordinary Quit/finalizer and the moved native-history reader; read the complete 95-line workflow validator and all workflow changes.",
+    "Checked existing immutable donor/runtime source references, stock helper builder and verifier, managed profile paths, current strict scripts configuration and full author R1/validation descriptions. A sibling independently reviews UI selectors and the two frontend images; that result is not substituted for this full-four review."
+  ],
+  "preparation": {
+    "donor": {
+      "commit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "tree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+      "version": "0.0.160",
+      "cliVersion": "2.777.777",
+      "runtimeArchiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10"
+    },
+    "runtimeSource": {
+      "commit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "tree": "a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9"
+    },
+    "standardOnly": "captureDonorInputs is reached only in the existing standard branch. V1/V2 source-selection returns and original 0.0.158 input and receipt checks remain.",
+    "pins": "Canonical paths, clean immutable Git HEAD/tree before and after capture, current source head, 22 files, Node24.21.0, donor Electron44.10.1, exact runtime VERSION/COMMIT, and helper source/builder/validator/image/sidecar are recorded and rechecked. VERSION.trim matches the exact release writer newline.",
+    "helper": "Packaged path components are checked first. A present invalid artifact or surviving sidecar refuses. Only actual ENOENT with absent sidecar selects the unchanged e13 stock helper builder; validation failure is never a fallback trigger.",
+    "helperLimits": "Stock verifier retains regular-file/no-symlink/no-hardlink/mode/ELF/source/hash limits. Reread sidecar is at most16KiB, all six normalized validated fields agree, and all selected bytes are repinned. Source-build kind may reuse an already valid stock dist; cc version does not prove a fresh compiler invocation. publishedRuntimeComplete=false in either kind. No atomic locking or full payload qualification is claimed.",
+    "actualRuntimeArchive": "The selected archive is still a future runtime input; this source review does not claim to have downloaded or executed it."
+  },
+  "oldJourneyPreservation": {
+    "completeOriginalReconstruction": true,
+    "original158": "All original retained-owner/Host V2 coexistence, Stop isolation, old cold read, source-selection branches, original finalizer and the existing sole overall passed=true remain. The donor addition is before that sole success assignment, after the old ordinary Quit and native-identity absence.",
+    "reader": "The existing51-line native reader is moved into the same app helper and parameterized. The old caller supplies bob, original team and model-failure/observation bindings; provider/label, lane/native-session/member/assistant/full content, UUID uniqueness, ambiguity and SHA256 checks stay. No log grep substitutes for the native tuple.",
+    "caps": {
+      "preparerLines": 379,
+      "runnerLines": 600,
+      "appLines": 577,
+      "sourceLineLimit": 800,
+      "wholeStandardTestMilliseconds": 900000,
+      "jobMinutes": 30
+    },
+    "cost": "Three additional app starts, dependency/runtime/helper preparation, source/currentness reads, process census, original UI actions and bounded corpus copying have real cost inside unchanged budgets. No timing PASS prediction or new wait/timeout waiver."
+  },
+  "newJourney": {
+    "isolatedInputs": "Fresh private profile/config/data/model separate from the old158 journey; no inherited process.env spread, real credentials, seeded release/Host descriptor/task/run/message/native session. Explicit CLI overrides, private metadata sentinels and managed-Codex-manifest absence checks preserve the intended TEST boundary. System discovery stat/read absence is not asserted.",
+    "actualDonor": "The donor checkout launches through its own electron-vite/preload surface; current/cold use current source. The donor readiness discriminator is explicit, and the old current readiness predicate is unchanged.",
+    "writes": "Original controls create one solo OpenCode team and one task with Start immediately deselected, then one HISTORY message through the unchanged bounded localhost model. Existing real isLeadMember finds the actual lead; no bob assumption for donor. Product reads provide actual team/run/member/lane/session/task/message/reply identities.",
+    "readers": "Donor/current/cold each check identical task/message and native assistant UUID/content hash plus visible original UI. Current and cold do not Launch/import a new Host descriptor; inference counters must not increase after donor Quit, including final model closure.",
+    "stopQuit": "Original scoped Stop observes processAlive=false. Each epoch then requires ordinary captured launcher exit0/null, original Electron identity absence, original group release and independent TEST namespace absence. All captured native identities are absent; V1 image capture is required, fork/helper captures are optional if observed. Wrapper exit is not relabelled natural native/Host exit.",
+    "failure": "First business failure remains first; model/namespace/captured-process cleanup failures are retained and prevent overall PASS. Failure cleanup has no new PID admission or success authority."
+  },
+  "corpus": {
+    "ordering": "Copied only after successful donor Stop/Quit/namespace absence, before current/cold reads.",
+    "nativePath": "runtime-data/opencode/profiles/<key>/data/opencode is derived from actual e13 managed-path/profile-manager XDG_DATA_HOME and current native reader sources; the earlier outer data/opencode assertion is not used.",
+    "selection": "Team/task/runtime metadata/native profile history/state and selected config are copied into nonhidden numbered blobs with a manifest. Executable sentinels/sealed image subtrees and the exact stock shared dependency link/tmp are excluded; this is not a complete Electron profile export.",
+    "limits": "Unexpected symlink/nonregular/hardlink/foreign ownership or changing inode/device/size/timestamps refuses; at most4096files,64MiB/file,256MiB total. All copied bytes hashed. No atomic whole-profile immutability claim."
+  },
+  "ciAndReceipt": {
+    "workflow": "One existing retained-opencode-coexistence job plus its paired required-outcome predicate. Existing Full/Ready/manual terms stay, with a narrow same-repo Draft PR1192/current-head plan path; no new job/manual action or global default activation.",
+    "sourceAcquisition": "Two exact immutable checkout inputs, explicit pinned donor dependency/Electron/runtime/controller/MCP preparation. No review-time dependency or runtime execution.",
+    "typeCommand": "pnpm typecheck:legacy-host-scripts reaches all3 TS paths through unchanged tsconfig.legacy-agent-host-scripts.json 538fdfe23d7aa6bac6f18a483d5d364aef644a39.",
+    "lintCommand": "pnpm lint:fast:files -- scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "tests": "The unchanged model test, complete standard node --test file, and both original V1/V2 source-selection invocations remain. No artificial RED-only cycle, mirrored unit suite, new type config or rule weakening.",
+    "verifier": "All old standard assertions remain. The new95-line validator joins donorHistory with exact prepared input receipt; exact22roster; actual task/message/native tuple; donor/current/cold source identity; six distinct captured process identities; Stop/Quit/namespace; unchanged inference count and bounded local model; entire selected corpus hashes and required source-derived native path. PASS flag alone is insufficient.",
+    "artifactScope": "Exactly11 bounded nonhidden donor outputs are added while retaining all old rows: corpus,3screenshots,3app logs,3failure JSONs,1sentinel record. No whole private profile or global hidden upload."
+  },
+  "outstanding": [
+    "Actual documentation-first publication/full readback/independent published-R1 review and later exact four-source child/full readback; a further external parent change requires fresh binding.",
+    "Actual resulting-source strict compiler, selected scoped lint, original whole tests and receipt validator; no static type/lint/runtime PASS is claimed.",
+    "Actual donor dependency/runtime availability, physical UI selectors/readiness, aggregate900s/30m budget, native history/current-cold reader compatibility and original cleanup.",
+    "No result transfer to other P10 acceptance rows, original15s readiness, Windows P08/I386, Darwin P09, M16, genuine real-vendor or release qualification."
+  ],
+  "issues": [],
+  "execution": {
+    "projectCommands": 0,
+    "nativeOrGuiOrProviderRuns": 0,
+    "gitIndexRefWrites": 0,
+    "canonicalSourceWrites": 0,
+    "ciMutations": 0,
+    "artifactOrLogDownloadsForReview": 0,
+    "sourceApiRequestsForFinalR1Review": 0
+  },
+  "r1Findings": [
+    "Read the complete14750-byte appendix5e896c2a and original P10§9 lines288–398. The cut implements only the selected genuine donor4a/runtime0.0.160 task/message/native-history retained-reader row, preserving original0.0.158 proof. Actual donor Review/tool-change/attachments, historical Darwin, stopped solo-Claude release/import and broader native/vendor/release obligations remain separate.",
+    "The task creation wording is corrected; no completed-business-task claim is made with Start immediately deselected.",
+    "Exact pin table, pure TEST environment/no real Claude or Codex invocation, helper absence-only fallback and incomplete-release limits, required V1 vs optional fork/helper evidence, wrapper exit vs native-exit limits, stopped corpus path/caps, original30min/900s and real added costs agree with source.",
+    "The one existing job and paired required-outcome predicate preserve old Full/Ready/manual terms and add only the stated exact Draft1192 route. Independently extracted normalized predicates are equal; exact current policy-test20fcd7ae lines99–131 checks that equality and original source/native/cleanup requirements. No test execution is claimed.",
+    "Original complete standard/model/V1/V2 tests, strict existing scripts compiler, changed-three-file fast lint and receipt checks remain future resulting-source gates. No extra mandatory RED-only cycle, configuration/rule/cap weakening or business-action retry is selected.",
+    "Append-only P10 publication-first and independent readback/source publication sequence is explicit; primary advancement additionally requires fresh complete cohort/ref/PR guard and preservation of useful started originals. No Actions mutation is selected.",
+    "899 rebind independently preserves the sole incoming existing Process test leaf217b→38efaed and all preceding Plans46/47/48. The full current appendix differs from the approved274 appendix only by the exact parent/tree and corresponding source-versus-plan history wording; inverse rehash returns5e896c2a. No P10 source, prefix, budget, guard, acceptance or execution change."
+  ],
+  "pairedPolicyTest": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/p10-retained-job-routing-review/reference/ciOptionalWorkflows-20fcd7ae.test.mts",
+    "gitBlob": "20fcd7ae72fc5ca98d4693a2ddf59326ff8afd4d",
+    "bytes": 8284,
+    "sha256": "477e9b4bf56104f868874d6ea2e8e81dfa8318566f98895a25e24af0d33c92b6"
+  },
+  "independentUiPeer": {
+    "report": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-ui-independent-r2/independent-r2.json",
+      "gitBlob": "149f370996e454d4f08062a1bdf224a7adbc9668",
+      "bytes": 17349,
+      "sha256": "3c4760eb3a1c01ad5517d2633b63748b6f49cf817d255b3101e6edb7231085ee"
+    },
+    "verdict": "APPROVE_STATIC_UI_PAIR",
+    "blockers": [],
+    "authority": "Independent author-external UI2 review read in full. This report separately owns preparation/CI and complete four-source/parent/R1 cross-check; no author approval is substituted for it."
+  }
+}

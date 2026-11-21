@@ -1,0 +1,315 @@
+{
+  "kind": "N608_ORIGINAL_OPENCODE_RUNTIME_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441565,
+  "status": "PASS within original finite TEST peer scope",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/job-133062441565.log",
+      "bytes": 180796,
+      "gitBlob": "0887944bb5a7edee554cabe4e06429b1681273f7",
+      "sha256": "e7f0c34477899afce4a8176fcc99ce2544e4aebf534e7d22bf11a9177e49d17d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/original-job-log-response.json",
+      "bytes": 190660,
+      "gitBlob": "ea3043819d6812f729c4406eec0d8e382b7434d9",
+      "sha256": "5f90b589fca096dd04772102b3dd6c61c6fa7942950d3b0cbab16bee976ecfcf"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/artifact-14197020809.zip",
+      "bytes": 2468350,
+      "gitBlob": "dc287ca539fdf615ce5cfcc660facbf00a570e07",
+      "sha256": "8ec1150d489d7591aeaf705062d79335b1a0743542820d40d35b1bef2c578b33"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/archive-retention.json",
+      "bytes": 7466,
+      "gitBlob": "67d30d39bb333e1fb5604c2946113a8fedacf88f",
+      "sha256": "ce535f150dce2d9cc37bb93a1eda551bbe29ad68e65dfeb8e8b88373cb2d9bfe"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0410.json",
+      "bytes": 9484,
+      "gitBlob": "f34ca6154c2b6e7016dcde8480bdd086e0f442e1",
+      "sha256": "badac9e3b213551e9b4ed59e9236c657320b8f834d2c9120b0009092d8feb670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0409.json",
+      "bytes": 92338,
+      "gitBlob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+      "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/audit.json",
+      "bytes": 55294,
+      "gitBlob": "cd0807f31cd646974a4da58b7dc8ce674d20e827",
+      "sha256": "9e5d94079089fe4b84e626dcbd6de57042f1e0a100d3e260feb6a179446c1fbd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/Plan29-opencode-runtime-appendix.md",
+      "bytes": 8148,
+      "gitBlob": "920f8609aa29dbfa1d0fd90fe698f35cceba5a5c",
+      "sha256": "63087f3339b55a778d26982c0f575d3e51dc91062b2a47ab6f50e808730c1004"
+    }
+  ],
+  "payloadCount": 10,
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-vOhEVE/TEST-peer-opencode-scope/effects.ndjson",
+      "bytes": 7092,
+      "sha256": "351d2ec1cbd838d41fab06fe81d972d1b915c067867be6dbb219fbf005b64228",
+      "crc32": "f1ea31cc"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/desktop-backend-receipt.json",
+      "bytes": 811408,
+      "sha256": "a7fcd3d4362029236098c78580b8733241ff49156d24b1179c5eb97bcdab00b5",
+      "crc32": "d267d647"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/desktop-app.log",
+      "bytes": 44238,
+      "sha256": "8327a3da08e8c2f0e0e26b7211cc8eff5990a4fa87aef6466cec3136ae2f1e27",
+      "crc32": "ac49d550"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/desktop-descriptor.json",
+      "bytes": 2653,
+      "sha256": "732bb54ceb18c79a4d92968e4e7b226763f0a0d91ccbee9cee23b38a03d511db",
+      "crc32": "0a037da3"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/host-profile.json",
+      "bytes": 9801,
+      "sha256": "07236fb02434a128ff7a36ec6f95b2198881f601ce8a442b51ba496733384d3e",
+      "crc32": "1ebc53fa"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 3866,
+      "sha256": "ac04d9c68061f9a37258416603657956bf72b284afc0f93e662c2caf583cb784",
+      "crc32": "9ccfc9e1"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/hoststore/management-commands/2157e614c85f23302b4c6b87132c296397b8adf4a068f489e1cb20bf94dabf7b.json",
+      "bytes": 5775,
+      "sha256": "36919eb91fbcfb2cd0e0d8a9a8e38de30f991687afad904d86fc7b82a057b593",
+      "crc32": "a57e1595"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/hoststore/teams/test-desktop-backend/inboxes/user.json",
+      "bytes": 410,
+      "sha256": "6ff39336c8bdb28a611696122869f8b7fbe6873fecac10dbaed8d7e4268525e7",
+      "crc32": "bec947c3"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-allow-pending.png",
+      "bytes": 152915,
+      "sha256": "6b4e4e939d53bb4f2e97f46e9ced32ca782c537c1276d12433693e3ac6f53177",
+      "crc32": "7e0c309c"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-completed.png",
+      "bytes": 134349,
+      "sha256": "208d85fb00d163b562a6e733c3fb0660178b4092a29d229548f64aa19d1e319a",
+      "crc32": "8aed2296"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-deny-pending.png",
+      "bytes": 151517,
+      "sha256": "4bf8ac7dfcdb107f8008a2174a06845b8447ac72d974ff571096e088d90391b9",
+      "crc32": "7719601e"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-effects.json",
+      "bytes": 9033,
+      "sha256": "03c7fec9ee30851ffaf73fe186b9c1df466a93413e814963ef93ba078b923026",
+      "crc32": "7a1dbedd"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-held.png",
+      "bytes": 115950,
+      "sha256": "f3920182a82f71b7616fb0f4f8c5a8fc79b0d6ffe7e1abe4f01d79e225e0e9a1",
+      "crc32": "6f4bf837"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-launch.png",
+      "bytes": 101953,
+      "sha256": "976bcbe50bbbd9063f6ebe403e011ae5f2b9d36b326e4ee51da1b954a0bfcdc9",
+      "crc32": "04379b9d"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-lead-logs.png",
+      "bytes": 59526,
+      "sha256": "08a15d30d102f8178886cd96ca4ff53682dea387b5fed9754f04aeb039f308e5",
+      "crc32": "0554dcd0"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-logs.png",
+      "bytes": 135444,
+      "sha256": "076fe0def3a4a389b0bfbb652445b9f82922f574277bcc15c3062e3c454f84e2",
+      "crc32": "319cdbd3"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-partial.png",
+      "bytes": 106715,
+      "sha256": "e8e7d310f1288cc8f69cf456ba6e9257c98bd95ae292ad9a0d65d45e19f75126",
+      "crc32": "8a880647"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-reloaded.png",
+      "bytes": 132667,
+      "sha256": "248e84a60849ffc47818f900fad3e4c43d459d2fb6e98c0e3301a1ad67e5e465",
+      "crc32": "369f4e3a"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-schedule-automatic.png",
+      "bytes": 139187,
+      "sha256": "3857fde41530e8b560f86dd652af663aad4c8b65ce119f335964b7e2764e38a9",
+      "crc32": "6e87d408"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-schedule.png",
+      "bytes": 118544,
+      "sha256": "cddbb9579941d61c446a10338589993d981831762a2437432beb5946a6c9bc83",
+      "crc32": "86456410"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-stats.png",
+      "bytes": 142578,
+      "sha256": "4c9a3ffb0d7bf9655afb65b5308672938a147ce4d5ba9a16ca46e0d9fe1a4f7b",
+      "crc32": "d072fb55"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-stopped.png",
+      "bytes": 136679,
+      "sha256": "7e744dbbc32b56a73381efecaf5b71925f250dee2c46607f061c02f98bbdcd9c",
+      "crc32": "e8a6cc49"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-task-activity.png",
+      "bytes": 172278,
+      "sha256": "06bfd14097984b65d93d8658050b00cd3102e8bf4bb7b6e6c1dcf02f019ee807",
+      "crc32": "8b3feeaa"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-emulated-runtime-task-log-stream.png",
+      "bytes": 145708,
+      "sha256": "1458cb7613e49fc6e76aa49c4ecc835b3579324b90faaacae965a586d6b7131f",
+      "crc32": "71c0f86a"
+    },
+    {
+      "path": "TEST-desktop-backend-vOhEVE/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "0a602b86e9a03803f1477d00996ce10fe71e629602c71870437cad96864cf2d2",
+      "crc32": "ffbf04da"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-7vIfqZ/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-7vIfqZ/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-emulated-opencode-runtime-ui.log",
+      "bytes": 225,
+      "sha256": "73e74b42120fec493f55faeb29ec3419a1244f571f6f744e3299cd5a37029e1d",
+      "crc32": "b52c7340"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "fb06c109756ed70f1190217d74cf989903ad2f39d7c513180520abe0b0be0225",
+      "crc32": "2d7a9c97"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "6481101b014dac906533f3f8e4d03a1180332ae8b90d44e293b2880cfadfabdd",
+      "crc32": "8d476f75"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 1436,
+      "sha256": "c1e2f9fe35bde28c5e7c3bb43cea81cd1b47c0b89879d59f06690a189f37652b",
+      "crc32": "042373a6"
+    }
+  ],
+  "actuallyViewed": [
+    "ui-emulated-runtime-lead-logs.png",
+    "ui-emulated-runtime-deny-pending.png",
+    "ui-emulated-runtime-stats.png",
+    "ui-emulated-runtime-schedule-automatic.png",
+    "ui-emulated-runtime-task-activity.png",
+    "ui-emulated-runtime-task-log-stream.png",
+    "ui-emulated-runtime-stopped.png"
+  ],
+  "historicalComparisonReferences": {
+    "oldHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "oldReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/extracted/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+      "bytes": 756997,
+      "gitBlob": "aeb2650c4ce00e53c7a8b746b506d992eac985e0",
+      "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3"
+    },
+    "oldAppendix": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/Plan29-opencode-failure-appendix-v2.md",
+      "bytes": 5950,
+      "gitBlob": "3355042930be89d70cccce47e1e36eafb1e7dcba",
+      "sha256": "7e9f5e46135f626a60446b2de7fba94b263d0850c3ea5e3c09b3b465bfc18f12"
+    },
+    "limit": "Original M geometry refusal and process-group cleanup debt remain historical failures. Same current helper/UI acceptance now passed; success neither identifies the old cause nor proves a timing/navigation/layout repair."
+  },
+  "effectObservationLimit": {
+    "uiProofEqualsSidecar": true,
+    "snapshotRows": 36,
+    "rawEqualsCleanup": true,
+    "finalRows": 37,
+    "exactEarlierPrefix": true,
+    "lateRow": {
+      "event": "exit",
+      "code": 0,
+      "provider": "opencode",
+      "role": "management",
+      "pid": 5292
+    }
+  },
+  "limits": [
+    "Finite TEST provider only; no vendor inference/authentication/native-provider/release qualification.",
+    "OpenCode stderr, structured-question, native slash-command/usage and Claude-only standalone branches are not executed; absent data does not qualify these capabilities.",
+    "All three peers are absent and final raw/cleanup ledger records three exit0 callbacks; the earlier UI snapshot has two. Code0 is not alone proof of unrequested natural termination.",
+    "Held input unknown/terminalConfirmedfalse is not successful input completion.",
+    "Final mixed-frame duration/cause/convergence unknown; this Runtime lane does not use the separate Selectioncd4 final75s DOM-convergence assertion.",
+    "Original source/receipt/DOM/image observations are not atomic full-lifetime proof.",
+    "Selected-source hashes and actual bundle hashes do not establish a reproducible source-to-bundle rebuild or full installed dependency census.",
+    "Transient Runtime sessions/tasks/schedule journals and approved-effect file are not archived; their assertions are source/receipt-bound, not an independent reconstruction from missing bytes.",
+    "No causal repair, stderr-canary result, later source qualification or oldM outcome replacement is claimed."
+  ],
+  "independentReviewPending": true
+}

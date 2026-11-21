@@ -1,0 +1,998 @@
+{
+  "kind": "READ_ONLY_CURRENT_REVIEW_AND_SELECTED_ROUTE_PREPARATION",
+  "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+  "integrationPreparation": {
+    "kind": "CURRENT_STAGE1_INTEGRATION_PREPARATION",
+    "recordedAt": "2026-11-19 22:52:14 UTC",
+    "reviewer": "/root",
+    "sourceHead": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+    "sourceTree": "4cd74131e306ef4cfdbeeac673e1766232991133",
+    "metadataAtomicSnapshot": false,
+    "prs": [
+      {
+        "number": 1192,
+        "url": "https://github.com/777genius/agent-teams-ai/pull/1192",
+        "state": "open",
+        "merged": false,
+        "draft": true,
+        "head": "fix/frontend-parity-completion-20261113",
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "base": "feat/provider-host-frontend-parity-20261112",
+        "base_sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+        "mergeable": true,
+        "merge_commit_sha": "1109d086c0562435dd7104f9f612df5d0e556160",
+        "updated_at": "2026-11-19T22:41:10Z"
+      },
+      {
+        "number": 1186,
+        "url": "https://github.com/777genius/agent-teams-ai/pull/1186",
+        "state": "open",
+        "merged": false,
+        "draft": false,
+        "head": "feat/provider-host-frontend-parity-20261112",
+        "head_sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+        "base": "feat/provider-migration-stage-1",
+        "base_sha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+        "mergeable": true,
+        "merge_commit_sha": "d7cf00c411576571a644649d8b2a4e9377117a74",
+        "updated_at": "2026-11-17T21:38:23Z"
+      },
+      {
+        "number": 982,
+        "url": "https://github.com/777genius/agent-teams-ai/pull/982",
+        "state": "open",
+        "merged": false,
+        "draft": true,
+        "head": "feat/provider-migration-stage-1",
+        "head_sha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+        "base": "main",
+        "base_sha": "0bda42478ae0ea1ec1727efa7dbd10a4dc970101",
+        "mergeable": false,
+        "merge_commit_sha": null,
+        "updated_at": "2026-11-12T18:50:06Z"
+      }
+    ],
+    "comparisons": [
+      {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+        "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "status": "ahead",
+        "ahead_by": 979,
+        "behind_by": 0,
+        "total_commits": 979,
+        "too_large": null,
+        "base_commit": {
+          "sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/commits/8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "html_url": "https://github.com/777genius/agent-teams-ai/commit/8d46f13fe87b4a25156b6be8331119eb8d0f790e"
+        },
+        "merge_base_commit": {
+          "sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/commits/8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "html_url": "https://github.com/777genius/agent-teams-ai/commit/8d46f13fe87b4a25156b6be8331119eb8d0f790e"
+        },
+        "returnedFiles": 300,
+        "fileListUsedForAncestryOrTreeProof": false
+      },
+      {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+        "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "status": "ahead",
+        "ahead_by": 1291,
+        "behind_by": 0,
+        "total_commits": 1291,
+        "too_large": null,
+        "base_commit": {
+          "sha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/commits/1d0f97f55de566036c970eab4f36b84620afdb3f",
+          "html_url": "https://github.com/777genius/agent-teams-ai/commit/1d0f97f55de566036c970eab4f36b84620afdb3f"
+        },
+        "merge_base_commit": {
+          "sha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/commits/1d0f97f55de566036c970eab4f36b84620afdb3f",
+          "html_url": "https://github.com/777genius/agent-teams-ai/commit/1d0f97f55de566036c970eab4f36b84620afdb3f"
+        },
+        "returnedFiles": 300,
+        "fileListUsedForAncestryOrTreeProof": false
+      }
+    ],
+    "githubEventMerge": {
+      "sha": "1109d086c0562435dd7104f9f612df5d0e556160",
+      "tree": "4cd74131e306ef4cfdbeeac673e1766232991133",
+      "parents": [
+        "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+        "d8a0c2965740789008ee0b8965f0889fbff5b712"
+      ],
+      "sourceTreeIdentical": true
+    },
+    "localAttempt": {
+      "shallowRepository": true,
+      "receivingCommitMissing": true,
+      "stoppedBeforeMergeTree": true,
+      "sourceOrRefMutation": false
+    },
+    "fallback": "Official GitHub compare metadata proves both selected destinations are ancestors of d8; actual PR event merge tree equals source tree. Full-history download or manufactured commit was unnecessary.",
+    "result": {
+      "sourceContentConflictsAtRecordedHeads": false,
+      "sourceReadyForActualMerge": false,
+      "remaining": "Original source CI, all acceptance failures, review and separately recorded automatic real-provider scope conflict."
+    },
+    "boundaries": {
+      "readyOrMergeAction": false,
+      "refUpdate": false,
+      "createdCommit": false,
+      "workflowOrProviderExecution": false,
+      "mainMergeConsidered": false,
+      "protectionOrGateBypass": false
+    },
+    "limits": [
+      "This proves source integration topology at the recorded heads, not CI or review approval.",
+      "The second selected edge follows transitively from Stage1 being an ancestor of d8; no future merge commit was fabricated.",
+      "PR982 to main remains outside authorization; its mergeable=false was not treated as work to execute."
+    ]
+  },
+  "appReviewInventory": {
+    "kind": "READ_ONLY_CURRENT_PR_REVIEW_INVENTORY",
+    "observedAt": "2026-11-19 23:08:53 UTC",
+    "repository": "777genius/agent-teams-ai",
+    "pr": 1192,
+    "latestKnownSourceHead": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+    "threadCount": 43,
+    "resolved": 43,
+    "outdated": 28,
+    "unresolved": 0,
+    "threadSummary": [
+      {
+        "id": "PRRT_kwDORVTEtM63PxiA",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/adapters/providers/capturedNativeProcessFactory.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63PxiI",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/owned-process/capturedWindowsLauncher.ts",
+        "line": 218
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63PxiT",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "line": 435
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_a",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": ".github/workflows/ci.yml",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_f",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/LinuxWarmProcess.ts",
+        "line": 126
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_m",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_0",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_6",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoAA",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoAE",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "line": 133
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoAn",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/features/codex-runtime-installer/main/adapters/input/ipc/registerCodexRuntimeInstallerIpc.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoA0",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoA_",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+        "line": 176
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBH",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/renderer/store/slices/cliInstallerSlice.ts",
+        "line": 1634
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBO",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "line": 284
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBU",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBZ",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/nativeVendorGate.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBf",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/serviceDebugLoop.h",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBj",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVT",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/output.ts",
+        "line": 53
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVZ",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVe",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/LinuxWarmProcess.ts",
+        "line": 119
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVm",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/TeamProcessCommands.ts",
+        "line": 254
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVt",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": 131
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVx",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReV1",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/tests/registered-process-commands.test.ts",
+        "line": 430
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReV-",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "line": 299
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWE",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "line": 180
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWJ",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "line": 189
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWT",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWY",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "line": 622
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWd",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "line": 183
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW3y",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW32",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW38",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4C",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4G",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": 285
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4L",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4N",
+        "is_resolved": true,
+        "is_outdated": false,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "packages/legacy-agent-host/src/work-sync/policy/core/domain/MemberWorkSyncNudge.ts",
+        "line": 183
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4S",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4a",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4g",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller.ts",
+        "line": null
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4j",
+        "is_resolved": true,
+        "is_outdated": true,
+        "head_sha": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "path": "tools/owned-process-broker/nativeLauncherScenario.ts",
+        "line": null
+      }
+    ],
+    "reviewStates": {
+      "COMMENTED": 20
+    },
+    "reviews": [
+      {
+        "id": "PRR_kwDORVTEtM8AAAABX3ioqA",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-13T19:18:54Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": "<!-- coderabbit-ai-generated:v1 -->\n\n**Actionable comments posted: 3**\n\n---\n\n<!-- autofix_checkbox_start -->\n- [ ] <!-- {\"checkboxId\":\"4b0d0e0a-96d7-4f10-b296-3a18ea78f0b9\"} --> Fix comments: Fix CodeRabbit comments on this PR\n<!-- autofix_"
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABX39qcQ",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-13T19:55:01Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": "<!-- coderabbit-ai-generated:v1 -->\n\n**Actionable comments posted: 16**\n\n---\n\n<!-- autofix_checkbox_start -->\n- [ ] <!-- {\"checkboxId\":\"4b0d0e0a-96d7-4f10-b296-3a18ea78f0b9\"} --> Fix comments: Fix CodeRabbit comments on this PR\n<!-- autofix"
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABX4ZGKQ",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-13T20:28:57Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": "<!-- coderabbit-ai-generated:v1 -->\n\n**Actionable comments posted: 13**\n\n---\n\n<!-- autofix_checkbox_start -->\n- [ ] <!-- {\"checkboxId\":\"4b0d0e0a-96d7-4f10-b296-3a18ea78f0b9\"} --> Fix comments: Fix CodeRabbit comments on this PR\n<!-- autofix"
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABX42N5A",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-13T21:08:43Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": "<!-- coderabbit-ai-generated:v1 -->\n\n**Actionable comments posted: 11**\n\n---\n\n<!-- autofix_checkbox_start -->\n- [ ] <!-- {\"checkboxId\":\"4b0d0e0a-96d7-4f10-b296-3a18ea78f0b9\"} --> Fix comments: Fix CodeRabbit comments on this PR\n<!-- autofix"
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYnHWxA",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T21:04:17Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYnH0JA",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T21:04:52Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYnfwJA",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T21:35:01Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYoqV0Q",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T23:13:33Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYoqpYQ",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T23:13:57Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYoriJA",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T23:15:04Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYo1K3g",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T23:29:39Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYo5p9w",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-17T23:37:11Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYphopg",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T00:48:29Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYphqoQ",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T00:48:33Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYpix3g",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T00:50:17Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYpqneg",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T01:04:37Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYpqpmQ",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T01:04:40Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYpqq9Q",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T01:04:43Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYpqsXA",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T01:04:46Z",
+        "author": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?u=7b8c77975cf33d0c2adc26c70af76bdad06dba73&v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      },
+      {
+        "id": "PRR_kwDORVTEtM8AAAABYpriqg",
+        "state": "COMMENTED",
+        "submitted_at": "2026-11-18T01:06:26Z",
+        "author": {
+          "login": "coderabbitai",
+          "name": "coderabbitai",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+          "id": null
+        },
+        "bodyExcerpt": ""
+      }
+    ],
+    "formalApprovalOfUnpublishedSlice": false,
+    "mutations": false
+  },
+  "providerReviewInventory": {
+    "kind": "READ_ONLY_PROVIDER_PR_REVIEW_INVENTORY",
+    "observedAt": "2026-11-19 23:09:33 UTC",
+    "repository": "agent-teams-ai/old-provider-implementations",
+    "pr": 8,
+    "latestKnownSourceHead": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "threads": [],
+    "reviews": [],
+    "threadCount": 0,
+    "unresolved": 0,
+    "formalApprovalAsserted": false,
+    "mutations": false
+  },
+  "remainingInventory": {
+    "kind": "bounded-independent-delivery-inventory",
+    "recordedAt": "2026-11-19T22:55:28.124806+00:00",
+    "reviewer": "/root/task_detail_finish",
+    "scope": "Published app d8a0c29/provider45a; local files and already saved current receipts only. Every14-row remaining-acceptance ID is mapped; no closed source/lint review or CI query repeated.",
+    "publishedApp": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+    "publishedProvider": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "currentSavedSnapshot": {
+      "record": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/cid8a0c-20261119-2241.json",
+        "bytes": 43801,
+        "sha256": "decc9bb2a9e817ca11c44a7d93308290f4ff129eeb9890183a3dd68cc6cffb13"
+      },
+      "observedAt": "2026-11-19 22:42:30 UTC",
+      "limits": "As-of saved observation only; sole observer owns subsequent updates."
+    },
+    "conclusion": "No additional unowned implementation or route-conflict patch is justified by these records. Useful independent work already has active owners: Windows evidence/source correction, its next independent R2, sole CI observation, root documentation/evidence integration and eventual delivery. Waiting/queued jobs are not blockers or PASS.",
+    "independentWorkBeyondActiveOwners": [],
+    "originalScope": {
+      "providerIsolationAndFrontendParity": "Implemented Host/Session SPI, provider/media/login/narrow entries, ReviewFlow/settings, Logs/Thinking, accounts/models, suggestions/schedules/membership and retained flows are already recorded in STATUS. Remaining rows concern exact integration acceptance; this inventory does not invent new product features.",
+      "providerCurrent": "45a source601+2 on both Node versions and53 native jobs accepted; exact archive/SPI/app installed bytes and same24 controlled cases passed R2. App original GUI/native qualification stays separate.",
+      "taskDetailCurrent": "Accepted implementation, both lint configurations, boundary probes, scoped TS7 and source/UI evidence remain final; no repeated review/test requested.",
+      "review": "Baseline43 resolved threads and independent R1/R2 are preserved with their source scopes; no formal approval inferred."
+    },
+    "remainingRows": [
+      {
+        "id": "E1-Stop / Import",
+        "done": "Original7fe import lifecycle PASS; canonical export/correlation/sentinel source fixes already accepted.",
+        "remaining": "Original current-source import-lifecycle flow, reply, Stop/reload and final cleanup evidence.",
+        "continuation": "Existing queued d8 import-lifecycle lane; sole observer."
+      },
+      {
+        "id": "E1-Stop / Aggregate",
+        "done": "Source-fence forwarding accepted; original8 failures,6 ordering cases and facade guard already PASS.",
+        "remaining": "Current-source frontend/contracts acceptance after publication.",
+        "continuation": "Existing d8 frontend/main gates; no duplicate local suite."
+      },
+      {
+        "id": "E1-Retained",
+        "done": "Ambient identity and actual Launch label fixes implemented and reviewed.",
+        "remaining": "Original current-source bootstrap, visible reply and Stop.",
+        "continuation": "Existing queued retained-original lane; inspect its exact receipt when terminal."
+      },
+      {
+        "id": "E1-Coexistence",
+        "done": "Original V1 history/no-replay preserved; passive boundary and Save-only fixes reviewed separately.",
+        "remaining": "Original V1/V2 coexistence/cold acceptance with cleanup; prior source-unreadable FAIL retained.",
+        "continuation": "Existing ci.yml retained-opencode-coexistence job has an explicit Draft1192 clause and needs plan. Current plan is queued; no new workflow or Ready transition required for this lane."
+      },
+      {
+        "id": "E1-SaveOnly",
+        "done": "Literal runtimeSelectionVersion1 writer/reader compatibility fixed;30 original cases and R2 accepted.",
+        "remaining": "Current original native/import/retained consumption proof.",
+        "continuation": "Existing current acceptance lanes; do not turn controlled proof into native PASS."
+      },
+      {
+        "id": "E1-Add",
+        "done": "Same-Team fence and exact owner checks accepted; no outstanding reviewed source fix.",
+        "remaining": "Original Add/Remove/Restore/Stop/cold path under unchanged model-probe ownership.",
+        "continuation": "Queued d8 opencode-v2-management lane; no generic optimization from aggregate times."
+      },
+      {
+        "id": "E1-Review",
+        "done": "Bounded source audit preserves639 prelaunch FAIL/held; new provider and controlled consumer correction accepted.",
+        "remaining": "Original Darwin Review success plus exact probe cleanup, independently of app/group/Host exit.",
+        "continuation": "Queued d8 review lane. Existing639 audit has no proven additional production fix."
+      },
+      {
+        "id": "E1-Resume",
+        "done": "Observer identity/wait-bound and passive hydration corrections already reviewed.",
+        "remaining": "Original current-source Launch/preflight/Resume and owner/Host cleanup receipt.",
+        "continuation": "Queued d8 resume lane; no new reads, retries or timeouts justified from old snapshots."
+      },
+      {
+        "id": "W1",
+        "done": "639 ARM late readiness and7-handle cleanup retained; bounded source review found no proven safe local optimization.",
+        "remaining": "Current ARM original readiness within its cutoff, with cleanup.",
+        "continuation": "Current d8 ARM process job pending; sole observer. Do not transfer Darwin ARM process PASS to this platform."
+      },
+      {
+        "id": "W2",
+        "done": "Prior Windows source work/review complete; d8 x64 job135930971049 now has an actual V1 TEST source failure.",
+        "remaining": "Establish the specific cause and correct it without altering reads, budgets, ordering, custody or oracle.",
+        "continuation": "Active owner /root/provider_cut_design prepares minimal passive namespace timing; this agent reviews the exact frozen candidate next. No duplicate source analysis."
+      },
+      {
+        "id": "P09",
+        "done": "Owner-selected A fixture acceptance is complete on639 Linux x64, Darwin x64 and Darwin ARM,8/8 each; strict negatives retained.",
+        "remaining": "Original d8 Native V2 receipts; installed/release remain outside qualification.",
+        "continuation": "Existing nine-job source run. Historical table mention of cancelled fbc ARM is not new missing A implementation."
+      },
+      {
+        "id": "D1-current",
+        "done": "All published local source/R2 gates accepted; previous full source gates remain historical.",
+        "remaining": "Full original d8 compiler/lint/contracts/frontend qualification and required source checks.",
+        "continuation": "Existing main plan and frontend run; observer waits normally. Metadata edited gate is separate."
+      },
+      {
+        "id": "E1-Other",
+        "done": "Task Detail lazy boundary and71 unique cases accepted; prior cross-team/media/Quit/packaged successes remain source-scoped.",
+        "remaining": "Current full cross-team, installer, attachments, active/pending-open Quit and remaining Desktop scenarios.",
+        "continuation": "Existing selected original lanes; predictions about the smaller eager graph do not prove a runtime memory fix."
+      },
+      {
+        "id": "Delivery",
+        "done": "d8 published with27 exact blob readbacks; provider45a and both body updates published/read back. Current route ancestry/tree preparation completed by root.",
+        "remaining": "Resolve actual source failures, finish current acceptance/review, then satisfy the separately recorded automatic real-provider scope conflict before allowed feature merges.",
+        "continuation": "Root owns exact-SHA delivery and receiving-source qualification; no Ready/base/labels/guards changes now."
+      }
+    ],
+    "routePreparation": {
+      "owner": "/root",
+      "state": "COMPLETED_READ_ONLY_AT_RECORDED_HEADS",
+      "record": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/d8-source-integration-preparation.json",
+        "bytes": 5459,
+        "sha256": "f6158400eeaf7f1d6f0d6f0b6861fa3fd95ea7a03f082707148221a064274c9b"
+      },
+      "receiving1186Head": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "stage1Head": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "bothDestinationHeadsAreAncestorsOfD8": true,
+      "eventMerge": "1109d086c0562435dd7104f9f612df5d0e556160",
+      "mergeTreeEqualsD8Tree": "4cd74131e306ef4cfdbeeac673e1766232991133",
+      "additionalContentConflictPatchRequiredAtTheseHeads": false,
+      "localProofLimit": "The shallow checkout lacks receiving commits; local ancestry commands stopped with128 before merge-tree. Root used official saved compare metadata (merge_base==base, behind0) and actual event-merge tree; the truncated300-file lists were not treated as complete diffs.",
+      "nextAfterQualification": "Root takes a fresh exact-head/base lease before any selected feature merge, retains source/review qualification on the resulting receiving source, and stops at Stage1. No ref/commit/Ready action was performed here.",
+      "excluded": [
+        "PR982 to main; its mergeable=false does not require out-of-scope conflict work.",
+        "Provider8 to bootstrap default; exact checked archive consumption does not require this merge.",
+        "Package/release publication, default Host activation and Stage2."
+      ]
+    },
+    "deferredExecutionScopeConflict": {
+      "existingAudit": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae.json",
+        "bytes": 36448,
+        "sha256": "f63f43c087fcec204f4c7f3b2f0888b0ef5e7edf9a6559e27377b968a6a3ca78"
+      },
+      "unchangedInD8": "Published27-path delta touches no workflow or selection-guard source, so the already verified automatic Ready1192 real Codex/version and Ready1186 real Claude/Codex Desktop conditions remain applicable.",
+      "decisionNotRequestedNow": true,
+      "reason": "Actual Windows source work, independent review and current original checks remain active. Scope reconciliation is a later delivery precondition, not a reason to stop independent work.",
+      "noBypass": "No changing Draft/base/labels/protection/guards to avoid automatic checks."
+    },
+    "documentationIntegration": {
+      "owner": "/root",
+      "workingStatus": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+        "bytes": 69625,
+        "sha256": "d7eb58f81a03fc3ae1312f6ed7279fd6257b438534a58ace4e584fd92ed9f12d"
+      },
+      "publishedStatusSha256": "f44b7a0d7097205cef980bb6616c29553e4eab75029de7a445c04f0c0422072d",
+      "alreadyPrepared": "Root working STATUS now records published d8, terminal639 including natural cancellations, first d8 x64 failure and Darwin ARM process PASS; intentionally uncommitted while source gates run. Bodies are already published.",
+      "smallOptionalClarification": "The implemented-capabilities Media/provider paragraph still says b194 pin unchanged. Label that existing paragraph as historical qualification before45a when root next integrates docs; do not rewrite its old receipt or create a source churn commit solely for the label.",
+      "inertSuggestedHeading": "**Media \u0438 provider \u2014 \u0438\u0441\u0442\u043e\u0440\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043a\u0432\u0430\u043b\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f \u0434\u043e `45a569bd`.**"
+    },
+    "activeNextActions": [
+      {
+        "owner": "/root/provider_cut_design",
+        "action": "Finish the narrowly scoped Windows V1 evidence/source candidate under existing reads/order/budgets; do not call passive timings a proven latency fix."
+      },
+      {
+        "owner": "/root/task_detail_finish",
+        "action": "Independently review that exact frozen slice when delegated; no source rerun or review of unrelated accepted code now."
+      },
+      {
+        "owner": "/root/ci_observer_current",
+        "action": "Await original d8 workflows at the existing cadence; read terminal receipts once and retain failure/cancel/skip truthfully."
+      },
+      {
+        "owner": "/root",
+        "action": "Integrate reviewed proven changes and pending docs/evidence in the next warranted publication; maintain exact-head leases and final receiving-source qualification."
+      }
+    ],
+    "evidence": [
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/app-lifecycle-publication.json",
+        "bytes": 8798,
+        "sha256": "6583eee16984d76aaf78ab54df5d1ef0ffad5fbb66ff2f45a36e0850ecc5ff52"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-final-r2.json",
+        "bytes": 7710,
+        "sha256": "8d571f84d636a484023b5f59bf86e0dfb9f9ff1a6850c7047694bfdd04102828"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/provider-45a569b-ci-terminal-audit.json",
+        "bytes": 19514,
+        "sha256": "aa5adbc6bb9525fda15e3ba2c185b371e43086641fa0cad847127a042758ed73"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/ci63927-terminal-audit.json",
+        "bytes": 2854,
+        "sha256": "43ed5adae63824a788c6bb8caa2e11429791df0c1eefa804e8096ce202bf8517"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/pr-bodies-d8-45a-published-readback.json",
+        "bytes": 9349,
+        "sha256": "535bd818fef503c34fb804840d82f262ff89ce60ec71572d208d187d492d72f2"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/darwin-review-63927ae-prelaunch-probe-audit.json",
+        "bytes": 25449,
+        "sha256": "52a9d2e79db3c1e14f85e1f9ed45867b22643c67dfd241359e4501ba7ccf6dc7"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-63927ae-additional-source-review.json",
+        "bytes": 17484,
+        "sha256": "3c4f112273dd26390f9cb9da3d842c70b657dd79c15329cfbb39f534e1e51db2"
+      }
+    ],
+    "actions": {
+      "githubRequests": 0,
+      "ciQueries": 0,
+      "testsOrCompilerOrNative": 0,
+      "repoEdits": 0,
+      "remoteMutations": 0,
+      "localAncestryReads": "Read-only; missing receiving objects recorded; no fetch or fabricated merge.",
+      "newArtifactOnly": true
+    }
+  },
+  "limits": [
+    "No actual Ready/merge/ref transition, review request, comment or CI action.",
+    "43/43 resolved inline threads are not formal approval of this source slice.",
+    "The selected feature route still conflicts with the prohibition on automatic real Claude/Codex execution; independent work continues."
+  ]
+}

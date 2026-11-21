@@ -1,0 +1,36 @@
+{
+  "stage": "D",
+  "commandName": "D-saved-probe-and-transport",
+  "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+  "parents": [
+    "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+    "packages/legacy-agent-host/tests/transport.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:45:28.761577+00:00",
+  "finishedAtUTC": "2026-11-15T20:45:32.754985+00:00",
+  "elapsedSeconds": 3.9933819040015806,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "270e975b51c1d5fe838ad2b71fb048a580c4939870697ac0475158b47b056af7",
+  "logBytes": 5547,
+  "logSHA256": "e76685fcfe0c90b6f0755de3abc6dc53b294c2cde0766a7586c74b82f7da2faa",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "outputInventoryBefore": null,
+  "outputInventoryAfter": null,
+  "builtOutputsCountAfter": 1446,
+  "freshSelectedOutputs": null,
+  "selectedSourceCount": 31,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17
+}

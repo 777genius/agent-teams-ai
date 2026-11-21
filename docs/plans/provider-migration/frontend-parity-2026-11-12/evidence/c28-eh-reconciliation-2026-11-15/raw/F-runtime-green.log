@@ -1,0 +1,57 @@
+✔ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (293.384947ms)
+✔ never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state (52.578733ms)
+✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (587.842004ms)
+✔ task recovery never returns a prior receipt for a changed command with unavailable attachments (63.846399ms)
+✔ mixed Host boots V2 Session SPI profile without invoking V1 management registration (678.801505ms)
+✔ two captured teams may share an original run ID without sharing launch ownership (68.99043ms)
+✔ cold unavailable Team history retains original resources while an independent Team still captures and runs (469.875371ms)
+✔ a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision (90.586407ms)
+✔ saved configuration captures fresh native identities, preserves historical launches and replays after cold restart (323.610964ms)
+✔ capture rejects stale product sources, missing recipes and protected args before native allocation (36.827524ms)
+✔ NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation (62.608325ms)
+✔ NDJSON roster replacement refuses live allocation, then saves only after confirmed stop (1912.931702ms)
+✔ captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal (557.055356ms)
+✔ NDJSON unknown native cleanup keeps the saved roster and its original grants bound (219.499329ms)
+✔ stopped fresh capture admits its exact probe profile and cold replay retains the original check (298.57248ms)
+✔ Team model preflight requires current control authority and exact launch selection before any provider allocation (115.07905ms)
+✔ NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC (149.761941ms)
+✔ member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority (155.051087ms)
+✔ runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation (128.578919ms)
+✔ dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt (29.681982ms)
+✔ pending open cleanup precedes readiness: late-driver (29.913366ms)
+✔ pending open cleanup precedes readiness: unknown-driver (34.898619ms)
+✔ pending open cleanup precedes readiness: factory-rejection (27.447495ms)
+✔ pending provider cleanup survives stop before dispose (32.731988ms)
+✔ pending provider cleanup survives reconcile before dispose (31.95782ms)
+✔ allocated driver checkpoint and close precede captured process cleanup (43.511552ms)
+✔ expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation (107.763834ms)
+✔ Codex Host cost reports retained usage once without native dispatch or private snapshot leakage (452.9894ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-aajb84
+✔ activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps (411.024571ms)
+✔ activity snapshot/feed recheck current human read grants and reject authority overrides (13.632227ms)
+✔ production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress (60.513976ms)
+✔ launch options are durably selected before provider creation and replay survives Host restart without new allocation (257.468071ms)
+✔ launch options refuse allocated state and compile every selected provider before any publication or allocation (169.970569ms)
+(node:47) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls (604.253224ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-dtcJ2g
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-SPcbp3
+✔ Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors (1.61815ms)
+✔ the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown (14.325848ms)
+✔ source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff (2.087909ms)
+✔ source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause (1.184233ms)
+✔ source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors (4.834769ms)
+✔ source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget (1.630487ms)
+✔ source standalone refuses a completed result delivered after the captured absolute deadline (1.301628ms)
+✔ source codex standalone preserves the original fresh capture check after successful completion (1.236921ms)
+✔ source claude standalone preserves the original fresh capture check after successful completion (1.082081ms)
+✔ source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors (11.689354ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9618.166878

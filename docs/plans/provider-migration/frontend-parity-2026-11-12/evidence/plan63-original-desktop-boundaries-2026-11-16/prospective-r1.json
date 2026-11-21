@@ -1,0 +1,118 @@
+{
+  "kind": "ROOT_PROSPECTIVE_PLAN63_SELECTION_R1",
+  "status": "selected narrow plan for independent review; no source afterimages",
+  "baseCommit": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "baseTree": "d5dc487719c64720b95a8ed390cc72f8ea9b924f",
+  "isolatedStagingBranch": "fix/frontend-parity-e2e-bounds-20261116",
+  "preservedExternalDelivery": "fix/frontend-parity-public-c2f5ff7c at5310b4a7b7b888c1715ef904d009b6b5cac8a087; no native-first prerequisite transfer",
+  "plan": {
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/63-original-desktop-e2e-boundaries-2026-11-16.md",
+    "bytes": 11988,
+    "physicalLines": 61,
+    "gitBlob": "b54e3a8a5680141a3a7b0889661d4de1888b35ba",
+    "sha256": "5d719a9e49d697a4a9662d0edd94a4e439049b16e39def4c079c71066a92cb0c"
+  },
+  "sourceBindings": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/before/scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "writable": true,
+      "bytes": 29580,
+      "physicalLines": 545,
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "writable": true,
+      "bytes": 22320,
+      "physicalLines": 343,
+      "gitBlob": "a41bff15e351d829d9cbb0197a7026ad09d6dc18",
+      "sha256": "e649994d2311bc5fdc308c24167593d0c387ce4fef3a170f04b8e20c9402ffe1"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/before/.github/workflows/host-emulated-acceptance.yml",
+      "writable": true,
+      "bytes": 141809,
+      "physicalLines": 1767,
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88"
+    },
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/e2e/comment-notification/cdp.mjs",
+      "writable": false,
+      "bytes": 3704,
+      "physicalLines": 119,
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "writable": false,
+      "bytes": 10086,
+      "physicalLines": 206,
+      "gitBlob": "23aab1f3fbf713eacc2e9741be6513fcc9de18e5",
+      "sha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/legacy-agent-host/desktop-owner-routing-product-census.ts",
+      "writable": false,
+      "bytes": 4022,
+      "physicalLines": 77,
+      "gitBlob": "ea9ed87dd6e0571843d807f68e7158c9cf469ee8",
+      "sha256": "af69541cc3ac9fa3740a05ef312b837096d4c239dacaf42241748cb897028e35"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/legacy-agent-host/desktop-captured-app.ts",
+      "writable": false,
+      "bytes": 49613,
+      "physicalLines": 787,
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+    }
+  ],
+  "originalEvidence": {
+    "chatFailureR2": "20685B SHA40d06db4d59ed7ff09ed4fdea5a7eb0319576c0f40aafd9c2d609d21775d1fc8 FULL ROOT READ",
+    "crossMissingPinsR2": "12801B SHA80bded0d62d7e95108883bc255edd6157242eda9dd35254a409375ccb50685ba FULL ROOT READ"
+  },
+  "closedDataChecks": {
+    "originalBeforeAfterVectorEquality": true,
+    "originalUniqueRows": 1777,
+    "threeNewPathsAbsent": [
+      "scripts/e2e/comment-notification/cdp.mjs",
+      "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts"
+    ],
+    "prospectiveUniqueRows": 1780,
+    "fastLintOriginalOrderedUniqueOperands": 132,
+    "fixtureMissing": true,
+    "rosterAlreadyPresent": true,
+    "prospectiveOperands": 133
+  },
+  "sourceReadExtent": "Root full545-line native-stop fixture acrossboundedreads, full119-line unchangedCDP, existingclosedactualPlan60roster andPlan61workflow reviews. Newsourceafterimages notauthored. IndependentfailureR2 marks narroweragentsemanticread separately. Root inspected exact existing DesktopCdpPort lines22-27; whole787-line type-provider body copied/hash-joined, not claimed wholly re-reviewed.",
+  "semanticSelection": "Only options.openCode: move existing180000 readinessclock beforeoriginalconfiguredstart; usepositiveremainingforonesameCDPawait; pre/postdeadlinechecksandsharedpending/readycutoff; keepnormalreadCDP30/nonOpenCode45/default/probe90/requests/cleanup/oracles/commands/preparationfinally unchanged. Three commonliteral sourcepins andonefastlintoperand only.",
+  "requiredGates": [
+    "Independent prospective document R2",
+    "Actual plan commit/tree/body readback plus independent actual documentary R2",
+    "Complete frozen three-file source R1/R2 and inverse",
+    "Immediate ordinary CASsourcepush/fullactualreadback R2",
+    "Original resulting-source CI with protectedusefuljobs; no runtimecompletionclaimbeforeoriginalreceipts"
+  ],
+  "execution": {
+    "projectImports": 0,
+    "compilers": 0,
+    "tests": 0,
+    "lint": 0,
+    "nativeOrGUI": 0,
+    "sourceAfterimages": 0,
+    "manualActions": 0
+  },
+  "typingSelection": "Use existing Pick<DesktopCdpPort, evaluate | send> for only prepareDesktopNativeStop options.cdp. Existing optional-timeout capability and structural compatibility; shared interfaces and other UiCdpPort helpers remain unchanged; no cast/new framework.",
+  "dispatchBoundaries": "Remaining check after original renderer ownership assertion and after poll tick; post-await cutoff before success/readiness/opening acceptance. Initial cutoff assignment and all start deadline throws stay inside original disarm finally; polling begins after disarm."
+}

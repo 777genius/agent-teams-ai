@@ -22,12 +22,19 @@ function assemble(parts: Map<number, { total: number; values: Map<number, Messag
     for (let index = 1; index < group.total; index++) {
       const part = group.values.get(index);
       if (!part || part.from !== original.from || part.messageId !== original.messageId ||
-          part.timestamp !== original.timestamp || part.read !== original.read)
+          part.timestamp !== original.timestamp || part.read !== original.read ||
+          part.source !== original.source || part.leadSessionId !== original.leadSessionId)
         throw new Error('Mismatched Host message fragment');
       text += part.text;
     }
     return { ...original, text };
   });
+}
+
+function historyNotice(page: BackendTeamMessagesPage) {
+  return page.conversation?.gaps.length ? {
+    historyWarning: 'Some agent replies are incomplete or unavailable. Showing the retained messages.',
+  } : {};
 }
 
 /** A message is published only after its original signed Owner parts are complete. */
@@ -67,7 +74,8 @@ export async function readHostMessagesPage(
       throw new HostTeamOperationError('invalid-result', 'unknown');
     if (first && (page.teamName !== first.teamName || page.revision !== first.revision ||
         page.messageTotal !== first.messageTotal ||
-        Boolean(page.messageParts) !== Boolean(first.messageParts)))
+        Boolean(page.messageParts) !== Boolean(first.messageParts) ||
+        JSON.stringify(page.conversation) !== JSON.stringify(first.conversation)))
       throw new Error('Host message history changed during paged read');
     first ??= page;
     if (!page.messageParts) {
@@ -77,6 +85,7 @@ export async function readHostMessagesPage(
         nextCursor: page.nextCursor,
         hasMore: page.hasMore,
         feedRevision: page.revision,
+        ...historyNotice(page),
       };
     }
     if (page.messageParts.length !== page.messages.length || page.messageTotal === undefined)
@@ -102,6 +111,7 @@ export async function readHostMessagesPage(
         nextCursor: page.nextCursor,
         hasMore: page.hasMore,
         feedRevision: page.revision,
+        ...historyNotice(page),
       };
     }
     if (!page.nextCursor || seen.has(page.nextCursor))

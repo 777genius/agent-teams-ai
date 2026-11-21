@@ -808,8 +808,7 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
       );
     }
   }
-  const hasActiveLane = laneIndex?.lanes[identity.laneId]?.state === 'active';
-
+  const laneState = laneIndex?.lanes[identity.laneId]?.state;
   let inboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>>;
   try {
     inboxMessages = await ports.inboxReader.getMessagesFor(input.teamName, input.memberName);
@@ -848,7 +847,7 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
       hasStableInboxMessageId(message)
   );
   if (unreadForeground?.messageId) {
-    if (hasActiveLane) {
+    if (laneState === 'active') {
       const activeRecord = await ports.tryGetActiveOpenCodePromptDeliveryRecord({
         teamName: input.teamName,
         memberName: input.memberName,
@@ -864,12 +863,13 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
         });
       }
     }
-    ports.scheduleOpenCodeMemberInboxDeliveryWake({
-      teamName: input.teamName,
-      memberName: input.memberName,
-      messageId: unreadForeground.messageId,
-      delayMs: 500,
-    });
+    if (laneState !== 'stopped' && laneState !== 'degraded')
+      ports.scheduleOpenCodeMemberInboxDeliveryWake({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        messageId: unreadForeground.messageId,
+        delayMs: 500,
+      });
     return {
       busy: true,
       reason: 'opencode_foreground_inbox_unread',
@@ -896,7 +896,7 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
   if (!laneIndex) {
     return { busy: true, reason: 'opencode_lane_index_unavailable', retryAfterIso };
   }
-  if (!hasActiveLane) {
+  if (laneState !== 'active') {
     return { busy: true, reason: 'opencode_no_active_lane', retryAfterIso };
   }
 

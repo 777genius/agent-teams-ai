@@ -1,0 +1,248 @@
+{
+  "status": "READ_ONLY_ORIGINAL_FIRST_FAILURE_NO_NEW_NATIVE_EXECUTION",
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "tree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "run": 43813731517,
+  "attempt": 1,
+  "step": 25,
+  "stepName": "Observe POSIX original-path exec and explicit mutation counterexamples",
+  "sourcePins": [
+    {
+      "sourcePath": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "bytes": 27709,
+      "blob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+      "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+      "immutableE1dBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+    },
+    {
+      "sourcePath": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36309,
+      "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "immutableE1dBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e"
+    }
+  ],
+  "jobs": [
+    {
+      "job": 133120929424,
+      "arch": "x64",
+      "log": {
+        "bytes": 112091,
+        "blob": "907a8263b7d72aace814479a1b01214f4024499e",
+        "sha256": "de953965a05ae16adbc9b3934bc2ba5b0bb604be4256616ce353b3aedbaad2c6"
+      },
+      "utf8Bom": true,
+      "crlfCount": 0,
+      "sourceSeenInOriginalCheckoutAndEnvironment": true,
+      "firstAssertion": {
+        "line": 1152,
+        "excerpt": [
+          "2026-11-16T06:21:59.0922070Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+          "2026-11-16T06:21:59.0923970Z   ",
+          "2026-11-16T06:21:59.0925520Z   13 !== 0",
+          "2026-11-16T06:21:59.0926530Z   ",
+          "2026-11-16T06:21:59.0930470Z       at TestContext.<anonymous> (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/registered-process-executable.native.ts:476:18)",
+          "2026-11-16T06:21:59.0933800Z       at async Test.run (node:internal/test_runner/test:1409:7)",
+          "2026-11-16T06:21:59.0935760Z       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {",
+          "2026-11-16T06:21:59.0937210Z     generatedMessage: true,",
+          "2026-11-16T06:21:59.0938080Z     code: 'ERR_ASSERTION',",
+          "2026-11-16T06:21:59.0938870Z     actual: 13,",
+          "2026-11-16T06:21:59.0939610Z     expected: 0,",
+          "2026-11-16T06:21:59.0940370Z     operator: 'strictEqual',",
+          "2026-11-16T06:21:59.0941310Z     diff: 'simple'",
+          "2026-11-16T06:21:59.0942070Z   }",
+          "2026-11-16T06:21:59.1067530Z ##[error]Process completed with exit code 1.",
+          "2026-11-16T06:21:59.1508500Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "meaning": "compiler-default unsigned baseline errno13 rather than0"
+      },
+      "observations": [
+        {
+          "line": 1135,
+          "timestamp": "2026-11-16T06:21:57.4907900Z",
+          "record": {
+            "kind": "TEST_POSIX_IMAGE_WITNESS_FAILURE",
+            "case": "compiler-default:baseline",
+            "stage": "kernel-image-validity",
+            "errno": 13,
+            "codeSigningError": -67062
+          }
+        },
+        {
+          "line": 1136,
+          "timestamp": "2026-11-16T06:21:57.9403710Z",
+          "record": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:after-check",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        },
+        {
+          "line": 1137,
+          "timestamp": "2026-11-16T06:21:58.0371570Z",
+          "record": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:writer-open",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        }
+      ],
+      "boundCleanup": "Both retained mutation rows report original reaped/group absent/cleanup true; no full product lifecycle qualification inferred."
+    },
+    {
+      "job": 133120929495,
+      "arch": "arm64",
+      "log": {
+        "bytes": 106404,
+        "blob": "59ecf6ca7fd558fb8d4021834ada5e4ca9b972ee",
+        "sha256": "5d1703477fb76b2f1f84fa1bc716e16d9ba233a49fe4413be459719d2a60224e"
+      },
+      "utf8Bom": true,
+      "crlfCount": 0,
+      "sourceSeenInOriginalCheckoutAndEnvironment": true,
+      "firstAssertion": {
+        "line": 1080,
+        "excerpt": [
+          "2026-11-16T06:23:22.3549460Z   AssertionError [ERR_ASSERTION]: no selected library or payload constructor may run after byte mutation",
+          "2026-11-16T06:23:22.3550490Z   + actual - expected",
+          "2026-11-16T06:23:22.3550840Z   ",
+          "2026-11-16T06:23:22.3551130Z   + 'LIB\\nBIN:A\\nMAIN:A\\n'",
+          "2026-11-16T06:23:22.3552580Z   - ''",
+          "2026-11-16T06:23:22.3552870Z   ",
+          "2026-11-16T06:23:22.3553730Z       at TestContext.<anonymous> (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/registered-process-executable.native.ts:496:24)",
+          "2026-11-16T06:23:22.3554610Z       at async Test.run (node:internal/test_runner/test:1409:7)",
+          "2026-11-16T06:23:22.3555820Z       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {",
+          "2026-11-16T06:23:22.3556260Z     generatedMessage: false,",
+          "2026-11-16T06:23:22.3556490Z     code: 'ERR_ASSERTION',",
+          "2026-11-16T06:23:22.3556760Z     actual: 'LIB\\nBIN:A\\nMAIN:A\\n',",
+          "2026-11-16T06:23:22.3556980Z     expected: '',",
+          "2026-11-16T06:23:22.3557170Z     operator: 'strictEqual',",
+          "2026-11-16T06:23:22.3557370Z     diff: 'simple'",
+          "2026-11-16T06:23:22.3557570Z   }"
+        ],
+        "meaning": "original no-selected-marker predicate failed after byte mutation"
+      },
+      "observations": [
+        {
+          "line": 1064,
+          "timestamp": "2026-11-16T06:23:21.8615120Z",
+          "record": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:after-check",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        },
+        {
+          "line": 1065,
+          "timestamp": "2026-11-16T06:23:21.9100750Z",
+          "record": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:writer-open",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        }
+      ],
+      "boundCleanup": "Both retained mutation rows report original reaped/group absent/cleanup true; no full product lifecycle qualification inferred."
+    }
+  ],
+  "disposition": "P09 strict HOLD remains. No selected same-contract correction is established; compiler-default unsigned support and zero-marker after mutation both remain required. No trust/signature/copy/path or deadline exception, no universal impossibility inference.",
+  "notClaimed": [
+    "Archive/ZIP verification (none downloaded for these two jobs)",
+    "ARM unsigned-baseline -67062 attribution",
+    "Current-source P09 pass",
+    "Full native qualification from earlier passing steps",
+    "New execution or Actions mutation"
+  ]
+}

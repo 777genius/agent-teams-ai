@@ -15,6 +15,12 @@ export async function prepareDesktopScheduleFixture(repo: string, pnpmEntry: str
   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiTask: true, launchDialog: true,
     nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl } });
+  await seedDesktopLegacySchedule(fixture, { model: 'claude-sonnet-4-6', prompt: SCHEDULE_FINITE_PROMPT });
+  return fixture;
+}
+
+/** The original on-disk legacy shape has no Host target until the original Edit/Save path binds it. */
+export async function seedDesktopLegacySchedule(fixture: { root: string; handleId: string }, selection: { model: string; prompt: string }) {
   const directory = join(fixture.root, 'claude/agent-teams-schedules');
   await mkdir(directory, { mode: 0o700 });
   const now = new Date().toISOString();
@@ -24,10 +30,9 @@ export async function prepareDesktopScheduleFixture(repo: string, pnpmEntry: str
     warmUpMinutes: 0, maxConsecutiveFailures: 3, consecutiveFailures: 0,
     maxTurns: 8, maxBudgetUsd: 0.5, createdAt: now, updatedAt: now,
     launchConfig: { cwd: join(fixture.root, 'workspace'), providerId: 'anthropic',
-      model: 'claude-sonnet-4-6', effort: 'low', fastMode: 'off', resolvedFastMode: false,
-      skipPermissions: true, prompt: SCHEDULE_FINITE_PROMPT },
+      model: selection.model, effort: 'low', fastMode: 'off', resolvedFastMode: false,
+      skipPermissions: true, prompt: selection.prompt },
   }], null, 2), { mode: 0o600, flag: 'wx' });
-  return fixture;
 }
 
 /** Read-only TEST oracle: the scheduler and actual native MCP own all task writes. */

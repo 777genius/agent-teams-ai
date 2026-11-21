@@ -30,6 +30,8 @@ export interface NativeExtensionProofSelection {
   nativeConfig: string;
   neighborPath: string;
   neighborSha256: string;
+  /** Absent for the original native qualification; finite UI evidence is explicitly separate. */
+  execution?: 'finite-protocol-peer';
   /** Stable namespace only: capture, generation and runtime request IDs are deliberately excluded. */
   runtimeNamespaceSha256?: string;
 }

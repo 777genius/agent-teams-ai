@@ -1,0 +1,147 @@
+{
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "kind": "Fresh current HTTP selected source/workflow/config/helper Git-byte audit",
+  "count": 17,
+  "files": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "bytes": 49160,
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "sha256": "54e077160701a4c76dca7d23b24fafe1003e0d67547a04f87b5066b66958a7d8",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs",
+      "bytes": 9525,
+      "blob": "9a410364742b3ad6345da89668becf31cf757bcc",
+      "sha256": "cdd0ec07afaa75331c34170e80b1551279f2c27c8caba82b6b3d4c8c9d839984",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "bytes": 6483,
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "sha256": "3a393846259e883c0d0e9ea324b932a47055c424dfe135e7332261eff1ef7805",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs",
+      "bytes": 4384,
+      "blob": "b6ab60be6f021b3cdcacba35f2ed4bcf357528fa",
+      "sha256": "8f95333c8c2ae33191031003863a525db73c3f38d763cd191c99efe1857582a3",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.mjs",
+      "bytes": 2661,
+      "blob": "d489fc8012c6bfa3ef706c5d79f4fcc61965fddb",
+      "sha256": "f954c94a11af08da5a4250eb4bfb6b6b44c8b3669850c38121c754863c527d91",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-process-guard.mjs",
+      "bytes": 634,
+      "blob": "d8522e59f917838468c07ba4a43beb71c08809c2",
+      "sha256": "2dfe3eb1e99067c4bcfec025b33effa5313aed5db84bec7894238419a0c4416b",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-log-parse.mjs",
+      "bytes": 4222,
+      "blob": "fba657e913aa08cfb8742400e44007a745a6b70d",
+      "sha256": "3d3b01ff3c519704d83d32b4563e99614b73bfad6dc99e496ae22d032fb3ccc0",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-session-guard.mjs",
+      "bytes": 950,
+      "blob": "f0b3bda7d1f2e2731ffca1c773c6cbf1504cea23",
+      "sha256": "e30430400acf68eee82b15deb6a4e8d5a248443ef2776e9fe6637ea852619e8a",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts",
+      "bytes": 19050,
+      "blob": "e4ef669047f308bcb4378283d92a4064b3e3e062",
+      "sha256": "ce2b40432a29553b322e9e2b40b05a43ca620515e60d060194df72c7e5ccedff",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts",
+      "bytes": 48064,
+      "blob": "89f2eb8711025416f7afd07727ed62fcd4ad3dad",
+      "sha256": "0d5775cebf1c7fcf7883e11db479a4a4a3efdcc943638065dccfa889cf17ae68",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelVariant.ts",
+      "bytes": 768,
+      "blob": "0df38e070a24cf3f2f6762954d2f706e50409d37",
+      "sha256": "b257839d3a5c8b3e70e3f05ab33068d497fd2ed8bb01a31a61bd670ece9f2ae2",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team-launch/context.ts",
+      "bytes": 290,
+      "blob": "03f264613cbdfc553675a7263ed6124ca475efe3",
+      "sha256": "d588944b04b0ef58fb24a85c2ecc703b9f1d96ed221266c8f8434860ea0869ac",
+      "freshNRead": true,
+      "byteIdenticalToMSelectedLeaf": true
+    }
+  ],
+  "fullReceiptSourceFreezeCensus": false,
+  "fullInstalledDependencyCensus": false,
+  "independentRebuild": false,
+  "historicalSourceEqualityDoesNotTransferResult": true
+}

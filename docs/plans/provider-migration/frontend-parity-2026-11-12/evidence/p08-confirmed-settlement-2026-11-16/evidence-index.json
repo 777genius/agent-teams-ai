@@ -1,0 +1,86 @@
+{
+  "kind": "P08_CONFIRMED_SETTLEMENT_SELECTED_PAYLOADS",
+  "parent": "fc0abec30ff37770c2d6b88cd29878600c6a7ee6",
+  "baseTree": "ab2fa12c51ebc58de813913c35ee88a8fc1d7413",
+  "source": {
+    "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+    "preimage": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+    "size": 31554,
+    "sha": "78486e24742278c6f803607e02e1601329e505a0",
+    "sha256": "68d94bb45e702746612b72f7f47151e5d2d24659bcf99b443fa499a7b2d21981"
+  },
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p08-confirmed-settlement-2026-11-16/original-windows-x64.log",
+      "mode": "100644",
+      "type": "blob",
+      "size": 337373,
+      "sha": "6df3de41248ff9b95acc293823b3347ddd5acc6c",
+      "sha256": "e9e066ef14aba98d8408f40980dad300863159c45dfffb637bf0051c66d33bdb",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p08-confirmed-settlement-2026-11-16/original-windows-arm64.log",
+      "mode": "100644",
+      "type": "blob",
+      "size": 313007,
+      "sha": "3b22c9a12da1caa741f9f9d53f6892963989debc",
+      "sha256": "afb2976413f640a9d1a5b4b0fe4322207234a4e84183a5494575795aff593ec0",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p08-confirmed-settlement-2026-11-16/original-metadata.json",
+      "mode": "100644",
+      "type": "blob",
+      "size": 11095,
+      "sha": "67c1f672c5f2352fc2c54288f2f8f30f93008fea",
+      "sha256": "555ad8a409bad753ffafeab2136cae646b42c1325e034db5a0906414a7a5fc3a",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p08-confirmed-settlement-2026-11-16/source-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "size": 5338,
+      "sha": "f5f44e61f8c9e95736e245be6cbaaa044e52b458",
+      "sha256": "e1896f0b0de991650b39b0f7971047cd9c6a85e97cc87fdd45506c6eb1974388",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p08-confirmed-settlement-2026-11-16/candidate.patch",
+      "mode": "100644",
+      "type": "blob",
+      "size": 1262,
+      "sha": "f0364dbbcb078fc647cc51e421721207ad871395",
+      "sha256": "b1a213df359c7c88ada852fa9f97b5ab6f0ab4beefd7ef7c81c49844d500b573",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p08-confirmed-settlement-2026-11-16/independent-source-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "size": 2488,
+      "sha": "d00521734ef2639ac8b7858da67aa752f73c71df",
+      "sha256": "f3ade82a8dc60d74a364ed850fd7cf76ca88e3ae326528b1d449953e4d6a28cc",
+      "encoding": "utf-8"
+    }
+  ],
+  "originalArchives": [
+    {
+      "id": 14214853300,
+      "bytes": 692899,
+      "sha256": "0ff7a64a45fc9b0ae6a638ba7c56efb772718151c9276cbab7faf9c435ae5c93",
+      "retainedAs": "original GitHub Actions artifact; full prior source-investigator and root inspection",
+      "newCopiedPayload": false
+    },
+    {
+      "id": 14216298092,
+      "bytes": 544775,
+      "sha256": "7885b5bd313529d0e822d834de5f8c1edffc97c887d969dc51d5656f37fc51bb",
+      "retainedAs": "original GitHub Actions artifact; contents not yet inspected",
+      "newCopiedPayload": false
+    }
+  ],
+  "projectExecution": false,
+  "qualification": "not established by this evidence cut"
+}

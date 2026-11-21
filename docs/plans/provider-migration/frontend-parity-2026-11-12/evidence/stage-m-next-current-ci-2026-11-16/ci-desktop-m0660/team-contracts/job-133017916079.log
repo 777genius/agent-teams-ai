@@ -1,0 +1,1247 @@
+﻿2026-11-16T01:44:32.8755242Z Current runner version: '2.338.2'
+2026-11-16T01:44:32.8778369Z ##[group]Runner Image Provisioner
+2026-11-16T01:44:32.8779161Z Hosted Compute Agent
+2026-11-16T01:44:32.8779685Z Version: 20261103.629
+2026-11-16T01:44:32.8780264Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T01:44:32.8781225Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T01:44:32.8781863Z Worker ID: {9bf55fb9-6847-447c-8956-1a8443fd5608}
+2026-11-16T01:44:32.8782499Z Region: westus
+2026-11-16T01:44:32.8782982Z Cloud: Azure
+2026-11-16T01:44:32.8783463Z ##[endgroup]
+2026-11-16T01:44:32.8784844Z ##[group]Operating System
+2026-11-16T01:44:32.8785420Z Ubuntu
+2026-11-16T01:44:32.8785891Z 26.04.1
+2026-11-16T01:44:32.8786339Z LTS
+2026-11-16T01:44:32.8786794Z ##[endgroup]
+2026-11-16T01:44:32.8787284Z ##[group]Runner Image
+2026-11-16T01:44:32.8787818Z Image: ubuntu-26.04
+2026-11-16T01:44:32.8788320Z Version: 20261111.196.1
+2026-11-16T01:44:32.8789434Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-16T01:44:32.8791117Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-16T01:44:32.8792058Z ##[endgroup]
+2026-11-16T01:44:32.8793058Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T01:44:32.8795113Z Contents: read
+2026-11-16T01:44:32.8795645Z Metadata: read
+2026-11-16T01:44:32.8796147Z ##[endgroup]
+2026-11-16T01:44:32.8798093Z Secret source: Actions
+2026-11-16T01:44:32.8798930Z Cache mode: write
+2026-11-16T01:44:32.8799934Z Prepare workflow directory
+2026-11-16T01:44:32.9405130Z Prepare all required actions
+2026-11-16T01:44:32.9454655Z Getting action download info
+2026-11-16T01:44:33.3158995Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T01:44:33.4278302Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-16T01:44:33.9365831Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T01:44:34.0369638Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T01:44:34.2351062Z Complete job name: Offline Host Desktop (linux-x64, team)
+2026-11-16T01:44:34.3302788Z ##[group]Run actions/checkout@v6
+2026-11-16T01:44:34.3304068Z with:
+2026-11-16T01:44:34.3304597Z   ref: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:34.3305242Z   persist-credentials: false
+2026-11-16T01:44:34.3305834Z   repository: 777genius/agent-teams-ai
+2026-11-16T01:44:34.3309629Z   token: ***
+2026-11-16T01:44:34.3310090Z   ssh-strict: true
+2026-11-16T01:44:34.3310563Z   ssh-user: git
+2026-11-16T01:44:34.3311172Z   clean: true
+2026-11-16T01:44:34.3311652Z   sparse-checkout-cone-mode: true
+2026-11-16T01:44:34.3312206Z   fetch-depth: 1
+2026-11-16T01:44:34.3312668Z   fetch-tags: false
+2026-11-16T01:44:34.3313146Z   show-progress: true
+2026-11-16T01:44:34.3313651Z   lfs: false
+2026-11-16T01:44:34.3314089Z   submodules: false
+2026-11-16T01:44:34.3314584Z   set-safe-directory: true
+2026-11-16T01:44:34.3315119Z   allow-unsafe-pr-checkout: false
+2026-11-16T01:44:34.3316125Z env:
+2026-11-16T01:44:34.3316593Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:44:34.3317368Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:34.3318108Z   HOST_EMULATED_LANE: team
+2026-11-16T01:44:34.3318647Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:44:34.3319200Z ##[endgroup]
+2026-11-16T01:44:34.5967607Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T01:44:34.5970242Z ##[group]Getting Git version info
+2026-11-16T01:44:34.5971900Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T01:44:34.5973986Z [command]/usr/bin/git version
+2026-11-16T01:44:34.5998399Z git version 2.56.1
+2026-11-16T01:44:34.6021112Z ##[endgroup]
+2026-11-16T01:44:34.6037816Z Temporarily overriding HOME='/home/runner/work/_temp/c8b06975-c2af-4f07-adf8-fc752cb78f29' before making global git config changes
+2026-11-16T01:44:34.6040648Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T01:44:34.6043857Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T01:44:34.6113284Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T01:44:34.6115133Z ##[group]Determining repository object format
+2026-11-16T01:44:34.6117733Z ##[endgroup]
+2026-11-16T01:44:34.6118915Z ##[group]Initializing the repository
+2026-11-16T01:44:34.6122980Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T01:44:34.6232653Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T01:44:34.6234657Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T01:44:34.6236420Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T01:44:34.6237927Z hint: call:
+2026-11-16T01:44:34.6238834Z hint:
+2026-11-16T01:44:34.6239981Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T01:44:34.6241454Z hint:
+2026-11-16T01:44:34.6242610Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T01:44:34.6244381Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T01:44:34.6245819Z hint:
+2026-11-16T01:44:34.6247016Z hint: 	git branch -m <name>
+2026-11-16T01:44:34.6247968Z hint:
+2026-11-16T01:44:34.6249162Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T01:44:34.6251322Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T01:44:34.6258625Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T01:44:34.6311389Z ##[endgroup]
+2026-11-16T01:44:34.6312810Z ##[group]Disabling automatic garbage collection
+2026-11-16T01:44:34.6316818Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T01:44:34.6355193Z ##[endgroup]
+2026-11-16T01:44:34.6356924Z ##[group]Setting up auth
+2026-11-16T01:44:34.6357745Z Removing SSH command configuration
+2026-11-16T01:44:34.6365301Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T01:44:34.6406124Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T01:44:34.6905843Z Removing HTTP extra header
+2026-11-16T01:44:34.6912209Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T01:44:34.6946478Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T01:44:34.7218471Z Removing includeIf entries pointing to credentials config files
+2026-11-16T01:44:34.7225624Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T01:44:34.7262649Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T01:44:34.7545565Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T01:44:34.7588997Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:34.7620272Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:34.7655445Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:34.7688040Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:34.7716489Z ##[endgroup]
+2026-11-16T01:44:34.7717737Z ##[group]Fetching the repository
+2026-11-16T01:44:34.7724051Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:40.6381777Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T01:44:40.6383344Z  * branch            0660c748f88675063e3051fb0f8b2022e8f6f056 -> FETCH_HEAD
+2026-11-16T01:44:40.6393040Z [command]/usr/bin/git rev-parse --verify --quiet 0660c748f88675063e3051fb0f8b2022e8f6f056^{object}
+2026-11-16T01:44:40.6419516Z 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:40.6424878Z ##[endgroup]
+2026-11-16T01:44:40.6425872Z ##[group]Determining the checkout info
+2026-11-16T01:44:40.6426887Z ##[endgroup]
+2026-11-16T01:44:40.6430421Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T01:44:40.6485190Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T01:44:40.6516325Z ##[group]Checking out the ref
+2026-11-16T01:44:40.6520198Z [command]/usr/bin/git checkout --progress --force 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:41.6676732Z Updating files:  99% (10023/10056)
+2026-11-16T01:44:41.6678021Z Updating files: 100% (10056/10056)
+2026-11-16T01:44:41.6679004Z Updating files: 100% (10056/10056), done.
+2026-11-16T01:44:41.6784722Z Note: switching to '0660c748f88675063e3051fb0f8b2022e8f6f056'.
+2026-11-16T01:44:41.6785653Z 
+2026-11-16T01:44:41.6786175Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T01:44:41.6787059Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T01:44:41.6787692Z state without impacting any branches by switching back to a branch.
+2026-11-16T01:44:41.6788126Z 
+2026-11-16T01:44:41.6788385Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T01:44:41.6789389Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T01:44:41.6789792Z 
+2026-11-16T01:44:41.6790073Z   git switch -c <new-branch-name>
+2026-11-16T01:44:41.6790391Z 
+2026-11-16T01:44:41.6790534Z Or undo this operation with:
+2026-11-16T01:44:41.6791120Z 
+2026-11-16T01:44:41.6791347Z   git switch -
+2026-11-16T01:44:41.6791597Z 
+2026-11-16T01:44:41.6791932Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T01:44:41.6792383Z 
+2026-11-16T01:44:41.6792778Z HEAD is now at 0660c74 docs: bind actual reconciliation and preserve completed original CI evidence
+2026-11-16T01:44:41.6827490Z ##[endgroup]
+2026-11-16T01:44:41.6881533Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T01:44:41.6908863Z 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:41.6919203Z ##[group]Removing auth
+2026-11-16T01:44:41.6919917Z Removing SSH command configuration
+2026-11-16T01:44:41.6925011Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T01:44:41.6960085Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T01:44:41.7251788Z Removing HTTP extra header
+2026-11-16T01:44:41.7257251Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T01:44:41.7328063Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T01:44:41.7587661Z Removing includeIf entries pointing to credentials config files
+2026-11-16T01:44:41.7593097Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T01:44:41.7620351Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T01:44:41.7621563Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T01:44:41.7622115Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T01:44:41.7622713Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T01:44:41.7632125Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T01:44:41.7655859Z /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7666420Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7702147Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T01:44:41.7725692Z /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7736450Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7772494Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T01:44:41.7796073Z /github/runner_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7804041Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7837831Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T01:44:41.7861422Z /github/runner_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7869091Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config
+2026-11-16T01:44:41.7902914Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T01:44:41.8186451Z Removing credentials config '/home/runner/work/_temp/git-credentials-0a386483-10d6-4e95-948c-9aebbe3b5c0e.config'
+2026-11-16T01:44:41.8195822Z ##[endgroup]
+2026-11-16T01:44:41.8491311Z ##[group]Run pnpm/action-setup@v6
+2026-11-16T01:44:41.8491661Z with:
+2026-11-16T01:44:41.8491888Z   dest: ~/setup-pnpm
+2026-11-16T01:44:41.8492137Z   run_install: null
+2026-11-16T01:44:41.8492382Z   cache: false
+2026-11-16T01:44:41.8492626Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-16T01:44:41.8492942Z   package_json_file: package.json
+2026-11-16T01:44:41.8493208Z   standalone: false
+2026-11-16T01:44:41.8493450Z env:
+2026-11-16T01:44:41.8493672Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:44:41.8494060Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:41.8494448Z   HOST_EMULATED_LANE: team
+2026-11-16T01:44:41.8494711Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:44:41.8494983Z ##[endgroup]
+2026-11-16T01:44:42.0109197Z ##[group]Running self-installer...
+2026-11-16T01:44:43.3365654Z 
+2026-11-16T01:44:43.3366191Z added 1 package, and audited 2 packages in 1s
+2026-11-16T01:44:43.3366609Z 
+2026-11-16T01:44:43.3367183Z 1 package is looking for funding
+2026-11-16T01:44:43.3367896Z   run `npm fund` for details
+2026-11-16T01:44:43.3377409Z 
+2026-11-16T01:44:43.3377712Z found 0 vulnerabilities
+2026-11-16T01:44:44.0943728Z Checking for updates...
+2026-11-16T01:44:44.2493619Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-16T01:44:44.8415792Z .../v11/9c2-1a1e207315e-5aa610bd4de4a52c | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T01:44:44.8436891Z .../v11/9c2-1a1e207315e-5aa610bd4de4a52c |   +1 +
+2026-11-16T01:44:45.2515773Z .../v11/9c2-1a1e207315e-5aa610bd4de4a52c | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T01:44:45.9194243Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-16T01:44:45.9253524Z Successfully updated pnpm to v11.22.0
+2026-11-16T01:44:45.9639858Z ##[endgroup]
+2026-11-16T01:44:45.9640567Z Installation Completed!
+2026-11-16T01:44:45.9823862Z ##[group]Run actions/setup-node@v6
+2026-11-16T01:44:45.9824177Z with:
+2026-11-16T01:44:45.9824392Z   node-version: 24.21.0
+2026-11-16T01:44:45.9824635Z   cache: pnpm
+2026-11-16T01:44:45.9824851Z   check-latest: false
+2026-11-16T01:44:45.9827183Z   token: ***
+2026-11-16T01:44:45.9827422Z   package-manager-cache: true
+2026-11-16T01:44:45.9827686Z env:
+2026-11-16T01:44:45.9827917Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:44:45.9828286Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:44:45.9828657Z   HOST_EMULATED_LANE: team
+2026-11-16T01:44:45.9828917Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:44:45.9829245Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:44:45.9829582Z ##[endgroup]
+2026-11-16T01:44:46.1224778Z Attempting to download 24.21.0...
+2026-11-16T01:44:46.7319069Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+2026-11-16T01:44:47.1895487Z Extracting ...
+2026-11-16T01:44:47.2030923Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/227722f6-85e1-482a-85e3-ac9366b888a8 -f /home/runner/work/_temp/5ef027b0-933d-4864-934e-5badc940143b
+2026-11-16T01:44:47.9630099Z Adding to the cache ...
+2026-11-16T01:44:49.6904107Z ##[group]Environment details
+2026-11-16T01:44:49.9371296Z node: v24.21.0
+2026-11-16T01:44:49.9371592Z npm: 11.19.0
+2026-11-16T01:44:49.9371807Z yarn: 1.22.22
+2026-11-16T01:44:49.9372293Z ##[endgroup]
+2026-11-16T01:44:49.9392530Z [command]/home/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-16T01:44:50.5622490Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T01:44:50.8281879Z Cache hit for: node-cache-Linux-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e
+2026-11-16T01:44:52.1186321Z Received 0 of 499350497 (0.0%), 0.0 MBs/sec
+2026-11-16T01:44:53.1196836Z Received 134217728 of 499350497 (26.9%), 64.0 MBs/sec
+2026-11-16T01:44:54.1199023Z Received 293601280 of 499350497 (58.8%), 93.3 MBs/sec
+2026-11-16T01:44:55.1202415Z Received 469762048 of 499350497 (94.1%), 112.0 MBs/sec
+2026-11-16T01:44:55.3091933Z Received 499350497 of 499350497 (100.0%), 113.7 MBs/sec
+2026-11-16T01:44:55.3092797Z Cache Size: ~476 MB (499350497 B)
+2026-11-16T01:44:55.3175882Z [command]/usr/bin/tar -xf /home/runner/work/_temp/820b2a36-46e1-4198-a35f-84fc4fcc7fcd/cache.tzst -P -C /home/runner/work/agent-teams-ai/agent-teams-ai --use-compress-program unzstd
+2026-11-16T01:45:01.9614383Z Cache restored successfully
+2026-11-16T01:45:01.9825435Z Cache restored from key: node-cache-Linux-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e
+2026-11-16T01:45:02.0128621Z ##[group]Run set -euo pipefail
+2026-11-16T01:45:02.0129155Z [36;1mset -euo pipefail[0m
+2026-11-16T01:45:02.0129540Z [36;1mtest "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"[0m
+2026-11-16T01:45:02.0130267Z [36;1mnode -e "require('node:assert/strict').equal(process.platform + '-' + process.arch, process.env.HOST_EMULATED_PLATFORM)"[0m
+2026-11-16T01:45:02.0131197Z [36;1mprintf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"[0m
+2026-11-16T01:45:02.0187657Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:45:02.0188043Z env:
+2026-11-16T01:45:02.0188276Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:45:02.0188895Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:45:02.0189297Z   HOST_EMULATED_LANE: team
+2026-11-16T01:45:02.0189567Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:45:02.0189905Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:45:02.0190236Z ##[endgroup]
+2026-11-16T01:45:02.1136305Z ##[group]Run set -euo pipefail
+2026-11-16T01:45:02.1137566Z [36;1mset -euo pipefail[0m
+2026-11-16T01:45:02.1137875Z [36;1msudo apt-get update[0m
+2026-11-16T01:45:02.1138191Z [36;1msudo apt-get install -y xvfb xauth lsof[0m
+2026-11-16T01:45:02.1261521Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:45:02.1262135Z env:
+2026-11-16T01:45:02.1262463Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:45:02.1263506Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:45:02.1264141Z   HOST_EMULATED_LANE: team
+2026-11-16T01:45:02.1264559Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:45:02.1265496Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:45:02.1266038Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:45:02.1266362Z ##[endgroup]
+2026-11-16T01:45:02.3326433Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-11-16T01:45:02.3527546Z Get:2 https://packages.microsoft.com/ubuntu/26.04/prod resolute InRelease [3964 B]
+2026-11-16T01:45:02.6036297Z Hit:3 http://azure.archive.ubuntu.com/ubuntu resolute InRelease
+2026-11-16T01:45:02.6061999Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute-updates InRelease [137 kB]
+2026-11-16T01:45:02.6143618Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute-backports InRelease [137 kB]
+2026-11-16T01:45:02.6170498Z Get:6 http://azure.archive.ubuntu.com/ubuntu resolute-security InRelease [137 kB]
+2026-11-16T01:45:02.6222551Z Get:7 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main arm64 Packages [143 kB]
+2026-11-16T01:45:02.6403617Z Get:8 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main amd64 Packages [158 kB]
+2026-11-16T01:45:02.6662608Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 Packages [869 kB]
+2026-11-16T01:45:02.6784802Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main Translation-en [195 kB]
+2026-11-16T01:45:02.6821758Z Get:11 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe amd64v3 Packages [390 kB]
+2026-11-16T01:45:02.6852784Z Get:12 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe Translation-en [122 kB]
+2026-11-16T01:45:02.7069779Z Get:13 http://azure.archive.ubuntu.com/ubuntu resolute-security/main amd64v3 Packages [718 kB]
+2026-11-16T01:45:02.7110276Z Get:14 http://azure.archive.ubuntu.com/ubuntu resolute-security/main Translation-en [157 kB]
+2026-11-16T01:45:02.7122884Z Get:15 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe amd64v3 Packages [220 kB]
+2026-11-16T01:45:02.7139135Z Get:16 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe Translation-en [72.5 kB]
+2026-11-16T01:45:02.7148655Z Get:17 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted amd64v3 Packages [590 kB]
+2026-11-16T01:45:02.7176873Z Get:18 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted Translation-en [122 kB]
+2026-11-16T01:45:04.6998232Z Fetched 4172 kB in 1s (6117 kB/s)
+2026-11-16T01:45:05.3584606Z Reading package lists...
+2026-11-16T01:45:05.3927923Z Reading package lists...
+2026-11-16T01:45:05.5388923Z Building dependency tree...
+2026-11-16T01:45:05.5396400Z Reading state information...
+2026-11-16T01:45:05.5700126Z xvfb is already the newest version (2:21.1.22-1ubuntu1.3).
+2026-11-16T01:45:05.5701151Z xauth is already the newest version (1:1.1.2-1.1build1).
+2026-11-16T01:45:05.5701775Z xauth set to manually installed.
+2026-11-16T01:45:05.5702579Z lsof is already the newest version (4.99.4+dfsg-2build2).
+2026-11-16T01:45:05.5703230Z lsof set to manually installed.
+2026-11-16T01:45:05.6222442Z Solving dependencies...
+2026-11-16T01:45:05.7349435Z 0 upgraded, 0 newly installed, 0 to remove and 24 not upgraded.
+2026-11-16T01:45:05.7407585Z ##[group]Run set -euo pipefail
+2026-11-16T01:45:05.7407946Z [36;1mset -euo pipefail[0m
+2026-11-16T01:45:05.7408382Z [36;1mnode scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1[0m
+2026-11-16T01:45:05.7408915Z [36;1mnode scripts/ensure-electron-install.cjs --strict[0m
+2026-11-16T01:45:05.7409493Z [36;1mnode -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"[0m
+2026-11-16T01:45:05.7410234Z [36;1mpnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1[0m
+2026-11-16T01:45:05.7459664Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:45:05.7460075Z env:
+2026-11-16T01:45:05.7460303Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:45:05.7460700Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:45:05.7461386Z   HOST_EMULATED_LANE: team
+2026-11-16T01:45:05.7461663Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:45:05.7462047Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:45:05.7462395Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:45:05.7462667Z ##[endgroup]
+2026-11-16T01:45:06.4272074Z Scope: all 7 workspace projects
+2026-11-16T01:45:06.6316813Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T01:45:06.7195160Z Lockfile is up to date, resolution step is skipped
+2026-11-16T01:45:07.0542328Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T01:45:07.2818806Z Packages: +2293
+2026-11-16T01:45:07.2820024Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T01:45:08.0602434Z Progress: resolved 2293, reused 341, downloaded 0, added 0
+2026-11-16T01:45:09.0599630Z Progress: resolved 2293, reused 856, downloaded 0, added 0
+2026-11-16T01:45:10.0649150Z Progress: resolved 2293, reused 1383, downloaded 0, added 0
+2026-11-16T01:45:11.0661550Z Progress: resolved 2293, reused 2005, downloaded 0, added 0
+2026-11-16T01:45:11.7192543Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T01:45:11.7194197Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T01:45:11.7195338Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T01:45:12.0715599Z Progress: resolved 2293, reused 2278, downloaded 0, added 29
+2026-11-16T01:45:13.0807040Z Progress: resolved 2293, reused 2278, downloaded 0, added 96
+2026-11-16T01:45:14.0976770Z Progress: resolved 2293, reused 2278, downloaded 0, added 281
+2026-11-16T01:45:15.0966827Z Progress: resolved 2293, reused 2278, downloaded 0, added 622
+2026-11-16T01:45:15.3115212Z ✓ Lockfile passes supply-chain policies (2533 entries in 8.6s)
+2026-11-16T01:45:16.0969129Z Progress: resolved 2293, reused 2278, downloaded 0, added 1881
+2026-11-16T01:45:16.2214275Z Progress: resolved 2293, reused 2278, downloaded 0, added 2293, done
+2026-11-16T01:45:17.3741483Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-16T01:45:17.4807851Z .../node_modules/better-sqlite3 install: (node:2801) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-11-16T01:45:17.4808974Z .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T01:45:17.7284491Z .../node_modules/better-sqlite3 install: Done
+2026-11-16T01:45:17.8151154Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-16T01:45:17.9168420Z .../node_modules/better-sqlite3 install: (node:2819) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-11-16T01:45:17.9170464Z .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T01:45:18.1618817Z .../node_modules/better-sqlite3 install: Done
+2026-11-16T01:45:18.2175051Z .../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-16T01:45:18.2637630Z .../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-16T01:45:18.2640009Z .../node-pty@1.1.0/node_modules/node-pty install: [33m> Rebuilding because directory /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/prebuilds/linux-x64 does not exist[0m
+2026-11-16T01:45:18.3036825Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info it worked if it ends with ok
+2026-11-16T01:45:18.3038285Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info using node-gyp@12.3.0
+2026-11-16T01:45:18.3039279Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info using node@24.21.0 | linux | x64
+2026-11-16T01:45:18.3608007Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
+2026-11-16T01:45:18.4383781Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz
+2026-11-16T01:45:18.5054281Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz
+2026-11-16T01:45:20.7773679Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.21.0/SHASUMS256.txt
+2026-11-16T01:45:20.8044643Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.21.0/SHASUMS256.txt
+2026-11-16T01:45:21.4318907Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn /usr/bin/python3
+2026-11-16T01:45:21.4320646Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [
+2026-11-16T01:45:21.4334402Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-16T01:45:21.4336395Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'binding.gyp',
+2026-11-16T01:45:21.4337575Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-f',
+2026-11-16T01:45:21.4338698Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'make',
+2026-11-16T01:45:21.4339784Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-16T01:45:21.4342048Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build/config.gypi',
+2026-11-16T01:45:21.4343864Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-16T01:45:21.4346509Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-16T01:45:21.4348651Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-16T01:45:21.4349761Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/.cache/node-gyp/24.21.0/include/node/common.gypi',
+2026-11-16T01:45:21.4350655Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-16T01:45:21.4351782Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dvisibility=default',
+2026-11-16T01:45:21.4352665Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.21.0',
+2026-11-16T01:45:21.4354289Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-16T01:45:21.4356348Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.21.0/<(target_arch)/node.lib',
+2026-11-16T01:45:21.4357767Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty',
+2026-11-16T01:45:21.4358859Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-16T01:45:21.4359548Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--depth=.',
+2026-11-16T01:45:21.4360222Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--no-parallel',
+2026-11-16T01:45:21.4361251Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--generator-output',
+2026-11-16T01:45:21.4361934Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'build',
+2026-11-16T01:45:21.4362622Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Goutput_dir=.'
+2026-11-16T01:45:21.4363247Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args ]
+2026-11-16T01:45:21.5824426Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn make
+2026-11-16T01:45:21.5825928Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-16T01:45:21.5918962Z .../node-pty@1.1.0/node_modules/node-pty install: make: Entering directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+2026-11-16T01:45:21.5951315Z .../node-pty@1.1.0/node_modules/node-pty install:   TOUCH Release/obj.target/../../../node-addon-api@7.1.1/node_modules/node-addon-api/node_addon_api_except.stamp
+2026-11-16T01:45:21.6048891Z .../node-pty@1.1.0/node_modules/node-pty install:   CXX(target) Release/obj.target/pty/src/unix/pty.o
+2026-11-16T01:45:23.3614429Z .../node-pty@1.1.0/node_modules/node-pty install:   SOLINK_MODULE(target) Release/obj.target/pty.node
+2026-11-16T01:45:23.4251396Z .../node-pty@1.1.0/node_modules/node-pty install:   COPY Release/pty.node
+2026-11-16T01:45:23.4323985Z .../node-pty@1.1.0/node_modules/node-pty install: make: Leaving directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+2026-11-16T01:45:23.4332650Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info ok 
+2026-11-16T01:45:23.4487713Z .../node-pty@1.1.0/node_modules/node-pty install: Done
+2026-11-16T01:45:23.4488425Z .../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-16T01:45:23.4930246Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-16T01:45:23.4945573Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-16T01:45:23.4946500Z .../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-16T01:45:23.4968907Z .../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+2026-11-16T01:45:23.7416795Z .../node_modules/cpu-features install$ node buildcheck.js > buildcheck.gypi && node-gyp rebuild
+2026-11-16T01:45:23.9604959Z .../node_modules/cpu-features install: gyp info it worked if it ends with ok
+2026-11-16T01:45:23.9606477Z .../node_modules/cpu-features install: gyp info using node-gyp@12.3.0
+2026-11-16T01:45:23.9607843Z .../node_modules/cpu-features install: gyp info using node@24.21.0 | linux | x64
+2026-11-16T01:45:24.0135028Z .../node_modules/cpu-features install: gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
+2026-11-16T01:45:24.0874511Z .../node_modules/cpu-features install: gyp info spawn /usr/bin/python3
+2026-11-16T01:45:24.0893017Z .../node_modules/cpu-features install: gyp info spawn args [
+2026-11-16T01:45:24.0896117Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-16T01:45:24.0898990Z .../node_modules/cpu-features install: gyp info spawn args 'binding.gyp',
+2026-11-16T01:45:24.0900191Z .../node_modules/cpu-features install: gyp info spawn args '-f',
+2026-11-16T01:45:24.0901618Z .../node_modules/cpu-features install: gyp info spawn args 'make',
+2026-11-16T01:45:24.0902633Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T01:45:24.0904681Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build/config.gypi',
+2026-11-16T01:45:24.0906541Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T01:45:24.0909213Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-16T01:45:24.0911751Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T01:45:24.0913232Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/.cache/node-gyp/24.21.0/include/node/common.gypi',
+2026-11-16T01:45:24.0914779Z .../node_modules/cpu-features install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-16T01:45:24.0916080Z .../node_modules/cpu-features install: gyp info spawn args '-Dvisibility=default',
+2026-11-16T01:45:24.0917622Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.21.0',
+2026-11-16T01:45:24.0920673Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-16T01:45:24.0924565Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.21.0/<(target_arch)/node.lib',
+2026-11-16T01:45:24.0927119Z .../node_modules/cpu-features install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features',
+2026-11-16T01:45:24.0929088Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-16T01:45:24.0930251Z .../node_modules/cpu-features install: gyp info spawn args '--depth=.',
+2026-11-16T01:45:24.0931572Z .../node_modules/cpu-features install: gyp info spawn args '--no-parallel',
+2026-11-16T01:45:24.0932747Z .../node_modules/cpu-features install: gyp info spawn args '--generator-output',
+2026-11-16T01:45:24.0933871Z .../node_modules/cpu-features install: gyp info spawn args 'build',
+2026-11-16T01:45:24.0934969Z .../node_modules/cpu-features install: gyp info spawn args '-Goutput_dir=.'
+2026-11-16T01:45:24.0936013Z .../node_modules/cpu-features install: gyp info spawn args ]
+2026-11-16T01:45:24.2445953Z .../node_modules/cpu-features install: gyp info spawn make
+2026-11-16T01:45:24.2446730Z .../node_modules/cpu-features install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-16T01:45:24.2461865Z .../node_modules/cpu-features install: make: Entering directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build'
+2026-11-16T01:45:24.2485905Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_linux_or_android.o
+2026-11-16T01:45:24.2778794Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_macos_or_iphone.o
+2026-11-16T01:45:24.3057930Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_windows.o
+2026-11-16T01:45:24.3333005Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_arm_linux_or_android.o
+2026-11-16T01:45:24.3614183Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_mips_linux_or_android.o
+2026-11-16T01:45:24.3888899Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_ppc_linux.o
+2026-11-16T01:45:24.4164623Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_freebsd.o
+2026-11-16T01:45:24.4438530Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_linux_or_android.o
+2026-11-16T01:45:24.8234832Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_macos.o
+2026-11-16T01:45:24.8522890Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_windows.o
+2026-11-16T01:45:24.8801736Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/filesystem.o
+2026-11-16T01:45:24.9336503Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/stack_line_reader.o
+2026-11-16T01:45:24.9906082Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/string_view.o
+2026-11-16T01:45:25.0973033Z .../node_modules/cpu-features install: rm -f Release/obj.target/deps/cpu_features/cpu_features.a Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list; mkdir -p `dirname Release/obj.target/deps/cpu_features/cpu_features.a`
+2026-11-16T01:45:25.1131176Z .../node_modules/cpu-features install: ar crs Release/obj.target/deps/cpu_features/cpu_features.a @Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list
+2026-11-16T01:45:25.7671485Z .../node_modules/cpu-features install:   COPY Release/cpu_features.a
+2026-11-16T01:45:25.7767399Z .../node_modules/cpu-features install:   CXX(target) Release/obj.target/cpufeatures/src/binding.o
+2026-11-16T01:45:26.6188810Z .../node_modules/cpu-features install: In file included from ../src/binding.cc:1:
+2026-11-16T01:45:26.6194074Z .../node_modules/cpu-features install: /home/runner/.cache/node-gyp/24.21.0/include/node/node.h:1374:7: warning: cast between incompatible function types from ‘void (*)(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE)’ {aka ‘void (*)(v8::Local<v8::Object>)’} to ‘node::addon_register_func’ {aka ‘void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, void*)’} [-Wcast-function-type]
+2026-11-16T01:45:26.6197855Z .../node_modules/cpu-features install:  1374 |       (node::addon_register_func) (regfunc),                          \
+2026-11-16T01:45:26.6199403Z .../node_modules/cpu-features install:       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-16T01:45:26.6201822Z .../node_modules/cpu-features install: /home/runner/.cache/node-gyp/24.21.0/include/node/node.h:1408:3: note: in expansion of macro ‘NODE_MODULE_X’
+2026-11-16T01:45:26.6203933Z .../node_modules/cpu-features install:  1408 |   NODE_MODULE_X(modname, regfunc, NULL, 0)  // NOLINT (readability/null_usage)
+2026-11-16T01:45:26.6205330Z .../node_modules/cpu-features install:       |   ^~~~~~~~~~~~~
+2026-11-16T01:45:26.6206900Z .../node_modules/cpu-features install: ../src/binding.cc:151:1: note: in expansion of macro ‘NODE_MODULE’
+2026-11-16T01:45:26.6208335Z .../node_modules/cpu-features install:   151 | NODE_MODULE(cpufeatures, init)
+2026-11-16T01:45:26.6209429Z .../node_modules/cpu-features install:       | ^~~~~~~~~~~
+2026-11-16T01:45:26.9354202Z .../node_modules/cpu-features install:   SOLINK_MODULE(target) Release/obj.target/cpufeatures.node
+2026-11-16T01:45:26.9869625Z .../node_modules/cpu-features install:   COPY Release/cpufeatures.node
+2026-11-16T01:45:26.9943454Z .../node_modules/cpu-features install: make: Leaving directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build'
+2026-11-16T01:45:26.9961163Z .../node_modules/cpu-features install: gyp info ok 
+2026-11-16T01:45:27.0023802Z .../node_modules/cpu-features install: Done
+2026-11-16T01:45:27.1574627Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-16T01:45:27.3439648Z 
+2026-11-16T01:45:27.3440376Z dependencies:
+2026-11-16T01:45:27.3441510Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-16T01:45:27.3442592Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-16T01:45:27.3443575Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-16T01:45:27.3444311Z + @codemirror/autocomplete 6.20.0
+2026-11-16T01:45:27.3444877Z + @codemirror/commands 6.10.2
+2026-11-16T01:45:27.3445393Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T01:45:27.3446011Z + @codemirror/lang-css 6.3.1
+2026-11-16T01:45:27.3446499Z + @codemirror/lang-go 6.0.1
+2026-11-16T01:45:27.3447032Z + @codemirror/lang-html 6.4.11
+2026-11-16T01:45:27.3447545Z + @codemirror/lang-java 6.0.2
+2026-11-16T01:45:27.3448116Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T01:45:27.3448669Z + @codemirror/lang-json 6.0.2
+2026-11-16T01:45:27.3449178Z + @codemirror/lang-less 6.0.2
+2026-11-16T01:45:27.3449725Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T01:45:27.3450263Z + @codemirror/lang-php 6.0.2
+2026-11-16T01:45:27.3450978Z + @codemirror/lang-python 6.2.1
+2026-11-16T01:45:27.3451506Z + @codemirror/lang-rust 6.0.2
+2026-11-16T01:45:27.3452016Z + @codemirror/lang-sass 6.0.2
+2026-11-16T01:45:27.3452516Z + @codemirror/lang-sql 6.10.0
+2026-11-16T01:45:27.3453014Z + @codemirror/lang-xml 6.1.0
+2026-11-16T01:45:27.3453525Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T01:45:27.3454036Z + @codemirror/language 6.12.1
+2026-11-16T01:45:27.3454589Z + @codemirror/language-data 6.5.2
+2026-11-16T01:45:27.3455118Z + @codemirror/lint 6.9.5
+2026-11-16T01:45:27.3455597Z + @codemirror/merge 6.12.0
+2026-11-16T01:45:27.3456088Z + @codemirror/search 6.6.0
+2026-11-16T01:45:27.3456565Z + @codemirror/state 6.5.4
+2026-11-16T01:45:27.3457114Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T01:45:27.3457642Z + @codemirror/view 6.39.15
+2026-11-16T01:45:27.3458117Z + @daypicker/react 10.0.1
+2026-11-16T01:45:27.3458582Z + @dnd-kit/core 6.3.1
+2026-11-16T01:45:27.3459018Z + @dnd-kit/sortable 10.0.0
+2026-11-16T01:45:27.3459492Z + @dnd-kit/utilities 3.2.2
+2026-11-16T01:45:27.3459968Z + @fastify/cors 11.2.0
+2026-11-16T01:45:27.3460436Z + @fastify/static 10.1.2
+2026-11-16T01:45:27.3461533Z + @file-viewer/preset-office 3.1.2
+2026-11-16T01:45:27.3462097Z + @file-viewer/react 3.1.2
+2026-11-16T01:45:27.3462600Z + @floating-ui/dom 1.7.6
+2026-11-16T01:45:27.3463108Z + @headless-tree/core 1.7.0
+2026-11-16T01:45:27.3463636Z + @headless-tree/react 1.7.0
+2026-11-16T01:45:27.3464159Z + @openuidev/lang-core 0.3.2
+2026-11-16T01:45:27.3464753Z + @openuidev/react-headless 0.17.0
+2026-11-16T01:45:27.3465350Z + @openuidev/react-lang 0.3.2
+2026-11-16T01:45:27.3465886Z + @openuidev/react-ui 0.17.0
+2026-11-16T01:45:27.3466476Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T01:45:27.3467088Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T01:45:27.3467690Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T01:45:27.3468334Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T01:45:27.3468937Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T01:45:27.3469547Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T01:45:27.3470170Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T01:45:27.3471001Z + @radix-ui/react-label 2.1.8
+2026-11-16T01:45:27.3471601Z + @radix-ui/react-popover 1.1.15
+2026-11-16T01:45:27.3472183Z + @radix-ui/react-presence 1.1.5
+2026-11-16T01:45:27.3472747Z + @radix-ui/react-select 2.2.6
+2026-11-16T01:45:27.3473243Z + @radix-ui/react-slot 1.2.4
+2026-11-16T01:45:27.3473769Z + @radix-ui/react-switch 1.3.7
+2026-11-16T01:45:27.3474271Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T01:45:27.3476026Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T01:45:27.3476609Z + @sentry/electron 7.10.0
+2026-11-16T01:45:27.3477090Z + @sentry/react 10.45.0
+2026-11-16T01:45:27.3477566Z + @tanstack/react-table 9.3.1
+2026-11-16T01:45:27.3478117Z + @tanstack/react-virtual 3.13.24
+2026-11-16T01:45:27.3478830Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T01:45:27.3479529Z + @terminal-platform/foundation 0.1.0
+2026-11-16T01:45:27.3480188Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T01:45:27.3481629Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T01:45:27.3482466Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T01:45:27.3483186Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T01:45:27.3483890Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T01:45:27.3484642Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T01:45:27.3485367Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T01:45:27.3486020Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T01:45:27.3486606Z + @tiptap/markdown 3.30.5
+2026-11-16T01:45:27.3487086Z + @tiptap/pm 3.30.5
+2026-11-16T01:45:27.3487527Z + @tiptap/react 3.30.5
+2026-11-16T01:45:27.3488014Z + @tiptap/starter-kit 3.30.5
+2026-11-16T01:45:27.3488526Z + @xterm/addon-fit 0.11.0
+2026-11-16T01:45:27.3489301Z + @xterm/addon-web-links 0.12.0
+2026-11-16T01:45:27.3489812Z + @xterm/xterm 6.0.0
+2026-11-16T01:45:27.3490467Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T01:45:27.3491296Z + better-sqlite3 12.11.1
+2026-11-16T01:45:27.3491768Z + builder-util-runtime 9.7.0
+2026-11-16T01:45:27.3492224Z + chokidar 4.0.3
+2026-11-16T01:45:27.3492730Z + class-variance-authority 0.7.1
+2026-11-16T01:45:27.3493214Z + clsx 2.1.1
+2026-11-16T01:45:27.3493582Z + cmdk 1.0.4
+2026-11-16T01:45:27.3493945Z + croner 10.0.1
+2026-11-16T01:45:27.3494357Z + cronstrue 3.13.0
+2026-11-16T01:45:27.3494744Z + date-fns 3.6.0
+2026-11-16T01:45:27.3495135Z + diff 8.0.3
+2026-11-16T01:45:27.3495521Z + dompurify 3.4.17
+2026-11-16T01:45:27.3495942Z + drizzle-orm 0.45.2
+2026-11-16T01:45:27.3496393Z + electron-updater 6.8.9
+2026-11-16T01:45:27.3496879Z + fast-json-stringify 6.4.0
+2026-11-16T01:45:27.3497329Z + fastify 5.12.5
+2026-11-16T01:45:27.3497754Z + highlight.js 11.11.1
+2026-11-16T01:45:27.3498183Z + i18next 26.2.0
+2026-11-16T01:45:27.3498596Z + idb-keyval 6.2.2
+2026-11-16T01:45:27.3499097Z + isbinaryfile 6.0.0
+2026-11-16T01:45:27.3499627Z + json-schema-ref-resolver 3.0.0
+2026-11-16T01:45:27.3500157Z + jsonc-parser 3.3.1
+2026-11-16T01:45:27.3500604Z + lucide-react 0.577.0
+2026-11-16T01:45:27.3501368Z + mdast-util-to-hast 13.2.1
+2026-11-16T01:45:27.3501856Z + mermaid 11.15.0
+2026-11-16T01:45:27.3502252Z + motion 12.38.0
+2026-11-16T01:45:27.3502665Z + node-diff3 3.2.0
+2026-11-16T01:45:27.3503081Z + node-pty 1.1.0
+2026-11-16T01:45:27.3503472Z + pica 9.0.1
+2026-11-16T01:45:27.3503845Z + pidusage 4.0.1
+2026-11-16T01:45:27.3504258Z + posthog-js 1.396.6
+2026-11-16T01:45:27.3504669Z + react 19.2.4
+2026-11-16T01:45:27.3505055Z + react-dom 19.2.4
+2026-11-16T01:45:27.3505515Z + react-grid-layout 2.2.2
+2026-11-16T01:45:27.3505982Z + react-i18next 17.0.8
+2026-11-16T01:45:27.3506420Z + react-markdown 10.1.0
+2026-11-16T01:45:27.3506874Z + react-modal-sheet 5.6.0
+2026-11-16T01:45:27.3507347Z + react-resizable 3.1.3
+2026-11-16T01:45:27.3507808Z + rehype-highlight 7.0.2
+2026-11-16T01:45:27.3508265Z + rehype-raw 7.0.0
+2026-11-16T01:45:27.3508708Z + rehype-sanitize 6.0.0
+2026-11-16T01:45:27.3509145Z + remark-gfm 4.0.1
+2026-11-16T01:45:27.3509577Z + remark-parse 11.0.0
+2026-11-16T01:45:27.3510026Z + simple-git 4.0.2
+2026-11-16T01:45:27.3510437Z + ssh-config 5.0.4
+2026-11-16T01:45:27.3511061Z + ssh2 1.17.0
+2026-11-16T01:45:27.3511478Z + strip-markdown 6.0.0
+2026-11-16T01:45:27.3511933Z + tailwind-merge 3.5.0
+2026-11-16T01:45:27.3512390Z + tailwindcss-animate 1.0.7
+2026-11-16T01:45:27.3513539Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T01:45:27.3514546Z + unified 11.0.5
+2026-11-16T01:45:27.3514918Z + ws 8.21.0
+2026-11-16T01:45:27.3515953Z + yaml 2.9.0
+2026-11-16T01:45:27.3516458Z + yet-another-react-lightbox 3.29.1
+2026-11-16T01:45:27.3516957Z + zod 4.6.7
+2026-11-16T01:45:27.3517320Z + zustand 4.5.7
+2026-11-16T01:45:27.3517555Z 
+2026-11-16T01:45:27.3517722Z devDependencies:
+2026-11-16T01:45:27.3518165Z + @electron/rebuild 4.2.0
+2026-11-16T01:45:27.3518841Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T01:45:27.3519469Z + @eslint/js 9.39.2
+2026-11-16T01:45:27.3519959Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T01:45:27.3520475Z + @sentry/vite-plugin 5.1.1
+2026-11-16T01:45:27.3521310Z + @tailwindcss/typography 0.5.19
+2026-11-16T01:45:27.3521888Z + @types/better-sqlite3 7.6.13
+2026-11-16T01:45:27.3522373Z + @types/hast 3.0.4
+2026-11-16T01:45:27.3522785Z + @types/mdast 4.0.4
+2026-11-16T01:45:27.3523220Z + @types/node 24.12.4
+2026-11-16T01:45:27.3523671Z + @types/pidusage 2.0.5
+2026-11-16T01:45:27.3524117Z + @types/react 19.2.14
+2026-11-16T01:45:27.3524567Z + @types/react-dom 19.2.3
+2026-11-16T01:45:27.3525056Z + @types/ssh2 1.15.5
+2026-11-16T01:45:27.3525586Z + @typescript/native <- typescript 7.0.2
+2026-11-16T01:45:27.3526159Z + @vitejs/plugin-react 4.7.0
+2026-11-16T01:45:27.3526644Z + @vitest/coverage-v8 3.2.6
+2026-11-16T01:45:27.3527111Z + autoprefixer 10.4.23
+2026-11-16T01:45:27.3527693Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T01:45:27.3528311Z + electron 44.10.1
+2026-11-16T01:45:27.3528798Z + electron-builder 26.17.0
+2026-11-16T01:45:27.3529266Z + electron-vite 5.0.0
+2026-11-16T01:45:27.3529736Z + eslint 9.39.4
+2026-11-16T01:45:27.3530219Z + eslint-config-prettier 10.1.8
+2026-11-16T01:45:27.3531100Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T01:45:27.3531746Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T01:45:27.3532276Z + eslint-plugin-import 2.32.0
+2026-11-16T01:45:27.3532861Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T01:45:27.3533394Z + eslint-plugin-react 7.37.5
+2026-11-16T01:45:27.3533970Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T01:45:27.3534599Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T01:45:27.3535228Z + eslint-plugin-security 3.0.1
+2026-11-16T01:45:27.3535861Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T01:45:27.3536474Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T01:45:27.3537080Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T01:45:27.3537651Z + fake-indexeddb 6.2.5
+2026-11-16T01:45:27.3538084Z + globals 17.2.0
+2026-11-16T01:45:27.3538497Z + happy-dom 21.0.4
+2026-11-16T01:45:27.3538888Z + husky 9.1.7
+2026-11-16T01:45:27.3539283Z + i18next-cli 1.58.0
+2026-11-16T01:45:27.3539691Z + knip 5.82.1
+2026-11-16T01:45:27.3540088Z + lint-staged 16.2.7
+2026-11-16T01:45:27.3540491Z + oxfmt 0.72.0
+2026-11-16T01:45:27.3541040Z + oxlint 1.87.0
+2026-11-16T01:45:27.3541386Z + postcss 8.5.28
+2026-11-16T01:45:27.3541618Z + prettier 3.8.1
+2026-11-16T01:45:27.3542051Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T01:45:27.3542383Z + tailwindcss 3.4.19
+2026-11-16T01:45:27.3542621Z + tsx 4.23.15
+2026-11-16T01:45:27.3542854Z + typescript 5.9.3
+2026-11-16T01:45:27.3543137Z + typescript-eslint 8.54.0
+2026-11-16T01:45:27.3543389Z + vite 6.4.4
+2026-11-16T01:45:27.3543600Z + vitest 3.2.6
+2026-11-16T01:45:27.3543729Z 
+2026-11-16T01:45:27.3597050Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-16T01:45:27.4137901Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-16T01:45:27.6154737Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-16T01:45:27.7202379Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-16T01:45:27.7289772Z landing postinstall: Done
+2026-11-16T01:45:27.8003420Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-16T01:45:27.8074607Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-16T01:45:27.8542186Z . preinstall: Done
+2026-11-16T01:45:27.8548913Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-16T01:45:27.9035906Z . postinstall: Done
+2026-11-16T01:45:27.9036657Z . prepare$ husky
+2026-11-16T01:45:27.9710682Z . prepare: Done
+2026-11-16T01:45:28.0113926Z Done in 22.2s using pnpm v11.22.0
+2026-11-16T01:45:28.1633545Z Electron installation is incomplete, running installer: /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/dist/electron
+2026-11-16T01:45:30.5848967Z Searching dependency tree
+2026-11-16T01:45:30.8279183Z Building modules: better-sqlite3
+2026-11-16T01:46:28.6511470Z ✔ Rebuild Complete
+2026-11-16T01:46:28.6801550Z ##[group]Run set -euo pipefail
+2026-11-16T01:46:28.6802307Z [36;1mset -euo pipefail[0m
+2026-11-16T01:46:28.6803256Z [36;1mif [[ "$RUNNER_OS" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi[0m
+2026-11-16T01:46:28.6804452Z [36;1mpnpm --filter @agent-teams/legacy-agent-host build[0m
+2026-11-16T01:46:28.6805321Z [36;1mpnpm --filter agent-teams-controller build[0m
+2026-11-16T01:46:28.6806231Z [36;1mpnpm --filter agent-teams-mcp build[0m
+2026-11-16T01:46:28.6810500Z [36;1mnode --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts[0m
+2026-11-16T01:46:28.6815423Z [36;1mnode --test test/scripts/installDependenciesWithRetry.test.mjs[0m
+2026-11-16T01:46:28.6881179Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:46:28.6881950Z env:
+2026-11-16T01:46:28.6928297Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:46:28.6928979Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:46:28.6929635Z   HOST_EMULATED_LANE: team
+2026-11-16T01:46:28.6930063Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:46:28.6930567Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:46:28.6931304Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:46:28.6931751Z ##[endgroup]
+2026-11-16T01:46:30.0106943Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-16T01:46:30.5075267Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T01:46:30.9484015Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T01:46:34.4086702Z $ node ./scripts/build.mjs
+2026-11-16T01:46:34.9503692Z $ tsup
+2026-11-16T01:46:35.2615092Z [34mCLI[39m Building entry: src/index.ts
+2026-11-16T01:46:35.2617979Z [34mCLI[39m Using tsconfig: tsconfig.json
+2026-11-16T01:46:35.2618776Z [34mCLI[39m tsup v8.5.1
+2026-11-16T01:46:35.2620142Z [34mCLI[39m Using tsup config: /home/runner/work/agent-teams-ai/agent-teams-ai/mcp-server/tsup.config.ts
+2026-11-16T01:46:35.2636689Z [34mCLI[39m Target: node24
+2026-11-16T01:46:35.2643196Z [34mCLI[39m Cleaning output folder
+2026-11-16T01:46:35.2654044Z [34mESM[39m Build start
+2026-11-16T01:46:35.6934300Z [32mESM[39m [1mdist/index.js     [22m[32m3.04 MB[39m
+2026-11-16T01:46:35.6935319Z [32mESM[39m [1mdist/index.js.map [22m[32m4.78 MB[39m
+2026-11-16T01:46:35.6936175Z [32mESM[39m ⚡️ Build success in 428ms
+2026-11-16T01:46:37.3633123Z ✔ offline Desktop admission refuses inherited native selections before preparing a fixture (8.870739ms)
+2026-11-16T01:46:37.3662420Z ✔ TEST management admission retains only the exact direct detached Host peer without signaling (7.110126ms)
+2026-11-16T01:46:37.3692424Z ✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (31.949826ms)
+2026-11-16T01:46:37.3695333Z ✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (6.102986ms)
+2026-11-16T01:46:37.3722531Z ✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (8.664024ms)
+2026-11-16T01:46:37.3747784Z ✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.980727ms)
+2026-11-16T01:46:37.3767123Z ✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (1.397528ms)
+2026-11-16T01:46:37.3782216Z ✔ initial discovery passes only its remaining captured budget to the IPC await (0.420499ms)
+2026-11-16T01:46:37.3812139Z ✔ exhausted initial observation never dispatches the backend IPC (0.684503ms)
+2026-11-16T01:46:37.3842443Z ✔ other discovery callers retain the default CDP budget (0.296074ms)
+2026-11-16T01:46:37.3872102Z ✔ an explicit IPC observation budget lets the same read settle after30s within60s (1.658587ms)
+2026-11-16T01:46:37.3873894Z ✔ default CDP evaluations still reject at30s without a resend (0.468768ms)
+2026-11-16T01:46:37.3902310Z ✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (1.001186ms)
+2026-11-16T01:46:37.3922636Z ✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (2.107269ms)
+2026-11-16T01:46:37.3944257Z ✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.372799ms)
+2026-11-16T01:46:37.3946565Z ✔ an already observed original natural exit still requires fresh group and captured Host absence (0.635761ms)
+2026-11-16T01:46:37.3948224Z ✔ original crash/signal and process-table failures remain debt (0.319228ms)
+2026-11-16T01:46:37.3949727Z ✔ the original deadline is not renewed after initial settlement consumed it (0.252763ms)
+2026-11-16T01:46:37.3951855Z ✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.381926ms)
+2026-11-16T01:46:37.3953827Z ✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.238467ms)
+2026-11-16T01:46:37.3955526Z ✔ an already reaped original child waits for actual descendant and original Host absence (0.931014ms)
+2026-11-16T01:46:37.3957607Z ✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (1.003611ms)
+2026-11-16T01:46:37.3959659Z ✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (1.226719ms)
+2026-11-16T01:46:37.3961658Z ✔ a reused leader PID and unavailable full process census retain debt without signaling (0.390953ms)
+2026-11-16T01:46:37.3963548Z ✔ absent leader observation never renews the original deadline or accepts a late census (0.2985ms)
+2026-11-16T01:46:37.4022406Z ✔ original peer observation accepts later-row only with its retained launch row (56.870037ms)
+2026-11-16T01:46:37.4086377Z ✔ original peer observation accepts exit only with its retained launch row (7.133767ms)
+2026-11-16T01:46:37.4150260Z ✔ original peer observation refuses reuse without admitting the census PID (6.696587ms)
+2026-11-16T01:46:37.4208582Z ✔ original peer observation refuses reparent without admitting the census PID (5.535743ms)
+2026-11-16T01:46:37.4282215Z ✔ original peer observation refuses argv without admitting the census PID (5.803013ms)
+2026-11-16T01:46:37.4352072Z ✔ original peer observation refuses duplicate without admitting the census PID (5.274122ms)
+2026-11-16T01:46:37.4374843Z ✔ original peer observation refuses missing without admitting the census PID (5.074078ms)
+2026-11-16T01:46:37.4474961Z ✔ original peer observation refuses late without admitting the census PID (4.296812ms)
+2026-11-16T01:46:37.4532166Z ✔ original peer observation accepts a valid empty journal with no current children (5.362828ms)
+2026-11-16T01:46:37.4561070Z ✔ original peer observation validates no-child-failure before returning without children (4.651566ms)
+2026-11-16T01:46:37.4589673Z ✔ original peer observation validates no-child-malformed before returning without children (4.501785ms)
+2026-11-16T01:46:37.4655079Z ✔ original peer observation validates no-child-late before returning without children (4.124278ms)
+2026-11-16T01:46:38.0372072Z ✔ requested Quit lets the original child report its natural exit before the cleanup census (605.165232ms)
+2026-11-16T01:46:38.5201597Z ✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (274.035095ms)
+2026-11-16T01:46:38.5253020Z ✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (385.707184ms)
+2026-11-16T01:46:38.5255862Z ✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (553.866738ms)
+2026-11-16T01:46:38.8543251Z ✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (333.836896ms)
+2026-11-16T01:46:39.0394493Z ✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (186.641856ms)
+2026-11-16T01:46:39.1879401Z ✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (147.667658ms)
+2026-11-16T01:46:39.3540530Z ✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (162.133018ms)
+2026-11-16T01:46:40.2653289Z ✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (914.581187ms)
+2026-11-16T01:46:41.0373423Z ✔ extensions Settings peer exposes only isolated auth status through original custody (517.629676ms)
+2026-11-16T01:46:41.0392516Z ✔ saved-import Settings peer exposes only isolated auth status through original custody (547.856845ms)
+2026-11-16T01:46:41.0394939Z ✔ finite extension status uses the original Host auth command and retains its exact private namespace (149.28264ms)
+2026-11-16T01:46:41.0397471Z ✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (952.729527ms)
+2026-11-16T01:46:41.4479865Z ✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (413.991088ms)
+2026-11-16T01:46:44.7145200Z ✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3266.488582ms)
+2026-11-16T01:46:45.1982750Z ✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (482.436842ms)
+2026-11-16T01:46:45.1989795Z ✔ receipt summaries retain only the original nested mixed Settings owner (1.613574ms)
+2026-11-16T01:46:45.2384950Z ✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (91.755908ms)
+2026-11-16T01:46:45.2386695Z ✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (9.656824ms)
+2026-11-16T01:46:45.2387921Z ✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (10.280778ms)
+2026-11-16T01:46:45.2389092Z ✔ V2 source history accounts for every publication and the exact retained current chain (20.46696ms)
+2026-11-16T01:46:45.2390282Z ✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (6.342554ms)
+2026-11-16T01:46:45.2391939Z ✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (5.327414ms)
+2026-11-16T01:46:45.2393041Z ✔ original V2 default intent joins its selected saving row within the same receipt deadline (27.328156ms)
+2026-11-16T01:46:45.2394054Z ✔ published receipt reads survive the real controller writer before its atomic rename (80.016619ms)
+2026-11-16T01:46:45.2395012Z ✔ receipt reads reject foreign staging names, directories and symbolic links (25.678492ms)
+2026-11-16T01:46:45.3453193Z ✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (204.740539ms)
+2026-11-16T01:46:45.3454961Z ✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.749681ms)
+2026-11-16T01:46:45.3457670Z ✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (5.898345ms)
+2026-11-16T01:46:45.3459886Z ✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (2.997569ms)
+2026-11-16T01:46:45.3462003Z ✔ isolated shell fixture emits the actual framed environment and refuses shell effects (194.367515ms)
+2026-11-16T01:46:45.3463942Z ✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (11.17766ms)
+2026-11-16T01:46:45.3465782Z ✔ Task attachment comment waits for its original focused owner after one click before inserting text (207.974294ms)
+2026-11-16T01:46:45.3466815Z ✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (4.0334ms)
+2026-11-16T01:46:45.3467983Z ✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (4.106958ms)
+2026-11-16T01:46:45.3469125Z ✔ original desktop click waits for stable target geometry, without repeating input (302.242064ms)
+2026-11-16T01:46:45.3470036Z ✔ original Task hover waits through layout and unavailability before its one physical move (603.643424ms)
+2026-11-16T01:46:45.3471125Z ✔ original desktop click refuses a constantly moving target before dispatch (1507.186468ms)
+2026-11-16T01:46:45.3472108Z ✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (301.229288ms)
+2026-11-16T01:46:45.3473059Z ✔ login failure facts retain only bounded original attempts and confirmed milestones (1.838306ms)
+2026-11-16T01:46:45.3473964Z ✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.822536ms)
+2026-11-16T01:46:45.3474939Z ✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (2.848268ms)
+2026-11-16T01:46:45.3475986Z ✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (3.055587ms)
+2026-11-16T01:46:45.3477011Z ✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.856055ms)
+2026-11-16T01:46:45.3477893Z ✔ installer CDP and cleanup projection retains only exact finite observations (1.410204ms)
+2026-11-16T01:46:45.3478698Z ✔ Selection target summaries retain the exact original phase and six closed facts (1.494952ms)
+2026-11-16T01:46:45.3479641Z ✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.871704ms)
+2026-11-16T01:46:45.3480677Z ✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (2.05437ms)
+2026-11-16T01:46:45.3481781Z ✔ original desktop click refuses a target unavailable during the final ownership check (201.264809ms)
+2026-11-16T01:46:45.5485946Z ✔ original desktop click refuses a target moved during the final ownership check (201.095771ms)
+2026-11-16T01:46:45.5487069Z ✔ original default scroll preserves a disabled control before its readiness wait (1.3129ms)
+2026-11-16T01:46:45.6501216Z ✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (101.648612ms)
+2026-11-16T01:46:45.8523544Z ✔ original desktop click rechecks owner after its pending final target read (201.844617ms)
+2026-11-16T01:46:46.1256317Z ✔ original desktop click rechecks cutoff after its pending final target read (202.287766ms)
+2026-11-16T01:46:46.1258736Z ✔ original clarification lookup admits its retained read without completing the assignment prerequisite (3.152148ms)
+2026-11-16T01:46:46.1268428Z ✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (23.542434ms)
+2026-11-16T01:46:46.1269812Z ✔ original owner availability admits three captured A Teams through its actual first DOM read (2.910725ms)
+2026-11-16T01:46:46.1271818Z ✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (2.933347ms)
+2026-11-16T01:46:46.1274267Z ✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (31.522671ms)
+2026-11-16T01:46:46.1276130Z ✔ original owner availability refuses invalid captured discovery before navigation (0.863067ms)
+2026-11-16T01:46:46.1277860Z ✔ owner availability admits every captured A Team through the actual first observation (0.745767ms)
+2026-11-16T01:46:46.1279435Z ✔ owner availability refuses healthy B in unavailable A rows (0.514945ms)
+2026-11-16T01:46:46.1282988Z ✔ owner availability refuses captured foreign owner in unavailable A rows (0.42653ms)
+2026-11-16T01:46:46.1285140Z ✔ owner availability refuses unknown Team in unavailable A rows (0.602809ms)
+2026-11-16T01:46:46.1290016Z ✔ owner availability refuses malformed Team in unavailable A rows (0.638597ms)
+2026-11-16T01:46:46.1292008Z ✔ owner availability refuses missing selected A before original navigation (0.346299ms)
+2026-11-16T01:46:46.1293827Z ✔ owner availability refuses non-string A handle before original navigation (0.32528ms)
+2026-11-16T01:46:46.1300508Z ✔ owner availability refuses empty A handle before original navigation (0.260178ms)
+2026-11-16T01:46:46.1302584Z ✔ owner availability refuses duplicate A handle before original navigation (0.209673ms)
+2026-11-16T01:46:46.1305720Z ✔ owner availability refuses over-bound capture before original navigation (0.380944ms)
+2026-11-16T01:46:46.1351539Z (node:4041) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+2026-11-16T01:46:46.1352995Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-11-16T01:46:46.1368819Z ✔ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (12.549981ms)
+2026-11-16T01:46:46.1703086Z ✔ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (33.50218ms)
+2026-11-16T01:46:46.2089105Z ✔ ordinary Node imports and synchronous observations remain inert (2.559075ms)
+2026-11-16T01:46:46.2090576Z ✔ constructor subscription observes the original async child after pid assignment (59.886082ms)
+2026-11-16T01:46:46.2092463Z ✔ the observer preserves an actual unhandled child-process error (159.664846ms)
+2026-11-16T01:46:46.2094199Z ✔ failed reads, writes and unknown child fields cannot change the original operation (2.238474ms)
+2026-11-16T01:46:46.2095626Z ✔ the original TEST helper path exposes only its closed requested target class (2.212636ms)
+2026-11-16T01:46:46.2096933Z ✔ event and pending-child bounds explicitly preserve incomplete coverage (1.679788ms)
+2026-11-16T01:46:46.2097747Z ℹ tests 115
+2026-11-16T01:46:46.2098291Z ℹ suites 0
+2026-11-16T01:46:46.2098863Z ℹ pass 115
+2026-11-16T01:46:46.2099360Z ℹ fail 0
+2026-11-16T01:46:46.2099897Z ℹ cancelled 0
+2026-11-16T01:46:46.2100435Z ℹ skipped 0
+2026-11-16T01:46:46.2101113Z ℹ todo 0
+2026-11-16T01:46:46.2101766Z ℹ duration_ms 10457.672322
+2026-11-16T01:46:46.4818873Z ✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (122.163244ms)
+2026-11-16T01:46:46.4823759Z ✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (57.557111ms)
+2026-11-16T01:46:46.4826251Z ✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (1.182226ms)
+2026-11-16T01:46:46.4828130Z ✔ next fatal engine line is not masked by a prior long warning (1.268798ms)
+2026-11-16T01:46:46.4830039Z ✔ 404 marker fragmented across chunks within one stream is terminal (0.194895ms)
+2026-11-16T01:46:46.4831821Z ✔ separate output streams cannot fabricate a 404 marker (0.234049ms)
+2026-11-16T01:46:46.4832815Z ✔ whole-output classifier distinguishes long warning from fatal engine (0.314079ms)
+2026-11-16T01:46:46.4927064Z ℹ tests 7
+2026-11-16T01:46:46.4927555Z ℹ suites 0
+2026-11-16T01:46:46.4928551Z ℹ pass 7
+2026-11-16T01:46:46.4929011Z ℹ fail 0
+2026-11-16T01:46:46.4929952Z ℹ cancelled 0
+2026-11-16T01:46:46.4930441Z ℹ skipped 0
+2026-11-16T01:46:46.4931149Z ℹ todo 0
+2026-11-16T01:46:46.4931636Z ℹ duration_ms 246.893011
+2026-11-16T01:46:46.5019333Z ##[group]Run set -euo pipefail
+2026-11-16T01:46:46.5019687Z [36;1mset -euo pipefail[0m
+2026-11-16T01:46:46.5022671Z [36;1mnode --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts[0m
+2026-11-16T01:46:46.5074836Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:46:46.5075221Z env:
+2026-11-16T01:46:46.5075456Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:46:46.5075890Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:46:46.5076283Z   HOST_EMULATED_LANE: team
+2026-11-16T01:46:46.5076549Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:46:46.5076895Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:46:46.5077244Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:46:46.5077514Z ##[endgroup]
+2026-11-16T01:46:47.1496773Z ✔ the original finite captured child retains sanitized stderr and excludes its stdout protocol (33.641332ms)
+2026-11-16T01:46:47.1891134Z (node:4365) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: mcp__team__task_create, mcp__team__task_update, mcp__team__task_set_owner, mcp__team__task_lifecycle, mcp__team__task_set_status, mcp__team__task_add_comment, mcp__team__task_set_clarification, mcp__team__task_link, mcp__team__task_unlink, mcp__team__review_request, mcp__team__review_start, mcp__team__review_approve, mcp__team__review_request_changes, mcp__team__task_get, mcp__team__message_send, mcp__team__command_lookup, mcp__team__task_start, mcp__team__task_complete, mcp__team__task_restore, mcp__team__task_delete, mcp__team__member_briefing, mcp__team__team_get, mcp__team__kanban_get, mcp__team__kanban_list_reviewers, mcp__team__task_get_comment, mcp__team__task_list, mcp__team__task_briefing, mcp__team__lead_briefing. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
+2026-11-16T01:46:47.1895914Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-11-16T01:46:47.2105142Z legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"custody-confirmed","physicalConfirmed":true}
+2026-11-16T01:46:47.2108672Z legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"sdk-close-completed","physicalConfirmed":true}
+2026-11-16T01:46:47.2110548Z legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"sdk-read-completed","physicalConfirmed":true}
+2026-11-16T01:46:47.2136343Z ✔ original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail (65.217874ms)
+2026-11-16T01:46:47.2436991Z ✔ original standalone claude child retains startup stderr and its closing tail without an endpoint (30.025875ms)
+2026-11-16T01:46:47.2916699Z ✔ original standalone codex child retains startup stderr and its closing tail without an endpoint (47.795147ms)
+2026-11-16T01:46:47.2941476Z ✔ captured native executable is pinned again at launch and sealing forbids late allocation (2.417321ms)
+2026-11-16T01:46:47.2971670Z ✔ captured launch rejects exact inode changes hidden by numeric file metadata before spawning (3.274167ms)
+2026-11-16T01:46:47.2991032Z ✔ captured launch rejects exact mtime changes hidden by numeric file metadata before spawning (1.932459ms)
+2026-11-16T01:46:47.3014629Z ✔ captured launch rejects exact ctime changes hidden by numeric file metadata before spawning (1.918847ms)
+2026-11-16T01:46:48.9161214Z ✔ custody closes its live original process group, preserving a neighboring process (1614.26474ms)
+2026-11-16T01:46:48.9162704Z ℹ {"cleanupConfirmed":true,"descendantAbsent":true,"neighborPreserved":true}
+2026-11-16T01:46:52.5535516Z ✔ custody holds an unverified group after parent exit until TEST descendants leave naturally (3637.379585ms)
+2026-11-16T01:46:52.5536643Z ℹ {"cleanupConfirmed":false,"descendantAbsent":true,"neighborPreserved":true}
+2026-11-16T01:46:56.0876400Z ✔ an exited original cannot signal a positively probed replacement group (3533.922233ms)
+2026-11-16T01:46:56.0901184Z ✔ captured launch revalidates selected cwd before any process allocation (2.766426ms)
+2026-11-16T01:46:56.6637783Z ✔ Codex observes only original stderr before initialization completes and retains the final tail (42.896307ms)
+2026-11-16T01:46:56.6672610Z ✔ Codex profile is a finite private union and requires captured namespace paths (13.741795ms)
+2026-11-16T01:46:56.6689462Z ✔ Codex profile enforces native 1 MiB ceiling before allocation and preserves Claude bounds (8.625328ms)
+2026-11-16T01:46:56.6955269Z ✔ Codex 0.162.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt (23.81067ms)
+2026-11-16T01:46:56.7508726Z ✔ Codex 0.169.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt (5.497791ms)
+2026-11-16T01:46:56.7523276Z ✔ Codex missingTools setup failure cleans captured handles before throwing (13.502596ms)
+2026-11-16T01:46:56.7535858Z ✔ Codex failInitialize setup failure cleans captured handles before throwing (15.580663ms)
+2026-11-16T01:46:56.7538397Z ✔ Codex checkpoint setup failure cleans captured handles before throwing (20.13755ms)
+2026-11-16T01:46:56.7540390Z ✔ seal or lost allocation authority prevents a Codex process allocation (10.145199ms)
+2026-11-16T01:46:56.7637118Z ✔ Host Codex adapter awaits its captured original-input baseline and terminal observer through real public D (13.09477ms)
+2026-11-16T01:46:56.7751905Z ✔ captured Codex options preserve none across each input and true-only Fast config (10.670754ms)
+2026-11-16T01:46:56.7881188Z ✔ captured Codex options preserve minimal across each input and true-only Fast config (11.828566ms)
+2026-11-16T01:46:56.8033058Z ✔ captured Codex options preserve ultra across each input and true-only Fast config (13.117122ms)
+2026-11-16T01:46:56.8376272Z ✔ captured Codex options preserve TEST-future-native-effort across each input and true-only Fast config (17.594291ms)
+2026-11-16T01:46:56.8399898Z ✔ Codex Default/absent options preserve the captured recipe; explicit false adds no native Fast override (16.392248ms)
+2026-11-16T01:46:56.8658286Z ✔ managed Codex 0.162.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation (31.115089ms)
+2026-11-16T01:46:56.9075390Z ✔ managed Codex 0.162.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation (34.227521ms)
+2026-11-16T01:46:56.9089081Z ✔ managed Codex 0.169.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation (2.919541ms)
+2026-11-16T01:46:56.9108078Z ✔ managed Codex 0.169.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation (3.006634ms)
+2026-11-16T01:46:56.9350437Z ✔ captured appOnly launches veto original plugin names and exact native gate precedes thread allocation (21.728588ms)
+2026-11-16T01:46:56.9514003Z ✔ changed original native census refuses before app-server allocation and without a thread (5.013706ms)
+2026-11-16T01:46:56.9515503Z ✔ new captured selection without original native census refuses before process custody (1.674098ms)
+2026-11-16T01:46:56.9516551Z ✔ captured Codex argv reaches only the selected app-server launch, preserving managed flags (10.253144ms)
+2026-11-16T01:46:56.9517518Z ✔ captured Codex managed aliases and positional prompts refuse before custody allocation (13.545974ms)
+2026-11-16T01:46:57.1067317Z ✔ original stderr captures startup and tail while redacting selected values across UTF-8 chunks (12.24685ms)
+2026-11-16T01:46:57.1077505Z ✔ standalone stderr uses selected private values without a Team endpoint (1.696449ms)
+2026-11-16T01:46:57.1078991Z ✔ invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence (1.052753ms)
+2026-11-16T01:46:57.1080405Z ✔ decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit (3.741902ms)
+2026-11-16T01:46:57.1082099Z ✔ oversized lines discard their complete suffix and preserve a multiline dump opener (1.177196ms)
+2026-11-16T01:46:57.1088057Z ✔ dump continuations stay suppressed through ordinary newlines and oversized fragments (0.937857ms)
+2026-11-16T01:46:57.1098201Z ✔ observer errors and reentrant close cannot change stream outcomes or duplicate a tail (0.859081ms)
+2026-11-16T01:46:57.1106528Z ✔ a bounded escape-heavy line remains subject to the existing serialized journal limit (1.805493ms)
+2026-11-16T01:46:57.1113868Z ✔ held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes (1.785406ms)
+2026-11-16T01:46:57.1115488Z ✔ overlapping held values are masked in one pass: ABABAB (1.110731ms)
+2026-11-16T01:46:57.1122912Z ✔ overlapping held values are masked in one pass: a (0.702837ms)
+2026-11-16T01:46:57.1124586Z ✔ long split ANSI does not lose a dump opener before flush (0.845785ms)
+2026-11-16T01:46:57.1132881Z ✔ long split ANSI does not lose a dump opener before discard (1.434758ms)
+2026-11-16T01:46:57.1139326Z ✔ dump detection continues through already discarded oversized fragments (1.18975ms)
+2026-11-16T01:46:57.1144492Z ✔ a short held value cannot destroy sensitive syntax before classification: s (0.637335ms)
+2026-11-16T01:46:57.1172125Z ✔ a short held value cannot destroy sensitive syntax before classification: a (0.389721ms)
+2026-11-16T01:46:57.1182400Z ✔ a short held value cannot destroy sensitive syntax before classification: h (0.483907ms)
+2026-11-16T01:46:57.1192344Z ✔ syntax redaction cannot expose fragments of a transformed held value (1.086166ms)
+2026-11-16T01:46:57.1193871Z ✔ an ANSI prefix larger than the line budget remains fail-closed (false) (1.077549ms)
+2026-11-16T01:46:57.1195344Z ✔ an ANSI prefix larger than the line budget remains fail-closed (true) (0.898704ms)
+2026-11-16T01:46:57.1205577Z ✖ held whitespace values cannot leak after contextual syntax redaction (space) (1.490373ms)
+2026-11-16T01:46:57.1207271Z ✖ held whitespace values cannot leak after contextual syntax redaction (tab) (0.931626ms)
+2026-11-16T01:46:57.1209070Z ✖ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.815108ms)
+2026-11-16T01:46:57.1210665Z ✔ safe diagnostics and unambiguous held-value context remain readable (0.680715ms)
+2026-11-16T01:46:58.5143117Z ✔ closed provider authority reads one fresh state with three namespace traversals and keeps original refusals (126.561412ms)
+2026-11-16T01:46:58.5147167Z ℹ {"baseline":{"lockPublications":1,"namespaceTraversals":6,"stateReads":7},"closed":{"lockPublications":1,"namespaceTraversals":3,"stateReads":1}}
+2026-11-16T01:46:58.5150678Z ✔ restored provider authority binds the complete open request and keeps current fences (95.449449ms)
+2026-11-16T01:46:58.5152921Z ✔ restored native input keeps the full checkpoint-bearing request identity (62.388941ms)
+2026-11-16T01:46:58.5154754Z ✔ only validated legacy roster applicability can fall back after all common authority checks (92.955032ms)
+2026-11-16T01:46:58.5158346Z ✔ both live workAllowed reads remain independent and final namespace validation refuses a late alias (66.391402ms)
+2026-11-16T01:46:58.5161176Z ✔ closed currentness follows an original additive roster receipt without replacing an existing member (45.507238ms)
+2026-11-16T01:46:58.5163405Z ✔ immutable provider entries and denied or unexpected aggregate results cannot enter fallback (61.908727ms)
+2026-11-16T01:46:58.5165874Z ✔ a prepared original lifecycle command refuses currentness before its state publication (59.983361ms)
+2026-11-16T01:46:58.5169178Z ✔ original factory stderr survives failed opening and cold read but cannot follow revoked or replaced sources (97.245828ms)
+2026-11-16T01:46:58.6661461Z ✔ early SDK write and EOF wait for native owner installation and resume, with backpressure (7.489492ms)
+2026-11-16T01:46:58.6688943Z ✔ abort-during-prepare never resumes native code or flushes queued input (2.968878ms)
+2026-11-16T01:46:58.6754006Z ✔ authority-loss-during-install never resumes native code or flushes queued input (1.439044ms)
+2026-11-16T01:46:58.6756201Z ✔ target exit before resume acknowledgement preserves its native code and final stdout/stderr (3.92796ms)
+2026-11-16T01:46:58.6768129Z ✔ prepare/control failure requests original cleanup once and never invents target termination (2.580499ms)
+2026-11-16T01:47:02.2798138Z ✔ conversation materialization keeps 150 distinct original replies across mixed-ring eviction without nontext or poll IO (3395.804056ms)
+2026-11-16T01:47:02.3098433Z ✔ conversation failure never rewrites terminal facts or accepts an older publication as current (29.744405ms)
+2026-11-16T01:47:02.3331084Z ✔ legacy conversation reads use only dated original input events and never migrate or invent timestamps (23.436605ms)
+2026-11-16T01:47:02.3698511Z ✔ conversation corrupt, missing, oversized and foreign derived records hold under the original member read grant (36.46327ms)
+2026-11-16T01:47:02.3943353Z ✔ conversation missing original state refuses retained observations without decoding large files or resetting authority (24.59879ms)
+2026-11-16T01:47:02.4145616Z ✔ conversation rows require the original input, operation and delivery fingerprint after cold read (20.281156ms)
+2026-11-16T01:47:02.4327701Z ✔ conversation finite FD read refuses symlink without adopting replacement bytes (18.2901ms)
+2026-11-16T01:47:02.4505442Z ✔ conversation finite FD read refuses before-open without adopting replacement bytes (17.572577ms)
+2026-11-16T01:47:02.4691103Z ✔ conversation finite FD read refuses after-open without adopting replacement bytes (18.538872ms)
+2026-11-16T01:47:02.4873934Z ✔ conversation finite FD read refuses symlink-before-open without adopting replacement bytes (18.024165ms)
+2026-11-16T01:47:02.5062286Z ✔ conversation finite FD read refuses disappeared-before-open without adopting replacement bytes (18.599767ms)
+2026-11-16T01:47:02.5258723Z ✔ conversation fresh empty marker refuses a nonempty retained file instead of adopting it (19.58571ms)
+2026-11-16T01:47:04.1210379Z ✔ conversation equal text remains input-distinct, existing blocks may clear, and 65 blocks survive count retention (1595.12949ms)
+2026-11-16T01:47:04.1377573Z ✔ conversation partial storage ports remain explicitly unsupported and cannot publish an unchecked marker (16.77012ms)
+2026-11-16T01:47:05.1537447Z ✔ conversation exact reserved-envelope budget retains the reply and one extra byte reports loss without evicting it (1015.604775ms)
+2026-11-16T01:47:05.1912313Z ✔ snapshot and replay share a fence/cursor; persisted text/tools/usage/interaction state survives restart with explicit incarnation gap (37.709513ms)
+2026-11-16T01:47:05.2517879Z ✔ bounded retention/paging gives explicit gap and cannot return a future or another member cursor (60.57759ms)
+2026-11-16T01:47:05.2877912Z ✔ wrong native/session/input/operation attribution is never assigned to this member or a neighboring input (34.825398ms)
+2026-11-16T01:47:05.3236543Z ✔ oversized/unsupported projection data cannot abort later permission and terminal/control persistence (36.761907ms)
+2026-11-16T01:47:05.3443996Z ✔ projection write failure exposes a gap while observer continues to durable terminal and later observations (20.592534ms)
+2026-11-16T01:47:05.3622450Z ✔ projection corrupt is HOLD rather than a reset cursor and cannot stop terminal persistence (17.870665ms)
+2026-11-16T01:47:05.3798086Z ✔ projection digest is HOLD rather than a reset cursor and cannot stop terminal persistence (17.702327ms)
+2026-11-16T01:47:05.4000538Z ✔ projection missing is HOLD rather than a reset cursor and cannot stop terminal persistence (20.249095ms)
+2026-11-16T01:47:05.4176995Z ✔ projection symlink is HOLD rather than a reset cursor and cannot stop terminal persistence (17.599372ms)
+2026-11-16T01:47:05.4356600Z ✔ projection oversize is HOLD rather than a reset cursor and cannot stop terminal persistence (17.826159ms)
+2026-11-16T01:47:05.4540313Z ✔ current read grant gates snapshots/replay and a consumer without event storage stays explicitly unsupported (18.330642ms)
+2026-11-16T01:47:06.3232770Z ✔ bounded feed pages replay each retained event once and snapshot marks a truncated latest view (868.842981ms)
+2026-11-16T01:47:06.3723160Z ✔ open/checkpoint/control/seal/reconcile state mutations advance the same cursor without a second business log (49.252393ms)
+2026-11-16T01:47:06.3878851Z ✔ event namespace symlink is rejected without touching external files or blocking terminal facts (15.592137ms)
+2026-11-16T01:47:06.3995380Z ✔ enabling projections on an existing unprojected session preserves an explicit historical gap (11.566118ms)
+2026-11-16T01:47:06.4254746Z ✔ private child activity shares the original Runtime input/fence and snapshot without settling root control or accepting foreign provenance (25.90693ms)
+2026-11-16T01:47:06.4550921Z ✔ original process diagnostics keep config and incarnation fences and survive only unreleased closing (29.621385ms)
+2026-11-16T01:47:06.4783330Z ✔ process diagnostics use the existing serialized event budget and storage degradation without changing control (23.040785ms)
+2026-11-16T01:47:06.5038590Z ✔ distinct Thinking retains original attribution without becoming text, conversation or state (25.274937ms)
+2026-11-16T01:47:06.5470090Z ✔ scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery (43.30978ms)
+2026-11-16T01:47:06.6920480Z ✔ auxiliary log trimming shares the existing byte budget without changing original groups or their completeness (144.851567ms)
+2026-11-16T01:47:08.2527146Z ✔ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (560.58217ms)
+2026-11-16T01:47:08.3734036Z ✔ never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state (120.735605ms)
+2026-11-16T01:47:09.2508088Z ✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (876.829332ms)
+2026-11-16T01:47:09.4360019Z ✔ task recovery never returns a prior receipt for a changed command with unavailable attachments (174.638755ms)
+2026-11-16T01:47:11.1182824Z ✔ mixed Host boots V2 Session SPI profile without invoking V1 management registration (1677.295219ms)
+2026-11-16T01:47:11.3241497Z ✔ two captured teams may share an original run ID without sharing launch ownership (206.061237ms)
+2026-11-16T01:47:12.2502005Z ✔ cold unavailable Team history retains original resources while an independent Team still captures and runs (942.476479ms)
+2026-11-16T01:47:12.4528616Z ✔ a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision (202.688052ms)
+2026-11-16T01:47:13.0878894Z ✔ saved configuration captures fresh native identities, preserves historical launches and replays after cold restart (633.534791ms)
+2026-11-16T01:47:13.1619676Z ✔ capture rejects stale product sources, missing recipes and protected args before native allocation (75.329822ms)
+2026-11-16T01:47:13.3076003Z ✔ NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation (144.266085ms)
+2026-11-16T01:47:17.2597223Z ✔ NDJSON roster replacement refuses live allocation, then saves only after confirmed stop (3940.120673ms)
+2026-11-16T01:47:19.0465674Z ✔ captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal (1788.43565ms)
+2026-11-16T01:47:19.7541527Z ✔ NDJSON unknown native cleanup keeps the saved roster and its original grants bound (718.43007ms)
+2026-11-16T01:47:20.1175022Z ✔ stopped fresh capture admits its exact probe profile and cold replay retains the original check (363.368941ms)
+2026-11-16T01:47:20.3032622Z ✔ Team model preflight requires current control authority and exact launch selection before any provider allocation (186.011197ms)
+2026-11-16T01:47:20.6249511Z ✔ NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC (321.632116ms)
+2026-11-16T01:47:20.9397266Z ✔ member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority (314.372307ms)
+2026-11-16T01:47:21.2456923Z ✔ runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation (306.371986ms)
+2026-11-16T01:47:21.3518124Z ✔ dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt (104.117547ms)
+2026-11-16T01:47:21.4459548Z ✔ pending open cleanup precedes readiness: late-driver (95.974591ms)
+2026-11-16T01:47:21.5419623Z ✔ pending open cleanup precedes readiness: unknown-driver (95.117232ms)
+2026-11-16T01:47:21.6326384Z ✔ pending open cleanup precedes readiness: factory-rejection (88.482769ms)
+2026-11-16T01:47:21.7432287Z ✔ pending provider cleanup survives stop before dispose (113.563999ms)
+2026-11-16T01:47:21.8459365Z ✔ pending provider cleanup survives reconcile before dispose (102.452976ms)
+2026-11-16T01:47:21.9928199Z ✔ allocated driver checkpoint and close precede captured process cleanup (145.527959ms)
+2026-11-16T01:47:22.3272146Z ✔ expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation (332.840547ms)
+2026-11-16T01:47:23.6083446Z ✔ Codex Host cost reports retained usage once without native dispatch or private snapshot leakage (1282.968988ms)
+2026-11-16T01:47:23.6085486Z ℹ TEST restore state: /home/runner/work/_temp/TEST-runtime-team-host-T7Opyo
+2026-11-16T01:47:23.7311104Z ✔ composed original stderr survives failed startup before Runtime installs a native session (119.955539ms)
+2026-11-16T01:47:23.8990318Z ✔ composed original stderr accepts closing diagnostics without settling Runtime state or inputs (171.085897ms)
+2026-11-16T01:47:24.0606047Z ✔ composed original stderr rejects changed member authority, revocation and a sealed Host (161.42438ms)
+2026-11-16T01:47:24.7738341Z ✔ activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps (712.960058ms)
+2026-11-16T01:47:24.8115077Z ✔ activity snapshot/feed recheck current human read grants and reject authority overrides (38.36533ms)
+2026-11-16T01:47:25.0092967Z ✔ production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress (197.331622ms)
+2026-11-16T01:47:25.3827414Z ✔ launch options are durably selected before provider creation and replay survives Host restart without new allocation (372.62765ms)
+2026-11-16T01:47:25.8286897Z ✔ launch options refuse allocated state and compile every selected provider before any publication or allocation (445.837216ms)
+2026-11-16T01:47:27.6607090Z (node:4464) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+2026-11-16T01:47:27.6609171Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-11-16T01:47:27.6611991Z ✔ selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls (1791.150022ms)
+2026-11-16T01:47:27.6613793Z ℹ TEST restore state: /home/runner/work/_temp/TEST-runtime-team-host-NzxVBy
+2026-11-16T01:47:27.6615757Z ℹ TEST restore state: /home/runner/work/_temp/TEST-runtime-team-host-ReNdvl
+2026-11-16T01:47:27.6617744Z ✔ Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors (1.807328ms)
+2026-11-16T01:47:27.6619411Z ✔ the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown (21.120703ms)
+2026-11-16T01:47:27.6621875Z ✔ source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff (2.24044ms)
+2026-11-16T01:47:27.6624087Z ✔ source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause (1.542932ms)
+2026-11-16T01:47:27.6626162Z ✔ source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors (7.072989ms)
+2026-11-16T01:47:27.6628299Z ✔ source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget (2.290333ms)
+2026-11-16T01:47:27.6638334Z ✔ source standalone refuses a completed result delivered after the captured absolute deadline (1.9095ms)
+2026-11-16T01:47:27.6639380Z ✔ source codex standalone preserves the original fresh capture check after successful completion (2.076513ms)
+2026-11-16T01:47:27.6640483Z ✔ source claude standalone preserves the original fresh capture check after successful completion (2.159428ms)
+2026-11-16T01:47:27.6642858Z ✔ source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors (17.879888ms)
+2026-11-16T01:47:28.3177807Z ✔ actual normalized content/tool/usage/compaction facts remain scoped to original task after reassignment (131.99874ms)
+2026-11-16T01:47:28.3183040Z ✔ cold thinking and member stderr retain their exact scope without changing message, usage or preview counts (64.249328ms)
+2026-11-16T01:47:28.3191020Z ✔ unknown usage stays unknown; foreign operation/input cannot borrow task scope; finite page cap is visible (42.498559ms)
+2026-11-16T01:47:28.3194168Z ✔ unattributed usage cannot be added to per-input token totals (0.253395ms)
+2026-11-16T01:47:28.3198869Z ✔ large retained facts produce a partial bounded log rather than losing the entire selection (54.686076ms)
+2026-11-16T01:47:28.4309480Z ✔ snapshot cursor replays only later invalidations, with stable IDs and explicit restart/retention gaps (2.265366ms)
+2026-11-16T01:47:28.4322430Z ✔ a recovery publication observed before its completion hook is still ordered under the snapshot fence (0.276378ms)
+2026-11-16T01:48:14.0179652Z ✔ private conversation reads leave the original Team fence and recheck full grant and lead identity (53.713256ms)
+2026-11-16T01:48:14.0184153Z ✔ ordinary stream revisions expire only ordinary cursors while original group pages never read conversation (24.866602ms)
+2026-11-16T01:48:14.0186170Z ✔ the original Team read boundary refuses a sparse private conversation gap array (9.344879ms)
+2026-11-16T01:48:14.0191921Z ✔ snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes (42.8593ms)
+2026-11-16T01:48:14.0194082Z ✔ one task with large nested history retains all task parts, order and signed continuations (43.1981ms)
+2026-11-16T01:48:14.0196174Z ✔ a 420 KiB Unicode message remains readable through signed Desktop and MCP pages (298.141823ms)
+2026-11-16T01:48:14.0198177Z ✔ real committed task mutation keeps an under-1-MiB Host acknowledgement with full durable history (40129.655031ms)
+2026-11-16T01:48:14.0205934Z ✔ large retained task inventory stays readable through all bounded original Owner pages (3882.451193ms)
+2026-11-16T01:48:14.0207687Z ✔ Kanban entries and column ordering survive both Desktop and MCP page budgets (98.795025ms)
+2026-11-16T01:48:14.0209399Z ✔ large legitimate inbox history preserves bounded snapshots and authorized change feed (98.203291ms)
+2026-11-16T01:48:14.0211439Z ✔ owner-side pages retain every message beyond 512 KiB under revision and principal fences (67.867984ms)
+2026-11-16T01:48:14.0215027Z ✔ removed teammate inbox remains readable for admin only after a persisted owner restart (13.419865ms)
+2026-11-16T01:48:14.0217004Z ✔ one valid Unicode comment larger than either Owner page remains lossless and signed (498.526276ms)
+2026-11-16T01:48:14.1596037Z ℹ tests 177
+2026-11-16T01:48:14.1596430Z ℹ suites 0
+2026-11-16T01:48:14.1596679Z ℹ pass 174
+2026-11-16T01:48:14.1596915Z ℹ fail 3
+2026-11-16T01:48:14.1597148Z ℹ cancelled 0
+2026-11-16T01:48:14.1597401Z ℹ skipped 0
+2026-11-16T01:48:14.1597634Z ℹ todo 0
+2026-11-16T01:48:14.1597902Z ℹ duration_ms 87614.502124
+2026-11-16T01:48:14.1610564Z 
+2026-11-16T01:48:14.1611079Z ✖ failing tests:
+2026-11-16T01:48:14.1611343Z 
+2026-11-16T01:48:14.1611966Z test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:250:3
+2026-11-16T01:48:14.1612831Z ✖ held whitespace values cannot leak after contextual syntax redaction (space) (1.490373ms)
+2026-11-16T01:48:14.1613544Z   AssertionError [ERR_ASSERTION]: the complete already-held value stays private
+2026-11-16T01:48:14.1613995Z   
+2026-11-16T01:48:14.1614233Z   true !== false
+2026-11-16T01:48:14.1614451Z   
+2026-11-16T01:48:14.1615225Z       at TestContext.<anonymous> (file:///home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/member-process-stderr.test.ts:258:12)
+2026-11-16T01:48:14.1616387Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-11-16T01:48:14.1616986Z       at async Test.run (node:internal/test_runner/test:1409:7)
+2026-11-16T01:48:14.1617555Z       at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+2026-11-16T01:48:14.1618044Z     generatedMessage: false,
+2026-11-16T01:48:14.1618322Z     code: 'ERR_ASSERTION',
+2026-11-16T01:48:14.1618596Z     actual: true,
+2026-11-16T01:48:14.1618831Z     expected: false,
+2026-11-16T01:48:14.1619085Z     operator: 'strictEqual',
+2026-11-16T01:48:14.1619363Z     diff: 'simple'
+2026-11-16T01:48:14.1619585Z   }
+2026-11-16T01:48:14.1619700Z 
+2026-11-16T01:48:14.1620051Z test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:250:3
+2026-11-16T01:48:14.1621113Z ✖ held whitespace values cannot leak after contextual syntax redaction (tab) (0.931626ms)
+2026-11-16T01:48:14.1621821Z   AssertionError [ERR_ASSERTION]: the complete already-held value stays private
+2026-11-16T01:48:14.1622267Z   
+2026-11-16T01:48:14.1622472Z   true !== false
+2026-11-16T01:48:14.1635284Z   
+2026-11-16T01:48:14.1636658Z       at TestContext.<anonymous> (file:///home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/member-process-stderr.test.ts:258:12)
+2026-11-16T01:48:14.1638190Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-11-16T01:48:14.1639205Z       at async Test.run (node:internal/test_runner/test:1409:7)
+2026-11-16T01:48:14.1639813Z       at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+2026-11-16T01:48:14.1640348Z     generatedMessage: false,
+2026-11-16T01:48:14.1640667Z     code: 'ERR_ASSERTION',
+2026-11-16T01:48:14.1641469Z     actual: true,
+2026-11-16T01:48:14.1641721Z     expected: false,
+2026-11-16T01:48:14.1641995Z     operator: 'strictEqual',
+2026-11-16T01:48:14.1642268Z     diff: 'simple'
+2026-11-16T01:48:14.1642500Z   }
+2026-11-16T01:48:14.1642632Z 
+2026-11-16T01:48:14.1643063Z test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:250:3
+2026-11-16T01:48:14.1644183Z ✖ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.815108ms)
+2026-11-16T01:48:14.1644849Z   AssertionError [ERR_ASSERTION]: the complete already-held value stays private
+2026-11-16T01:48:14.1645266Z   
+2026-11-16T01:48:14.1645470Z   true !== false
+2026-11-16T01:48:14.1645681Z   
+2026-11-16T01:48:14.1646405Z       at TestContext.<anonymous> (file:///home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/member-process-stderr.test.ts:258:12)
+2026-11-16T01:48:14.1647325Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-11-16T01:48:14.1647872Z       at async Test.run (node:internal/test_runner/test:1409:7)
+2026-11-16T01:48:14.1648877Z       at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+2026-11-16T01:48:14.1649337Z     generatedMessage: false,
+2026-11-16T01:48:14.1649610Z     code: 'ERR_ASSERTION',
+2026-11-16T01:48:14.1649861Z     actual: true,
+2026-11-16T01:48:14.1650091Z     expected: false,
+2026-11-16T01:48:14.1650347Z     operator: 'strictEqual',
+2026-11-16T01:48:14.1650598Z     diff: 'simple'
+2026-11-16T01:48:14.1651132Z   }
+2026-11-16T01:48:14.1686175Z ##[error]Process completed with exit code 1.
+2026-11-16T01:48:14.1892457Z ##[group]Run actions/upload-artifact@v4
+2026-11-16T01:48:14.1892794Z with:
+2026-11-16T01:48:14.1893161Z   name: host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-team
+2026-11-16T01:48:14.1893602Z   retention-days: 14
+2026-11-16T01:48:14.1893860Z   if-no-files-found: warn
+2026-11-16T01:48:14.1908992Z   path: /home/runner/work/_temp/host-emulated-*.json
+/home/runner/work/_temp/host-emulated-*.log
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/linux-child-exec/manifest.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/linux-child-exec/linux-child-exec
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-ui-capture.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-custody/manifest.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-backend-receipt.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-backend-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/owner-routing-*.log
+/home/runner/work/_temp/TEST-desktop-backend-*/owner-routing-*-failure.png
+/home/runner/work/_temp/TEST-desktop-backend-*/host-profile.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-descriptor.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/management-commands/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-sources/index.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-sessions/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/teams/*/inboxes/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/teams/*/group-chat*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/tasks/test-stopped-legacy/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/preferences/**/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-review-readback-receipt.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-review-readback-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/review-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/review-ui-initial-git-diff.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/sentinel-invocations.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-oauth-host-management/native-effects.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-login-processes.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-wire.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/external-open.jsonl
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-install/*.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/runtimes/codex/current.json
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/*.jsonl
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-checkpoints/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/emulated-cold-resume-epoch1-bundles/**
+/home/runner/work/_temp/TEST-desktop-backend-*/ui-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/ui-*.png
+/home/runner/work/_temp/TEST-desktop-backend-*/native-extensions-*.png
+/home/runner/work/_temp/TEST-desktop-backend-*/native-extensions-selection.json
+/home/runner/work/_temp/TEST-desktop-backend-*/stopped-import-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/task-attachments/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/native-chat-attachment-inputs/**
+/home/runner/work/_temp/TEST-desktop-backend-*/home/Downloads/source-original.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/home/Downloads/TEST-native-chat.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/controlled-process-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/process-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/workspace/process-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/workspace/process-*.ndjson
+
+2026-11-16T01:48:14.1924138Z   compression-level: 6
+2026-11-16T01:48:14.1924392Z   overwrite: false
+2026-11-16T01:48:14.1924638Z   include-hidden-files: false
+2026-11-16T01:48:14.1924891Z env:
+2026-11-16T01:48:14.1925116Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:48:14.1925484Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:48:14.1925869Z   HOST_EMULATED_LANE: team
+2026-11-16T01:48:14.1926131Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:48:14.1926463Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:48:14.1926803Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:48:14.1927070Z ##[endgroup]
+2026-11-16T01:48:14.3717373Z (node:4513) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T01:48:14.3719201Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T01:48:14.3978316Z ##[warning]No files were found with the provided path: /home/runner/work/_temp/host-emulated-*.json
+/home/runner/work/_temp/host-emulated-*.log
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/linux-child-exec/manifest.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/linux-child-exec/linux-child-exec
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-ui-capture.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-custody/manifest.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-backend-receipt.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-backend-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/owner-routing-*.log
+/home/runner/work/_temp/TEST-desktop-backend-*/owner-routing-*-failure.png
+/home/runner/work/_temp/TEST-desktop-backend-*/host-profile.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-descriptor.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/management-commands/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-sources/index.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-sessions/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/teams/*/inboxes/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/teams/*/group-chat*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/tasks/test-stopped-legacy/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/preferences/**/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-review-readback-receipt.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-review-readback-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/review-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/review-ui-initial-git-diff.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/sentinel-invocations.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-oauth-host-management/native-effects.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-login-processes.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-wire.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/external-open.jsonl
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-install/*.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/runtimes/codex/current.json
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/*.jsonl
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-checkpoints/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/emulated-cold-resume-epoch1-bundles/**
+/home/runner/work/_temp/TEST-desktop-backend-*/ui-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/ui-*.png
+/home/runner/work/_temp/TEST-desktop-backend-*/native-extensions-*.png
+/home/runner/work/_temp/TEST-desktop-backend-*/native-extensions-selection.json
+/home/runner/work/_temp/TEST-desktop-backend-*/stopped-import-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/task-attachments/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/native-chat-attachment-inputs/**
+/home/runner/work/_temp/TEST-desktop-backend-*/home/Downloads/source-original.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/home/Downloads/TEST-native-chat.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/controlled-process-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/process-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/workspace/process-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/workspace/process-
+2026-11-16T01:48:14.4195577Z Post job cleanup.
+2026-11-16T01:48:14.5766937Z Pruning is unnecessary.
+2026-11-16T01:48:14.5964707Z Post job cleanup.
+2026-11-16T01:48:14.6890212Z [command]/usr/bin/git version
+2026-11-16T01:48:14.6938502Z git version 2.56.1
+2026-11-16T01:48:14.7007713Z Temporarily overriding HOME='/home/runner/work/_temp/d5a53677-c0ff-4b09-b18b-05f85f77c70d' before making global git config changes
+2026-11-16T01:48:14.7025451Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T01:48:14.7027186Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T01:48:14.7082363Z Removing SSH command configuration
+2026-11-16T01:48:14.7083720Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T01:48:14.7141138Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T01:48:14.7621634Z Removing HTTP extra header
+2026-11-16T01:48:14.7627572Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T01:48:14.7674704Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T01:48:14.8093593Z Removing includeIf entries pointing to credentials config files
+2026-11-16T01:48:14.8103985Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T01:48:14.8146772Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T01:48:14.8625887Z Cleaning up orphan processes
+2026-11-16T01:48:14.9088336Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

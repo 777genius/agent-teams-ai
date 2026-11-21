@@ -1,3 +1,4 @@
+import { isReviewFlow } from '@features/review-flow';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
@@ -11,7 +12,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import type { KanbanColumnId, KanbanState, UpdateKanbanPatch } from '@shared/types';
 
 const logger = createLogger('Service:TeamKanbanManager');
-const MAX_KANBAN_STATE_BYTES = 512 * 1024;
+export const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 
 function createDefaultState(teamName: string): KanbanState {
   return {
@@ -75,6 +76,8 @@ export class TeamKanbanManager {
     }
     if (options.strict) validateKanbanSafetyState(parsed, teamName);
     const sanitizedTasks: KanbanState['tasks'] = {};
+    const reviewFlowPrompt =
+      typeof parsed.reviewFlowPrompt === 'string' ? parsed.reviewFlowPrompt.trim() : '';
     if (parsed.tasks && typeof parsed.tasks === 'object') {
       for (const [taskId, value] of Object.entries(parsed.tasks)) {
         if (!value || typeof value !== 'object') {
@@ -105,6 +108,10 @@ export class TeamKanbanManager {
         ? parsed.reviewers.filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
         : [],
       tasks: sanitizedTasks,
+      // Present only when the team overrides the default; absent means it follows the default.
+      ...(isReviewFlow(parsed.reviewFlow)
+        ? { reviewFlow: parsed.reviewFlow, ...(reviewFlowPrompt ? { reviewFlowPrompt } : {}) }
+        : {}),
       columnOrder: sanitizeColumnOrder(parsed.columnOrder),
     };
   }
@@ -114,7 +121,7 @@ export class TeamKanbanManager {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
     const columnOrder = { ...state.columnOrder };
     if (orderedTaskIds.length > 0) {
       columnOrder[columnId] = orderedTaskIds;
@@ -126,7 +133,7 @@ export class TeamKanbanManager {
 
   async updateTask(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     if (patch.op === 'disapprove') throw new Error('Use the explicit taskBoard Disapprove action');
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
 
     if (patch.op === 'remove' || patch.op === 'request_changes') {
       delete state.tasks[taskId];
@@ -147,7 +154,7 @@ export class TeamKanbanManager {
   }
 
   async garbageCollect(teamName: string, validTaskIds: Set<string>): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
     const before = Object.keys(state.tasks).length;
 
     for (const taskId of Object.keys(state.tasks)) {
@@ -195,6 +202,14 @@ export class TeamKanbanManager {
       teamName,
       reviewers: state.reviewers,
       tasks: state.tasks,
+      ...(isReviewFlow(state.reviewFlow)
+        ? {
+            reviewFlow: state.reviewFlow,
+            ...(state.reviewFlowPrompt?.trim()
+              ? { reviewFlowPrompt: state.reviewFlowPrompt.trim() }
+              : {}),
+          }
+        : {}),
       ...(state.columnOrder && Object.keys(state.columnOrder).length > 0
         ? { columnOrder: state.columnOrder }
         : {}),

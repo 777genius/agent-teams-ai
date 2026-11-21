@@ -1,0 +1,67 @@
+{
+  "verdict": "APPROVE",
+  "record": "F-runtime-green",
+  "sourceHead": "6376001fa9db4b67c4d3264352680d29832a43c9",
+  "sourceTree": "e27dc5d280d7970ac4179a040330663b59ceb54a",
+  "parents": [
+    "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e"
+  ],
+  "log": {
+    "bytes": 5547,
+    "blob": "fbcbc4c2422eedbe5dabeec75715e196faeb0ec2",
+    "sha256": "d8364a1fec852e34c9d9f00d6d88ef8a1b497640333ce1f4ddec29554185ccac"
+  },
+  "metadata": {
+    "bytes": 2690,
+    "blob": "88bd38dad85a128264533c7443f5cd7727d374d5",
+    "sha256": "6f5e47487f087f2f3e40c8e17d2617bcb047083b3dfb43bb310004db3866630b"
+  },
+  "preflight": {
+    "bytes": 20742,
+    "blob": "dfa14ffac7135ece54f119d15018d6e69312fada",
+    "sha256": "561a48e79ef45738d7bd92a09848f321559ad09b94158aff435c16550f50cf97"
+  },
+  "startedAtUTC": "2026-11-15T21:24:16.750705+00:00",
+  "finishedAtUTC": "2026-11-15T21:24:26.417869+00:00",
+  "elapsedSeconds": 9.667085895998753,
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+  ],
+  "exitCode": 0,
+  "total": 44,
+  "pass": 44,
+  "fail": 0,
+  "skip": 0,
+  "cancelled": 0,
+  "todo": 0,
+  "same44CaseNamesAsE": true,
+  "previousSixFailuresNowPass": [
+    "source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff",
+    "source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause",
+    "source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget",
+    "source standalone refuses a completed result delivered after the captured absolute deadline",
+    "source codex standalone preserves the original fresh capture check after successful completion",
+    "source claude standalone preserves the original fresh capture check after successful completion"
+  ],
+  "onlySourceDelta": [
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+  ],
+  "postflightExact": true,
+  "sourceCount": 32,
+  "hostSourceCount": 615,
+  "dependencyCount": 17,
+  "outputCount": 1446,
+  "newBuildPerformed": false,
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "limits": [
+    "Actual extracted closure and complete original Runtime file result only; no native or Windows execution qualification.",
+    "All assertions in the six formerly failing cases now reached and passed; E later assertions remain historically unexecuted.",
+    "Full immutable D output inventory reused; no F build claim or full dependency payload census.",
+    "Incoming76/a02 remain unadopted by this isolated source."
+  ],
+  "reviewerProjectExecutions": 0
+}

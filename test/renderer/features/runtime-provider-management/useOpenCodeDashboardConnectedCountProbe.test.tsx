@@ -161,6 +161,32 @@ describe('cold Dashboard OpenCode count-only probe', () => {
     expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
   });
 
+  it('retries expired or failed evidence after cooldown while the pane remains active', async () => {
+    vi.useFakeTimers();
+    try {
+      loadProviderDirectory.mockRejectedValueOnce(new Error('test-only transient failure'));
+      await render();
+      expect(getRuntimeProviderConnectedCountEvidence(null).checking).not.toBe(true);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(119_999);
+      });
+      expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(11);
+      });
+      expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+      expect(getRuntimeProviderConnectedCountObservation(null)?.connected).toBe(1);
+      expect(loadModels).not.toHaveBeenCalled();
+      await render({ enabled: false });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(240_000);
+      });
+      expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('accepts a genuine complete empty connected summary as zero', async () => {
     loadProviderDirectory.mockResolvedValue(response({ entries: 0 }));
     await render();

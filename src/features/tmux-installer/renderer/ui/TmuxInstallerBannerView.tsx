@@ -353,7 +353,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                   className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
                   style={{
                     borderColor: 'var(--color-border)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                    backgroundColor: 'var(--color-form-control-bg)',
                     color: 'var(--color-text)',
                   }}
                   autoComplete="current-password"

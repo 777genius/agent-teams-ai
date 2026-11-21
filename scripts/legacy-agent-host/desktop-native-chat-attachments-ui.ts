@@ -27,6 +27,7 @@ export async function prepareNativeChatAttachments(
     assertOwnedRenderer(): void;
     step(value: Record<string, unknown>): void;
     openCodeV2?: boolean;
+    finite?: 'collaboration-v1';
   }
 ) {
   const ui = createDesktopUiControls(cdp, options);
@@ -39,7 +40,8 @@ export async function prepareNativeChatAttachments(
     [CHAT_IMAGE_NAME, png],
     ...(!options.openCodeV2 ? [[CHAT_FILE_NAME, text] as const] : []),
   ] as const;
-  const turn = options.openCodeV2 ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+  assert.ok(!options.finite || !options.openCodeV2);
+  const turn = options.finite ? 'TEST_UI_COLLAB_ATTACH' : options.openCodeV2 ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
   for (const [name, bytes] of inputFiles)
     await writeFile(join(directory, name), bytes, { flag: 'wx', mode: 0o600 });
   options.assertOwnedRenderer();
@@ -123,7 +125,9 @@ export async function prepareNativeChatAttachments(
       height: 1,
       source: 'existing Composer pending image before Send',
     },
-    nativeInference: 'Actual SDK/CLI to localhost; vendor authentication not qualified',
+    nativeInference: options.finite ? 'Pinned SDK with finite TEST peer; no vendor executable or inference'
+      : 'Actual SDK/CLI to localhost; vendor authentication not qualified',
+    ...(options.finite ? { execution: 'finite-protocol-peer' } : {}),
   };
   options.evidence.nativeChatAttachments = proof;
   return (messageId: string) => verifyNativeChatAttachmentMessage(cdp, { ...options, messageId });
@@ -139,10 +143,13 @@ export async function verifyNativeChatAttachmentMessage(
     step(value: Record<string, unknown>): void;
     messageId: string;
     openCodeV2?: boolean;
+    finite?: 'collaboration-v1';
+    finiteReadback?: true;
   }
 ) {
   const ui = createDesktopUiControls(cdp, options),
     messageId = options.messageId;
+  assert.ok(!options.finiteReadback || options.finite === 'collaboration-v1');
   const proof = row(options.evidence.nativeChatAttachments);
   const preparedPng = await readFile(
     join(options.root, 'native-chat-attachment-inputs', CHAT_PREPARED_IMAGE_NAME)
@@ -150,7 +157,7 @@ export async function verifyNativeChatAttachmentMessage(
   assertChatImagePixels(preparedPng.toString('base64'));
   assert.equal(row(proof.preparedImage).sha256, sha(preparedPng));
   const text = Buffer.from(CHAT_TEXT),
-    turn = options.openCodeV2 ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+    turn = options.finite ? 'TEST_UI_COLLAB_ATTACH' : options.openCodeV2 ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
   assert.match(messageId, /^[a-f0-9-]{36}$/);
   const descriptor = row(
     JSON.parse(await readFile(join(options.root, 'desktop-descriptor.json'), 'utf8'))
@@ -204,9 +211,18 @@ export async function verifyNativeChatAttachmentMessage(
     return;
   }
   const downloads = join(options.root, 'home/Downloads');
-  await mkdir(downloads, { recursive: true, mode: 0o700 });
+  if (!options.finiteReadback) await mkdir(downloads, { recursive: true, mode: 0o700 });
   assert.equal(await realpath(downloads), downloads);
   const path = join(downloads, CHAT_FILE_NAME);
+  if (options.finiteReadback) {
+    assert.equal(await realpath(path), path); const file = await stat(path);
+    assert.ok(file.isFile() && file.nlink === 1 && file.size === text.length);
+    const downloaded = await readFile(path);
+    assert.deepEqual(downloaded, text);
+    assert.deepEqual(proof.download, { filename: CHAT_FILE_NAME, sha256: sha(downloaded), size: downloaded.length });
+    proof.finiteReadback = { previewRetained: true, downloadedBytesRetained: true, downloadClicks: 0 };
+    return;
+  }
   await assert.rejects(stat(path), { code: 'ENOENT' });
   options.assertOwnedRenderer();
   await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });

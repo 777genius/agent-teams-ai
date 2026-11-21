@@ -1,0 +1,205 @@
+{
+  "kind": "N608_PARTIAL_FRONTEND_SHARDS_1_AND_2",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "partialOnly": true,
+  "completedShards": [
+    1,
+    2
+  ],
+  "unqualifiedShards": [
+    3,
+    4
+  ],
+  "audits": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard1/audit-shard1.json",
+      "bytes": 139425,
+      "gitBlob": "65e10def347242553d432d6a861f159cc02cec14",
+      "sha256": "cffc415d9283596876630d3371805b69db92009d2b8ce4414389dc4a4144df6f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard2/audit-shard2.json",
+      "bytes": 141397,
+      "gitBlob": "78232fb47637741d9ed873023cb95ae2ce402764",
+      "sha256": "3f7143e9ddc64274ece02ceaa22fa4ce83ca3f9b38877d4bd25d82a88457ef84"
+    }
+  ],
+  "actualTotals": {
+    "physicalFiles": 1082,
+    "filesPassed": 1080,
+    "filesWhollySkipped": 2,
+    "assertions": 12976,
+    "passed": 12952,
+    "failed": 0,
+    "skipped": 24
+  },
+  "uniqueFilePaths": 1082,
+  "allPathsDisjoint": true,
+  "perShard": [
+    {
+      "filesTotal": 541,
+      "filesPassed": 541,
+      "filesWhollySkipped": 0,
+      "assertionsTotal": 6228,
+      "assertionsPassed": 6222,
+      "assertionsSkipped": 6,
+      "assertionsFailed": 0
+    },
+    {
+      "filesTotal": 541,
+      "filesPassed": 539,
+      "filesWhollySkipped": 2,
+      "assertionsTotal": 6748,
+      "assertionsPassed": 6730,
+      "assertionsSkipped": 18,
+      "assertionsFailed": 0
+    }
+  ],
+  "allSkippedAssertions": [
+    {
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "fullName": "TEST Node dependency staging without execution accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/ipc/review.test.ts",
+      "fullName": "review IPC path confinement authorizes a saved case-only rename path through its published transaction target",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: ascii",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: spaces",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: unicode",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "fullName": "OpenCodeTaskLogStreamSource real OpenCode fixture e2e reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "status": "skipped"
+    },
+    {
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "fullName": "cross-shell Windows verifier invocation executes the unchanged verifier in PowerShell and cmd",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides rejects a case-only alias of a nonexistent legacy profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "fullName": "review file transaction safe E2E classifies a published equal-content case-only Undo using its owned inode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through a batch launcher that forwards %*",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves safe argv through batch parameter modifiers",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip rejects shell syntax before a batch launcher can reparse positional arguments",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh reads real login and interactive startup exports with exact edge values",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh ignores startup banners and accepts a completed dump before a failing real logout",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh falls back from a failing real login profile to the real interactive rc",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf function",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf alias",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "fullName": "OpenCode nvm-windows runtime resolution safe e2e selects the native OpenCode executable behind an nvm cmd shim",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "fullName": "Team runtime memory safe e2e reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "fullName": "Team runtime memory safe e2e reports RSS for a real Anthropic teammate CLI process",
+      "status": "skipped",
+      "failureMessages": []
+    }
+  ],
+  "limits": [
+    "Partial two-shard arithmetic only; no all-four result.",
+    "24 skipped assertions remain skipped; native/vendor/Desktop/static qualifications are not inferred.",
+    "Both runner Node26.12.1 and separately captured TEST Node24.21.0 remain explicitly distinct."
+  ],
+  "projectExecutionByReviewer": false
+}

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-frontend-shard-success",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "shard": "1/4",
+  "job": {
+    "id": 135261470581,
+    "name": "Offline frontend tests (1/4)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T02:22:59Z",
+    "completed_at": "2026-11-19T02:30:25Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261470581"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261470581,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 02:34:14 UTC",
+    "bytes": 175939,
+    "sha256": "27ed965c7cdd8d55f7843e5e89bc16228bdd92ebaaec7cf3914f763cb0c5bd1e",
+    "computedGitBlobSha": "23b300bab5681d1ff9f7ca13c6ddb0a162c886ba",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470581-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470581-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true
+  },
+  "actualCheckoutLines": [
+    "HEAD is now at 42a4ee2 fix(host): repair parity races and preserve solo launch state"
+  ],
+  "summary": {
+    "testFilesPassed": 552,
+    "testFilesSkipped": 0,
+    "testFilesTotal": 552,
+    "testsPassed": 6362,
+    "testsSkipped": 6,
+    "testsTotal": 6368,
+    "failures": 0,
+    "originalLines": [
+      " Test Files  552 passed (552)",
+      "      Tests  6362 passed | 6 skipped (6368)"
+    ]
+  },
+  "focusedTestsWithinSummary": [
+    " ✓ test/main/services/schedule/SchedulerService.test.ts (41 tests) 140ms",
+    " ✓ src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts (17 tests) 102ms",
+    " ✓ test/renderer/components/team/schedule/SmartScheduleFields.test.tsx (14 tests) 367ms",
+    " ✓ test/main/services/schedule/HostSchedules.safe-e2e.test.ts (4 tests) 15051ms"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14491804532,
+    "bytes": 302070,
+    "sha256": "e3516d8295bb7d98d60397690cc250b5e87a5a0b420745c2c4413d30403754b1",
+    "downloaded": false
+  },
+  "scope": "Entire original safe frontend shard1 passed on42a4. SchedulerService41, TeamProvisioningPersistenceReconcileFacade17, SmartScheduleFields14 and HostSchedules.safe-e2e4 are included within6362, not additional test totals.",
+  "limits": [
+    "This safe frontend test shard does not establish root TypeScript success; the independently observed TS2540 failure remains a separate gate.",
+    "No other frontend shard, actual Solo UI producer, native/GUI/vendor or release gate is implied.",
+    "Artifact metadata comes from original upload; the ZIP was not separately requested.",
+    "Raw original job log captured once and permanently retired."
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "result": "APPROVE_RECOVERABILITY",
+  "role": "root independent complete original native bundle byte verification",
+  "bundles": [
+    {
+      "cohort": "27b",
+      "archive": {
+        "bytes": 181613,
+        "blob": "29839a0783a1b8f40001f2bcf374859693ecacef",
+        "sha256": "7b512f95d6190cfedcbbf580499f4148455ca6bf6cdf20c05d17318c9653cc61"
+      },
+      "payloads": 17,
+      "originalBytes": 762481,
+      "allOriginalPayloadsFullByteMatched": true,
+      "outerMembers": 19,
+      "CRCAndSafePaths": true
+    },
+    {
+      "cohort": "1f924",
+      "archive": {
+        "bytes": 628187,
+        "blob": "eac84d0558575cb6c58f8a9a2e858f2ea5a88764",
+        "sha256": "bc75cc356f898018bd49f2526cb72dbeb60e2d4e2a3f7d627b98461b1da9cb3c"
+      },
+      "payloads": 45,
+      "originalBytes": 2445016,
+      "allOriginalPayloadsFullByteMatched": true,
+      "outerMembers": 47,
+      "CRCAndSafePaths": true
+    }
+  ],
+  "scannedNonZipPayloads": 143,
+  "recursiveMemberVisits": 154,
+  "signedTransportURLsFound": 0,
+  "notAReexecutionOrNewSourceQualification": true,
+  "observedUtc": "2026-11-16T00:06:03.226807+00:00"
+}

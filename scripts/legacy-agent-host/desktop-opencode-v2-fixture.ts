@@ -10,6 +10,7 @@ import { readOpenCodeV2DeliveryMap } from '../../src/features/opencode-runtime-i
 import { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import type { OpenCodeMemberProfile } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
+import { fileDigest } from './desktop-file-digest.ts';
 
 export interface DesktopOpenCodeV2Selection {
   readonly bunPath: string;
@@ -54,13 +55,12 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
   assert.equal(await realpath(selection.engineDirectory), selection.engineDirectory);
   assert.match(selection.bunSha256, /^[a-f0-9]{64}$/);
   assert.equal(
-    createHash('sha256')
-      .update(await readFile(selection.bunPath))
-      .digest('hex'),
+    await fileDigest(selection.bunPath),
     selection.bunSha256
   );
   if (process.platform === 'darwin') {
     assert.ok(selection.processCustody, 'Darwin requires its exact packaged custody artifact');
+    assert.ok(!('kind' in selection.processCustody), 'Darwin requires its native artifact selection');
     const artifact = readPackagedProcessArtifact(selection.processCustody);
     assert.equal(
       createHash('sha256')

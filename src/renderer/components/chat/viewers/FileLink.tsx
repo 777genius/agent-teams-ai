@@ -8,7 +8,7 @@
 
 import React from 'react';
 
-import { useTaskDetailFileLink } from '@features/team-task-detail/renderer';
+import { useTaskDetailFileLink } from '@features/team-task-detail/renderer/shell';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { PROSE_LINK } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';

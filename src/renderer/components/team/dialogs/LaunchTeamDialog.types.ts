@@ -8,6 +8,7 @@ import type {
 } from '@shared/types';
 
 interface LaunchDialogBase {
+  retainedLegacyLaunch?: import('@features/agent-backend/renderer').RetainedLegacyLaunchChoice;
   runtimeRunId?: string | null;
   memberSettingsDraft?: MemberSettingsRelaunchDraft;
   validateMemberSettings?: () => Promise<void>;

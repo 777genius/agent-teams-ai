@@ -1,0 +1,28 @@
+{
+  "tree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+  "leafCount": 9663,
+  "unchanged": 9657,
+  "changes": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+  ],
+  "rootApproved": true,
+  "sourceParents": [
+    "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+    "c28f1aa890c909c7b981254c5e30b874cbc84287"
+  ],
+  "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "outstandingTree": "80391374c3b64ed643e2fd00989cc17cd2711c7c",
+  "latestDeltaPaths": [
+    ".github/workflows/electron-packaged-ci.yml",
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+    "tools/owned-process-broker/nativeFixture.cpp"
+  ],
+  "intersectionWithCurrentStages": [],
+  "scope": "Exact published isolated c28 E\u2013H; latest a02 and parent76 remain unadopted until separately reviewed later reconciliation. Explicit fresh disjoint-drift disposition under published efc72 note; no source/policy/command or current-stage input changes.",
+  "independentApproved": true
+}

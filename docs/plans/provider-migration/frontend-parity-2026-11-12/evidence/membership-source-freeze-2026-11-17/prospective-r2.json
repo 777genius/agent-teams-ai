@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-plan79-prospective-r2",
+  "reviewer": "/root/qualification_audit",
+  "decision": "GO_EXACT_TWO_FILE_PROSPECTIVE_SCOPE",
+  "blockers": [],
+  "parent": "32aa94501c41eac930a26e780c40b6dbb436c1e6",
+  "parentTree": "442adf28fac51a129c4a4193351ec3621596f6c9",
+  "primaryObservedByHeldPacket": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "base": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "readScope": {
+    "planFullRead": {
+      "bytes": 4996,
+      "physicalLines": 22,
+      "gitBlob": "5d050f11cdc99e981c993ee7c992605a9abd660d",
+      "sha256": "9402896b70a74f3c855daf7235c962c9a7097b7738d5ff52cdf3e18fab89ee23"
+    },
+    "rootR1FullRead": {
+      "bytes": 20911,
+      "physicalLines": 442,
+      "gitBlob": "3694a42e15ba8b78c87c49d78d4ff8ab60e6fb5a",
+      "sha256": "3232ed80c12f26ba40d14733fc4c84d6e80ad896d179c19411a50c7c3f80bcf8"
+    },
+    "originalR1Correction": "The only change after initial full read was Cross receipt physicalLines96070→96071. Exact original bytes contain96070 LF and no terminal LF. Reverse substitution independently reconstructs the previous R1 SHA24f41126b37c3f0b549d01389139f27a49ec8bd2503902963615059964848398.",
+    "sourceReading": [
+      "Membership order, actual conditional renderer subtree, draft flag/value preservation, save-only request branch, original helper and source-slice test were independently read for the closed first-failure diagnosis; current parent joins rechecked here.",
+      "The complete362-line supplementary roster and complete135-line group-page helper were read. Main roster imports/Set union, all literal-array contents, direct board import/call sites and eleven post-flow hash paths were inspected.",
+      "Full dynamic source capture/verification owner68lines and source-size eligibility/default/cap logic were read.",
+      "Current fast command and relevant gate context were read from the official Plan78 workflow body.",
+      "Cross independent R2, original vectors/post-flow rows and three group snapshots were checked for this provenance question. No duplicate full Cross UI/18PNG qualification is claimed by this prospective review.",
+      "Renderer Board/Card full bytes were rehashed to current leaves and original post-flow hashes; their product behavior is unchanged and is not re-reviewed as a new source edit."
+    ]
+  },
+  "independentData": {
+    "path": "independent-prospective-data-proof.json",
+    "bytes": 35040,
+    "physicalLines": 705,
+    "gitBlob": "5a1f1b576ecf3862fecc20c44a6f4cd2e5f19214",
+    "sha256": "fb7adae8aca78a8591b1b9ece0501514ac278a75518e8c0a723cc825e03a0f10",
+    "checks": 6170,
+    "meaning": "Inert bytes/Merkle/literal-array/JSON checks only. These are not compiler, lint, unit-test, GUI or native results.",
+    "currentTree": {
+      "leaves": 11226,
+      "directoriesIncludingRoot": 1729,
+      "allDirectoryHashesVerified": true,
+      "truncated": false
+    },
+    "completeReferences": "All18 R1 source references plus three existing imported array bodies independently hash-joined to current parent. Both writable preimages and all14 protected leaves joined exactly.",
+    "documentaryPaths": "All three selected Plan79 documentary paths are absent from the current complete tree."
+  },
+  "membershipSelection": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "preimage": {
+      "bytes": 47601,
+      "physicalLines": 585,
+      "gitBlob": "6fd01f62356f098647cb454440790d7664ddaa3e",
+      "sha256": "5b2feb8629d03c92a5c004f8cb5923715e34060342c74f44418ed2897e193bf3"
+    },
+    "scope": "Relocate the one existing checked(false) statement from immediately after the Create scope declaration to immediately after empty-prompt replacement, before JSON/Bob. No extra toggle, read API, submit, selector, assertion, model or effort edit.",
+    "originalCause": {
+      "jobId": 133788425693,
+      "runId": 44008164473,
+      "originalHead": "5c55a4a2008f4a6131d265344d384b39415ad055",
+      "firstError": "UI read timed out: original optional launch settings; no mutation retry",
+      "sourceBoundary": "Membership274; controls204",
+      "evidence": "Original24 UI records turn launch off, select finite TEST Claude Sonnet and Medium, then stop before optional settings. Failure PNG0948e6aae0f9e49195bc88bcc934f1dcd7e62eb5e2dd082579f156380ecf4bef shows unchecked Run command after create and no Optional launch settings.",
+      "renderer": "CreateTeamDialog eff07b53… mounts the required subtree only under launchTeam. The subsequent header wait cannot become ready while the existing false flag remains.",
+      "diagnosisSha256": "f0df0d981f9902486bdcf15470c9f7332262209fe1c46dd6ac0a96d7a1763ff4",
+      "separation": "Preceding Settings root PASS and verifier success remain separate from membership INCOMPLETE and whole job FAILURE."
+    },
+    "statePreservation": [
+      "The actual draft setter changes only launchTeam ref/state and schedules its existing snapshot; it does not reset selected model, effort or permissions.",
+      "Prompt is the existing separate persisted draft. The request derives prompt/model/effort/skipPermissions independently of launchTeam.",
+      "False submit takes the existing createConfig branch and forwards those settings.",
+      "The moved verified false state is established before Bob is inserted and before the existing one Create submit."
+    ],
+    "preflightLimit": "Existing Claude preflight may run while the original flag remains true during configuration. The move does not prove zero probes and does not authorize enlarging probe counts. Bob is still inserted after false. Original no business input, zero OpenCode probes and no runtime capture/delivery before explicit Launch remain mandatory.",
+    "preservedActualOracles": [
+      "Selected finite and genuine model alternatives, Medium, empty prompt, permissions and all saved-value assertions",
+      "No Runtime captures, no member delivery and zero OpenCode probes at the original saved/pre-Launch boundaries",
+      "Original one explicit Launch, initial owned ready sessions with inputs[], and finite Claude1..9/Codex1..8 probe bounds",
+      "Original pin/currentness/physical identity, Add/Remove/Restore/Stop/cold/no-replay and cleanup assertions",
+      "All30s/90s budgets, no-mutation-retry behavior and unique/visible/hittable/enabled target checks"
+    ],
+    "mechanicalProof": "Both selected substitutions occur once. Reversing them reproduces the entire preimage. Removing the single existing uncheck statement from each in-memory text makes all remaining bytes identical;585physical lines stay585.",
+    "tests": "Current originalLiveMembershipPoll source slice is before workspace setup and is byte-identical after the proposed move. The current suite has no ordering assertion for launch-team/Optional launch settings. No existing assertion is invalidated and no new test is selected.",
+    "remainingQualification": "Prospective GO fixes the demonstrated mounted-control order only. Resulting-head original P11 must still prove its complete journey and cleanup; capturedHostAbsent:null in the original failure is not retroactively converted to an absence witness."
+  },
+  "sourceFreezeSelection": {
+    "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "preimage": {
+      "bytes": 23535,
+      "physicalLines": 362,
+      "gitBlob": "d6e3dbe4b6c5f6def5aeba21671456291ce1396b",
+      "sha256": "f316db6661d7ca4a20b959c8d85ab5b85e1c089d3f61f7ec0d8d1eceb7e5a301"
+    },
+    "insertionAnchor": "Immediately after existing scripts/legacy-agent-host/desktop-owner-routing-product-census.ts in desktopProofSupplementarySources.",
+    "additions": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-group-page-read.ts",
+        "gitBlob": "ff04e1a1626e79fc31b5bbf70f50fc763185f52b",
+        "bytes": 5443,
+        "originalCoverage": "Absent both before/after vector and all11 board post-flow rows. Direct board import and three retained owner-page snapshots establish its concrete use."
+      },
+      {
+        "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
+        "gitBlob": "15578dd958bf33460c9e166be4b1a0fdb04f4f09",
+        "bytes": 30276,
+        "originalCoverage": "Only original post-flow hash2a0ba036f8e61c2009c48883cc2184c44e4233c00dbdd496ed7cbde2a627dec0; absent explicit before/after vector."
+      },
+      {
+        "path": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+        "gitBlob": "93c2ad26cfe85d2b9c02bf380e1e9a2cd47d1636",
+        "bytes": 34033,
+        "originalCoverage": "Only original post-flow hash05450de37d0ce062c02a797076a6202f76bcafdd23d2db4b16deb20561694ea2; absent explicit before/after vector."
+      }
+    ],
+    "originalEvidence": {
+      "jobId": 133788425709,
+      "runId": 44008164473,
+      "receiptSha256": "b7b33633fa3742062604c407932b0170ecc8561a866aa7756e8e8d190df63598",
+      "independentCrossR2Sha256": "5de2ca56ecebc1b7c0227a81758cd4a555c0c2dc608c83e98276fcc83e2effb1",
+      "orderedEqualBeforeAfterRows": 1815,
+      "boardPostFlowRows": 11,
+      "postFlowRowsAlreadyFrozen": 9,
+      "actualGroupSnapshots": "beforeCreate/afterCreate/afterReload each3pages, exact phase/revision/feed/task ID sets and originalOwnerPagesComplete:true",
+      "compiledLimit": "Retained original compiled paths are main/preload. They do not prove a before/after freeze of the two renderer source files.",
+      "historicalDecision": "Original successful UI assertions remain accepted in their actual scope. This is a concrete provenance omission, not proof of a source mutation or reason to reverse those UI results."
+    },
+    "consumerSemantics": [
+      "Main a8be2617… remains800lines and imports/spreads the same common array into its original Set union.",
+      "A closed literal-only parse of all existing base/common/process/integrated/management/native-prompt arrays independently reconstructs the exact original1815 ordered paths.",
+      "Exactly the three new literal entries produce1818 unique paths; deleting those three restores the full original order.",
+      "Process and WindowsRetry arrays, native-prompt spread and all previous literal rows remain exact.",
+      "Existing capture hashes each supplied path before the app; existing verifier compares dynamically captured after-flow rows to that before vector, marking original evidence incomplete on failure.",
+      "All three files already exist in the actual parent. Their bodies, renderer behavior, provider APIs and test read semantics are unchanged."
+    ],
+    "counts": {
+      "supplementaryPhysicalLines": [
+        362,
+        365
+      ],
+      "supplementaryLiteralRows": [
+        271,
+        274
+      ],
+      "flattenedRowsBeforeSet": [
+        1995,
+        1998
+      ],
+      "uniqueCommonPaths": [
+        1815,
+        1818
+      ],
+      "mainPhysicalLines": 800
+    },
+    "qualificationLimit": "The prospective new freeze applies only to a future original run. The historical1815 vector is not edited, inferred complete or replaced by current file availability/post-flow hashes."
+  },
+  "validationAndPreservation": {
+    "workflowGitBlob": "5556d12fc6ef0564c70d590e4ee9e9af2d860d69",
+    "fastOperands": 141,
+    "bothChangedPathsAlreadyCovered": true,
+    "newFastOperands": 0,
+    "workflowChanges": 0,
+    "sourceCap": "Existing default800 applies with no selected-file legacy exception.585and365fit; main800 and the baseline remain unchanged.",
+    "protected": "All14 protected leaves match current Plan78 tree, including closed Plan77/78 source corrections, both workflows, lockfile, size policy, main roster and the three newly pinned bodies.",
+    "additionalTests": 0,
+    "budgetsAndOraclesChanged": false,
+    "genericFrameworkOrNewDependency": false,
+    "publicApiOrProductBehaviorChanged": false
+  },
+  "documentaryAndPublicationGate": [
+    "This GO authorizes only the exact prospective two-file selection; no source afterimages have been created or executed by this review.",
+    "Publish the three absent documentary paths with exact final R1 and this R2; close independent actual-document verification and root full read before source authoring.",
+    "Then independently review the full exact source patch and actual publication against the then-current parent, preserving intervening approved leaves.",
+    "Primary Draft PR1192 may advance only after all coherent source gates close and a fresh complete useful-job/ref guard.",
+    "No manual dispatch/rerun/cancel, CI-only commit, default activation, release/main merge or Stage2 is selected."
+  ],
+  "reviewActivity": {
+    "sourceAfterimagesWritten": 0,
+    "GitOrApiMutations": 0,
+    "ActionsQueries": 0,
+    "ArtifactDownloads": 0,
+    "ProjectImportsOrVM": 0,
+    "TestsCompilerLintBuild": 0,
+    "NativeProviderOrGUIExecution": 0,
+    "CIObserverState": "PAUSED",
+    "note": "Python was used only for full byte hashes, JSON/tree verification and closed literal/text calculations. Prospective full source texts were not saved as afterimages."
+  },
+  "finalLimits": [
+    "No resulting-head CI/GUI/native success is inferred from this source feasibility review.",
+    "Membership original failure and cleanup scope, separate Settings result, Cross historical provenance gaps, strict P09 HOLD, unselected Plan40 A/B and missing historical P10 originals remain explicit.",
+    "No blocked tests, original acceptance criterion or authority boundary was removed."
+  ]
+}

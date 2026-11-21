@@ -1,0 +1,29 @@
+{
+  "kind": "Frozen provider9423 evidence bundle byte inventory; no project execution",
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/provider-9423-publication/provider-9423-original-evidence.zip",
+    "members": 112,
+    "bytes": 535395,
+    "blob": "d3f67b210db6dd303bc293b83d07c9b741933267",
+    "sha256": "4d656ceea8c1df4ad47483e83d323494c7b2e25acb2d59efd8a1171009df89d2"
+  },
+  "inventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/provider-9423-publication/inventory.json",
+    "bytes": 85277,
+    "blob": "03016302374b01c66d1fd0f0f608f4e0148086b7",
+    "sha256": "e5beb9e4f25eb7fbc50e987aafbb876b644f802be15538e2f3daebcf166b5aee"
+  },
+  "readme": {
+    "path": "/workspace/scratch/82d3f9ba6b85/provider-9423-publication/README.md",
+    "bytes": 3716,
+    "blob": "6800fdfabb0856142046a7e2f0606fc148232a70",
+    "sha256": "e8fa145609f89561e84f25a742a05bc85a322712c1ccf88152cd5c5f095ad4db"
+  },
+  "originalFiles": 110,
+  "originalFileBytes": 1732460,
+  "exactRecoverableOmissions": 56,
+  "allOuterBytesSafePathsAndCrcVerified": true,
+  "allOriginal46CheckedPayloadsReverified": true,
+  "allOriginal53NativeArchivesAndMembersReverified": true,
+  "qualification": "Separate original source/packed results and controlled receipt classification only; no product/native promotion."
+}

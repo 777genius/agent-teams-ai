@@ -78,6 +78,24 @@ describe('localePolicy', () => {
     expect(resolveAppLocale({ preference: 'system', systemLocale: 'ro-RO' })).toBe('ro');
   });
 
+  it('resolves Traditional Chinese system locales to zh-TW', () => {
+    expect(normalizeAppLocalePreference('zh-TW')).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'zh-TW', systemLocale: 'en-US' })).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-TW' })).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh_tw' })).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-HK' })).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-MO' })).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-Hant' })).toBe('zh-TW');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-Hant-TW' })).toBe('zh-TW');
+  });
+
+  it('keeps Simplified Chinese system locales on zh', () => {
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh' })).toBe('zh');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-SG' })).toBe('zh');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-Hans' })).toBe('zh');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'zh-Hans-HK' })).toBe('zh');
+  });
+
   it('falls back when the system locale is not supported yet', () => {
     expect(resolveAppLocale({ preference: 'system', systemLocale: 'sv-SE' })).toBe('en');
   });

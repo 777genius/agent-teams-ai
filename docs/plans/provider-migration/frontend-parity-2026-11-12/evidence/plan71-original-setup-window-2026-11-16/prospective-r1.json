@@ -1,0 +1,100 @@
+{
+  "kind": "ROOT_PLAN71_PROSPECTIVE_R1",
+  "verdict": "GO_EXACT_ORIGINAL_SHARED_OBSERVATION_WINDOW_SELECTION_ONLY",
+  "baseCommit": "12d01df13271def88d7a1dd86da6ec70ca243902",
+  "baseTree": "8d778f4f6f4b0aa4043ae3348b91208e701be452",
+  "plan": {
+    "bytes": 9374,
+    "physicalLines": 51,
+    "gitBlob": "f71a56bccb29bfa198309209eb16c895b88b671f",
+    "sha256": "054d2af3bb3e84329e461c2bb1dc327965408a8125d3c34a9561b00a1222c356"
+  },
+  "preimageBindings": {
+    "bytes": 1356,
+    "physicalLines": 39,
+    "gitBlob": "fa54ff2b9b08853d17086cf05f05efc74122818d",
+    "sha256": "780919d01d73ee3feb6bf12885a817e9bb08331eedfaafd091f4f99a213e0bc9"
+  },
+  "selectedFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "mode": "100644",
+      "bytes": 30369,
+      "physicalLines": 563,
+      "gitBlob": "a1a2b6d5a55b1e6ae777220034d92e178e734150",
+      "sha256": "02338ed06fddbb38eb60aee237c2bba6968ac988de655fb016f921d00a067ad7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 167406,
+      "physicalLines": 2777,
+      "gitBlob": "fb5a5cff107473b047a67f7b69f5d59a3b102bee",
+      "sha256": "0e820d5520b58e19e8fe2576371774c91ea12311fbf57c3b195579e6cbbda8be"
+    }
+  ],
+  "sourceReferences": [
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "physicalLines": 119,
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "physicalLines": 787,
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+    }
+  ],
+  "actualSource70R2": {
+    "bytes": 14466,
+    "physicalLines": 253,
+    "gitBlob": "52ea26f5c24bbdc2fc3dbfc64531e47674b7937c",
+    "sha256": "8fac0426888d95a5e6538708a13b8e144ad2aa5d2a95c5512ec488bcd910f29a"
+  },
+  "selectedChange": "Move single existing OpenCode180s observation cutoff before original global metadata and retain it through selected setup acceptance; preserve ordinary30s read cap and nonOpenCode45s post-start behavior. Narrow existing helper optional timeout callback; no new product API/reader/cleanup or timeout policy.",
+  "rootReasoning": {
+    "concreteSourceGap": "Original global/project evaluate omit override; original CDP default30s precedes existing later180s setup observation. No exposed end-to-end Host remaining exists; reuse single TEST window earlier rather than invent a product remaining value.",
+    "errorAndOrdering": "Pre-dispatch check after original guard; late successful results rejected; awaited original Error preserved; same original request order/count/payload; no reset or repeated input/start.",
+    "preparation": "Before-arm failure causes no arm/disarm; after arm all throws within original start try/finally; disarm1 before polling. Global/project metadata stays outside armed period.",
+    "acceptance": "Both ready/opening, existing exact predicates and native lineage observations preserved; late native observation/finaldigest cannot publish accepted nativeSetup. Read-only observation/physicalcleanup may finish late: no hard cancellation claim.",
+    "defaults": "Ordinary OpenCode reads use min30s/remaining; legacy/default overrides remain undefined; other global helper callers omit callback.",
+    "tests": "Actual prepare/global function bodies and local helpers through existing source-slice/stripTypeScriptTypes/injected clock+CDP seam. Append only, preserve full old test bytes. No new test file/framework or real provider."
+  },
+  "requiredCaseFamilies": [
+    "Single shrinking180s across global>30s, initialread, project, start, readyprogress; ordinaryread30s cap.",
+    "Exact and late cutoff global/project/start/read/progress plus readonly metadata/native/digest acceptance; no following request/evidence.",
+    "Pending-opening commoncutoff and original session predicates.",
+    "Guard consumesremaining and100ms tick crossescutoff: no next dispatch/read.",
+    "Rejected await retains identicalError evenafterexpiry; no retry.",
+    "Arm0/disarm0 beforearm; disarm1 afterarm on success/failure beforepoll.",
+    "NonOpenCode45s poststart/default overrides and defaultglobalcallers unchanged."
+  ],
+  "validation": {
+    "sourceVector": 1783,
+    "fastLint": 136,
+    "workflow": "bd50fd9636f7b63bf8501bca0c6c5a296e2e21bb",
+    "roster": "eb917dd3cf76a917430b3a0cb3b20ea387307f99",
+    "noWorkflowRosterChange": true,
+    "productionBeforeLines": 563,
+    "productionAfterMustStayBelow": 800
+  },
+  "historical75Evidence": {
+    "job": 133621515713,
+    "rawSHA256": "1d0f42d99db006a88d0508b54e50b940b00d53c40221a997238bdd4674277338",
+    "receiptSHA256": "3e84f6d80be56ea4ae3ed42f65ae1ba621a222519cb391415bff89b77de58484",
+    "boundedSourceBudgetReviewSHA256": "048100e17d54b656728519d1b299ea2d9a653d304d142577b7deae866105a8ec",
+    "rootRead": "All read in full before environment reset. These SHA references do not assert their old tmp bodies currently exist. Source mismatch/selected contract independently reviewable from exact current sources.",
+    "limit": "Original error retained no expression/caller; no native causal attribution or execution PASS."
+  },
+  "repositoryPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/71-original-setup-observation-window-2026-11-16.md",
+  "repositoryEvidenceRoot": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan71-original-setup-window-2026-11-16",
+  "bothDestinationsAbsent": true,
+  "sourceAfterimages": 0,
+  "blockers": [],
+  "next": "Independent prospectiveR2 before documentary publication; then full actualdocR2 before source. Primary75 deliberately held for known71\u201373; freshsoleCIguard before eventualFF.",
+  "runtimeQualified": false
+}

@@ -1,0 +1,287 @@
+{
+  "kind": "independent-plan80-prospective-r2",
+  "reviewer": "/root/qualification_audit",
+  "reviewedAt": "2026-11-17T05:25:08.428747+00:00",
+  "decision": "GO",
+  "blockers": [],
+  "scope": "Exactly the frozen six-path prospective source selection and its three-document publication plan, on the closed actual Plan79 parent. No source afterimages are authorized by this review before the actual-document gate.",
+  "parent": "fd60d11dc686467f16c2a4713731de188301497c",
+  "parentTree": "b68e87c071804ce837bb099e17bc3da5b1d958ce",
+  "primary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "plan": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan80/plan.md",
+    "bytes": 4629,
+    "physicalLines": 22,
+    "gitBlob": "aafd3cb7613f0c485ccf980a338509b7ab18007c",
+    "sha256": "981963c50aae52d031ffdbe24e5b81a9ed368f40435ea80ba6ebfb6b9184dafe"
+  },
+  "prospectiveR1": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan80/prospective-r1.json",
+    "bytes": 24334,
+    "physicalLines": 501,
+    "gitBlob": "4b39d81c1c0be0bf01d2c22b09670ebc9a9caad4",
+    "sha256": "e11b7c30a4699f165c9ccbf667066fb83dc0ee6dc69cb51a6ae0efb9eb121c6d"
+  },
+  "independentData": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan80/independent-prospective-data-proof.json",
+    "bytes": 34527,
+    "physicalLines": 733,
+    "gitBlob": "c961bd718a4dd7715c49f72bf8ae7630e59ed72a",
+    "sha256": "637de0cecfcd2335581ee86f86eb270044dcf8492de756606892a290c9590ae7"
+  },
+  "closedParentActualR2": {
+    "sha256": "98baaefbd63b742e2b9b845d4ed4994fc7f9987397873c602d6758c7b4992a1c",
+    "rootFullReadLines": 156,
+    "dataSha256": "23f4cb059cf47d23117653c476bf3f767a4103354d13818384a6aa9283b185b3",
+    "rootFullDataReadLines": 377
+  },
+  "reviewReads": {
+    "full": [
+      "Plan80 plan22L and frozen prospective R1501L, including all literal replacements and proposed7-line helper.",
+      "ProcessesSection236L; CollapsibleTeamSection241L; Badge37L.",
+      "Existing legacy Section78L and canonical Section101L tests; existing process UI356L helper tests.",
+      "Existing desktop-native-process-ui426L and native-process-readback body.",
+      "Original Processes145L independent report and133L badge finding."
+    ],
+    "bounded": [
+      "TeamDetailView imports and complete Processes block3287–3313; full3749-line bytes independently hash-joined, without claiming unrelated component review.",
+      "Current HostEmulated fast block and original Processes verifier1533–1564; full workflow bytes hash-joined and all text outside the selected fast block proved unchanged.",
+      "Retained qualify-linux-process-cold-ui153–207 and TeamProcess type declaration; full files hash-joined to current parent.",
+      "Existing cap policy entry and physical-line/legacy-cap rules; original916-line data report identity checked, with original receipt fields independently parsed."
+    ],
+    "originalPngsViewed": 2,
+    "inertChecks": 6316,
+    "projectOrSourceCodeExecution": 0
+  },
+  "concreteOriginalDefect": {
+    "head": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "runId": 44008164473,
+    "jobId": 133788425715,
+    "originalReceipt": {
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/qualification-5c55a4a/jobs/133788425715/extracted/TEST-desktop-backend-hIJ4rA/desktop-backend-receipt.json",
+      "bytes": 754537,
+      "physicalLines": 18106,
+      "gitBlob": "8ef664808bba1b966df6102f36196d6813e520d7",
+      "sha256": "8c9618e889dea98d8e1c4bd518beec6ad2b907041abda730e473b33d2285ae07"
+    },
+    "observed": "Original cold owner props contain isTeamAlive=false with an opaque canonical processRef and observation=same-live. The original row is green and exposes Kill while the same visible CLI Processes header displays0. After the original Stop, the same row is stopped/gray with no Kill and header0.",
+    "sourceCause": "TeamDetailView gates badge/pulse on data.isAlive and legacy stoppedAt, while the same rendered row already uses canonical observation independently of team liveness. Both exact source blobs remain current at fd60d11.",
+    "scope": "This display defect is separate from the already independently proven original controlled Stop and cleanup. No historical header-regression PASS is inferred."
+  },
+  "sixPathReview": [
+    {
+      "path": "src/renderer/components/team/teamProcessLiveness.ts",
+      "finding": "Seven-line pure colocated function extracts the exact original ternary. The only import is type-only TeamProcess; no runtime hook, state, dependency cycle or new policy owner is introduced. Truthy processRef depends only on same-live; absent/falsy processRef preserves strict true team liveness and no stoppedAt."
+    },
+    {
+      "path": "src/renderer/components/team/ProcessesSection.tsx",
+      "finding": "All three old calls, two sort operands and the mapped row, pass the same current isTeamAlive argument. The old local predicate is removed. Current canStop/pendingStop/original-ref dispatch, Unknown label, all memo comparisons and every other byte remain preserved by inverse selection."
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailView.tsx",
+      "finding": "Both badge filter and pulse some call the same helper with the same data.isAlive. Their canonical/legacy interpretation now matches the child. Canonical liveness is not derived from termination permission or pending status. One import yields3750 lines, exactly the unchanged inherited cap, with no packing or baseline change."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "finding": "The same existing rendered-row expression adds two nullable data fields. firstElementChild selects the current section header div, not its overlay button or row body; the scoped span.font-normal.leading-none selects the actual Badge, and span.animate-ping stays header-only. Existing Processes has no secondary badge, so exactly one match is expected. The before1/true and after0/false assertions are controlled-only and use the already completed observations; original action/wait/deadline/Stop/cleanup routes remain unchanged."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "finding": "Exactly helper, CollapsibleTeamSection and Badge are added to the common source roster. These are the actual shared predicate and DOM owners needed by the new original header observations. Every old entry/order and Process/WindowsRetry array is preserved."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "finding": "Exactly four currently missing TS operands are appended: helper, Section, TeamDetailView and native UI runner. Supplementary was already present. All141 old operands and surrounding workflow commands/jobs remain byte-preserved."
+    }
+  ],
+  "sharedNativeReadbackBoundary": {
+    "nullableFactsOnly": true,
+    "unchangedOriginalNullReturnCount": 3,
+    "newEarlyReturnsOrVisibilityGates": 0,
+    "beforeAssertions": "Only inside if(controlled), after the existing before screenshot and before the separate source/readback branch.",
+    "afterAssertions": "Only inside the pre-existing controlled block after the original stopped-row read; original controlled.assertStopped remains required.",
+    "consumerInspection": "The retained readback owner compares original registration/session/command records, not exact rendered-row key sets. The current workflow verifier and retained packaged/cold wrapper read selected killCount/stoppedStyle/stoppedIndicator fields and do not reject added row fields. No applicable exact-key validator was found in these bounded callers.",
+    "scopeLimit": "No whole-repository compatibility claim and no native/readback execution or qualification. Those routes gain no new header admission condition."
+  },
+  "validationAndTests": {
+    "existingLegacyTest": "The existing78-line suite asserts false-team no Kill/ping and true-team Kill/ping; it remains unchanged.",
+    "existingCanonicalTest": "The existing101-line suite uses canonical same-live with false team flag and checks original opaque ref plus pending original-command lookup. It does not assert the parent header; that regression is intentionally covered by the actual controlled UI assertions.",
+    "existingUiHelperTests": "All356 lines remain unchanged; actual exported owner-expression/public packed read and independent diagnostics tests are unaffected. No new unit test merely mirrors the predicate.",
+    "meaningfulRegression": "Four actual header assertions in the two original controlled observations cover the concrete before/after display mismatch while retaining real canonical Stop evidence.",
+    "resultingHeadRequired": [
+      "Full original frontend tests",
+      "Original workspace types and fast/typed lint",
+      "Unchanged source-cap policy",
+      "Original selected source/native/packaged/GUI gates"
+    ],
+    "localRuns": 0
+  },
+  "closure": {
+    "completeParentLeaves": 11229,
+    "completeParentDirectories": 1730,
+    "allParentDirectoryHashesVerified": true,
+    "sourcePaths": 6,
+    "existingPreimages": 5,
+    "newHelperPaths": 1,
+    "selectedOccurrencesAndInversesExact": true,
+    "frozenR1ReferencesJoined": 11,
+    "additionalBoundedReadOnlyReferencesJoined": 3,
+    "protectedCurrentLeaves": 22,
+    "newSourceAfterimageFiles": 0,
+    "newDocumentPathsAbsent": 3,
+    "roster": {
+      "mainLines": 800,
+      "commonLines": [
+        365,
+        368
+      ],
+      "commonDirectLiterals": [
+        274,
+        277
+      ],
+      "commonExpanded": [
+        296,
+        299
+      ],
+      "baseUnique": [
+        1818,
+        1821
+      ],
+      "flatEntries": [
+        1998,
+        2001
+      ],
+      "exactAdditions": [
+        "src/renderer/components/team/teamProcessLiveness.ts",
+        "src/renderer/components/team/CollapsibleTeamSection.tsx",
+        "src/renderer/components/ui/badge.tsx"
+      ],
+      "oldOrderedSha256FinalLF": "f1831959850fe1476b583cf8ce3aee11152c39ad06daa1e7f40868f325825b29",
+      "selectedOrderedSha256FinalLF": "a740c2ff274ce80adbbc1f65cc4c3c9f9b8f9a406f9103b8323e91ac37764ab1",
+      "oldOrderPreserved": true,
+      "ProcessAndWindowsRetryUnchanged": true
+    },
+    "fastLint": {
+      "oldCount": 141,
+      "selectedCount": 145,
+      "oldOrderedSha256FinalLF": "41a31eabc24245b3cf54203d61e3d04034ffbb774044f84fa0c979c6b309108c",
+      "selectedOrderedSha256FinalLF": "104fa34d5e6d1ed983f719128f679d6951c0b534796b9711b3e869bd6799c330",
+      "exactAdditions": [
+        "src/renderer/components/team/teamProcessLiveness.ts",
+        "src/renderer/components/team/ProcessesSection.tsx",
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "scripts/legacy-agent-host/desktop-native-process-ui.ts"
+      ],
+      "allOldOrderAndSurroundingCommandsPreserved": true,
+      "supplementaryAlreadyCovered": true
+    },
+    "caps": {
+      "newHelper": 7,
+      "Section": [
+        236,
+        235
+      ],
+      "TeamDetailView": [
+        3749,
+        3750
+      ],
+      "TeamDetailFrozenCap": 3750,
+      "nativeUi": [
+        426,
+        436
+      ],
+      "supplementary": [
+        365,
+        368
+      ],
+      "workflow": [
+        1776,
+        1780
+      ],
+      "baselineUnchanged": true
+    }
+  },
+  "prospectivePredictions": [
+    {
+      "path": "src/renderer/components/team/teamProcessLiveness.ts",
+      "inMemorySelectedTextIdentity": {
+        "bytes": 252,
+        "physicalLines": 7,
+        "gitBlob": "7d7621cfcd2ccceaf34689381f92be4461dc24c5",
+        "sha256": "d4359c914c4257be09c9b1cca3561504a849becfa5dfe1d92a747157801a0885"
+      }
+    },
+    {
+      "path": "src/renderer/components/team/ProcessesSection.tsx",
+      "inMemorySelectedTextIdentity": {
+        "bytes": 9390,
+        "physicalLines": 235,
+        "gitBlob": "182890668d39bc690fbf9d847f70d39187c558af",
+        "sha256": "60a6569fbfc3418595610cf52d804c0c2288cb08cdfb0300c3a3264e694101c2"
+      }
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailView.tsx",
+      "inMemorySelectedTextIdentity": {
+        "bytes": 137799,
+        "physicalLines": 3750,
+        "gitBlob": "a956d82eb02481db22a5d923d111c75cf5399755",
+        "sha256": "e16f8a07f5822985c068757b02998d475c3207670a81fec3420a9b01061e7aff"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "inMemorySelectedTextIdentity": {
+        "bytes": 23389,
+        "physicalLines": 436,
+        "gitBlob": "b4588e5fcacace69026aa852b8d813410a807219",
+        "sha256": "5fd156afb3417048876f266f11cf53bb6c9ffa5544fbd0f867e049e1d4cda7e6"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "inMemorySelectedTextIdentity": {
+        "bytes": 23881,
+        "physicalLines": 368,
+        "gitBlob": "5a05f7a8bee998c40275b5ff428ffedee2cb9a2a",
+        "sha256": "bde22fc9df1aa0ffa99e19d5c123edfb1677eff33dae60edf88b1c592a572cab"
+      }
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "inMemorySelectedTextIdentity": {
+        "bytes": 142701,
+        "physicalLines": 1780,
+        "gitBlob": "706f83a6052a4879dfe587c330f093cb188c2e59",
+        "sha256": "25d5165494cfffccc8373a9ae35c1922b3602d613734eee1ffd29a48eeaa09c5"
+      }
+    }
+  ],
+  "publicationGates": [
+    "prospective R1/R2 and root full closure",
+    "three-document ordinary CAS and actual-document independent/root closure before source afterimages",
+    "six-file source candidate independent/root closure",
+    "ordinary source CAS, actual-source independent/root closure",
+    "fresh complete useful-job/ref guard before ordinary primary FF",
+    "resulting-head original automatic CI qualification"
+  ],
+  "limitations": [
+    "This is prospective R2 only. Actual documents must first be independently read back and closed, then the exact six source afterimages independently reviewed.",
+    "Current source identity and original images establish a concrete repair target; neither predicts runtime latency or proves resulting-head PASS.",
+    "The historical1815 source vector and old badge-finding counts are retained as history. Current-parent expansion independently uses1818→1821.",
+    "No process permissions, native signaling authority, Runtime/Team custody, provider behavior, action count, request deadline or public ABI is changed.",
+    "Plan40, historical P10 holds and unrelated Resume/Quit failures remain outside this cut."
+  ],
+  "activity": {
+    "sourceAfterimageFilesWritten": 0,
+    "GitOrAPIWrites": 0,
+    "ActionsCalls": 0,
+    "APIReads": 0,
+    "projectTestsCompilerLintVM": 0,
+    "nativeProviderGUIExecution": 0,
+    "inertDataChecksOnly": true,
+    "originalPNGViews": 2
+  },
+  "observerState": "PAUSED pending explicit parent instruction."
+}

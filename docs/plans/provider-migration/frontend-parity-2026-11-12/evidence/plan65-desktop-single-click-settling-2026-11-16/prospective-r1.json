@@ -1,0 +1,67 @@
+{
+  "kind": "ROOT_PROSPECTIVE_PLAN65_R1",
+  "baseCommit": "5a49d66c4ab90e18906f5121deb898a72a154c0b",
+  "baseTree": "a6e8d6393dc8c4b3f9ed6f5af90b1c0999bd925a",
+  "priorActualSourceR2": "10082B SHA704332bc3a14f2f1bd3e5121dc9b9775e6f8fb5cdb52c0628a9b41938a0ab96f FULLROOTREAD",
+  "plan": {
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/65-desktop-single-click-settling-2026-11-16.md",
+    "bytes": 9087,
+    "physicalLines": 48,
+    "gitBlob": "2a7225baa3a2e91d86fed40551c528565ee1441e",
+    "sha256": "43aeb137ca02690b5281983c303dd0cc37df3dd8c3cfe66c60e28a09b1803394"
+  },
+  "bindings": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/before/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "writable": true,
+      "bytes": 30733,
+      "physicalLines": 548,
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/before/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "writable": true,
+      "bytes": 162195,
+      "physicalLines": 2689,
+      "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+      "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/reference/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "writable": false,
+      "bytes": 36207,
+      "physicalLines": 798,
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/reference/scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "writable": false,
+      "bytes": 8576,
+      "physicalLines": 162,
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/reference/.github/workflows/host-emulated-acceptance.yml",
+      "writable": false,
+      "bytes": 141880,
+      "physicalLines": 1768,
+      "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "sha256": "7e2add679b6b13ed9cc08cc57575e835c3a93a62f52ede4a352571f614ca2134"
+    }
+  ],
+  "rootRead": "Full548-line controls owner; affected existing test738-815,1319-1350,1404-1446,2087-2195; full22127B currentTaskboard finding untruncated. All5 bodies joined actual5a49 leaves, not a whole unrelated test/caller reread.",
+  "selection": "Only existingclickExpression and existingtwo affected motion cases plus meaningful continuation owner/cutoff/transport/tag/finite regressions in same test file.16sharedobservations after2initial; original15stablemaximum and100ms/30sinnerwait unchanged. Owner guard beforecontinuation; originalonepress/release only.",
+  "unchangedWorkflow": "af1abdb8c2309b4122d50ba9bdfa745a896344de; bothpaths already exactlyonce atfastlint168/169; safe suite127",
+  "sourceAfterimages": 0,
+  "sourceExecution": 0,
+  "originalFailureR2": "22127B SHAb623dd50dfca0289662074ea3608a49eee6a41d51dbfc7bf319f49c5b23905d2 FULLROOTREAD",
+  "status": "Prospective selection only, independent R2 and actualdoc gate required before sourceafterimages"
+}

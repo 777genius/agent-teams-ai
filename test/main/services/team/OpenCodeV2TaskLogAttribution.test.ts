@@ -268,6 +268,26 @@ describe('V2 native task-log attribution', () => {
     expect(selected).not.toContain('msg_TESTforeignturn');
   });
 
+  it('attributes resumed review_complete turns and excludes foreign task turns', () => {
+    const messages = lifecycleMessages('task-a');
+    const completed = messages.find((message) => message.uuid === 'msg_TESTterminal');
+    expect(completed?.toolCalls).toHaveLength(1);
+    completed!.toolCalls[0]!.name = 'mcp__agent-teams__review_complete';
+    completed!.toolCalls[0]!.input = {
+      taskId: 'task-a',
+      expectedReviewRequestId: 'request-cycle-1',
+    };
+    const selected = filterMessagesForAttribution(messages, record()).map(
+      (message) => message.uuid
+    );
+    expect(selected).toContain('msg_TESTinput');
+    expect(selected).toContain('msg_TESTwork');
+    expect(selected).toContain('msg_TESTterminalturn');
+    expect(selected).toContain('msg_TESTterminal');
+    expect(selected).not.toContain('msg_TESTforeignturn');
+    expect(selected).not.toContain('msg_TESTforeignmarker');
+  });
+
   it('widens to a terminal marker naming only the display id when the ref set includes it', () => {
     const messages = lifecycleMessages('TASK-1');
     expect(

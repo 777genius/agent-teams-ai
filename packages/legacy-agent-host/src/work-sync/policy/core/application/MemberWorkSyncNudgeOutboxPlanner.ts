@@ -196,7 +196,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         'Do not redo completed file work unless the task is actually unfinished.',
         'If the implementation is done, add a concise result comment with task_add_comment, then call task_complete, then call member_work_sync_status and member_work_sync_report with the current agendaFingerprint/reportToken.',
         'If the task is not done, add a task comment with the current status or blocker, then report still_working or blocked with member_work_sync_report.',
-        'If prefixed Agent Teams MCP tool names are exposed, use mcp__agent-teams__task_add_comment, mcp__agent-teams__task_complete, mcp__agent-teams__member_work_sync_status, and mcp__agent-teams__member_work_sync_report.',
+        'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required.',
         baseInput.payload.text,
       ].join('\n'),
     };

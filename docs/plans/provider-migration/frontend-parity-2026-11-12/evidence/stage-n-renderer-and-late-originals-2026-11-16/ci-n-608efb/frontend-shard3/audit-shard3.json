@@ -1,0 +1,4571 @@
+{
+  "kind": "N608_ORIGINAL_FRONTEND_SHARD_3_READONLY_AUDIT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "runId": 43795234483,
+  "jobId": 133062441650,
+  "artifact": {
+    "id": 14197591870,
+    "name": "host-offline-tests-608efb78823d7c74b35f8a674fcfb6faea8ecfc5-3",
+    "size_in_bytes": 296445,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14197591870",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14197591870/zip",
+    "expired": false,
+    "created_at": "2026-11-16T04:25:35Z",
+    "expires_at": "2026-11-30T04:25:34Z",
+    "updated_at": "2026-11-16T04:25:35Z",
+    "digest": "sha256:6d6da27acb70272d1a157f13fa1e5a2454ab7bc7d1ebc3b8c33636b47d2e1906",
+    "workflow_run": {
+      "id": 43795234483,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "officialArtifactApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0431.json",
+    "bytes": 18807,
+    "gitBlob": "aff1987e1d8aed7e9beb14d7f2e10e682d50c3b1",
+    "sha256": "6e60d207ad9d637695d187e794030906be6283f65509ad10bbebfae244b89ef2"
+  },
+  "terminalJobApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0430.json",
+    "bytes": 181243,
+    "gitBlob": "e8647d9e2ecd21221f6705fffd658db63309ef9d",
+    "sha256": "ed553382eed28c3c01f1b207a575546071ecb8821f1c8ef32400f05a04cf4334"
+  },
+  "rawFiles": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard3/job-133062441650.log",
+      "bytes": 163185,
+      "gitBlob": "b70294e51531bfb213a7393778646978585fb55a",
+      "sha256": "40ea08c24824088169cbbb1dad5f2def2966b51be18e0a89cc27a9cf7eda4f7d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard3/original-job-log-response.json",
+      "bytes": 200952,
+      "gitBlob": "814e4a76319cabafef15f8c0cb13a170d02db552",
+      "sha256": "94a2c8ca6485b00de90fcf837133024fcd7d523ee99bcab90695774f08c91d3e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard3/artifact-14197591870.zip",
+      "bytes": 296445,
+      "gitBlob": "55e7b613d69408cf367490b6d0546fda051e9163",
+      "sha256": "6d6da27acb70272d1a157f13fa1e5a2454ab7bc7d1ebc3b8c33636b47d2e1906"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard3/extracted/host-offline-tests-3.json",
+      "bytes": 2190018,
+      "gitBlob": "fa6447ccb68fff26a3713670e422d1c2eb3f3951",
+      "sha256": "0daeddf81868e4ce0fd97e183c872cb30282146e8d42bab23a70b72c12b68bea"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard3/extracted/host-offline-tests-3.log",
+      "bytes": 93801,
+      "gitBlob": "4ed41ba37de10fc6a304ec023eecb2c07d3fbd54",
+      "sha256": "2dbe1333f321a9a54bc76f260d53f61cb99b2f0442cba8065ec7340f1170b10b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/frontend-shard3/archive-retention.json",
+      "bytes": 2386,
+      "gitBlob": "22cb7b930c268d89d507521e19ce50e29d89f1ec",
+      "sha256": "482585791b964e8cb8426650ed7907720e1fd4dc145ae06c3515617b98d9e33b"
+    }
+  ],
+  "archiveMembers": [
+    {
+      "path": "host-offline-tests-3.json",
+      "bytes": 2190018,
+      "sha256": "0daeddf81868e4ce0fd97e183c872cb30282146e8d42bab23a70b72c12b68bea",
+      "crc32": "68000ce4"
+    },
+    {
+      "path": "host-offline-tests-3.log",
+      "bytes": 93801,
+      "sha256": "2dbe1333f321a9a54bc76f260d53f61cb99b2f0442cba8065ec7340f1170b10b",
+      "crc32": "cc6a849d"
+    }
+  ],
+  "counts": {
+    "filesTotal": 541,
+    "filesPassed": 538,
+    "filesWhollySkipped": 3,
+    "assertionsTotal": 6263,
+    "assertionsPassed": 6256,
+    "assertionsSkipped": 7,
+    "assertionsFailed": 0
+  },
+  "reportedJsonSuiteCounters": {
+    "numTotalTestSuites": 1316,
+    "numPassedTestSuites": 1316,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 6263,
+    "numPassedTests": 6256,
+    "numFailedTests": 0,
+    "numPendingTests": 7,
+    "numTodoTests": 0
+  },
+  "runtime": {
+    "Node": "26.12.1",
+    "pnpm": "11.22.0",
+    "Vitest": "3.2.6",
+    "separateCapturedTestNode": "24.21.0",
+    "durationSeconds": 294.59
+  },
+  "command": {
+    "literal": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" 2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+    "HOST_TEST_SHARD": "3",
+    "shell": "bash -e -o pipefail",
+    "defaultTestTimeoutMs": 15000
+  },
+  "rawMcpDecodedContentExact": true,
+  "fullTeeBytesContainedAfterOnlyJobTimestampRemoval": true,
+  "sourceConfigPins": [
+    {
+      "path": "vitest.config.ts",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    {
+      "path": "package.json",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6"
+    }
+  ],
+  "all7SkippedAssertions": [
+    {
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "fullName": "real Windows process identity readers observes this Node process through both table transports and its birth reader",
+      "status": "skipped"
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "fullName": "strict JSON report journal returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "fullName": "Anthropic Auto GUI shell safe e2e uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "fullName": "OpenCode review pickup live e2e delivers review pickup when the current unread review request is still in the foreground inbox",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "fullName": "ReviewApplierService ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "status": "skipped"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "fullName": "OpenCodeLocalProviderConnector live Ollama probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "fullName": "CodexBinaryResolver live local Codex smoke resolves and versions the current local Codex binary",
+      "status": "skipped"
+    }
+  ],
+  "skipGuardSourceUnchangedFromM": [
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "gitBlob": "39141ae707e6d2b7032563ca466ac29eb79bc9e1",
+      "sha256": "4f02a0e5cc2a5ad66d75aa3ada27b166597156d096d167dddcd26ddaf650a43c",
+      "sameAsM": true,
+      "guard": "one original live Ollama case; LIVE_OLLAMA=1 opt-in"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "gitBlob": "e1e93fd32288ca463fda5513688e364e180d1b7f",
+      "sha256": "45c8961b91b3c622f9771899c3aea71f4843b202deae738ab14afb0fdbc24ed8",
+      "sameAsM": true,
+      "guard": "one original real local-binary case; LIVE_CODEX_BINARY_RESOLVER_SMOKE=1 opt-in"
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "gitBlob": "7c4341d26d8e3328ea8807dfd845a608eaf2586a",
+      "sha256": "b31daa14c5d5dc9ee910581f9cb44bc0f1ca99bffdbe0cb1f5b8a113bd9629e1",
+      "sameAsM": true,
+      "guard": "one Windows-only retry/fsync case; it.skipIf non-Windows"
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "gitBlob": "b848b741a71d70676af7cd65cd745244e0dde1c8",
+      "sha256": "333a56feffedaa1b86a9c2deb7e5fc8572684319d7e745a191c39da03a9eb4a7",
+      "sameAsM": true,
+      "guard": "one original opt-in native-runtime case; it.skipIf no AGENT_TEAMS_TEST_ANTHROPIC_RUNTIME_PATH"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "gitBlob": "0ddcdc4a76f2a479eb8794fdecd462ba3d1642be",
+      "sha256": "99b6f114be36aa164b7fdb64c8f71f44e7066c8d1f82d2795de2d726a99907b4",
+      "sameAsM": true,
+      "guard": "one original live case requires OPENCODE_E2E=1 and OPENCODE_E2E_REVIEW_PICKUP=1"
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "gitBlob": "f60d3dfbe2f9fdb9774cd010e7ede2b27081b121",
+      "sha256": "7435d0a3e0fab3657d2b3b52a9cc669a77cc5c0f83f9b7ddb77d3820f3b0f650",
+      "sameAsM": true,
+      "guard": "one Darwin-only canonical-equivalent rename case; it.runIf darwin"
+    },
+    {
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "gitBlob": "802cee3658310ab29b473d098b02f3e6b3ed9857",
+      "sha256": "1428b98babd00b724d3a849ff516303c8735fb4217d075c6cd2db6cba0088435",
+      "sameAsM": true,
+      "guard": "one real Windows identity case; describe.skipIf non-Windows"
+    }
+  ],
+  "files": [
+    {
+      "path": "test/main/index.shutdown-order.test.ts",
+      "gitBlob": "e321ef9cc242b46915d3b7fcaf9da75335b4bdf1",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/legacySourceWriteAdmission.test.ts",
+      "gitBlob": "4d24a9598fef8d03b66696b47ec426a5c452b64a",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/sentryBootstrap.test.ts",
+      "gitBlob": "d5dc58e9e927ad7553f28e78cbbd8bdaadda4563",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/editorBridge.test.ts",
+      "gitBlob": "2af5bdd4e8798d533434f4abe5d839fa256600c5",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/workflows/windowsBackfillWorkflow.test.ts",
+      "gitBlob": "b163c695a1e4cf74b4c1c733650e89a4fbef544e",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/desktopRetainedOpenCodeProcesses.test.ts",
+      "gitBlob": "263674c2e4c0323d7eacfb8929f5c3d86178e87e",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/nodeOptions.test.ts",
+      "gitBlob": "f7a5895e3d2e851ca69852f54fcefc3db005bcbc",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/opencodeWindowsPeerText.test.ts",
+      "gitBlob": "ae4f8c0921d380d766438af3c0fbe339dcb48afb",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/openuiChatReply.test.ts",
+      "gitBlob": "b28bec36b064a1963a64c5b4e6e0492da89fdf52",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/releaseWorkflowWindowsArm64.test.ts",
+      "gitBlob": "a10f8ce88222ef55c68698bbebfe4b3934fe6fc0",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/sentryArtifactInventory.integration.test.ts",
+      "gitBlob": "af0b4d92c7f2b74e37ab943c281aaffc91de1ab8",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/sentryBuildIdentity.test.ts",
+      "gitBlob": "6c440b7564e614feff3d5d67801c8709f03705f6",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/scripts/sourceFileSizePolicy.test.ts",
+      "gitBlob": "2cbe4adc3632cc7d2fb187527b256e109e3a1233",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/ipc/openCodeRuntime.test.ts",
+      "gitBlob": "4840f285967085bc626f4d7118fa50d72a356a37",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/hooks/useComposerDraft.lifecycle.test.tsx",
+      "gitBlob": "114d553e46d52314c1210a889e24a3d1f2ae66c9",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/hooks/useComposerDraftAttempt.sync.test.tsx",
+      "gitBlob": "70e13b1589b636816d58544b0ce74235954b70aa",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/services/composerDraftRepository.test.ts",
+      "gitBlob": "c1be162fbe44e60a2eae384ec4fabdd62a203388",
+      "counts": {
+        "passed": 39
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/services/composerOutbox.test.ts",
+      "gitBlob": "705f98eb6cc16a50f85cee987bbb0887c689fea9",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/services/createTeamDraftGeneration.test.ts",
+      "gitBlob": "68b1862206cd7600bb98b86065e4c784dc210b1e",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/services/createTeamDraftStorage.test.ts",
+      "gitBlob": "bd5d896c520aef359f4a67911380e1779dd9affe",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/utils/composerEnterKey.test.ts",
+      "gitBlob": "2fe2b393827181b8e44241fa61481345b9734676",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-attachments/messageFileReferences.integration.test.ts",
+      "gitBlob": "f87c0dd4c51dcf2383e0acc0072e2aef7247002e",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/document-preview/documentPolicy.test.ts",
+      "gitBlob": "df8d9e1732a70c715ed5ff3c0f7c23b4a749f59f",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/internal-storage/InternalStorageFallbackContinuity.test.ts",
+      "gitBlob": "8144967a1408acbcdb4e307fcdac6757ccd1a994",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/internal-storage/InternalStorageWorkerCore.test.ts",
+      "gitBlob": "cd521f02400519391b6444f154a69ba6a492c95b",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/internal-storage/createInternalStorageFeature.test.ts",
+      "gitBlob": "47ba65f308d7dfb616a22bff1f6714b4bc444cb5",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/manual-message-queue/queueRepository.test.ts",
+      "gitBlob": "e607c32c2ba7d1a228b085dbe77cd5e97090ff82",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/opencode-compatibility/protocol2.test.ts",
+      "gitBlob": "e017f5250eb92ab767f39a07eab8dad85f6dd44d",
+      "counts": {
+        "passed": 28
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/opencode-runtime-installer/installAction.test.tsx",
+      "gitBlob": "18cbbc1cdfca82adaaf5ea37586a4cc457cc9c81",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/capturedReviewWatchTransport.test.ts",
+      "gitBlob": "8a455e9b14ff395e82952f427387a4a9d7bb8b6a",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/capturedTeamPreparation.test.ts",
+      "gitBlob": "a24a4fe812163085790ac1546801c98671125a42",
+      "counts": {
+        "passed": 51
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostApprovalPolicyPreview.test.ts",
+      "gitBlob": "af3b25c1895f9a35d607e4f9ebcd05aafc8a41f3",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostBackupScheduler.test.ts",
+      "gitBlob": "592631982c04ba75f2e97ea0420938ecefc775f6",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostCrossTeamTransport.test.ts",
+      "gitBlob": "99c7722bf73c8676535a71300ec31a8fcab9570b",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostDeletedTasks.test.ts",
+      "gitBlob": "1c7e79a9064d8db04a8d534c7834643aa6942bed",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostMemberActions.test.ts",
+      "gitBlob": "c420a537ae5eec36ea33539233aa80bb1316411b",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "gitBlob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostProcessControls.test.ts",
+      "gitBlob": "f730f9ddd3a259968a111d0ec171b6b5a5cf5faa",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostRosterFacade.test.ts",
+      "gitBlob": "1bc60efb56e7c82028a13781ad1b49930f73b40d",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/hostTeamMutations.test.ts",
+      "gitBlob": "3dbb1a1d820f3d7d626974de7c6a1c17627ec563",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/nativeExtensionsCapturedNativeExtensions.test.ts",
+      "gitBlob": "b49fa493cfd10b63ddfffd5dcdd9c01cf4dbd641",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/nativeExtensionsExtensionMutationOwner.test.ts",
+      "gitBlob": "92eab5dd55079fe43dd3c77073ce50433a53056c",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/nativeExtensionsNativeExtensionCoordinator.test.ts",
+      "gitBlob": "f5b8ed0d669cc62ee56075e6bf05b9c724ef97fb",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/reviewTransportCapacity.test.ts",
+      "gitBlob": "588fb950dcde73bd2b61ab064d84539412a8d3d1",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/stoppedImportReferences.test.ts",
+      "gitBlob": "96c50e8d3d98f8b386f508bdf97173c47c4d20f0",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/taskReviewContracts.test.ts",
+      "gitBlob": "fcbb5f43ab852136363abde2cc6c8cafbefb5ca2",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/agent-backend/teamCreationRefusal.test.ts",
+      "gitBlob": "3a1aa1cb0b5bc17d93ea46d9d2d5510608e8c6c8",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/task-folders/docked-sidebar.test.tsx",
+      "gitBlob": "2c43ce79c09dc7019d258b35ddb83ba4897b8bad",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/task-folders/host-fallback.test.tsx",
+      "gitBlob": "799cadb5ad2e41e5fad8c3ae2d22005c35cac146",
+      "counts": {
+        "passed": 25
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedCodexAuth.test.ts",
+      "gitBlob": "451d38eb06bbc61891fe16863b8a52caf0f1f431",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedDefaults.test.ts",
+      "gitBlob": "d97412d8d0115e4458d89d5fbc6ea20b2fe851ef",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedManagement.safe-e2e.test.ts",
+      "gitBlob": "5dc0d55dff29763c16906e35fbb0da267313de28",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedProviderCredentials.test.ts",
+      "gitBlob": "fdb19cfad0e2bf674c7747fcd0b6a250a5a0b9c9",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedRuntimeStatus.test.ts",
+      "gitBlob": "f62a03ef803b57af468180f0f6e849923d4ed749",
+      "counts": {
+        "passed": 19
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/claudeAuthConversation.test.ts",
+      "gitBlob": "f05ac193eb08126cc4edf38eb138dd98eea10114",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/nativeStatusIpcAuthority.test.ts",
+      "gitBlob": "084e65857ceee69708cf9346d12291358c33769c",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/nativeStatusPresentation.test.ts",
+      "gitBlob": "fc4bd0d37a5c45e3842f2f72bc7fb49f90467f5d",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/runtime-provider-management/providerAuthenticationActions.test.tsx",
+      "gitBlob": "20dcbf433fdcf6332dab1ccb741f31006d077c4e",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-group-chats/GroupMessageReaction.test.tsx",
+      "gitBlob": "c8a30e4da99e525788b76f0e037e3dbf88d85b8e",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-group-chats/desktopVisualizationDelivery.integration.test.ts",
+      "gitBlob": "a5b46d7200f777aaf873cf78f24f940626a21c23",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-group-chats/groupChats.integration.test.ts",
+      "gitBlob": "11467ee26744abe5b79f7b8007ba5d0304b74a18",
+      "counts": {
+        "passed": 36
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-group-chats/useGroupChatComposer.test.tsx",
+      "gitBlob": "925a37953277367a56fe92ec036263547580d3a6",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-read-recovery/physicalContinuation.test.ts",
+      "gitBlob": "7342eca92ca804863edf4eb53f767aebee5d5649",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-read-recovery/physicalFault.test.ts",
+      "gitBlob": "445b1084b33d4beeee3f824c0e5d61879c75952c",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-read-recovery/teamReadTransport.test.ts",
+      "gitBlob": "b6c3e7d956a12aea5574dd231d6bfb4d5986d9b7",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/build/electronBuilderDistScript.test.ts",
+      "gitBlob": "6f86d594fd766f7316a6ef300b6d1cde8ae49668",
+      "counts": {
+        "passed": 32
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/http/agentBackendBootstrap.test.ts",
+      "gitBlob": "9455e12ecd7844b8b02f53462f7e428e17296299",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/cliInstaller.test.ts",
+      "gitBlob": "7fb8c2d6753a3339316e990a0cdfdc7aefb7b9ac",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/configValidation.test.ts",
+      "gitBlob": "95599c7b9550a0d6f0ca06b83c31e4ee756e40d7",
+      "counts": {
+        "passed": 94
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/rendererLogs.test.ts",
+      "gitBlob": "952b5d6fc37c55cd21ea3555b3801fe27b80a432",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/teamProvisioningContext.test.ts",
+      "gitBlob": "a3d630cdd97738def362a823093735fa63465ade",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/teams.test.ts",
+      "gitBlob": "06aa3a4c97a8484e5a0fe0b423609d151b8a610c",
+      "counts": {
+        "passed": 297
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/window.test.ts",
+      "gitBlob": "34d218a3ef2478a3856bb11fb2bbb4295ecd9bb9",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/api/httpClient.queuedUserMessages.test.ts",
+      "gitBlob": "ccbe0487fcdcdab249947294d503723b8159c1c2",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/api/httpClient.workspaceTrust.test.ts",
+      "gitBlob": "ca70741f931ca0e36963a62830eefa11cc844c47",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/cliPathMerge.test.ts",
+      "gitBlob": "f890ace40b02a4f40857e978ef68345a64d08292",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/electronUserDataMigration.test.ts",
+      "gitBlob": "a7ee7e17f5aacc160db3226f7bb8ead7a0f9ca5e",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/fatalDiagnosticReport.test.ts",
+      "gitBlob": "7d10fe6936724c01f1513fca052ea29f05f8765b",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/shutdownStep.test.ts",
+      "gitBlob": "50c8e09f6907b894ffa034946f13be26f0da7c57",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/standardOutputGuard.test.ts",
+      "gitBlob": "29ea6ff0588e385332e9eb493796165d76af612b",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/startupTelemetry.test.ts",
+      "gitBlob": "dde529abf83dcf84854e3ed5c64b5742fb8be717",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/windowsElevationRuntime.test.ts",
+      "gitBlob": "c9aff270e12433f0d14d341972022a9acb2e2605",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "gitBlob": "802cee3658310ab29b473d098b02f3e6b3ed9857",
+      "counts": {
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/constants/teamColors.test.ts",
+      "gitBlob": "d9d897278d293d72eea5789cf2434f32acb84180",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/constants/teamRoles.test.ts",
+      "gitBlob": "c2fae6cf82490a5e7833705357d3b2aaf9b0aadf",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useAutoScrollBottom.test.ts",
+      "gitBlob": "c8eae7980b978cba9b080e8006d2ffc9f4586363",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useEditorKeyboardShortcuts.test.ts",
+      "gitBlob": "21dc2c6bae496d4a0f208c787dd46e0a0d0b101e",
+      "counts": {
+        "passed": 25
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useEffectiveCliProviderStatus.test.ts",
+      "gitBlob": "b0a045d32efbae9bb8c45bf9c05826d7b4b5b0ed",
+      "counts": {
+        "passed": 23
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useKeyboardShortcuts.test.ts",
+      "gitBlob": "05cea65000b49d1be915b4e00a4e278b3448f57b",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useMentionDetection.test.ts",
+      "gitBlob": "83be0ff8e2b731490fbef7c51175dff110036947",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useMessagesReadState.test.tsx",
+      "gitBlob": "0b50d963bb70f05c3c3a265685726a6368bad298",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useTheme.test.ts",
+      "gitBlob": "f8d847cbd2cf0427effcdbeaa0d4ab9c8dbe2011",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useViewportCommentRead.test.ts",
+      "gitBlob": "1dcf8cc084690faab3f052e71e5a8f2a56fe8206",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/hooks/useVisibleAIGroup.test.ts",
+      "gitBlob": "b1adc3d6cf3287c9e66596de278ac69335bd4aa9",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/telemetry/posthogIdentity.test.ts",
+      "gitBlob": "0a376b30525216540ff7a1f05de2826bd1865c6a",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/telemetry/productAnalytics.test.ts",
+      "gitBlob": "95e6562263b774ddc3ed4834c756b2d190ec2180",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/telemetry/sentryDiagnostics.test.ts",
+      "gitBlob": "29d025256b795dfc8df51c39a539b19882c0ebaa",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/codexStartupStatusRevalidation.test.ts",
+      "gitBlob": "fde85edd8e78cbd08d24431cae080a2173a0e76a",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/editorSlice.test.ts",
+      "gitBlob": "f01b4b3b4369705599b0abde914798e31847c178",
+      "counts": {
+        "passed": 58
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/extensionsSlice.test.ts",
+      "gitBlob": "388451ef549c901eb0e19c587a0cc32fa59f7b15",
+      "counts": {
+        "passed": 57
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/pathResolution.test.ts",
+      "gitBlob": "c6331c4b39335ed7ad643d7bb42e6dbd46731350",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/teamChangeThrottle.test.ts",
+      "gitBlob": "9f4afbf196d3eb8b6fd4998c997dc118afe53e5f",
+      "counts": {
+        "passed": 64
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/teamMemberActivityMeta.test.ts",
+      "gitBlob": "32ca24b613a809744b0e1ed85b77204886ca0dff",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/teamPendingReplyWaits.test.ts",
+      "gitBlob": "45a7b1aafed64ff859da6e8ce4a78f85b109d229",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/teamRefreshBurstDiagnosticsStore.test.ts",
+      "gitBlob": "5cc3f52911d4821c694c3ebccb5f8ad633718b2e",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/teamRefreshFanoutDiagnostics.test.ts",
+      "gitBlob": "eb223304d14f3f4f2e82c927926a143efc9ec42b",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/teamToolApprovalSettingsSync.test.ts",
+      "gitBlob": "b7bc7569c315b3982198b398ed0c78ae8d557335",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/store/updateSlice.test.ts",
+      "gitBlob": "b0ef9214a592c3ae3bd1848811fe9fef7e9885f5",
+      "counts": {
+        "passed": 18
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/buildSelectionAction.test.ts",
+      "gitBlob": "70a13811fa9996c4a906e6f77e0990eb15c0202a",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/codemirrorLanguages.test.ts",
+      "gitBlob": "6b9af67cb831749e115a9f418419106ef76cb397",
+      "counts": {
+        "passed": 40
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/contextTracker.test.ts",
+      "gitBlob": "ae2a04c6de601e72529fb3a4580f0594fa6b897b",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/dateGrouping.test.ts",
+      "gitBlob": "cadf504b2ec83d10cbd9e0d4523ca0a300e8e001",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/fileTreeBuilder.test.ts",
+      "gitBlob": "c4eee0bc3225d517b8723f1cd7e46f3ae24fe68e",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/markdownSizeLimit.test.ts",
+      "gitBlob": "3d9863b8e9c2bb35defa387e8d8a57c191311857",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/memberActivityTimerStoreScale.test.ts",
+      "gitBlob": "b952d4e0f8d9032643ca656807dd81ae37ab261c",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/memberAvatarCatalog.assets.test.ts",
+      "gitBlob": "71626d0df3edd8024da030e7f7de5e89d00856bc",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/memberLaunchFailureReasonText.test.ts",
+      "gitBlob": "493386daaf31c98802546e63cf9c2dfaead9f19a",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/mentionLinkify.test.ts",
+      "gitBlob": "e61fe5e513e37e16b4d129295015708ac45051ba",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/providerSlashCommands.test.ts",
+      "gitBlob": "0934de3351c88bd1812b7216f7c9c692e03d3df6",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/renderHelpers.test.ts",
+      "gitBlob": "89be2fc6ffebe91d1db09b30cf1d4752008cb9cc",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/reportAssessments.test.ts",
+      "gitBlob": "b25e08b0e409c5214f5538d1a597eb6cb581bbda",
+      "counts": {
+        "passed": 52
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/reviewKey.test.ts",
+      "gitBlob": "2036a85b9eb4563029770450d55c43332636678d",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/scheduleFormatters.test.ts",
+      "gitBlob": "b017fd1508dac4732f73e816f8383860f4b56adc",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/startupIdleTask.test.ts",
+      "gitBlob": "067c6bfebebd4544a19a73da9f568f20a434e9ba",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/teamListStatus.test.ts",
+      "gitBlob": "0f8494e04823bba868ecc417505bb4c1c074f306",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/teamMessageExpandStorage.test.ts",
+      "gitBlob": "1cbad969cbd17d6d18d577a5368583b7d9d81836",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/teamModelCatalog.test.ts",
+      "gitBlob": "a44fdabcf5d2a9201b5450f61ea09fb3436e4f7a",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/utils/toolSummaryHelpers.test.ts",
+      "gitBlob": "dcddf3785c808f749c6e3f16fc64741b52df6490",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/anthropicLaunchModel.test.ts",
+      "gitBlob": "43e11419aee980ff3f93fde3d4df9657c4f9c7f7",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/anthropicModelIdentity.expected-values.test.ts",
+      "gitBlob": "ea866f34258375278a0562f21515850cb16d9de7",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/cliArgsParser.test.ts",
+      "gitBlob": "fe78dfba798d31c39283e448fe9d52c5c9daa04e",
+      "counts": {
+        "passed": 50
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/contentSanitizer.test.ts",
+      "gitBlob": "e793e7de5bdb194df5464646fe00a6378fa90662",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/providerStatusAuthority.test.ts",
+      "gitBlob": "808a642439ead2500a387f97cd8d85cefb7613f2",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/taskChangeState.test.ts",
+      "gitBlob": "85837d8dbc8f16fe5b053eaad25ae7cdfab656a2",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/teamMemberColors.test.ts",
+      "gitBlob": "9a198a01b84ea26d41908b2a780eaca1325eeb9c",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/teamMemberName.test.ts",
+      "gitBlob": "2466c51243f2e32dd73df3d868c1a399efbea822",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/tokenFormatting.test.ts",
+      "gitBlob": "73cd88efa72e377e5fd9f95e6ebdcc1aad85dabb",
+      "counts": {
+        "passed": 22
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/shared/utils/userTurnProvenance.test.ts",
+      "gitBlob": "58078a9fb8dabf5367bfd9ce747d660c2392ec24",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/gateway-provider/__tests__/gatewayDomain.test.ts",
+      "gitBlob": "665b6bf60b3106af51c9ff1b3d62785b834fd042",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/OpenCodeLocalModelLimitsCard.test.tsx",
+      "gitBlob": "4b199ee7606032b7c4cb1b595afbb262be6c2b1d",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/http/__tests__/teamsLaunchValidationHttp.test.ts",
+      "gitBlob": "de98f65159c1c8e18037197c2185ca5922b56927",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/gateway/GatewayRunMetadataStore.test.ts",
+      "gitBlob": "10584e9d844ac135a62015655fb52340bd1d2020",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/common/ConfirmDialog.abort.test.ts",
+      "gitBlob": "e0d55b23e20637eab79cfed7ce5889850c1ba813",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/dashboard/DashboardProviderSummary.test.tsx",
+      "gitBlob": "0bd53004c7e1d457aa33e412408ac3656811e0ad",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/dashboard/OpenCodeFreeTierUpdateAction.test.tsx",
+      "gitBlob": "99aac6ef181329da2ce6f484d03fc57e5cd2a909",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/dashboard/WindowsAdministratorBanner.test.tsx",
+      "gitBlob": "247cc809fd32e4beb3bef52cc4150f8bff6d4a0d",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/dashboard/providerDashboardRateLimits.test.ts",
+      "gitBlob": "9821bde671d8edc117ea00b8db84f66d1d40cf91",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/layout/GlobalTaskDetailDialogSlot.test.tsx",
+      "gitBlob": "36da773e5013ea75b0293a968449d8435539327a",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/runtime/CodexLoginLinkCopyButton.test.tsx",
+      "gitBlob": "08f6c7af223618fb13c09e334727b65a57a0539c",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/settings/SettingsView.test.tsx",
+      "gitBlob": "2d23f3c865974cc3d852dd287b20860fac0b3872",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/TeamLoadingSkeleton.test.tsx",
+      "gitBlob": "efce7ffc30d8aad7fb5305c3058cfb32e344f98d",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/UnreadCommentsBadge.test.tsx",
+      "gitBlob": "11c6bbf324024b5a7b4c22b99f679629572992d0",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/utils/__tests__/memberHelpers.test.ts",
+      "gitBlob": "a5c329f24c2d001c46ebb577820443bc93b425f0",
+      "counts": {
+        "passed": 36
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/shared/utils/__tests__/ephemeralProjectPath.test.ts",
+      "gitBlob": "e8da7ecb1fd812ab226d2f513b11f19a38447b20",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/shared/utils/__tests__/openCodeWindowsAccessDenied.test.ts",
+      "gitBlob": "a5e02155c1ad3f5029fef68ac96b01b75de2da03",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/shared/utils/__tests__/opencodeModelRoute.test.ts",
+      "gitBlob": "b328905afe7f568f231a02b89cd41857125d1670",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/shared/utils/__tests__/posthogBuildPolicy.test.ts",
+      "gitBlob": "ba09589b3ccc85bf29d898a90e23dd2cba9e7f06",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/shared/utils/__tests__/teamProvider.test.ts",
+      "gitBlob": "7298b59ff4e22d1d3be94d84146b4a980a2c7083",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/app-close-coordination/main/RendererCloseReadinessCoordinator.test.ts",
+      "gitBlob": "d12f2280b0ddaa588363c7b4681ec3df17a0d56a",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/app-close-coordination/renderer/AppCloseParticipantRegistry.test.ts",
+      "gitBlob": "4dac074c2d90e1f48ffef88a3f50d20ab0c7f6bf",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/application-command-ledger/core/ApplicationCommandRunner.test.ts",
+      "gitBlob": "0b05a028698138f51a7495ddb8b201aa1f49c195",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/announcements/main/source.test.ts",
+      "gitBlob": "3a888e419e16b4da13ac0ac34416804fbb3188b4",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/announcements/renderer/markdown.test.tsx",
+      "gitBlob": "7ed31a464336abadf95d91f6f4b2fb8d54b17db5",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/change-review-history/renderer/ReviewDraftHistoryWriteBuffer.test.ts",
+      "gitBlob": "6b6620cc0c42bca22ff2b8d9377683b883c2aaba",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/codex-account/preload/createCodexAccountBridge.test.ts",
+      "gitBlob": "ee522cc3e10903320b0e5a0b3142702330e93e13",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/external-agent-connection/main/nativeAgentRun.test.ts",
+      "gitBlob": "2f656b93cb09fa42841fadbf1a8839d1dd0ee47a",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/external-agent-connection/renderer/useManagementApplied.test.tsx",
+      "gitBlob": "f508184e5f95bea3153e0cde936f1e91b478bf92",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/localization/renderer/zhTwFallback.test.ts",
+      "gitBlob": "17d7451607898535ac601937ec22d90e31a448cd",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/core/MemberWorkSyncAudit.test.ts",
+      "gitBlob": "95b75fe51762c670f43dfa918a55c2f26c85ae4a",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/core/MemberWorkSyncUseCases.test.ts",
+      "gitBlob": "66f2128f14b35bcea494aacf7e58ec0f2f401752",
+      "counts": {
+        "passed": 111
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/core/SyncDecisionPolicy.test.ts",
+      "gitBlob": "c813d0d65bf3a78ab9eb84f767dfaaa4333873ae",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/FileRuntimeTurnSettledEventStore.test.ts",
+      "gitBlob": "fb7d484913fe1226ddef19ffc5341e42a3a5d7cd",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "gitBlob": "7c4341d26d8e3328ea8807dfd845a608eaf2586a",
+      "counts": {
+        "passed": 21,
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/MemberWorkSyncNudgeDispatchScheduler.isolation.test.ts",
+      "gitBlob": "6bd7846ca2a8ec6d160be70c1d4fc33e1424fd84",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/MemberWorkSyncNudgeDispatchScheduler.test.ts",
+      "gitBlob": "34a9b5e0afb692fd235ec0be8deea8c9f52107b6",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/MemberWorkSyncReporterJournal.test.ts",
+      "gitBlob": "4bc7c87d9a42a58ef9dafec312a20c9a0433f487",
+      "counts": {
+        "passed": 26
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/MemberWorkSyncTaskImpactResolver.test.ts",
+      "gitBlob": "255a6e9f1b7f8e5f6a7dbd897b9f1498092c73e9",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/MemberWorkSyncTeamChangeRouter.test.ts",
+      "gitBlob": "7e0acc69d5db034f2c95ad5f225a45e0bc16957d",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/QuiescingMemberWorkSyncAuditJournal.test.ts",
+      "gitBlob": "5234035577158dbe5958a9f1456ff7783991e8f0",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/SqliteMemberWorkSyncStore.test.ts",
+      "gitBlob": "8ea799f4bbb4449567719c86a1e85d4f5deb1f10",
+      "counts": {
+        "passed": 32
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/TeamInboxMemberWorkSyncNudgeSink.test.ts",
+      "gitBlob": "6fd8a19add0ca79b5bb176f181999859ea988d43",
+      "counts": {
+        "passed": 22
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/TeamRuntimeTurnSettledTargetResolver.test.ts",
+      "gitBlob": "d49273527b56a8c3297f6145b386e5d4d700e7ed",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts",
+      "gitBlob": "c20b7edb8a299c9b977b02fcd1451641cb9f8902",
+      "counts": {
+        "passed": 87
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/memberWorkSyncReportJournalMerge.test.ts",
+      "gitBlob": "25215a650a0507f5e2f778df59c88b249004ae55",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/memberWorkSyncScheduledDispatchLifetime.test.ts",
+      "gitBlob": "959234eae8a655ab6122d439f4133733d037aafd",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/memberWorkSyncStatusPreflight.test.ts",
+      "gitBlob": "7bec11b10cef5c23165fb1c0e452534a3b030b29",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/memberWorkSyncStatusVersion.test.ts",
+      "gitBlob": "18281ab1bc59f00abc9a6420ef64f8464259556a",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/refreshMemberWorkSyncStatus.test.ts",
+      "gitBlob": "f447b761c6055cbb87586765e45f3749b53c0de5",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/preload/memberWorkSyncPreload.test.ts",
+      "gitBlob": "be321392097fdf6161cffde18dbe42429646424c",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-provisioning/preload/createTeamMemberSettingsBridge.test.ts",
+      "gitBlob": "147a5a35d2fa40863b07be04761a1c9b3f2be43b",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-runtime-recovery/core/DispatchDueRecoveries.test.ts",
+      "gitBlob": "b6b3565119ecba0fbe2a288f4cbc0fb968762104",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-runtime-recovery/core/RuntimeFailureClassifier.test.ts",
+      "gitBlob": "59c93122d219e4d9081bf1e1dc32688ab3b6ebce",
+      "counts": {
+        "passed": 38
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+      "gitBlob": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/terminal-workspace/main/createTerminalWorkspaceFeature.fixture-e2e.test.ts",
+      "gitBlob": "ce9e9a6e955a187a40e1cee20829b6024409a018",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/terminal-workspace/main/registerTerminalWorkspaceIpc.fixture-e2e.test.ts",
+      "gitBlob": "bc49087b1393d101d4477754254eca29cea456a8",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/workspace-trust/main/createWorkspaceTrustStatusFeature.test.ts",
+      "gitBlob": "abe22fd626585ed22121f12ea49625e19a859473",
+      "counts": {
+        "passed": 22
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/workspace-trust/main/registerWorkspaceTrustHttp.test.ts",
+      "gitBlob": "22fb82d826a989159785fed2214ec93bda31a095",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/workspace-trust/main/workspaceTrustPreflightEnv.test.ts",
+      "gitBlob": "09235d8afff7b7782096f9e031bc45b51a401582",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/workspace-trust/core/StartupDialogRules.test.ts",
+      "gitBlob": "70002a87f2335f8e4eaeb7d418e4fb78bc241565",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/workspace-trust/core/WorkspaceTrustArgPatchApplier.test.ts",
+      "gitBlob": "3cc2ba2f896f8abd4b144308231aebec01221c3a",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/workspace-trust/core/WorkspaceTrustCoordinator.test.ts",
+      "gitBlob": "8a6708a3a7d080d28514b824662b45983e6fd384",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/features/runtime-provider-management/openCodeWindowsNodeModulesJunction.test.ts",
+      "gitBlob": "db875c8cdba713ab15c8ba0082764df9ba6564fc",
+      "counts": {
+        "passed": 27
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/features/team-import/SafeLocalTeamImportFolderSource.test.ts",
+      "gitBlob": "8ced4234ecd1bb345b9f96155eb0a85000ad0f88",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/features/team-provisioning/MemberSettingsRelaunchFiles.test.ts",
+      "gitBlob": "8a21ff87289a523647027243b4d26ec340a20bb7",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/teams/teamForceStopSharedFlow.test.ts",
+      "gitBlob": "5e24ef28aa22dcc08bff1987bfc75c17aef36466",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/teams/teamPermanentDeletionTransactionCoordinator.test.ts",
+      "gitBlob": "8eab39fe30d868dcf4f8c9866e5b0477ff3f6c85",
+      "counts": {
+        "passed": 19
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/ipc/teams/teamQueuedUserMessages.test.ts",
+      "gitBlob": "dd225ec24f15610bbe9c0a4881916d2b36fd9dd3",
+      "counts": {
+        "passed": 23
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/discovery/ProjectScanner.cwdSplit.test.ts",
+      "gitBlob": "1d5047d3442e76b9de839a8200ecf62cc8719b88",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/discovery/SearchTextCache.test.ts",
+      "gitBlob": "12c510d02e198719781c6073d943228419788ab1",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/discovery/SearchTextExtractor.test.ts",
+      "gitBlob": "ec1ce11d6c36815b0542ad31114df4a107e246b4",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/discovery/SessionContentFilter.test.ts",
+      "gitBlob": "0a830bd49bcbc1d2359a070e0f29b8a212ed5e3a",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/discovery/WorktreeGrouper.filesystemState.test.ts",
+      "gitBlob": "1218fe5faa89d35e2a9e75e6221af9bc93bdd321",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/editor/conflictDetection.test.ts",
+      "gitBlob": "261ae939a2784bad32ff5950980db1de6f25497f",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/editor/largeFiles.test.ts",
+      "gitBlob": "92afc2e1d67e556c3688753f6e9ee9fa5373d4aa",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/extensions/McpHealthDiagnosticsService.test.ts",
+      "gitBlob": "706d508f2a96fbd2494de1f09e8e95718c5aec3d",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/extensions/SkillImportService.test.ts",
+      "gitBlob": "5e7001f1d6b73d650f3a15cbecd9bb35f839ab5b",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/extensions/SkillMetadataParser.test.ts",
+      "gitBlob": "53daeebd0b9ad88eb5ee9eda1e0d88eb2f5d41b6",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/extensions/SkillValidator.test.ts",
+      "gitBlob": "0fc22594a83721740f7ce005267ac65cccc8b5ac",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/ChunkedTeamTaskPollSnapshot.test.ts",
+      "gitBlob": "9e0733fc6d06619a031acc455e58a9acfd81d66b",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/ConfigManager.codexMigration.test.ts",
+      "gitBlob": "9883f84aaffb03ab8493c190f92cdc22f05f8897",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/DetailCacheFillLease.test.ts",
+      "gitBlob": "78a7018b116c8c70be8a4c572c398c3158acd44f",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/LocalFileSystemProvider.test.ts",
+      "gitBlob": "1ecc705755e4c2c0104cf60692805bf0ecc1a623",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/NotificationManager.testNotification.test.ts",
+      "gitBlob": "a4c7bf45933d678b1b794b372b290eb53cff8e58",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+      "gitBlob": "06e69833aaf06daefd474aaeb93c6233f91f3c1f",
+      "counts": {
+        "passed": 113
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/UpdaterService.releaseNotes.test.ts",
+      "gitBlob": "c37f2cb7a47ef390aa8b26b9e1d83ee05ae5b61d",
+      "counts": {
+        "passed": 19
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/infrastructure/updaterReleaseMetadata.test.ts",
+      "gitBlob": "d4061b937e113f21f3629157c14d3905f4a5ceba",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/schedule/JsonScheduleRepository.test.ts",
+      "gitBlob": "62de3e09960abe38eaf0e9ad0fd9b0a27e4a8305",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "gitBlob": "b848b741a71d70676af7cd65cd745244e0dde1c8",
+      "counts": {
+        "passed": 9,
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimePreflight.integration.test.ts",
+      "gitBlob": "861ce79a4b18c871c1738620cd59cd0788cfa47f",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/ProviderConnectionService.test.ts",
+      "gitBlob": "732af88ef1b643b0a6db578b18e7278a0648d5be",
+      "counts": {
+        "passed": 99
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/cliSettingsArgs.test.ts",
+      "gitBlob": "b737c628119990be7ef6abda25dbb7e489a4ab19",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/providerCliCommandArgs.test.ts",
+      "gitBlob": "a0648ef051f19725c94e3f61962f04e21c24e238",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/providerRuntimeEnv.test.ts",
+      "gitBlob": "389a9a1ac284d3740eea408f13b985a4edfc0f9a",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/runtimeStatusCommandDiagnostics.test.ts",
+      "gitBlob": "22a70837ac713fd89e65d1f6fd262ca613809548",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/runtime/teamRuntimeSettingsBundle.test.ts",
+      "gitBlob": "995dae60ddda1e38fe5b0b8ef11b8fd44fd77c35",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/BoardTaskExactLogFileVersions.test.ts",
+      "gitBlob": "001274635c52e084574570d78d7683bd0cae1cfc",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/BoardTaskExactLogStrictParser.test.ts",
+      "gitBlob": "7303ec710e8334c10a8ff2da83b4cd78976b11c7",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/BoardTaskLogDiagnosticsService.test.ts",
+      "gitBlob": "40f76668816670923956c6dea0fa8221c4db24ee",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/ClaudeDoctorProbe.test.ts",
+      "gitBlob": "83c9b820c2a7bbc50b7c078798e061c8b0f3c50e",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/CodexNativeTraceReader.test.ts",
+      "gitBlob": "6080d7b3e06ff1fcda96f0b1c01cde7de8a9b900",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/LaunchIoGovernor.test.ts",
+      "gitBlob": "40e55fc7d14700e53ae634144a1e389dea9b0e1d",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeBackfillRetry.test.ts",
+      "gitBlob": "a90248dc1e1ca30bd9a934f96afa3fa753db2783",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeBridgeCommandClientJunctionRecovery.test.ts",
+      "gitBlob": "0bfd54a02aaf060b5645539d0cd8ba1ca2c2b16b",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeBridgeCommandContract.test.ts",
+      "gitBlob": "aade847a67aca3a02d87217c168180cb12ff8465",
+      "counts": {
+        "passed": 19
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeLaunchTransactionStore.test.ts",
+      "gitBlob": "560544daa7de56687f8a448af28d5ad471c661ba",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts",
+      "gitBlob": "ca099878a05c01b8965b09af9c57ef10e5c3b2b2",
+      "counts": {
+        "passed": 61
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeMemberMessageDeliveryService.test.ts",
+      "gitBlob": "7445d40fb5afbc5953ea245e8e0a5b64eab63711",
+      "counts": {
+        "passed": 31
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeProductionPromptArtifacts.safe-e2e.test.ts",
+      "gitBlob": "694d0032cdea3289d8e1ed0f786efee59569156f",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePromptDeliveryFollowUpPolicy.test.ts",
+      "gitBlob": "a243e8fe8689d02dfad7c31a32c7d0a3b4a0d525",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReadinessBridge.test.ts",
+      "gitBlob": "b9a9023ea84346f51291dfc1d707c7d7374481ba",
+      "counts": {
+        "passed": 42
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "gitBlob": "0ddcdc4a76f2a479eb8794fdecd462ba3d1642be",
+      "counts": {
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeRuntimeDeliveryAdvisoryPolicy.test.ts",
+      "gitBlob": "95a3486fa973c0b90330ee95ad412d98d90f4f75",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeRuntimeDeliveryDiagnostics.test.ts",
+      "gitBlob": "c8a2687503a8d123aea3c994e7db99b1bfb5dacb",
+      "counts": {
+        "passed": 43
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeRuntimeDeliveryPorts.test.ts",
+      "gitBlob": "1c0c140a7cfad971e03edcaaffee4d3dbe0414f0",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeRuntimeDeliveryProofReader.test.ts",
+      "gitBlob": "aa68ed1044ff2b112aaff81e3996e93f07db75b3",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogAttributionService.test.ts",
+      "gitBlob": "6f6d7891c8347e628d368f97bbe53844caa6b88d",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogErrorAttribution.test.ts",
+      "gitBlob": "63ab174d719ea71bee1923be4d162bdfc3b96edf",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "gitBlob": "f60d3dfbe2f9fdb9774cd010e7ede2b27081b121",
+      "counts": {
+        "passed": 60,
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/ReviewPersistenceScopeLock.safe-e2e.test.ts",
+      "gitBlob": "51dc00f8053b03d9187bc87c530194437ba79ade",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/RuntimeStoreManifest.test.ts",
+      "gitBlob": "a04c8506010a7ae4c56fc7dc925e616d84aa7cb2",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TaskChangeWorkerClient.test.ts",
+      "gitBlob": "8226187ef49fd2cfa1923c6c0df9c7a4b49deaf8",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TaskLogTranscriptCandidateSelector.test.ts",
+      "gitBlob": "7f58d223a00de105c75bc1bda2d3351270c8ae18",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamBackupStartupRegistry.test.ts",
+      "gitBlob": "1153b9e9f9ec9d03bc2fc035f4599135e3039ffb",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamConfigReader.test.ts",
+      "gitBlob": "ccde4464e63fbe20c1720ca52c66a7aded031be9",
+      "counts": {
+        "passed": 27
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamControlApiHostWiring.test.ts",
+      "gitBlob": "240b4ef54a34ddf6102d91424e67b2ec4712e30f",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamInboxPermissions.test.ts",
+      "gitBlob": "05719b5fc0307ea47c28ff0d1afcc7505dc111ae",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamInboxWriter.test.ts",
+      "gitBlob": "796b951bd5f9a38a874e9de06a92fe9c6cadee39",
+      "counts": {
+        "passed": 32
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamKanbanManager.test.ts",
+      "gitBlob": "89cc4f328dd685b716ae28ba63715dc3d9bcc964",
+      "counts": {
+        "passed": 18
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamLaunchStateEvaluator.test.ts",
+      "gitBlob": "108bf0d1b97ad9edb3ab1985ad20ae0195c03084",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+      "gitBlob": "d310431a7424065600ff28668f32184d80e2dc3a",
+      "counts": {
+        "passed": 31
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamLogSourceTrackerProfileOwnership.test.ts",
+      "gitBlob": "6a83f907a650a9ee4850b6d3f3147a099696542d",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamMemberLogsFinder.test.ts",
+      "gitBlob": "f87bb96ea6d9d5dc6e800e0fdbc02b7b544c0640",
+      "counts": {
+        "passed": 30
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamMemberResolver.test.ts",
+      "gitBlob": "25325dca8ba0a5308694e653b394fe41fa7f2423",
+      "counts": {
+        "passed": 29
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamMemberStoragePaths.test.ts",
+      "gitBlob": "501ee28f9f3ed18b40a531634de9fac3a06daa32",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamMemberWorktreeResume.safe-e2e.test.ts",
+      "gitBlob": "d9ad69f6a8fe79763e818d9ca3ef2be17462038f",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamMessageHistoryRetrievalGate.test.ts",
+      "gitBlob": "cfa96021a1d2a7d295905a472c8ba887a9fc439b",
+      "counts": {
+        "passed": 24
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningBootstrapTranscriptIndex.test.ts",
+      "gitBlob": "d8fdb4648b0e03957fbb73f465de1527421fb450",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningDirectRestart.test.ts",
+      "gitBlob": "ebcaefcc31211fdc3c09c9ee0200b182ce22b495",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningInboxRelayPolicy.test.ts",
+      "gitBlob": "b1c59348fcfed657cd914d44a0c8c0c2576cf844",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningLaunchStateReconciliation.laneEvidence.test.ts",
+      "gitBlob": "2d9225b9f25eed33b02ad28616d67de3c4ec483a",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningMemberIdentity.test.ts",
+      "gitBlob": "a03b0b43bf1bc2d370c0b0c19d4170ff19ac9534",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningOpenCodeDiagnosticsPolicy.test.ts",
+      "gitBlob": "8318f08bc36eba72b44ca60807e4d754b33b588e",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningOpenCodeRuntimePermissions.test.ts",
+      "gitBlob": "33a4236d853a1b611beaa8301215e2ab4062fd93",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningProcessExit.test.ts",
+      "gitBlob": "055e5f27d2e9c8ede12aca48d422bef44dd8e821",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningPromptBuilders.test.ts",
+      "gitBlob": "95acccbf4f078d6b7a5f8b4703201f31c8ae61d1",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningRuntimeDiagnostics.test.ts",
+      "gitBlob": "7e4397c7ae9781e7f4da6a0337f05f3181add530",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningRuntimeResourceSampling.test.ts",
+      "gitBlob": "c8704c57215a2ebdb40d952db7144cdd4d88c6b2",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningServiceIdempotency.test.ts",
+      "gitBlob": "6f7c08a5de2bfe079b7ff75cff628a7b6c90abab",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningServiceMemberLifecycleHost.test.ts",
+      "gitBlob": "0e73c298925b0926fcaf03681ede72ed834047aa",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningServicePostCompact.test.ts",
+      "gitBlob": "6f7e8349c1abbbc9efad24d176820ed645ead156",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningServiceRoster.test.ts",
+      "gitBlob": "e0dde1d6455a2b35cbecfa1aa749cebc3cfb3053",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningVisualizationPrompt.test.ts",
+      "gitBlob": "c83d761542cf79a6cb6e6578b83a7fc1d1617dcc",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamProvisioningWorkspaceTrust.test.ts",
+      "gitBlob": "3ebd9b2e36afd9a4c936ce8343cd7e9e2a45d29e",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamReconcileDrainScheduler.test.ts",
+      "gitBlob": "c8976ce8cc4bd3663c9a4d53fce9a7d1bf6ba9a5",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeLivenessResolverCommandParsing.test.ts",
+      "gitBlob": "f82b2746acf1fb48350249fed69df095e3a11491",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamTaskActivityIntervalService.test.ts",
+      "gitBlob": "2ea845c6ae4a4680e890c737b67ddcb466be09fa",
+      "counts": {
+        "passed": 39
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamTranscriptSourceLocator.test.ts",
+      "gitBlob": "0fb6712c0295b3849df51f63e0fd7d523e3c7d83",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/TeamWorkSyncRestoreAttemptOwner.test.ts",
+      "gitBlob": "d5ed411e73388f81708d125b0e9aea89265f627e",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/ToolApprovalPolicySync.safe-e2e.test.ts",
+      "gitBlob": "698bace1cd9c2eb46ec8d96d14f934b20920b6ec",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/VersionedJsonStore.test.ts",
+      "gitBlob": "4e3a19287f02ee667ad1131a7969a74b0e787e06",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/claudeJsonProjectTrust.test.ts",
+      "gitBlob": "8e1e80c3c40569f5f538cfb3368a147e2ea07f32",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/memberWorkSyncLiveHarness.test.ts",
+      "gitBlob": "3bd481d8a87f89cebdb0846fcdb3adfbab3ec321",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/openCodeFullTeamProofDiagnostics.test.ts",
+      "gitBlob": "4dd4006653a526bfd78f9e34bccc14418b0769d7",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/openCodeLiveTestHarness.test.ts",
+      "gitBlob": "e271b71e504f32087446c121e88740ed58e9d89b",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/openCodeMixedTeamEvidence.test.ts",
+      "gitBlob": "3c48f36bba7d534dff8ea8bb2a42664690a64ca8",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/progressPayload.test.ts",
+      "gitBlob": "f1707d241ba2aabf4025507c991a8e4518ed8cc6",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/taskChangeLedgerFixtures.integration.test.ts",
+      "gitBlob": "df386e457d4ff4b0f153159562692351ae37bdb8",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/teamForceStopFlow.clearPendingDeliveries.test.ts",
+      "gitBlob": "d8a4baa7c040b98447f165200d46028ac157f955",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/teamForceStopFlow.killRetained.test.ts",
+      "gitBlob": "153733a38cfc97df4c2d3b196aa121027e289962",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/teamTaskActiveState.test.ts",
+      "gitBlob": "d7cd5157ce33419ecd6b715f33a38619980c7daf",
+      "counts": {
+        "passed": 26
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/common/CliInstallWarningBanner.test.tsx",
+      "gitBlob": "96e71181fcdf2dbc119dc78f6b6f692dec510e26",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/common/TokenUsageDisplay.test.ts",
+      "gitBlob": "a0e6fc526e1b7cbd7c7e35143a7bfdd2fab214a0",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/common/UpdateUi.fixture-e2e.test.tsx",
+      "gitBlob": "0e1687795801b40f89dff90b218aefb426972e2c",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/runtime/ProviderRuntimeSettingsDialog.test.ts",
+      "gitBlob": "6d68a011c0c351ac388dff0b43a968faeb7f02c7",
+      "counts": {
+        "passed": 54
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/search/CommandPalette.test.tsx",
+      "gitBlob": "7967813e60d49e026132723bc77b7b2461ff6479",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/sidebar/GlobalTaskList.test.ts",
+      "gitBlob": "7a1ace814f79bac52e41b8860450240e156af688",
+      "counts": {
+        "passed": 22
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/sidebar/SidebarTaskItem.test.ts",
+      "gitBlob": "c93eb373ac4f6d1de5747f89360132e0eed36231",
+      "counts": {
+        "passed": 19
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/sidebar/dateGroupedSessionsSelection.test.ts",
+      "gitBlob": "8b111c97c13e93c756508207a5ba14e19b07e1b4",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/sidebar/projectGroupPagination.test.ts",
+      "gitBlob": "b9651f0428fc05f58f8a04a7d8e55e39ff2e4de6",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/sidebar/taskFiltersState.test.ts",
+      "gitBlob": "e996d179b2e11b95b7d59cda4d7302082758b3a4",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/organizations/OrgGraphFocusHud.test.tsx",
+      "gitBlob": "f925746080c1e0b84cbe7d5bc0ec9c598ad7b16e",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/organizations/OrgOverviewHud.test.tsx",
+      "gitBlob": "f4a7da3d6e7b58ec1103d64a74e1fc23e855420c",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/GraphMemberLogPreviewHud.test.tsx",
+      "gitBlob": "7880a9a1a513a8c4ab4e61f7e5a6b07fc4515142",
+      "counts": {
+        "passed": 18
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/GraphMinimap.test.ts",
+      "gitBlob": "a67f8159560385d0eaaa87245bdeeb9880b340f2",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/GraphProvisioningHud.test.ts",
+      "gitBlob": "092ce49b0b9b55ba3046c4dfd8445eaa98a49ba7",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/GraphTaskCard.test.tsx",
+      "gitBlob": "20f94c14eabafc62e2d7b6b08743c66546ec3f6b",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/activityLane.test.ts",
+      "gitBlob": "3883211a2ba18341512d874a97682861efab2ae9",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/drawEdges.test.ts",
+      "gitBlob": "066fceba083b2a9d3a50f61fe2ae3f6f4e073682",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/graphCamera.test.ts",
+      "gitBlob": "25e58fc65a93a6f165f447d7ae6a881fc46fea5f",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/useGraphMemberLogPreviews.test.tsx",
+      "gitBlob": "fad63cfe4173a41f823079539d95a9e958127aba",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/useGraphSimulation.test.ts",
+      "gitBlob": "c5ba0f0c8744c7217ff3264a693473db1d2dbc99",
+      "counts": {
+        "passed": 31
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/agent-graph/useGraphSimulationIdentity.test.ts",
+      "gitBlob": "dffa2e0d2f6b09c2b9cb11ea0f900a4e08ffa5ef",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts",
+      "gitBlob": "f05f09c941ca27a58cdd5167749fdcccaa17dda8",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderModelTestResult.test.tsx",
+      "gitBlob": "cfe38ed6500c90c2a945ff60dc3fd90da44ceb30",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/providerManagementView.test.ts",
+      "gitBlob": "8fda2e44896919832c87a6f75ae89d4438f7276b",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/runtimeProviderDirectoryCache.test.ts",
+      "gitBlob": "f9f2aea2b9c259d54fe66ca58c838de057c7c92b",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/runtimeProviderOnboardingProgressRepository.test.ts",
+      "gitBlob": "bd47933757403e0dccc93c9bf1efbe6c8e935aff",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useOpenCodeDashboardConnectedCountProbe.test.tsx",
+      "gitBlob": "e3aacdc1f66ff173c954dcf2d1a5d315016b887e",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderCompanion.test.ts",
+      "gitBlob": "7329d8234d9abba3a075fc553e2d37eadff2189b",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.anonymous.test.tsx",
+      "gitBlob": "f507a82e26265b7168ececde20822ce6e3b4ae50",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderQuickConnect.test.ts",
+      "gitBlob": "129e512e33ae0494e92381f3d2667f2407fa3678",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/features/terminal-workspace/TerminalWorkspaceScreenPresentation.fixture-e2e.test.ts",
+      "gitBlob": "511356f0725fcbd7747c82485f7ab792463b1e89",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/ui/Combobox.test.tsx",
+      "gitBlob": "ba9b085d2d87a541bb29b99c6f30d3e1546305f4",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsPanel.test.ts",
+      "gitBlob": "8ed2190052fff5853ebc8bdf1a2214a12f870052",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "gitBlob": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/LeadSessionDetailGate.test.tsx",
+      "gitBlob": "96678afc591f84a4a357038eab809ce7af0e7049",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/ProcessesSection.test.tsx",
+      "gitBlob": "a30949377b558c76c9e713a1ddf84a26526c91b0",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/TaskTooltip.test.tsx",
+      "gitBlob": "52644e60bcb608d644d80ef5ac95d2fc619554d8",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/TeamStatusBadge.test.tsx",
+      "gitBlob": "7f8f1df6d2adbce90eb022b67b0d1dd9f68d094d",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/member-log-stream/preload/__tests__/createMemberLogStreamBridge.test.ts",
+      "gitBlob": "51764de6aee5854ff9ef77f34dfe8e24b5e167d6",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/core/domain/openCodeCatalogFailure.test.ts",
+      "gitBlob": "02ae079fa52ee31a405f016271b5df09bba0e99c",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/core/domain/runtimeProviderConnection.test.ts",
+      "gitBlob": "0895c964bf792417ae574db26ee16b6ef9655f57",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/LocalProviderPrivateNetworkApprovalStore.test.ts",
+      "gitBlob": "a8d59c16791a741f44829aaa1ee2b4c016d168df",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.list.test.ts",
+      "gitBlob": "0eba1e5014add602c8b23daec3e87021f2042c58",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "gitBlob": "39141ae707e6d2b7032563ca466ac29eb79bc9e1",
+      "counts": {
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/RuntimeProviderLoadingBudget.test.ts",
+      "gitBlob": "b8a36e7a0135df50f6896162638b885539901aa7",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/boundedResponseBody.test.ts",
+      "gitBlob": "b7b620a11685d6146e5039aaa09607d9fd89f1d9",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelRequestTracker.test.ts",
+      "gitBlob": "c930fbd4b1b472f495af04f05fa98432d9102daa",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/runtimeProviderModelAccess.test.ts",
+      "gitBlob": "95c84069a64f53637dd883afbf290075c443ac2a",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeLocalProviders.test.ts",
+      "gitBlob": "1be6b6c6524cdacb7865719d72385813cb9ece18",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.test.ts",
+      "gitBlob": "e740e51fcb84a583af5c29f1ec71bcee033837b0",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/team-provisioning/renderer/ui/TeamMemberSettingsDialogBridge.test.tsx",
+      "gitBlob": "bed136bd935483be01d9f4ae16da1aed6c4caa48",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/token-usage/renderer/ui/ActivityHeatmapPanel.test.tsx",
+      "gitBlob": "3a039dfe41b57fdbaf8d3f249b07b0b1ff60160c",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/__tests__/TeamMetaStore.test.ts",
+      "gitBlob": "4a25897823e125f09b2d55b87ac74a077f924d03",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/activity/timelineItemPresentation.test.ts",
+      "gitBlob": "77daf0587d534adade0a40627826b4e6bd1feea8",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/AnthropicFastModeSelector.test.ts",
+      "gitBlob": "966f9844e1f2200a6dad8b70a78334a245f5e1f9",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OpenCodeProviderScopedDialogCatalogLoaders.test.tsx",
+      "gitBlob": "b98216dc634693cfb5a400b10756ea721c07a362",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider.test.tsx",
+      "gitBlob": "dbdee4e3686d46e52f3bc20da21c527749d7712f",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/openCodeDefaultModel.test.ts",
+      "gitBlob": "6b44578a6db46332ce9c4503c0d01322d167a6c8",
+      "counts": {
+        "passed": 24
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/openCodeDialogCatalogGate.test.ts",
+      "gitBlob": "433d84e11b59f0e85a581ad4b3dbcfea1acea0ec",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/openCodeInheritedRouteNoSilentDefault.test.ts",
+      "gitBlob": "9860d1ada97fe59f9063e48d30f146060330803a",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/openCodeLocalModelOverlay.test.ts",
+      "gitBlob": "07c93606063ccfa2be28bbf1872839d065c6d026",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/openCodeUnavailableSelection.test.ts",
+      "gitBlob": "19ed9dd43fa92c064fc1eb4c4395353fb14644f6",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberDraftRow.test.tsx",
+      "gitBlob": "0bded7f94fe3455ddc5325cf68e5c33ecd0205af",
+      "counts": {
+        "passed": 29
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/members/MembersEditorSection.test.tsx",
+      "gitBlob": "af7f4cc458157c9178f4bf042ce7380b386c7504",
+      "counts": {
+        "passed": 23
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/members/TeamRosterEditorSection.test.tsx",
+      "gitBlob": "cc58870d9c09b05562cad60b6f8fc951d2fbcdd4",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/members/memberWorkspace.test.ts",
+      "gitBlob": "edbe396ace1621fd0dc6d73182a307ef4dde8abb",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/messages/ThreadAwareMessageComposer.test.tsx",
+      "gitBlob": "0283f449759814553d0467c7310cc7c8c98107cc",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/components/team/messages/useMessageRevisionIntent.test.tsx",
+      "gitBlob": "9add9f7b9e998776fb5592437c6fea6a8ca0fcd2",
+      "counts": {
+        "passed": 24
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/store/slices/__tests__/openCodeRuntimeActivation.test.ts",
+      "gitBlob": "93e3ff9393028d8ab4849572197711e61b6163b6",
+      "counts": {
+        "passed": 44
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/renderer/store/team/__tests__/teamAgentRuntimeSnapshotStabilizer.test.ts",
+      "gitBlob": "0423f827b11920e9622621b72f8c0f6890ca7aaf",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/core/application/MemberWorkSyncAdmissionCrashWindows.test.ts",
+      "gitBlob": "883b5a9c5bf56e6306e17bdce699646418d3276e",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/core/application/MemberWorkSyncNudgeDeliveryFence.test.ts",
+      "gitBlob": "3dba4618c8cf7d2591fa2e74b99f7570f84c1c31",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/core/domain/MemberWorkSyncAdmissionHash.test.ts",
+      "gitBlob": "c94b2f5f113a1ee2c301cc21857731ada18f1a2a",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/composition/createMemberWorkSyncRuntimeTicketAdmissionRouter.test.ts",
+      "gitBlob": "e6f47ae1cc1d848063bba0a3fde7cf3e7e60f3e9",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/recent-projects/core/domain/mergeRecentProjectCandidates.test.ts",
+      "gitBlob": "556949c62a997b4792160790f8f494b474c9a721",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/recent-projects/main/infrastructure/CodexAppServerClient.test.ts",
+      "gitBlob": "4d9f306399d12e3169c7b5a779949028314ede21",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/recent-projects/renderer/hooks/useRecentProjectsSection.test.tsx",
+      "gitBlob": "16b788edddf4568cdcd572caef61f771f161a13e",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/recent-projects/renderer/view-models/recentProjectsSectionViewModel.test.ts",
+      "gitBlob": "ee70496505aa56d5e951f89a6655f52423948a06",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-import/core/application/CreateTeamImportDraftUseCase.test.ts",
+      "gitBlob": "add9f89abc63f4c78b0a19f7ffce5b5b9a8b74e7",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/team-direct-chats/core/domain/sortChatList.test.ts",
+      "gitBlob": "a437900c36c0a4eb1dcdd34d342bd13796055d74",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/contracts/TeamProvisioningApis.test.ts",
+      "gitBlob": "f41b2b9127bb7041b875c41eba85f7f5f50b9a6f",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/runtime-projection/RuntimeProjectionCommandRedaction.test.ts",
+      "gitBlob": "24f0a83308099c2ab57efcf0e823032a82bf95eb",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/BoardTaskActivityBatchIndexer.test.ts",
+      "gitBlob": "38b9d60351cc8ca7f3fd2e053344c613e1d53364",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/TaskProgressSignalClassifier.test.ts",
+      "gitBlob": "8fc0c3231ea0580d00db730570bf7aa782995934",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/TeamTaskStallJournal.test.ts",
+      "gitBlob": "935c89983fcaf70082b54cc0ea4e3d3df445df35",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/TeamTaskStallMonitor.test.ts",
+      "gitBlob": "fe8fb67287b836f228c3988dd51efe4dffba9f84",
+      "counts": {
+        "passed": 23
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/TeamTaskStallPolicy.test.ts",
+      "gitBlob": "30c80fceeae12356c65da72b65b1384d3c296167",
+      "counts": {
+        "passed": 29
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/chat/viewers/MarkdownViewer.test.tsx",
+      "gitBlob": "93e4983f968485adfff445b17cfe34612b3fe122",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/extensions/mcp/CustomMcpServerDialog.test.ts",
+      "gitBlob": "56e6dc9124b75b7587f3f99fa5de6c32a5f3d33e",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/extensions/skills/SkillEditorDialog.test.ts",
+      "gitBlob": "bca9d7b8a3d2a3d495a5c49abcd0a810ba3e7b0d",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/extensions/skills/skillDraftUtils.test.ts",
+      "gitBlob": "631071acdd79a20dc5a92ab28285ba5985ee2072",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/extensions/skills/skillValidationUtils.test.ts",
+      "gitBlob": "7785887a35a4e40e922246176a92b87d57f81d8b",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/activity/ActivityMessageHoverCard.test.tsx",
+      "gitBlob": "6a9f42c9db617babaf8ece2b59052e4a2796976e",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/activity/ActivityTimeline.virtualization-config.test.ts",
+      "gitBlob": "f3ac45b3631a287207cd4d4585f3a5dfbced8c27",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/activity/LeadThoughtsGroup.test.ts",
+      "gitBlob": "b030517357ed602a70cac2d44b44a4d1e4fc1e75",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/activity/activityMarkdown.test.ts",
+      "gitBlob": "8b52304102ac67a536dd3eb41af68466c72b835f",
+      "counts": {
+        "passed": 24
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/activity/conversationWindow.test.ts",
+      "gitBlob": "5423953f4068f806321af5c4d55ada7a7aefa3af",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/activity/useMessageReadVisibility.test.tsx",
+      "gitBlob": "9b7b9efc6868a93b35588400fc0b5b81f1b92634",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/CodexModelCatalogFallbackNotice.test.tsx",
+      "gitBlob": "5a7fa51da8fd5447349d5c2e369b34d1c3b45bb5",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/CustomProjectFolder.test.tsx",
+      "gitBlob": "3510a125eb8c9d7aa4701385e57e02b075c0ae4b",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/LimitContextCheckbox.test.tsx",
+      "gitBlob": "85bad50c5bf860581053a2c114aebf90180f0cc1",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/ProvisioningProviderStatusList.test.ts",
+      "gitBlob": "f682ad2a2f5ca14efa91c93fd2e5632d5a3fd12a",
+      "counts": {
+        "passed": 36
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/createHostTeamResume.test.ts",
+      "gitBlob": "8830cdb1fb1ffe56029e2b5630c74c75e0111196",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/memberModelScope.test.ts",
+      "gitBlob": "115bd8e80dc1519aeeeecba83e1a919a49d83f26",
+      "counts": {
+        "passed": 23
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/optionalProviderPreflight.test.ts",
+      "gitBlob": "430e455fdcd905da4633cbf64e65568cd10b54e4",
+      "counts": {
+        "passed": 78
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/projectPathOptions.test.ts",
+      "gitBlob": "c4045599a53f8f681e072d52752388aff4b1464c",
+      "counts": {
+        "passed": 24
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/provisioningMemberScope.test.ts",
+      "gitBlob": "0caf508277493d758711233c551c3988cd00da2b",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/stoppedTeamLaunch.test.tsx",
+      "gitBlob": "5ddc9e6e059b7cc5867d7d8ea7f03c4cd8ca6586",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/teamRelaunchFlow.test.ts",
+      "gitBlob": "e68379fe9437f649fc29146dd3e5bb57fd840d15",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/useOpenCodeProviderScopedModelAuthority.test.tsx",
+      "gitBlob": "a2ac451e84fe7badffe1d68296cbe73217ee464a",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/editor/EditorSelectionMenu.test.ts",
+      "gitBlob": "f4e66797174c798247cbd4263a39ebb26e7f3e28",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/members/CurrentTaskIndicator.layout.test.ts",
+      "gitBlob": "00d14e475bb920c0fa1e4a259ed268c1b3a88989",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberExecutionLog.test.ts",
+      "gitBlob": "fe4e48cdb3e8e808dbac024f0fc23bdfb60c861a",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberHoverCard.test.ts",
+      "gitBlob": "2a0a741365a3d978a1f8c91e7e00b92e33f371c3",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberPresenceDot.test.tsx",
+      "gitBlob": "f17ae800fbaba7c765a75f2f04ece78b51debe46",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/messages/MessagesExpandedChrome.test.tsx",
+      "gitBlob": "2bac9c67a6fc23ac299bf8026bc2d3e80424259e",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/messages/messagesPanelReplyRecipient.test.ts",
+      "gitBlob": "d8a7d19952dfdc6bf339f2caba5ed0adc9a5aa6a",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/messages/messagesPanelStatusScope.test.ts",
+      "gitBlob": "f515f2fc26fee0df6baa85eaec06a331e12ea2f3",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/messages/useExpandedTeamChat.test.tsx",
+      "gitBlob": "11a5ea0fc68097697c3da112d26a21004fac7923",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/ChangeReviewDialog.guards.test.ts",
+      "gitBlob": "98bb2ab784ff7f0f018f746461fe8f7c5f70e5aa",
+      "counts": {
+        "passed": 32
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/ReviewToolbar.stats.test.tsx",
+      "gitBlob": "4e5d02a822411c1a5a20ab164b2c7ce6be3e67ca",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/SavedReviewStateRecoveryGate.test.tsx",
+      "gitBlob": "07ba01f59dcdd0b666142c56fb2128db26dbe385",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/duplicateReviewEditableOwner.test.tsx",
+      "gitBlob": "cb73b25ca75c89d46abd755639dc60d70c49cfef",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/duplicateReviewRemount.test.tsx",
+      "gitBlob": "b18ad237bd23f5394b786b2b4c40cfb5f612c940",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/initialReviewFileScroll.test.ts",
+      "gitBlob": "5e6d0218fda01620f1981a9c32b6f3b19d955d1b",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/review/reviewDialogIdentity.test.ts",
+      "gitBlob": "f3bc632a04570fb592e8d237644cccea491ef10a",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/sidebar/TeamSidebarPortalManager.test.ts",
+      "gitBlob": "738e6b84d50c29f7ae85b824d69b3f00609c95c6",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/TaskLogStreamSection.integration.test.ts",
+      "gitBlob": "b58915637d69554969abb3c46652322dea2ca09e",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx",
+      "gitBlob": "e3b2e072757d546d62de28aba87196e6f2961481",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/gateway-provider/renderer/ui/__tests__/MemberGatewaySelector.test.tsx",
+      "gitBlob": "e034b91dff5d0c169c15ae7df90e91e6f85d684c",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/token-usage/main/infrastructure/__tests__/BudgetRepositories.test.ts",
+      "gitBlob": "f6f19569d3838ab21648ff6a4bf41cf36e368a8d",
+      "counts": {
+        "passed": 25
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/token-usage/main/infrastructure/__tests__/GatewayUsageImporter.test.ts",
+      "gitBlob": "7feed9ac35c9af3cc976957067729e32a5c2a46d",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/token-usage/main/infrastructure/__tests__/TeamLaunchRunSourceDiscovery.test.ts",
+      "gitBlob": "90f43c831af73f7e8ec15e4a0b2b5ba6e9bd7151",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/token-usage/renderer/view-models/__tests__/activityCalendar.test.ts",
+      "gitBlob": "97ca7e6c370114ead7c95bb8ebbdc93dce76737f",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexAppServerSessionFactory.test.ts",
+      "gitBlob": "203a8fa4e3236cfe42c3766038898679131f541c",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "gitBlob": "e1e93fd32288ca463fda5513688e364e180d1b7f",
+      "counts": {
+        "passed": 3,
+        "skipped": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.test.ts",
+      "gitBlob": "d8bddcddf547b4adef399ca564aedd85f17998fc",
+      "counts": {
+        "passed": 19
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts",
+      "gitBlob": "37e0542b97352ba740b6823c8852d7243457621e",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/bridge/OpenCodeLegacyMaintenanceCensus.test.ts",
+      "gitBlob": "1f28a1cd6c72a6a90d1befee3830201c7506bd4f",
+      "counts": {
+        "passed": 29
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.test.ts",
+      "gitBlob": "27931a45543f5a15ac41fc0670c90810cb1a09a4",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/config/CursorMcpConfigWriter.test.ts",
+      "gitBlob": "199f4080580816a49f46931a2c5800031cf60360",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/runtime-control/__tests__/OpenCodeRuntimeControlApi.test.ts",
+      "gitBlob": "52f76eece3e9c2dc505ca08cce8898e0b8e5de3e",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/runtime-control/__tests__/OpenCodeRuntimeControlProvider.test.ts",
+      "gitBlob": "e190396b6ca7836a39ddedd37e22d44f7ff32ebb",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/runtime-control/__tests__/TeamRuntimeControlCompatibility.test.ts",
+      "gitBlob": "94b8963f9d9189d0c468cd47d33a66751f3649be",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/runtime/__tests__/OpenCodeTeamRuntimeAdapter.test.ts",
+      "gitBlob": "f90984a71eb786a4603113a492c2b6eff41f6844",
+      "counts": {
+        "passed": 34
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/OpenCodeAggregatePrimaryIncarnation.test.ts",
+      "gitBlob": "e83d325cc8b9c1b972cd7ce103c515f4b34afe9d",
+      "counts": {
+        "passed": 33
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningAuthRetryRecoveryBoundaryFactory.test.ts",
+      "gitBlob": "61316dc6a8abc3d6cf06c18c98e5bbc87318e2f2",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningBootstrapEvidenceFacade.test.ts",
+      "gitBlob": "5e03a71168e20c80eb4ad9e858cf6241ca0ee60c",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningBootstrapFailureMarking.test.ts",
+      "gitBlob": "9320d833d8a7ec34a7d6ede7e526dc5b8692a1a6",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCancellationBoundary.test.ts",
+      "gitBlob": "e2f51aa319037b62456d0c3f24018cc8ed87d500",
+      "counts": {
+        "passed": 24
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCliHelpOutputPortsFactory.test.ts",
+      "gitBlob": "2dd17ee4ca6ba4b990ddb2f75600ada6c8c1e1d1",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCodexChatGptModelGate.test.ts",
+      "gitBlob": "b12c3d8f62821a9336956363a7e73c077db15a67",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase.test.ts",
+      "gitBlob": "2847995fcbeb13597b4c93f7fdce434e8fa09d31",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningConfigMaterialization.test.ts",
+      "gitBlob": "df4bae419ffc911de4b69f14a8cffb551efc0250",
+      "counts": {
+        "passed": 35
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCreateDeterministicRunFlow.test.ts",
+      "gitBlob": "2b3ff3bb606edbfab8ade08d79ac276d7bf927cf",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCreateDeterministicSetupFlowPortsFactory.test.ts",
+      "gitBlob": "d8d313461c97857bbaeacb584e3527526f100546",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningCreateDeterministicSpawnFlowPortsFactory.test.ts",
+      "gitBlob": "bb3d00fbf2dd88e989ffb1400220ba5ee0ddf7f0",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningDiagnosticsHelpers.test.ts",
+      "gitBlob": "7e3b38bb6443732f2a83a089829357c7abdbcff3",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningIdlePromptInjection.test.ts",
+      "gitBlob": "8083d09b24624ad7ec382eab781f4e39725c007b",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningIdlePromptInjectionPortsFactory.test.ts",
+      "gitBlob": "a90aff48edd5f231d6e59a3bad4f65a68e4484ac",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningInboxRelayPolicy.test.ts",
+      "gitBlob": "37950b1c6854b6eb1e555c7535562ca5f0ec1e10",
+      "counts": {
+        "passed": 18
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchDeterministicFlowPortsFactory.test.ts",
+      "gitBlob": "f629efcb1771ae242a62a57d13092c943ff0a113",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchDeterministicRunFlow.test.ts",
+      "gitBlob": "4c05483c74ecaf066ad4d1586c79021c7a20eedf",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchDeterministicSetupFlow.test.ts",
+      "gitBlob": "f8a992000cfdfa7af0c70580f054fa3db21a18df",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchStateStoreBoundary.test.ts",
+      "gitBlob": "66db90eaafcfafffc47ebd118ca8ba3cdb869e3e",
+      "counts": {
+        "passed": 35
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLeadRelayCaptureTouch.test.ts",
+      "gitBlob": "48e32f4bda5e96f64df2a78d08a2bc271d006412",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLeadRelayLifecycle.test.ts",
+      "gitBlob": "029d2738af59e47752a31d3380099637d817fd91",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberInboxRelayFlow.test.ts",
+      "gitBlob": "d796b944fa1acc4eba627406f642709b21a1233c",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberLifecycleAnthropicCleanup.test.ts",
+      "gitBlob": "e8ce9cf34ff02ca6a1e0344bc7a72002900a7b4f",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberLifecycleCompatibilityFacade.test.ts",
+      "gitBlob": "8c63e9641804220847a68afdd01dce578d81be08",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberLifecycleOperationUseCases.test.ts",
+      "gitBlob": "e22457c7f2c39281cb97f94c2355ecf38b2320c1",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberLifecycleServiceUseCases.test.ts",
+      "gitBlob": "a71b3267bdfb8b2bc7c35ecde8901b36503b02ce",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberSpawnStatusesReadOnly.test.ts",
+      "gitBlob": "edfff054a482129657ff55eafbfb8e9d1b632fcf",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningMemberStatusProjection.test.ts",
+      "gitBlob": "f7afc3b8c7daa2646b2be467fc6e8dd3b59207bd",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningNativeTeammateMessages.test.ts",
+      "gitBlob": "174adb74bf891bece807cdee59e639567ca7d8b4",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeAggregateLaunchPrompt.test.ts",
+      "gitBlob": "e1918ba60ee646617cd345763034ee17a2c078d8",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeAggregateRun.test.ts",
+      "gitBlob": "c8111d35a03cb3fe3d860e975320e494beceee49",
+      "counts": {
+        "passed": 37
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeBootstrapDeliveryDuringProvisioning.test.ts",
+      "gitBlob": "9e21c0bf167f4bc7818557f56529ef3b9ca0fa46",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeInboxCoalescePolicy.test.ts",
+      "gitBlob": "36303c1785d70b309acfb6bb40ad9f06ce2b6d49",
+      "counts": {
+        "passed": 20
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberInboxRelay.followUpWake.test.ts",
+      "gitBlob": "cdaa5a9f8a3709abad800849ec050be2a0346c50",
+      "counts": {
+        "passed": 9
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade.test.ts",
+      "gitBlob": "1269f6386d070a3f85d7d0cb14191c8021fcb5e9",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberRestartSystemMessageUseCase.test.ts",
+      "gitBlob": "3a8c1b687067d595331313db25d629f505ff860b",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodePrimaryLaneRebootstrap.test.ts",
+      "gitBlob": "d2bfb473abfad0634c7570b65edff7fd7895d9d6",
+      "counts": {
+        "passed": 22
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade.test.ts",
+      "gitBlob": "bce28983319699fb51799a5f83ca79977339b5ee",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary.test.ts",
+      "gitBlob": "bc6d5902d27883894f3c07450563f4ce861b48f7",
+      "counts": {
+        "passed": 15
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeRecoveryFacade.test.ts",
+      "gitBlob": "ddf131f7463497fe787c17000d4ad346f0e856d9",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeSecondaryBriefingBuilder.test.ts",
+      "gitBlob": "0ddec6a14282d42d6aa2079afb8c9e014ca4744f",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeSharedRuntimeFailurePolicy.test.ts",
+      "gitBlob": "f00a08f3a5327d8a5f305d991a571cebaec0506f",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeSoloRuntime.test.ts",
+      "gitBlob": "ade3928fe2a3bfcb04eb84087a04b191d2db041e",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeStoppedLaneStopTargets.test.ts",
+      "gitBlob": "50545c67aad40852e337a22ffcd36ff0b11f5413",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOutputErrorPolicy.test.ts",
+      "gitBlob": "8ab6b2459f840973353a6e77c7252126a9c08df9",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOutputRecoveryBoundaryFactory.test.ts",
+      "gitBlob": "fe3ecbcedceaa3c901498928f3483bb7b7de492c",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningOutputRecoveryFacade.test.ts",
+      "gitBlob": "e133f3f2ac80ae23eb09636d7161eb82843fe2e0",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistedLaunchReconcilePorts.test.ts",
+      "gitBlob": "7ad31ee78e596e1acd20be74ca1de14b0820b386",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistedTeamConfigAccess.test.ts",
+      "gitBlob": "c55da0a52d706addb5397f1c5e8e037cb1a4e6be",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistentRuntimeCleanup.test.ts",
+      "gitBlob": "9c14722211b6cee1fdfecbeb7ea3b0d624413605",
+      "counts": {
+        "passed": 21
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPrepareCoordinator.test.ts",
+      "gitBlob": "db8c3bda72db46dbfea407c03fb8981055ad48d8",
+      "counts": {
+        "passed": 39
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningProbeWarnings.test.ts",
+      "gitBlob": "d967af956ff22e8ce3aa314a83b0efc36c6367b4",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase.test.ts",
+      "gitBlob": "0c37146d8aa711ff3a8234f555d2e1647418f7cd",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningRunProgress.test.ts",
+      "gitBlob": "2a4156c4edb35af458c1b9b0d655649b39b4c4c4",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeAdapterCancellation.test.ts",
+      "gitBlob": "a356db2cada08f0f71340b6e1ebac8d4ea33dab7",
+      "counts": {
+        "passed": 16
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeAdapterCancellationPortsFactory.test.ts",
+      "gitBlob": "18ed5507e856f7bab5428737f64714751a26c316",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeEvidenceReader.test.ts",
+      "gitBlob": "326d8ddf3c1053259869c8f3f1ea88d45e8f0907",
+      "counts": {
+        "passed": 32
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeRecipientResolution.test.ts",
+      "gitBlob": "500ff201323b5ad8399a680139a09c893fed4416",
+      "counts": {
+        "passed": 13
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeSnapshotCache.test.ts",
+      "gitBlob": "a96d8c5e007ac279a89f9d0cd596b3c667bce081",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningServiceComposition.test.ts",
+      "gitBlob": "c9d2c7a7cdceaedcccdde50f92c55295b52ab31f",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningServiceMemberLifecycleHostPortGroups.test.ts",
+      "gitBlob": "7ff7866fb02b0194b4e951b74e832a8012ee9696",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningStopFlowPortsFactory.test.ts",
+      "gitBlob": "8f9e824884a88fdc9ce5aa2e7004972d2021510f",
+      "counts": {
+        "passed": 6
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningStoppedTeamSpawnProjection.test.ts",
+      "gitBlob": "2f3e41f21887198151e12396b6e427e85b1061c4",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningStreamSpawnEvents.test.ts",
+      "gitBlob": "7a04cfe77f035787ac249a8ebe58cb43a856024b",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningTeammatePermissionRequest.test.ts",
+      "gitBlob": "664fe2ed6b07f72e70dc3113fc7eb06092527401",
+      "counts": {
+        "passed": 5
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningToolApprovalNotifications.test.ts",
+      "gitBlob": "d4a1a099a931fa0f8253e59fcbdfb10967992494",
+      "counts": {
+        "passed": 8
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningToolApprovalPortsFactory.test.ts",
+      "gitBlob": "6f89af0d5e27e3b66763862b0b809ba1d419ce30",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningToolApprovalResponse.test.ts",
+      "gitBlob": "45448cc7fa3e4c551eb56332e1a955e436345fe0",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningTransientRunState.test.ts",
+      "gitBlob": "afb0e0f43c71bc04de9df0d31c7e092098e655f9",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase.test.ts",
+      "gitBlob": "37682dd2b513c35f31f9e1f7bce3ed2757687601",
+      "counts": {
+        "passed": 11
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningVerificationProbePortsFactory.test.ts",
+      "gitBlob": "97b2d3227b63810d275075d7da2b7932d227f14f",
+      "counts": {
+        "passed": 14
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/member-work-sync/main/adapters/output/TeamTaskAgendaSource.recovery.test.ts",
+      "gitBlob": "1dc8b90f30cc3399d98c4f9721ca9ae8c3057679",
+      "counts": {
+        "passed": 3
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "test/features/recent-projects/main/adapters/output/CodexSessionFileRecentProjectsSourceAdapter.test.ts",
+      "gitBlob": "41e44d1d7aaf755d3ced97f7c77940e91be7b8ac",
+      "counts": {
+        "passed": 17
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/member-log-stream/core/domain/policies/__tests__/memberLogPreviewMergePolicy.test.ts",
+      "gitBlob": "bc82158ebe6be4533a5c0041f51829ff6c6afcec",
+      "counts": {
+        "passed": 1
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/features/tmux-installer/main/infrastructure/runtime/__tests__/decodeInstallerProcessOutput.test.ts",
+      "gitBlob": "288061c1d870d2fdbb30a8ab065d5cba192f36b1",
+      "counts": {
+        "passed": 7
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodeLeadTurnActivity.test.ts",
+      "gitBlob": "2096158e06f57ebecdd9fc3fc3613e62c6c61af0",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodeMemberMessageDeliveryService.turnActivity.test.ts",
+      "gitBlob": "511d6c96e963c77bb94a90603e847ac51f03e36c",
+      "counts": {
+        "passed": 12
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryAttemptText.test.ts",
+      "gitBlob": "16b11b14dec8a6cefa0783fa338d74005c59c601",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryDeferral.test.ts",
+      "gitBlob": "fac278b62d247c803cbda2d61d5c0524a7efc98a",
+      "counts": {
+        "passed": 4
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryFollowUpPolicy.proofPendingRearm.test.ts",
+      "gitBlob": "1acf2656d4fde08e813acc080eef25c2ad00a6c8",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryStalePendingPolicy.test.ts",
+      "gitBlob": "6e4632605d50ee2883565e07e1e55d18a94eb61a",
+      "counts": {
+        "passed": 31
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryWatchdogScheduler.test.ts",
+      "gitBlob": "42f1c28886303380ae239af31d8db91ee921feac",
+      "counts": {
+        "passed": 18
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/__tests__/RuntimeDeliveryService.test.ts",
+      "gitBlob": "3397f40d45c5d0fd1260847ce0efcd0fd712c518",
+      "counts": {
+        "passed": 10
+      },
+      "jsonFileStatus": "passed"
+    },
+    {
+      "path": "src/main/services/team/opencode/permissions/__tests__/RuntimePermission.test.ts",
+      "gitBlob": "1c2c571d6c372409e5a7e8f3f5024569bb2a23eb",
+      "counts": {
+        "passed": 2
+      },
+      "jsonFileStatus": "passed"
+    }
+  ],
+  "limits": [
+    "Only original shard3 of4; other shards retain separate qualification.",
+    "All seven skipped assertions remain unqualified; seven exact source guard leaves were read and match M.",
+    "JSON suite counters are not physical file counts; actual assertion arrays/default reporter counted.",
+    "Original checkout/CLI/path joins are not an independent transformed-code rebuild or per-file archived source census.",
+    "Runner Node26.12.1 is distinct from captured TEST Node24.21.0.",
+    "Original live/live-e2e/native exclusions and separate native/Desktop/privacy/static obligations remain unchanged."
+  ],
+  "projectExecutionByReviewer": false,
+  "all541UniquePathsPresentAtExactGitHeadAndMatchOriginalIncludeExclusions": true
+}

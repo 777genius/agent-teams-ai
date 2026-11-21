@@ -80,6 +80,7 @@ export async function qualifyRegisteredProcessNative(input: {
       generation: '1',
     };
     const captured = rootCapture.capture(targetPid, registrar);
+    assert.ok(captured.version === 1 || captured.version === 2, 'This existing qualification is Darwin-only');
     retain('original-selection', {
       rootPid: root.pid,
       sentinelPid: sentinel.pid,

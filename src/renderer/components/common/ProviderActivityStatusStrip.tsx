@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { shouldMaskCodexNegativeBootstrapState } from '@renderer/components/runtime/providerConnectionUi';
+import { useConservativeNow } from '@renderer/hooks/useConservativeNow';
 import { cn } from '@renderer/lib/utils';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
@@ -32,6 +33,7 @@ interface ProviderActivityStatusStripProps {
   readonly cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   readonly multimodelEnabled: boolean;
   readonly codexSnapshotPending?: boolean;
+  readonly hasCapturedTeamReadiness?: (providerId: CliProviderId, now: number) => boolean;
   readonly openCodePreparationEvidence?: OpenCodeScopedPreparationEvidence;
   readonly forceLoadingProviderIds?: readonly CliProviderId[];
   readonly providerIds?: readonly CliProviderId[];
@@ -86,6 +88,7 @@ function useProviderActivityDisplay({
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  hasCapturedTeamReadiness,
   openCodePreparationEvidence,
   forceLoadingProviderIds,
   providerIds,
@@ -99,6 +102,7 @@ function useProviderActivityDisplay({
   | 'cliProviderStatusLoading'
   | 'multimodelEnabled'
   | 'codexSnapshotPending'
+  | 'hasCapturedTeamReadiness'
   | 'openCodePreparationEvidence'
   | 'forceLoadingProviderIds'
   | 'providerIds'
@@ -131,7 +135,7 @@ function useProviderActivityDisplay({
     [sourceStatus?.providers]
   );
 
-  const providerStates = useMemo<ProviderActivityState[]>(() => {
+  const readProviderStates = useCallback((now: number): ProviderActivityState[] => {
     const visibleProviders = filterMainScreenCliProviders(renderCliStatus?.providers ?? []).filter(
       (provider) => !providerIdSet || providerIdSet.has(provider.providerId)
     );
@@ -146,7 +150,8 @@ function useProviderActivityDisplay({
           provider.providerId,
           provider,
           !overridden && cliProviderStatusLoading[provider.providerId] === true,
-          openCodePreparationEvidence
+          openCodePreparationEvidence,
+          now
         ) ||
         (provider.providerId === 'codex' && codexSnapshotPending) ||
         shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
@@ -154,24 +159,34 @@ function useProviderActivityDisplay({
         });
       const scopedOpenCodeReady =
         provider.providerId === 'opencode' &&
-        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence);
+        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence, now);
 
       return {
         provider,
         loading,
-        error: !loading && !scopedOpenCodeReady && !hasEffectiveProviderLaunchAuthority(provider),
+        error:
+          !loading &&
+          !scopedOpenCodeReady &&
+          hasCapturedTeamReadiness?.(provider.providerId, now) !== true &&
+          !hasEffectiveProviderLaunchAuthority(provider, now),
       };
     });
   }, [
     cliProviderStatusLoading,
     codexSnapshotPending,
     forcedLoadingProviderIdSet,
+    hasCapturedTeamReadiness,
     openCodePreparationEvidence,
     providerIdSet,
     renderCliStatus?.providers,
     sourceProviderMap,
     providerStatusOverride,
   ]);
+  const [authorityNow] = useConservativeNow(readProviderStates);
+  const providerStates = useMemo(
+    () => readProviderStates(authorityNow),
+    [authorityNow, readProviderStates]
+  );
 
   const visibleProviderIds = useMemo(
     () => providerStates.map((state) => state.provider.providerId),
@@ -263,6 +278,7 @@ export const ProviderActivityStatusStrip = ({
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  hasCapturedTeamReadiness,
   openCodePreparationEvidence,
   forceLoadingProviderIds,
   providerIds,
@@ -284,6 +300,7 @@ export const ProviderActivityStatusStrip = ({
     cliProviderStatusLoading,
     multimodelEnabled,
     codexSnapshotPending,
+    hasCapturedTeamReadiness,
     openCodePreparationEvidence,
     forceLoadingProviderIds,
     providerIds,

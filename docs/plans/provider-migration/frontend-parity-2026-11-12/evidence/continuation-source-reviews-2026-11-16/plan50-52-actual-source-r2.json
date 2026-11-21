@@ -1,0 +1,300 @@
+{
+  "kind": "INDEPENDENT_CURRENT_SOURCE_R2_PLAN50_PLAN52",
+  "reviewedAtUtc": "2026-11-16T18:21:35.160899+00:00",
+  "disposition": "APPROVE_SOURCE_ONLY",
+  "blockingFindings": [],
+  "reviewer": "/root/frontend_failures",
+  "sourceTip": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+  "sourceTree": "e46e640469645cdd58cf5d0f7e0064d709940b9e",
+  "plan52Source": "1951c2354e91fcdf6fc8d6ae5143ba0448b6dbd1",
+  "parent": "efecd96984eca3bb1fbe97492bd1984445befd24",
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan50-52-1ef2-full-readback.json",
+      "gitBlob": "b5de0e0f82b69bb060f5e443387388287dfd193b",
+      "bytes": 500875,
+      "lines": 518,
+      "sha256": "a2af305c27b0c44b7daf9540ab955f4bc81788b97766e5c39f4c2a4f50aa60ee"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan50-unchanged-owner-reference.json",
+      "gitBlob": "690c961b23839a00904ea2ef65d125f97885386b",
+      "bytes": 6582,
+      "lines": 21,
+      "sha256": "4f6018c2aef24deb94b4a33f548be8ea818411ad7ff71b6b3a9f9f3ef51b1b52"
+    }
+  ],
+  "plans": {
+    "plan50": {
+      "gitBlob": "fea4c731b0befea2c3fe5d082a8b138cb03c5cac",
+      "bytes": 12773,
+      "lines": 70,
+      "sha256": "305023e9835e651c61f007aa98884b76c59b9b6814846a5ff2ed47748b65b398"
+    },
+    "plan52": {
+      "gitBlob": "1a47ede0b6b1430486a160ce107ade5a906120e2",
+      "bytes": 3868,
+      "lines": 31,
+      "sha256": "adf80cff634105a87a3689de717d43128646899c66786599681882d2eb4f83df"
+    }
+  },
+  "completeFileComparisons": [
+    {
+      "commit": "1951c2354e91fcdf6fc8d6ae5143ba0448b6dbd1",
+      "path": "src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts",
+      "before": {
+        "gitBlob": "8d3abd63b2098c33694f15e211f03753815aff81",
+        "bytes": 18853,
+        "lines": 371,
+        "sha256": "700ae1b6955bb95924f1f44143fb2f8d0a48a90e99c9a1a09f9bfcdc1b49cfd7"
+      },
+      "after": {
+        "gitBlob": "80fb692b7e05afec6ddc30a2bc13a0185b071daf",
+        "bytes": 18859,
+        "lines": 371,
+        "sha256": "26395dde5ad01c5259b1cae985eed5351d49b8fa5b19bc148d52ba6eceac1b2d"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    },
+    {
+      "commit": "6075b12398a1e8005e80a0f422a745f2605e35d0",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md",
+      "before": null,
+      "after": {
+        "gitBlob": "98132d365c399c6200d377eaf7ed7a1d85a9dce6",
+        "bytes": 13078,
+        "lines": 69,
+        "sha256": "f8c4abda3a48a33c1749f00282d08550791ff8ad666081e44d7817972af78e8c"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    },
+    {
+      "commit": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "2c57fc6733ddc0e0b7f61f8ef56550b1f4ad553a",
+        "bytes": 106144,
+        "lines": 1368,
+        "sha256": "1bd8efcf0228f3349960a78282bd03f9342467095424b3efb92b0b9c0fbee4dc"
+      },
+      "after": {
+        "gitBlob": "53e17d0c4115fa029e9a12dc55859c52d7f448a3",
+        "bytes": 106313,
+        "lines": 1370,
+        "sha256": "f8ebc45fe39ae9d94309555316ee4950d7997f2870500645aa6a76b367df251e"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    },
+    {
+      "commit": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "before": {
+        "gitBlob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+        "bytes": 12302,
+        "lines": 168,
+        "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77"
+      },
+      "after": {
+        "gitBlob": "ba950ee03787427aaa837a0b77608c6a8760cab9",
+        "bytes": 12371,
+        "lines": 169,
+        "sha256": "3e221532ec7b77b71f2f55a847a2de9a0363f48af0b813119c73ed5a5db1fc58"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    },
+    {
+      "commit": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "gitBlob": "a3d7047a1d081852263726b59f3fa39ab0428a29",
+        "bytes": 22049,
+        "lines": 339,
+        "sha256": "57c46c53b141f00d18c7377afe15476c3587ad46e0ac3b48dc8011080b517618"
+      },
+      "after": {
+        "gitBlob": "dba3426375f7bbd3db5f594f2fe68d58e3cc3e25",
+        "bytes": 22258,
+        "lines": 342,
+        "sha256": "cc130e893171483f19773b03a2ed79a138abd6c6d84206eb4d93c3b209269bc3"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    },
+    {
+      "commit": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "before": {
+        "gitBlob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "bytes": 23900,
+        "lines": 580,
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568"
+      },
+      "after": {
+        "gitBlob": "bd7ed1336cdfba524f37c39dbe4e3f5c3ac48418",
+        "bytes": 25194,
+        "lines": 620,
+        "sha256": "3eb50c6da39aa9da82656a741e341c7a780827731b7213135cd0d368403cad25"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    },
+    {
+      "commit": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "path": "test/features/runtime-provider-management/capturedManagementClient.test.ts",
+      "before": {
+        "gitBlob": "653bd2392d49fe91cfcee7f2829dd50d3045bc62",
+        "bytes": 14815,
+        "lines": 391,
+        "sha256": "9d7e0d8472c1fd6abfcff6d43ffff8b72d9e8d8cd1e5b042ecba6931ea1f5ea6"
+      },
+      "after": {
+        "gitBlob": "f68d59b9804704da8a7fd635f4a69d36c1f956bc",
+        "bytes": 24134,
+        "lines": 608,
+        "sha256": "891858b0060ff3f180a26a77ae356e46fc498311898a35c76264f05ed9f7affd"
+      },
+      "githubPatchForwardExact": true,
+      "githubPatchInverseExact": true
+    }
+  ],
+  "unchangedDirectOwners": [
+    {
+      "path": "src/shared/utils/logger.ts",
+      "gitBlob": "88bb1d9c1fe670370e86a8945654f8b79b2a572d",
+      "bytes": 3645,
+      "lines": 141,
+      "sha256": "e0b1b90a5292e18e6482e2cb1c98387571206c229b29c0ab28b2bb66277e7956"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences.ts",
+      "gitBlob": "9a680f0ed4f847ae4612809e342a25ca448036be",
+      "bytes": 2201,
+      "lines": 57,
+      "sha256": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23"
+    }
+  ],
+  "method": {
+    "fullBeforeAfterReadAndRehash": true,
+    "allSevenGithubDiffsForwardAndInverseCompared": true,
+    "literalSourceAndTestReview": true,
+    "newApiOrArtifactRetrieval": false,
+    "projectImportOrExecution": false,
+    "testsCompilerLintParserExecuted": false,
+    "canonicalFilesGitIndexRefsOrActionsModified": false,
+    "metadataPolling": false,
+    "fullMerkleQualification": "Read and retained root packet full-tree joins through all three commits; no new independent whole-tree/API retrieval is claimed."
+  },
+  "plan52": {
+    "exactOneLineOnly": true,
+    "oldDeclaration": "const invalid = (): never => { throw new Error('Captured Windows environment mismatch'); };",
+    "newDeclaration": "const invalid: () => never = () => { throw new Error('Captured Windows environment mismatch'); };",
+    "erasedDeclarationsEqual": true,
+    "linesBefore": 371,
+    "linesAfter": 371,
+    "bytesAdded": 6,
+    "unchanged": "All imports, existing guard conditions and invalid callsites, property reads, schema uses, constructors, return values, Error body/message and outer fail-closed catch. No casts, assertion, new input acceptance, process operation or timeout.",
+    "sourceDiagnosis": "The unchanged endpoint guards, local MCP array guard and witness guard feed the seven reported TS narrowing locations. Giving the terminating const an explicit function type is consistent with the stated canonical control-flow issue; this static conclusion is not compiler success.",
+    "qualification": "Resulting-source canonical TS7.0.2 Process/full workspace checks remain required; native readiness is not inferred from the annotation."
+  },
+  "plan50": {
+    "productionLines": {
+      "before": 580,
+      "after": 620,
+      "existingLimit": 800,
+      "limitOrBaselineChanged": false
+    },
+    "activation": "Only exact environment value 1 selects an observer for loadView; the original smoke adds that single flag immediately before passing the same fixture.appEnvironment to its single original spawn. All preparation, source freeze, invocation and cleanup code is otherwise byte-identical.",
+    "bound": "Per client port, only first32 enabled loadView calls allocate ordinals1..32; each emits capture/catalog/preferences plus one resolved-or-rejected terminal record, at most128 Main view records. Disabled calls do not consume the cap. A new port has a new cap; this is not a global process cap.",
+    "closedRecord": {
+      "message": "Runtime provider view stage",
+      "namespace": "Host:ProviderView",
+      "payloadKeys": [
+        "kind",
+        "view",
+        "stage",
+        "scope"
+      ],
+      "kind": "runtime-provider-view-stage-v1",
+      "viewRange": [
+        1,
+        32
+      ],
+      "stageValues": [
+        "capture",
+        "catalog",
+        "preferences",
+        "resolved",
+        "rejected"
+      ],
+      "scopeValues": [
+        "global",
+        "project"
+      ]
+    },
+    "privacy": "Payload carries no path, profile/config revision, provider, request payload, credential, raw error or native child identity. Logger adds only its existing timestamp/level/namespace envelope. Other catalog/view mutation callers receive no observer.",
+    "order": "capture record precedes original capture; catalog record precedes the original one catalog request; preferences follows the original parse/native-default work and precedes selectedPreferences; resolved follows the original complete view; rejected precedes the unchanged unavailable(error) mapping. No added await, request, owner/currentness read or timer.",
+    "unchangedAuthority": "The same capture, catalog payload, preference store reads, currentness checks, captured intent copy, stale-context refusal and original error mapping remain. Other port methods and mutation/default refresh behavior are unchanged apart from optional undefined observer plumbing.",
+    "costAndFailureLimits": "Each emitted stage allocates an existing Logger, obtains its timestamp and synchronously dispatches existing sinks; this is real bounded extra cost inside unchanged deadlines. Synchronous sink exceptions are caught by the unchanged logger; logger creation/diagnostic throws are additionally caught in the observer. This review does not claim arbitrary asynchronous sink containment, zero timing effect or artifact persistence before original execution.",
+    "diagnosticInterpretation": "Next stage establishes preceding await completion. No native child/request join, queue timing, native startup/read split or earlier UI-timeout cause is exposed. Ordinal is port-local and observations may stop after32. Original30s UI,60s Main RPC and120s native management boundaries are not changed by the six reviewed diffs.",
+    "historicalBoundary": "Original a07 wait failure17:10:06.519 precedes cleanup17:10:06.786 and late response-error17:10:06.924. This cut observes Main stages; it does not repair or establish that earlier latency cause."
+  },
+  "tests": {
+    "existingCaseCount": 11,
+    "resultingCaseCount": 15,
+    "allOriginalBytesPreservedExceptTwoAddedImports": true,
+    "addedSuffixBytes": 9115,
+    "newCases": [
+      "observes the three original view awaits without another catalog or currentness read",
+      "keeps disabled views silent and bounds observations to the first 32 enabled views per port",
+      "keeps original view failures and their call boundaries without recording raw errors",
+      "contains throwing diagnostic sinks and observer creation without changing the original view"
+    ],
+    "meaning": [
+      "Actual client promise gates isolate capture/catalog/preferences with no fake timer; original one capture/catalog/preferences call and fixture two currentness reads asserted.",
+      "Disabled flag, 33 enabled calls, exact128 records, new-port restart and closed fields/privacy checked.",
+      "Original capture/catalog/preferences/final-current failures preserve expected errors, stage boundaries and call counts; no raw error contents observed.",
+      "Actual throwing sink plus createLogger spy preserve complete original result and one capture/catalog call."
+    ],
+    "cleanup": "Every observation helper restores the previous environment and removes its sink in finally; pending deferred stages are released and awaited and spies restored in inner finally. No new suite/framework, provider/native execution or missing-helper RED is introduced.",
+    "limits": "Real filesystem-backed preference IO, Electron logger persistence, native request timing and resulting CI are not executed or qualified by these source-only tests."
+  },
+  "closure": {
+    "fastLintBefore": 125,
+    "fastLintAfter": 127,
+    "uniqueBefore": 125,
+    "uniqueAfter": 127,
+    "oldOrderedOperandsExact": true,
+    "addedOperands": [
+      "test/features/runtime-provider-management/capturedManagementClient.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts"
+    ],
+    "sourceRosterAdded": [
+      "test/features/runtime-provider-management/capturedManagementClient.test.ts",
+      "src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts",
+      "src/shared/utils/logger.ts"
+    ],
+    "oldRosterAndWindowsArrayPreserved": true,
+    "existingTestVenue": "Complete unchanged safe Vitest shards include the existing client test; original live/native exclusion patterns and command unchanged. Team retains original full harness/contracts, complete workspace types, dedicated backend types and typed src/main/preload/shared/types, renderer, features and MCP lint.",
+    "productionLint": "Main management client and Windows environment source remain within unchanged typed src/features scope. Windows file is not an explicit operand of this127-file command; no new operand was selected for its erased annotation.",
+    "artifactVenue": "Existing always-upload still retains TEST-desktop-backend-*/userData/logs/app-errors*.ndjson and original smoke logs/receipts/screenshots. No added transport/collector or success oracle.",
+    "dependencyChange": "Only existing logger import and existing preference namespace test import; no dependency/package/compiler/config/module creation. Logger has no imports.",
+    "unchangedWorkflow": "All job selectors,18 Desktop lanes,4 safe shards, runner/toolchain,45minute job bounds, full commands, receipt/UI/live-membership steps and aggregate success gate are byte-identical after removing exactly the two appended operands."
+  },
+  "plan53Context": {
+    "gitBlob": "98132d365c399c6200d377eaf7ed7a1d85a9dce6",
+    "docsOnlyInReviewedChain": true,
+    "readForContext": true,
+    "sourcePreparedOrExecutedByReviewer": false,
+    "limits": "Separate native metadata failure diagnostic; its documented125-operand workflow preimage must be rebound to later127 before any eventual source publication. No Plan53 source approval or competing implementation is implied."
+  },
+  "remainingGates": [
+    "Exact resulting-source original compiler/types and lint outcomes.",
+    "Complete existing client suite and original safe frontend shards.",
+    "Original V2 Models30s UI and subsequent live membership plus original cleanup/artifact verification.",
+    "Separate selected Desktop/native/package/P08/P09/provider qualification; no historical result transfer."
+  ]
+}

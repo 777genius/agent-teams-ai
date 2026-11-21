@@ -166,6 +166,39 @@ describe('ordinary Host snapshot invalidation', () => {
     expect(f.events).toHaveLength(4);
     stop();
   });
+  it('invalidates only the captured inbox for text changes without advancing the product feed', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    let revision = 'a'.repeat(64);
+    const request = vi.fn(async (handle: { handleId: string }) => ({
+      ok: true,
+      value: {
+        streamId: a, sequence: 0, cursor: a, events: [],
+        conversation: { revision: handle.handleId === 'A' ? revision : 'b'.repeat(64), gaps: [] },
+      },
+    }));
+    const facade = new BackendOperationsFacade({ request } as never);
+    vi.mocked(f.backend.invoke).mockImplementation((input) => facade.invoke(input));
+    const stop = f.watch.subscribe((_event, event) => f.events.push(event));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.events).toHaveLength(4);
+    f.events.length = 0;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(f.events).toEqual([]);
+    revision = 'c'.repeat(64);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(f.events).toEqual([{
+      type: 'inbox', teamName: hostTeamSelectionKey('A'), detail: 'host-conversation-invalidated',
+    }]);
+    expect(f.readOrder.position('A')).toEqual({ streamId: a, sequence: 0, cursor: a });
+    expect(request).toHaveBeenCalledTimes(6);
+    expect(vi.mocked(f.backend.invoke).mock.calls.every(([input]) =>
+      input.operation === 'team.changes.read'
+    )).toBe(true);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(f.events).toHaveLength(1);
+    stop();
+  });
   it('uses the existing control lane and projects no private fields', async () => {
     const request = vi.fn(async () => ({
       ok: true,
@@ -175,6 +208,7 @@ describe('ordinary Host snapshot invalidation', () => {
         cursor: a,
         events: [],
         gap: { reason: 'cursor' },
+        conversation: { revision: 'd'.repeat(64), gaps: ['legacy-history'] },
         privateRoot: '/TEST/private',
       },
     }));
@@ -188,7 +222,10 @@ describe('ordinary Host snapshot invalidation', () => {
       })
     ).toEqual({
       ok: true,
-      value: { streamId: a, sequence: 0, cursor: a, events: [], gap: { reason: 'cursor' } },
+      value: {
+        streamId: a, sequence: 0, cursor: a, events: [], gap: { reason: 'cursor' },
+        conversation: { revision: 'd'.repeat(64), gaps: ['legacy-history'] },
+      },
     });
     expect(request.mock.calls[0]).toEqual([
       { handleId: 'A' },

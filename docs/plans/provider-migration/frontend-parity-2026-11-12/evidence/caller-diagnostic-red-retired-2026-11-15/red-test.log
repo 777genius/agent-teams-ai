@@ -1,0 +1,101 @@
+✔ saved model evidence follows the published source and cannot authorize a later source revision (167.127549ms)
+✔ saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes (214.076526ms)
+✔ never-captured saved/imported lead and Alice resolve explicit private recipes without any product/runtime writes (11.669908ms)
+✔ missing/ambiguous templates, changed source and stale owner refuse without authorizing a new launch (10.821339ms)
+✔ existing probe journal retains original intents and exact claude cleanup after roster without native Team allocation (23.39056ms)
+✔ existing probe journal retains original intents and exact claude cleanup after revoke without native Team allocation (14.077032ms)
+✔ existing probe journal retains original intents and exact claude cleanup after recipe without native Team allocation (14.684257ms)
+✔ existing probe journal retains original intents and exact codex cleanup after roster without native Team allocation (21.52272ms)
+✔ existing probe journal retains original intents and exact codex cleanup after revoke without native Team allocation (15.099444ms)
+✔ existing probe journal retains original intents and exact codex cleanup after recipe without native Team allocation (29.155255ms)
+✖ existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation (254.779562ms)
+✔ existing probe journal retains original intents and exact opencode cleanup after revoke without native Team allocation (17.80917ms)
+✔ existing probe journal retains original intents and exact opencode cleanup after recipe without native Team allocation (16.908709ms)
+✔ operator grant revocation invalidates saved source evidence even when the roster and template remain identical (4.517397ms)
+✔ Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable (335.700166ms)
+✔ saved Launch draft codex/lead selects only its explicit private recipe and retains original cancellation after template change (16.220895ms)
+✔ saved Launch draft codex/new-member selects only its explicit private recipe and retains original cancellation after template change (14.038855ms)
+✔ saved Launch draft opencode/lead selects only its explicit private recipe and retains original cancellation after template change (14.268778ms)
+✔ saved Launch draft opencode/new-member selects only its explicit private recipe and retains original cancellation after template change (13.520523ms)
+✔ saved workspace projection distinguishes canonical inheritance from an explicit member cwd (5.044281ms)
+✔ codex model preflight preserves private default native options and binds explicit effort without rewriting the source (7.074254ms)
+✔ opencode model preflight preserves private default native options and binds explicit effort without rewriting the source (8.25323ms)
+✔ claude explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (7.623643ms)
+✔ claude explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (6.905112ms)
+✔ codex explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (12.223091ms)
+✔ codex explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (7.10442ms)
+✔ opencode explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (8.402903ms)
+✔ opencode explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (8.438266ms)
+✔ V1 saved Default rebases only its proven limit overlay and resets the native provider/model pair (13.266494ms)
+✔ V2 draft Default preserves the native session model and rejects drifted private defaults (6.7493ms)
+✖ original factory boundary labels preserve its readiness guards and callback order (0.990275ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 29
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2355.720827
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/saved-team-model-probe.test.ts:452:5
+✖ existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation (254.779562ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      {
+  +     caller: undefined,
+  -     caller: 'allocation',
+        cutoff: 1794773231681,
+        observedAt: 1794773231680,
+        phase: 'reference',
+        reason: 'threw'
+      }
+  
+      at assertRetainedProductRosterTransfer (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts:1601:18)
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts:602:59)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ { caller: undefined, phase: 'reference', reason: 'threw', cutoff: 1794773231681, observedAt: 1794773231680 } ],
+    expected: [ { caller: 'allocation', phase: 'reference', reason: 'threw', cutoff: 1794773231681, observedAt: 1794773231680 } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/saved-team-model-probe.test.ts:1677:1
+✖ original factory boundary labels preserve its readiness guards and callback order (0.990275ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      [
+        'allocate'
+      ],
+      [
+  ...
+        'readiness',
+  +     undefined
+  -     'provider-opening'
+      ]
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts:1703:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ [ 'allocate' ], [ 'current' ], [ 'runtime' ], [ 'readiness', undefined ] ],
+    expected: [ [ 'allocate' ], [ 'current' ], [ 'runtime' ], [ 'readiness', 'provider-opening' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

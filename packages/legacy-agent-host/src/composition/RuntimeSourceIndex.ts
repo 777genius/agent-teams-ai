@@ -15,7 +15,6 @@ import { openCodeManagedPreferencesDigest } from './openCodeManagedPreferences.j
 import {
   publishRuntimeSourceSchema,
   publishRuntimeSourceRequestSchema,
-  runtimeSourceGrantSchema,
   runtimeSourceLookupSchema,
   runtimeSourceReadSchema,
   refreshRuntimeConfigurationSchema,
@@ -27,7 +26,11 @@ import {
   verifyRuntimeSourceExecutable,
 } from './verifyRuntimeSourceCandidate.js';
 import { qualifiedCodexProtocolRevision, RuntimeSourceAdmissionError } from './runtimeSourceQualification.js';
-import { RuntimeSourceUnavailable, readOriginalRuntimeSourcePublication, sameRuntimeSourceGrantAuthority, validateRuntimeSourceHistory } from './runtimeSourceGrantAuthority.js';
+import { runtimeSourceProcessOriginSchema, runtimeSourceRecipeIdentity } from './runtimeSourceProcessOrigin.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
+import { RuntimeSourceUnavailable, readOriginalRuntimeSourcePublication, sameRuntimeSourceGrantAuthority,
+  validateRuntimeSourceHistory, selectRuntimeSourceSeed, runtimeSourceNativeIdentityMatches,
+  runtimeSourceGrantMatchesScope, assertRuntimeSourceScopeAvailable } from './runtimeSourceGrantAuthority.js';
 import type { RuntimeSourceRecord } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
 import type {
@@ -511,13 +514,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       | { nativeVersion?: string | undefined; seedNativeVersion?: string | undefined }
       | undefined
   ): boolean {
-    return (
-      candidate.nativeCli !== undefined &&
-      identity?.nativeVersion === candidate.nativeCli.version &&
-      (seed.provider !== 'claude' ||
-        candidate.executable.sha256 === seed.executable.sha256 ||
-        identity?.seedNativeVersion === candidate.nativeCli?.version)
-    );
+    return runtimeSourceNativeIdentityMatches(seed, candidate, identity);
   }
 
   private async settleRetainedCleanup(
@@ -636,6 +633,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     return runtimeMemberProfileSchema.parse({
       ...(recipe.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(recipe, record.candidate) : structuredClone(recipe)),
+      ...(recipe.provider === 'codex' && record.candidate.nativeCli
+        ? { protocolRevision: record.candidate.nativeCli.version } : {}),
       executable: record.candidate.executable,
       ...(seed.provider === 'codex' ? {
         protocolRevision: qualifiedCodexProtocolRevision(record.candidate.nativeCli?.version ?? seed.protocolRevision),
@@ -643,23 +642,44 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     });
   }
 
+  /** Private process metadata only; returned recipe/profile bytes and their retained digests stay unchanged. */
+  processOrigin(reference: RuntimeSourceReference, scope: RuntimeSourceTeamScope,
+    projectPath: string, recipe: RuntimeMemberProfile): RuntimeSourceProcessOrigin | undefined {
+    this.resolveRecipe(reference, scope, projectPath, recipe);
+    if (recipe.teamId !== scope.teamId) fail('held');
+    if (!this.profile.processCustody || !('kind' in this.profile.processCustody) ||
+        this.profile.processCustody.kind !== 'main-windows-v1') return undefined;
+    return runtimeSourceProcessOriginSchema.parse({ sourceId: reference.sourceId, revision: reference.revision,
+      origin: { kind: 'runtime', scope: { teamId: scope.teamId, projectId: scope.projectId,
+        workspaceId: scope.workspaceId }, projectPath, teamId: recipe.teamId,
+        memberId: recipe.memberId, recipeIdentity: runtimeSourceRecipeIdentity(recipe) } });
+  }
+
+  /** Source-management IDs already name one immutable revision; this does not consult the current pointer. */
+  managementProcessOrigin(profile: ProviderManagementProfile): RuntimeSourceProcessOrigin | undefined {
+    const record = this.read().records.find(row => profile.profileId === `runtime-source:${row.revision}` &&
+      profile.configRevision === `runtime-source:${row.revision}`);
+    if (!record) return undefined;
+    const seed = this.retainedSeed(record);
+    if (runtimeDigest(this.managementProfile(record, seed)) !== runtimeDigest(profile)) fail('held');
+    return this.managementOrigin(record, seed);
+  }
+
+  private managementOrigin(record: RuntimeSourceRecord, seed: ProviderManagementProfile): RuntimeSourceProcessOrigin {
+    return runtimeSourceProcessOriginSchema.parse({ sourceId: record.grant.targetId, revision: record.revision,
+      origin: { kind: 'management', profileId: seed.profileId, configRevision: seed.configRevision } });
+  }
+
   assertReferenceAvailable(reference: RuntimeSourceReference, scope: RuntimeSourceTeamScope, projectPath: string): void {
     const record = this.read().records.find(row =>
       row.grant.targetId === reference.sourceId && row.revision === reference.revision);
     if (!record || !this.matchesScope(record.grant, scope, projectPath)) fail('held');
     this.retainedSeed(record);
-    const grant = record.grant;
-    if (!grant.teamScopes.some(row => row.teamId === scope.teamId &&
-        row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) &&
-        !this.profile.creation?.contextIds.includes(grant.contextId))
-      throw new RuntimeSourceUnavailable();
+    assertRuntimeSourceScopeAvailable(this.profile, record.grant, scope, projectPath);
   }
 
   private matchesScope(grant: RuntimeSourceGrant, scope: RuntimeSourceTeamScope, projectPath: string): boolean {
-    return (grant.projectPath === null || grant.projectPath === projectPath) &&
-      (grant.teamScopes.some(row => row.teamId === scope.teamId &&
-        row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) ||
-       (scope.projectId === grant.contextId && scope.workspaceId === grant.contextId));
+    return runtimeSourceGrantMatchesScope(grant, scope, projectPath);
   }
 
   private retainedSeed(record: RuntimeSourceRecord): ProviderManagementProfile {
@@ -674,37 +694,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
 
   private seed(raw: RuntimeSourceGrant, retained = false): ProviderManagementProfile {
     this.assertWriter();
-    const unavailable = (): never => { if (retained) throw new RuntimeSourceUnavailable(); return fail('conflict'); };
-    const grant = runtimeSourceGrantSchema.parse(raw);
-    if (
-      grant.ownerId !== this.profile.owner.ownerId ||
-      grant.ownerRevision !== this.profile.owner.revision
-    )
-      return unavailable();
-    if (
-      grant.teamScopes.some(
-        (scope) =>
-          !this.profile.teams.some(
-            (team) =>
-              team.scope.teamId === scope.teamId &&
-              team.scope.projectId === scope.projectId &&
-              team.scope.workspaceId === scope.workspaceId
-          )
-      )
-    )
-      return unavailable();
-    const seeds =
-      this.profile.management?.filter(
-        (row) =>
-          row.profileId === grant.profileId &&
-          row.configRevision === grant.configRevision &&
-          row.provider === grant.runtimeId
-      ) ?? [];
-    const seed = seeds[0];
-    if (seeds.length > 1) return fail('conflict');
-    if (!seed || (grant.projectPath !== null && grant.projectPath !== seed.cwd))
-      return unavailable();
-    return seed;
+    return selectRuntimeSourceSeed(this.profile, raw, retained);
   }
 
   private seedRevision(grant: RuntimeSourceGrant, seed: ProviderManagementProfile): string {
@@ -743,6 +733,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     return providerManagementProfileSchema.parse({
       ...(seed.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(seed, record.candidate) : structuredClone(seed)),
+      ...(seed.provider === 'codex' && record.candidate.nativeCli
+        ? { protocolRevision: record.candidate.nativeCli.version } : {}),
       profileId: selected.profileId,
       configRevision: selected.configRevision,
       executable: record.candidate.executable,

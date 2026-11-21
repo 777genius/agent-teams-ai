@@ -1,0 +1,561 @@
+{
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runId": 43736377045,
+  "attempt": 1,
+  "custodySource": {
+    "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+    "gitBlob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+    "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687",
+    "bytes": 9536
+  },
+  "jobs": [
+    {
+      "key": "v2_win_arm",
+      "jobId": 132879768061,
+      "nodeVersion": "v24.21.0",
+      "sourceAndDigestJoinsVerified": true,
+      "commands": [
+        {
+          "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts",
+          "counts": {
+            "tests": 58,
+            "pass": 57,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0
+          }
+        },
+        {
+          "command": "node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+          "counts": {
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        {
+          "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+          "counts": {
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        {
+          "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+          "counts": {
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        }
+      ],
+      "totalTests": 61,
+      "pass": 60,
+      "skip": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "originalSkip": [
+        "2026-11-15T16:49:07.5682181Z \ufe63 Linux builder refuses an existing or linked output leaf before any compiler dispatch (1.5985ms) # SKIP"
+      ],
+      "jobLog": {
+        "bytes": 102008,
+        "sha256": "17d4e010ef85ac7341869325e0be4c54b7d87f16888289fe751149b549dddb85"
+      },
+      "originalSkippedSteps": [
+        {
+          "number": 11,
+          "name": "Prove actual Darwin executable custody and adversarial cleanup"
+        },
+        {
+          "number": 12,
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple"
+        },
+        {
+          "number": 15,
+          "name": "Check original Desktop private recipe composition"
+        },
+        {
+          "number": 18,
+          "name": "Exercise native catalog and model probe without tool allocation"
+        },
+        {
+          "number": 19,
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery"
+        },
+        {
+          "number": 20,
+          "name": "Exercise effective permissions and active Stop with a surviving sibling"
+        },
+        {
+          "number": 21,
+          "name": "Exercise captured external MCP and app-only through the native Host"
+        },
+        {
+          "number": 22,
+          "name": "Require complete native management and permission evidence"
+        },
+        {
+          "number": 24,
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples"
+        }
+      ],
+      "inputs": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+        "status": "READY",
+        "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "platform": "win32-arm64",
+        "nodeVersion": "v24.21.0",
+        "productQualified": false,
+        "stage": "prepared",
+        "baseArchiveSha256": "6455e6269b41ac044357de847e07b783000a56ca7503a340739510c446ad004a",
+        "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "bun": {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+          "sha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+          "version": "1.4.3"
+        },
+        "supportArchiveSha256": "c52b4ba9f8ec03d40d71e5f60a37978596dc22030be3a41ca46190e766e15f2e",
+        "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5"
+      },
+      "custody": {
+        "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+        "status": "PASS",
+        "cleanup": true,
+        "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "platform": "win32-arm64",
+        "nodeVersion": "v24.21.0",
+        "bunSha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+        "hostBuild": {
+          "hostSourceDigest": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+          "hostDistDigest": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+          "providerDigest": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+        },
+        "productQualified": false,
+        "desktopQualified": false,
+        "captureBeforeInput": true,
+        "descendantSurvivedRootExit": true,
+        "originalJobCleanup": "confirmed",
+        "neighborSurvivedTargetStop": true,
+        "neighborJobCleanup": "confirmed"
+      },
+      "hosts": [
+        {
+          "approvalMode": "manual",
+          "status": "PASS",
+          "cleanup": true,
+          "elapsedMs": 225310,
+          "failureCode": null,
+          "cancelled": false,
+          "digests": {
+            "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+            "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+            "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+            "hostSource": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+            "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+            "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+            "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+          },
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "modelFailures": [],
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "diagnostics": {
+            "count": 254,
+            "epochs": {
+              "1": 254
+            },
+            "events": {
+              "child-spawn": 1,
+              "child-ready": 1,
+              "request": 105,
+              "response": 104,
+              "request-send-headers": 15,
+              "request-body-sent": 15,
+              "response-end": 12,
+              "trace-limit": 1
+            }
+          }
+        },
+        {
+          "approvalMode": "auto",
+          "status": "PASS",
+          "cleanup": true,
+          "elapsedMs": 213739,
+          "failureCode": null,
+          "cancelled": false,
+          "digests": {
+            "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+            "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+            "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+            "hostSource": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+            "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+            "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+            "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+          },
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "modelFailures": [],
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "diagnostics": {
+            "count": 254,
+            "epochs": {
+              "1": 254
+            },
+            "events": {
+              "child-spawn": 1,
+              "child-ready": 1,
+              "request": 105,
+              "response": 104,
+              "request-send-headers": 15,
+              "request-body-sent": 15,
+              "response-end": 12,
+              "trace-limit": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "key": "v2_win_x64",
+      "jobId": 132879768193,
+      "nodeVersion": "v24.21.0",
+      "sourceAndDigestJoinsVerified": true,
+      "commands": [
+        {
+          "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts",
+          "counts": {
+            "tests": 58,
+            "pass": 57,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0
+          }
+        },
+        {
+          "command": "node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+          "counts": {
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        {
+          "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+          "counts": {
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        {
+          "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+          "counts": {
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        }
+      ],
+      "totalTests": 61,
+      "pass": 60,
+      "skip": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "originalSkip": [
+        "2026-11-15T16:52:58.9578360Z \ufe63 Linux builder refuses an existing or linked output leaf before any compiler dispatch (0.7297ms) # SKIP"
+      ],
+      "jobLog": {
+        "bytes": 88125,
+        "sha256": "f9e1175103cb7661cf01e837f5b177bb123781ea88beab09e77793020498c5c3"
+      },
+      "originalSkippedSteps": [
+        {
+          "number": 11,
+          "name": "Prove actual Darwin executable custody and adversarial cleanup"
+        },
+        {
+          "number": 12,
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple"
+        },
+        {
+          "number": 15,
+          "name": "Check original Desktop private recipe composition"
+        },
+        {
+          "number": 18,
+          "name": "Exercise native catalog and model probe without tool allocation"
+        },
+        {
+          "number": 19,
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery"
+        },
+        {
+          "number": 20,
+          "name": "Exercise effective permissions and active Stop with a surviving sibling"
+        },
+        {
+          "number": 21,
+          "name": "Exercise captured external MCP and app-only through the native Host"
+        },
+        {
+          "number": 22,
+          "name": "Require complete native management and permission evidence"
+        },
+        {
+          "number": 24,
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples"
+        }
+      ],
+      "inputs": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+        "status": "READY",
+        "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "platform": "win32-x64",
+        "nodeVersion": "v24.21.0",
+        "productQualified": false,
+        "stage": "prepared",
+        "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+        "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "bun": {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+          "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "version": "1.4.3"
+        },
+        "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+        "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+      },
+      "custody": {
+        "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+        "status": "PASS",
+        "cleanup": true,
+        "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "platform": "win32-x64",
+        "nodeVersion": "v24.21.0",
+        "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+        "hostBuild": {
+          "hostSourceDigest": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+          "hostDistDigest": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+          "providerDigest": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+        },
+        "productQualified": false,
+        "desktopQualified": false,
+        "captureBeforeInput": true,
+        "descendantSurvivedRootExit": true,
+        "originalJobCleanup": "confirmed",
+        "neighborSurvivedTargetStop": true,
+        "neighborJobCleanup": "confirmed"
+      },
+      "hosts": [
+        {
+          "approvalMode": "manual",
+          "status": "PASS",
+          "cleanup": true,
+          "elapsedMs": 160915,
+          "failureCode": null,
+          "cancelled": false,
+          "digests": {
+            "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+            "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "hostSource": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+            "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+            "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+            "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+          },
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "modelFailures": [],
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "diagnostics": {
+            "count": 254,
+            "epochs": {
+              "1": 254
+            },
+            "events": {
+              "child-spawn": 1,
+              "child-ready": 1,
+              "request": 105,
+              "response": 104,
+              "request-send-headers": 15,
+              "request-body-sent": 15,
+              "response-end": 12,
+              "trace-limit": 1
+            }
+          }
+        },
+        {
+          "approvalMode": "auto",
+          "status": "PASS",
+          "cleanup": true,
+          "elapsedMs": 138791,
+          "failureCode": null,
+          "cancelled": false,
+          "digests": {
+            "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+            "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "hostSource": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+            "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+            "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+            "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+          },
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "modelFailures": [],
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "diagnostics": {
+            "count": 254,
+            "epochs": {
+              "1": 254
+            },
+            "events": {
+              "child-spawn": 1,
+              "child-ready": 1,
+              "request": 105,
+              "response": 104,
+              "request-send-headers": 15,
+              "request-body-sent": 15,
+              "response-end": 12,
+              "trace-limit": 1
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Only original d382 Windows V2 leaves are qualified by these observations; no Process, P09, packaged, resulting composition, vendor-auth, desktop or release qualification transfers.",
+    "Original Linux-only custody unit skip and skipped workflow branches remain unqualified.",
+    "Original custody assertions verify capture before input, original root exit with surviving descendant, repeated confirmed original Job termination, surviving neighbor and final independent owner cleanup; receipts do not retain individual native PID/HANDLE values.",
+    "All four Host receipts saturate passive tracing at 254 epoch-1 records including one trace-limit. It is not a complete process census or later-epoch trace.",
+    "Full Host source/dist trees and provider archives were not independently rebuilt or rehashed; retained aggregate values agree across each platform's receipts.",
+    "No project source, test, compiler, native provider or CI execution was performed during this archive/source audit."
+  ]
+}

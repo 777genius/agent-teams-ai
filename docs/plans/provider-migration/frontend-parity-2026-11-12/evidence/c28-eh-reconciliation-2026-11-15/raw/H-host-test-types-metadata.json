@@ -1,0 +1,67 @@
+{
+  "stage": "H",
+  "commandName": "H-host-test-types",
+  "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+  "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+  "parents": [
+    "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/@typescript/native/bin/tsc",
+    "--project",
+    "packages/legacy-agent-host/tsconfig.test.json"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T21:33:43.875672+00:00",
+  "finishedAtUTC": "2026-11-15T21:33:47.124021+00:00",
+  "elapsedSeconds": 3.2483284390036715,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "1a42a061e611d77b1cf08a732b307c0246190be508833f2cf5a03b6c5e971262",
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "builtOutputsCountAfter": 1446,
+  "selectedSourceCount": 32,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17,
+  "validationManifest": {
+    "bytes": 66013,
+    "blob": "7953713cb36794a7f504f99c18a686263cfc3371",
+    "sha256": "488189eb6ffe21c8c4a3961a6f79f15bebfce7e1b24f69f3b5d94d14b2df0b39"
+  },
+  "recorder": {
+    "bytes": 17448,
+    "blob": "c340b62f3667f76678d4e3049613ac9cdd038ddd",
+    "sha256": "d150a5015780602de0cc0e48f05eb93526eca387d082a71d111dca820e674fa9"
+  },
+  "newBuildPerformed": false,
+  "reusedBuild": {
+    "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+    "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+    "outputCount": 1446,
+    "reusedOnly": true,
+    "outputInventory": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+    },
+    "originalHostBuildMetadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-metadata.json",
+      "bytes": 1613,
+      "blob": "46fcbd461387e4ecc280845f6610c53c3ad2790a",
+      "sha256": "85ecadb70ae10c23e84e994324bd9efe42f9f374c6a9261c59a98ba76c029f4a"
+    },
+    "originalLedgerBuildMetadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-metadata.json",
+      "bytes": 1620,
+      "blob": "35330f31c2c9a4d91d275270f4e9de5016870041",
+      "sha256": "8f30dd274ba8df816b01850217dca18cbe62a66e4227e95cf98cf92c85c3f2ba"
+    }
+  }
+}

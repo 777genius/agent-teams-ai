@@ -1,0 +1,264 @@
+{
+  "checkpoint": {
+    "path": "darwin-first-leaves-checkpoint-20261115-2130.json",
+    "bytes": 2739,
+    "gitBlob": "dd58a141b746609f4128da775edae4978dc4ef70",
+    "sha256": "7c79b68176ff7cf3f74131dbd46bda348ff5b2aa54abfe15a6b05c45563a07db"
+  },
+  "payloads": [
+    {
+      "path": "native-audit-a02/a02-process-darwin-x64.zip",
+      "bytes": 12394,
+      "gitBlob": "8eeb45bcc989ec940de7465765a5d31ed7de04ce",
+      "sha256": "9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96"
+    },
+    {
+      "path": "native-audit-a02/a02-v2-darwin-x64.zip",
+      "bytes": 10515,
+      "gitBlob": "6fe5eb3595b834e0f0f3b93148d905f8498f150d",
+      "sha256": "afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839"
+    },
+    {
+      "path": "native-audit-a02/job-132959932726.log",
+      "bytes": 111654,
+      "gitBlob": "f457565e3bfbeaa5ea689969687a51e4152d637a",
+      "sha256": "96ca68135d37588aa68ca9aed53f26f3b5a06fe2e128e2cc577cbb94955c2f8c"
+    },
+    {
+      "path": "native-audit-a02/job-132960007302.log",
+      "bytes": 109870,
+      "gitBlob": "eeea32f195588a3690df54ec4072f1a1d952955f",
+      "sha256": "e0ffb2fe61663664dbf2d6236210553b23ad4279d61f1559fdd7fdc9909101b5"
+    },
+    {
+      "path": "native-audit-a02/archive-audit-process_darwin_x64.json",
+      "bytes": 3302,
+      "gitBlob": "8e1caac4c4647de91ae71ea5a38c63391f5dda16",
+      "sha256": "c7e1f8ac2973bfb1ec3c66927da2d1fe5893b28d5129a05825756977024c0adc"
+    },
+    {
+      "path": "native-audit-a02/archive-audit-v2_darwin_x64.json",
+      "bytes": 2437,
+      "gitBlob": "2a89a423623ae86ad2f29b0ef668a77bc406eaa2",
+      "sha256": "d955520d6fcb8fff975f7b74dbede326eff07456e49d0f41dfa1397713191a7e"
+    },
+    {
+      "path": "native-audit-a02/receipt-audit-darwin-x64.json",
+      "bytes": 31536,
+      "gitBlob": "2015897df44c28437e2b620bc4e6e6678c31bfe0",
+      "sha256": "c5ffad3f97261deb27b586cdf7757b528d484b99644ddc8fa4d81a3cab1a9d5f"
+    },
+    {
+      "path": "native-audit-a02/initial-jobs-snapshot-20261115-2125.json",
+      "bytes": 92726,
+      "gitBlob": "c972923d758462f32dd68240f6f408a3d04addcb",
+      "sha256": "883653a2e045c189626bfe3c686bc66d0abe9530c47b4d1ddb3ef37e31dff4a6"
+    },
+    {
+      "path": "native-audit-a02/plan29-a02-darwin-first-leaves-appendix.md",
+      "bytes": 6624,
+      "gitBlob": "c9cfc9ed183bdc3a0cc9bb4d6937f3f3f088337e",
+      "sha256": "47fe8ce234b204b6f8b0848d708399c9a774fe048ff04b9c6fead9fbaa7c8f3c"
+    }
+  ],
+  "payloadCount": 9,
+  "payloadBytes": 381058,
+  "archives": [
+    {
+      "name": "a02-process-darwin-x64.zip",
+      "bytes": 12394,
+      "gitBlob": "8eeb45bcc989ec940de7465765a5d31ed7de04ce",
+      "sha256": "9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96",
+      "artifactId": 14180383715,
+      "runId": 43762390679,
+      "members": 6,
+      "allCrcValid": true,
+      "allPathsSafeUniqueRegular": true,
+      "allExtractedBytesEqual": true
+    },
+    {
+      "name": "a02-v2-darwin-x64.zip",
+      "bytes": 10515,
+      "gitBlob": "6fe5eb3595b834e0f0f3b93148d905f8498f150d",
+      "sha256": "afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839",
+      "artifactId": 14181024060,
+      "runId": 43762390792,
+      "members": 4,
+      "allCrcValid": true,
+      "allPathsSafeUniqueRegular": true,
+      "allExtractedBytesEqual": true
+    }
+  ],
+  "sourceClosureVerification": {
+    "path": "packages/legacy-agent-host/src",
+    "gitTree": "92515b1671f7bc02c9fbbde943319b503f7e73de",
+    "files": 615,
+    "sourceBytes": 4084414,
+    "lfSha256": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+    "crlfSha256": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+    "algorithm": "sorted relative ASCII path + NUL + exact .ts file bytes + NUL; Git objects, no project execution",
+    "exactSelectedGitSourceCount": 7,
+    "allVerified": true,
+    "compiledPayloadArchived": false
+  },
+  "originalReceiptVerification": {
+    "process": {
+      "pass": 318,
+      "skip": 2,
+      "fail": 0,
+      "native": [],
+      "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6"
+    },
+    "manualHost": {
+      "status": "PASS",
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "hostCount": 2,
+      "trace": {
+        "count": 254,
+        "events": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 104,
+          "response": 104,
+          "request-send-headers": 17,
+          "request-body-sent": 17,
+          "response-end": 9,
+          "trace-limit": 1
+        },
+        "epochs": [
+          1
+        ],
+        "ordinary": 253,
+        "projectedBytesWithLf": 54849,
+        "largestProjectedBytesWithLf": 230,
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 64997,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "limitsVerified": true,
+        "completeTraceQualified": false
+      },
+      "qualified": false
+    },
+    "darwinCustody": {
+      "status": "PASS",
+      "cleanup": "confirmed",
+      "productQualified": false
+    },
+    "P09": {
+      "status": "INCOMPLETE",
+      "firstOriginalAssertion": {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "line": 476,
+        "actual": 13,
+        "expected": 0,
+        "processExit": 1
+      },
+      "observations": [
+        {
+          "label": "compiler-default:plain",
+          "stage": "plain-exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "PASS",
+          "cleanup": true
+        },
+        {
+          "label": "compiler-default:baseline",
+          "stage": "kernel-image-validity",
+          "errno": 13,
+          "resumed": false,
+          "result": "INCOMPLETE",
+          "cleanup": true
+        },
+        {
+          "label": "adhoc-test-only:plain",
+          "stage": "plain-exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "PASS",
+          "cleanup": true
+        },
+        {
+          "label": "adhoc-test-only:baseline",
+          "stage": "exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "PASS",
+          "cleanup": true
+        },
+        {
+          "label": "adhoc-test-only:rename",
+          "stage": "rejected-image",
+          "errno": 0,
+          "resumed": false,
+          "result": "PASS",
+          "cleanup": true
+        },
+        {
+          "label": "adhoc-test-only:inplace",
+          "stage": "rejected-image",
+          "errno": 0,
+          "resumed": false,
+          "result": "PASS",
+          "cleanup": true
+        },
+        {
+          "label": "adhoc-test-only:after-check",
+          "stage": "exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "INCOMPLETE",
+          "cleanup": true
+        },
+        {
+          "label": "adhoc-test-only:writer-open",
+          "stage": "exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "INCOMPLETE",
+          "cleanup": true
+        },
+        {
+          "label": "script:plain",
+          "stage": "plain-exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "PASS",
+          "cleanup": true
+        },
+        {
+          "label": "script:script-negative",
+          "stage": "exit",
+          "errno": 0,
+          "resumed": true,
+          "result": "COUNTEREXAMPLE",
+          "cleanup": true
+        }
+      ],
+      "all10ReapedAbsentCleanup": true
+    }
+  },
+  "reviewScope": "Read-only exact retained bytes, CRC/path safety, immutable Git source joins and original receipt/log limits; no project execution, source/ref or CI action.",
+  "verdict": "APPROVE"
+}

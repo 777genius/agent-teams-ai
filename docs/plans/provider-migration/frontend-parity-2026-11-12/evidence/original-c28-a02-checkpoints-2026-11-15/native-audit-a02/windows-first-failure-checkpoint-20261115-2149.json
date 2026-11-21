@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "kind": "Frozen original a02 Windows failed-gate checkpoint; evidence only",
+  "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "runId": 43762390679,
+  "jobs": [
+    132959932736,
+    132959932738
+  ],
+  "artifacts": [
+    14180489564,
+    14181119327
+  ],
+  "rawArchiveMembersRecoverable": 18,
+  "selectedFiles": 9,
+  "selectedBytes": 516724,
+  "files": [
+    {
+      "path": "a02-process-win32-x64.zip",
+      "bytes": 14529,
+      "gitBlob": "1a7cdff7f3d0b6e499c2eeaa4726f847714fa294",
+      "sha256": "1bacc81fbc0fc0ab7d638b5d74698dca0688a4a903fb37df160b55f011c22052"
+    },
+    {
+      "path": "a02-process-win32-arm64.zip",
+      "bytes": 14568,
+      "gitBlob": "057b43b670eb6e3af8070e79c4223d288befcd4a",
+      "sha256": "6854610bee9a18c7f67db25eb45c34909303e0b9be4ac4c356fe0c7b1d3dcc83"
+    },
+    {
+      "path": "job-132959932736.log",
+      "bytes": 128865,
+      "gitBlob": "d55f42aec77d9498e62cd04dbaf25bf2656eb428",
+      "sha256": "9d4adf1f05f4fbf8bc2b7b9de77dc66009d832a65b97a233e9c6c61febf45238"
+    },
+    {
+      "path": "job-132959932738.log",
+      "bytes": 152256,
+      "gitBlob": "37c25d5e822ddd81a55b62374e603fb4bc034a55",
+      "sha256": "77e60dc919ecee333ba23307e228aa6752035bccaadb2ef6f29e6a018b89b6e7"
+    },
+    {
+      "path": "archive-audit-process_win_x64.json",
+      "bytes": 4297,
+      "gitBlob": "4d271aa47bc1767c910cebe9184a71750a33c912",
+      "sha256": "839381216a99246b3cce75001d601e365d0ba8dfe88eb42492d825849607c292"
+    },
+    {
+      "path": "archive-audit-process_win_arm.json",
+      "bytes": 4301,
+      "gitBlob": "9b4b1ab6da7a26a9f20a4356705299f7230f4151",
+      "sha256": "85304ae0599d5676ae572ac3a293748baddfe2e8c5f67747636b722803283ecc"
+    },
+    {
+      "path": "receipt-audit-windows-first-failure.json",
+      "bytes": 65902,
+      "gitBlob": "a1d5fbc3f5c2475702b2c9b24de01c9a1b8fa954",
+      "sha256": "cb958fff36f3de1722df664704b07cb3480ec95c096e17f958acca7eb19884b5"
+    },
+    {
+      "path": "terminal-jobs-snapshot-20261115-2142.json",
+      "bytes": 123994,
+      "gitBlob": "619f2369d9bdc7aa2b0d5c07d52c852d10ce8160",
+      "sha256": "10304a05045222c7ab52ccdaf33b91d276436d86f66fbd5b5cf6ef6f6323f813"
+    },
+    {
+      "path": "plan29-a02-windows-first-failure-appendix.md",
+      "bytes": 8012,
+      "gitBlob": "728e6c8751b3dc39b9cba1d38cd09cc447d8426b",
+      "sha256": "5453d459b59dd79ea086b49c77c818840d9face290cdbdaf7bcb369112911986"
+    }
+  ],
+  "qualification": "Original failed native gate and bounded original cleanup only; no replay, test/compiler/native/CI or source changes"
+}

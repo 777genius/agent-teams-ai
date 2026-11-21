@@ -1,0 +1,612 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_ORIGINAL_GUI_EVIDENCE_SUMMARY",
+  "qualification": {
+    "derivedSummary": true,
+    "fullReceipt": false,
+    "overallPass": false,
+    "overallStatus": "INCOMPLETE",
+    "scope": "Completed original task-board-cross-team-ui run on 823ef00a. Taskboard passed; review cycle stopped during its deliberate post-Approve renderer reload. ReviewFlow and owner-routing continuation were not entered.",
+    "hashEncoding": "File hashes are SHA-256 of exact bytes. Fields named canonicalJsonSha256 use UTF-8 JSON with recursively sorted object keys, compact separators, original array order and unescaped Unicode.",
+    "artifactRetention": "Raw artifacts are referenced at captured paths; this summary does not copy or replace them."
+  },
+  "source": {
+    "head": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+    "tree": "d1c7d5e1e541b65f348b1c5bef9e92d42016ad5f",
+    "worktreeCleanBefore": true,
+    "worktreeCleanAfterExit": true,
+    "selectedSourceCount": 1883,
+    "beforeAfterSourceListsEqual": true,
+    "selectedSourceListCanonicalJsonSha256": "b1cc50e13224428973be9c130340bc1ed297438e42a1f6da41c903585341c01e",
+    "harness": {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "sha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221",
+      "origin": "original receipt source freeze"
+    },
+    "uiControls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sha256": "e84a189178a440aa57137ce2213a425d4b2231d78f708afe07501b9ba121d85d",
+      "origin": "original receipt source freeze"
+    },
+    "captureAndCleanup": {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "sha256": "6ba21f2b357b0fbb3e6240cab8b9df9516868b38d80f0a83899b76801437bb7a",
+      "origin": "original receipt source freeze"
+    },
+    "quitObserver": {
+      "path": "scripts/legacy-agent-host/startup-passive-observer.ts",
+      "sha256": "4c64958f572aa2c06e8792244b40d923e5a4a12fecab41807b7580db851e5afc",
+      "origin": "original receipt source freeze"
+    },
+    "mainRecoveryComposition": {
+      "path": "src/main/index.ts",
+      "sha256": "08b30b5af697c4924b84ba43e01295ba6ca184a2c566496fd37696c8a35b03fa",
+      "origin": "original receipt source freeze"
+    },
+    "sourceFreezeFailure": null,
+    "ownerSourceFreezeFailure": null
+  },
+  "run": {
+    "mode": "task-board-cross-team-ui",
+    "preparedAt": "2026-11-18T21:22:56.266069+00:00",
+    "completedCollectionAt": "2026-11-18T21:28:29.439136+00:00",
+    "harnessExitCode": 1,
+    "elapsedSeconds": 318.542,
+    "actualSession": 75502,
+    "runner": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/run-task-board.py",
+      "bytes": 1444,
+      "sha256": "6cac2fb7f95198a6138b00bc21f095a29e18959e1916c55e6c33ef9949146d04"
+    },
+    "passiveObserver": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/observe-gui-resources.py",
+      "bytes": 10596,
+      "sha256": "7728cd6d843f986a3244b37477e41f880b394ab3746e346da6f259ddb5bc967d"
+    },
+    "invocation": [
+      "python3",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/observe-gui-resources.py",
+      "--mode",
+      "task-board-cross-team-ui",
+      "--source-maps-off",
+      "--prefix",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-823ef00a",
+      "--",
+      "python3",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/run-task-board.py"
+    ],
+    "resourceProfile": {
+      "selector": "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536=1",
+      "mapsOff": true,
+      "uvPool": "original behavior; no override",
+      "parentHeap": "unchanged"
+    },
+    "oldSpaceMiB": 1536,
+    "capturePins": "MATCH",
+    "ambientNodeOptions": "absent",
+    "ambientHeapSelectors": "absent",
+    "ambientUvPool": "absent",
+    "noPrebuild": true,
+    "noAutomaticRetry": true,
+    "providerArchiveSha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+  },
+  "artifacts": {
+    "originalReceipt": {
+      "path": "/tmp/TEST-desktop-backend-SZFMmp/desktop-backend-receipt.json",
+      "bytes": 4110266,
+      "sha256": "3842d21118ec3ba579ad8ebbad0ce9a6a8ebee7d743834f69d4237b55efcc684"
+    },
+    "postExitObservation": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-cross-team-20261118T212256Z.observation.json",
+      "bytes": 2771,
+      "sha256": "b74b70ef174fa6411e187e22653f44a581271c7eb1c55635778a7d3f1af146be"
+    },
+    "attemptMetadata": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-823ef00a-fixed1536.json",
+      "bytes": 2553,
+      "sha256": "20ff2103147e61305c7773840e6d698a813f85ab265b65cc6591a6c9058a5922"
+    },
+    "originalHarnessLog": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-cross-team-20261118T212256Z.log",
+      "bytes": 3176,
+      "sha256": "b26d3411eb659bc9e967ac6556a3f10b92feb8512cefc60dae78b2ae5120c940"
+    },
+    "desktopAppLog": {
+      "path": "/tmp/TEST-desktop-backend-SZFMmp/desktop-app.log",
+      "bytes": 34447,
+      "sha256": "dbffef9e584cc58c7e5c98634f77cdbd86619c78255fcbc2ad2c468cd194cd2f"
+    },
+    "resourceSummary": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-823ef00a.resources.json",
+      "bytes": 24987,
+      "sha256": "fbbe438a0843c1bec2aae0adc37d780012c1275049d843b1267578655da036f5"
+    },
+    "resourceTrace": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-823ef00a.resources.jsonl",
+      "bytes": 114189,
+      "sha256": "c8d94a4b46a0c9cdd0b88e502a8ae1e60f21aa82558334f1f3b23610544a2fe9"
+    },
+    "resourceRunnerLog": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-823ef00a.runner.log",
+      "bytes": 163,
+      "sha256": "ec0487488044c8c6630cc1c5007069e8f97c7aef013bbc4e90a79a3b549c7f7d"
+    },
+    "commandReceiptDirectory": "/tmp/TEST-desktop-backend-SZFMmp/hoststore/teams/test-desktop-backend/.host-owner/commands"
+  },
+  "startup": {
+    "mainSsr": {
+      "completed": true,
+      "transformedModules": 3712,
+      "seconds": 29.25,
+      "compiledPath": "dist-electron/main/index.cjs",
+      "compiledSha256": "cd1cde5387d6b14b14da37317a356e5ac7bc6802a466922ba744eecca7c35abb"
+    },
+    "preload": {
+      "completed": true,
+      "compiledPath": "dist-electron/preload/index.js",
+      "compiledSha256": "0562ad43745aab58ff1dcf39c98ecf4d011881520ed00fa077d2da9d6857b3aa"
+    },
+    "rendererTarget": {
+      "elapsedMs": 39059,
+      "matchingMainFound": true,
+      "appExitCode": null,
+      "appSignalCode": null,
+      "spawnError": false
+    },
+    "documentStatus": "DOCUMENT_READY",
+    "appReadinessStatus": "READY",
+    "backendDiscovery": {
+      "state": "ready",
+      "bindingCount": 3,
+      "attempts": 1,
+      "transient": []
+    }
+  },
+  "proofs": {
+    "taskBoardUiProof": {
+      "status": "PASS",
+      "source": {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "sha256": "0d33e45f9692601125f536cdbd87354bee19fa6fd336ac60d6d1b31d3432f59c",
+        "origin": "original receipt source freeze"
+      },
+      "canonicalJsonSha256": "90c36f2daa311933b068b02d7a3a438828b058dc6f45637529d5ad5abc4cebfa",
+      "originalStepCount": 100,
+      "originalTaskCount": 2,
+      "groupAssociationStatus": "PASS",
+      "attachmentsStatus": "PASS",
+      "receiptCount": 13,
+      "receipts": [
+        {
+          "file": "090e9c1b3fbda877f03481a5b81d9056d62d519b3aca3521d205b57a441445ce.json",
+          "bytes": 1184,
+          "sha256": "57ec215fff6bfb00ddc62491d8026cd09ca973dbb485ebf06e7feb8e526e98a8",
+          "commandId": "6e9aefb2-d5e8-4cb5-8bdb-75609bd6428e",
+          "operation": "task.start",
+          "phase": "rejected"
+        },
+        {
+          "file": "11c52d7eaef9d83a1d172136909755ed44c9f1b897b4cfd660d5b71e473c0708.json",
+          "bytes": 3803,
+          "sha256": "99e385f56d84268aa32f8ff63396b1941136c8dfa1255ca964724599625dac3b",
+          "commandId": "1137e32b-b967-49d0-b29c-d08ac43d789a",
+          "operation": "task.start",
+          "phase": "completed"
+        },
+        {
+          "file": "1394682f3e1bf79778511a946ddebf1855ce7f540e3b86e8f3757fa84580a359.json",
+          "bytes": 1522,
+          "sha256": "5f775ff6237492c2c1217a9cfaf615b83c40b30e851df54a0566ab4be686adbc",
+          "commandId": "c9a1d73d-4c7a-456c-90aa-2bdcfa435a5f",
+          "operation": "task.board.order",
+          "phase": "completed"
+        },
+        {
+          "file": "6954bb30063736858e7c87969250463d9451271617d636fe3f6753623cc7e108.json",
+          "bytes": 6519,
+          "sha256": "6cf00ed7e7ff32298d30ea381d58acaec33fa8f992ec5b2b6b5020ce1b243c4d",
+          "commandId": "bafaecfe-5d1f-4348-903f-93b02d2fd8bc",
+          "operation": "task.comment",
+          "phase": "completed"
+        },
+        {
+          "file": "6aeb6ccba8a301b5d56804c26fea19834b9dd520bdfe380a0d5fea24136bba61.json",
+          "bytes": 1802843,
+          "sha256": "19748fc4c9ad7d4240c05cb0c4cf2ec4441eb33ca2e0fc7ea34b722b3e375ea7",
+          "commandId": "TEST-large-accepted-task-comment",
+          "operation": "task.comment",
+          "phase": "completed"
+        },
+        {
+          "file": "73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+          "bytes": 2197,
+          "sha256": "347e9888bc42d3baf20f145acd301fa5dd6c5433527249386b96a4abc1313348",
+          "commandId": "TEST-ui-offline-seed",
+          "operation": "task.create",
+          "phase": "completed"
+        },
+        {
+          "file": "7e3695834235ee9209f0071c8cf190657bd7ace851f384db95abcabfe691ba74.json",
+          "bytes": 2395,
+          "sha256": "e0bff800c3577acd3746d375eec292294cb8ccc6aa8a0c571ca55d3ea43c3b25",
+          "commandId": "b359c804-af07-4ee4-bdda-014d2c8a7bb7",
+          "operation": "task.create",
+          "phase": "completed"
+        },
+        {
+          "file": "8c4895ae648cf0abc2aeaa2a58820372f00fa24ff95f0cb727078083798e83ac.json",
+          "bytes": 2475,
+          "sha256": "68946e901868f54ec9d0d8a4cfee2dadbc5caf641628a1a9dd0af83943895aaa",
+          "commandId": "a8c2c89f-6edf-40d7-90c2-3c24786fbf41",
+          "operation": "task.clarification",
+          "phase": "completed"
+        },
+        {
+          "file": "9d1c00e7d559dc9e3bd888745de60c08add08f13aaf062228b6d4ca543eb5e33.json",
+          "bytes": 2287,
+          "sha256": "430236b8dc061ea1eb3d7a0fd00b00b4958e3d9f08cfa781c1135df5b83f431c",
+          "commandId": "TEST-task-board-clarification-setup",
+          "operation": "task.clarification",
+          "phase": "completed"
+        },
+        {
+          "file": "a17d683e77362839d9035a068a6c2126d771bc70db6abf7b727bcfd38de1d739.json",
+          "bytes": 602702,
+          "sha256": "e1fc4218d1f8d49c79f0b935c084507bf94f25d61f8c0e7d4633d5744ae95814",
+          "commandId": "117a430e-b8e9-459d-8a8e-54767f917deb",
+          "operation": "task.lifecycle",
+          "phase": "completed"
+        },
+        {
+          "file": "d130dee8d82c55480a8c575f21b139b0f5a53ad5336cc6564d12ea0b15c6c57c.json",
+          "bytes": 2505,
+          "sha256": "f10c185866a5d5acde44dad5915879676704e310d596f6cccdad9442070f2deb",
+          "commandId": "2bc9dba3-c600-40ae-a39d-3851f93e73da",
+          "operation": "task.assign",
+          "phase": "completed"
+        },
+        {
+          "file": "d3e1baf8d1d1c0b4b98fe5d6d52945502af48106ba699dd8d03f814ba5db97e8.json",
+          "bytes": 4427,
+          "sha256": "81c9c19f0838b7c57a4dc584affc76e46f3a57be80423300a77e4bec5a26a00b",
+          "commandId": "4531e981-e5ea-4458-b1b5-97b2d3a0ed06",
+          "operation": "task.attachment.add",
+          "phase": "completed"
+        },
+        {
+          "file": "d7ce7550be1666723712eefdb2945b0e1c4930e4ce67d7289fa686dbe8c51bca.json",
+          "bytes": 4499,
+          "sha256": "bb9135c98762ca733af059a655af5cda03b929168ed237294d997763191ad255",
+          "commandId": "59f63aca-f06a-41aa-ba23-548216926b96",
+          "operation": "task.attachment.remove",
+          "phase": "completed"
+        }
+      ],
+      "embeddedReceiptsCanonicalJsonSha256": "cfe9a4d592ac57e6d7fd748fb72851c8dccac8d059df5f2dda881183db948abf",
+      "receiptFilesMatchOriginalEmbeddedObjects": true,
+      "screenshots": {
+        "initialScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-initial.png",
+          "bytes": 102706,
+          "sha256": "f92fe889a49100d85e850b4e887a252d28429ab9e20fbb37af3095979643518c"
+        },
+        "dependencyScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-assigned-blocked.png",
+          "bytes": 105308,
+          "sha256": "5503d9f15b7a07e36020a06b369e4c1298b720ddf4cad65f22198e0b6acc0abc"
+        },
+        "reorderedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-reordered.png",
+          "bytes": 125600,
+          "sha256": "960bc6a8177da2f11f5ecc09836c199e85d4f7efe7ca99a71690108ea11eee3a"
+        },
+        "blockedStartScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-blocked-start.png",
+          "bytes": 137844,
+          "sha256": "74fb6444678dee4bf9793c2d714dc71ed91569a766547064c9cd744de065b452"
+        },
+        "reloadedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-reloaded.png",
+          "bytes": 118117,
+          "sha256": "3bd28486889b51d87f2732914cad25ee11b28a1557632f8fca1a1a0109300de8"
+        },
+        "attachments.addedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-attachment-added.png",
+          "bytes": 119214,
+          "sha256": "b0a694c6741dcd9eb7173101fb7b325c7d492a8f23eebb1c0d24ddec4c352c3d"
+        },
+        "attachments.reloadedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-attachments-reloaded.png",
+          "bytes": 109099,
+          "sha256": "bbc9f6c1166466ac389f5b70c9c5143282f7912c97328097ffb589ebc865b010"
+        },
+        "attachments.removedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-board-attachment-removed.png",
+          "bytes": 111880,
+          "sha256": "5a332c38059b80facd745130b5ee94cdb5fc1c235db26011728cc0b1e4a83d92"
+        }
+      },
+      "visualReview": "screenshots retained; independent visual inspection pending"
+    },
+    "taskReviewCycleUiProof": {
+      "status": "INCOMPLETE",
+      "source": {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "sha256": "3123c2bcf29522defc7e9441ad6f68d2e31e6a1e0ea570d4b455aaada9044e76",
+        "origin": "original receipt source freeze"
+      },
+      "canonicalJsonSha256": "8e1e24d52d9aa95098b546706091d83da68de26002e780010512dab27274c937",
+      "originalStepCount": 50,
+      "settledCommandCountBeforeFailure": 8,
+      "settledCommandReceipts": [
+        {
+          "file": "8e5d64168efb6781ec4d2afe2d15e1074e6223f537b7ec0e0acfd3dcc4b14fe5.json",
+          "bytes": 4742,
+          "sha256": "f7df0f48efcfa02a2f6cbce2feb41032084f3872c4828ae7161f5a2333844dec",
+          "commandId": "ed63fbd2-c529-4680-9277-35d82a676020",
+          "operation": "task.lifecycle",
+          "phase": "completed"
+        },
+        {
+          "file": "709ac8874e904e56536473e943cf5a4fb56423711f0ec302d24e5d6eb4803bc8.json",
+          "bytes": 4968,
+          "sha256": "cd8db5cef60407908527f56932d452b688fe1021dfe7aa8d274727c6bf0e1949",
+          "commandId": "c97aa1bb-0028-438f-9347-ee2c70f0ca1a",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "93652ce92d0dbeabe9193f42fa471a127b20866643e2c6eae7b646f67ab3f722.json",
+          "bytes": 5797,
+          "sha256": "dd0434130f299c04de707c48c0c44f71ca850d170ba118d9f6c75f423e853d7e",
+          "commandId": "706b1822-1074-4ff4-bfe9-0add60f6f4d3",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "5af580b43c83ed112d3330fdd897d2bbee05dc03dc9d473b848524b4702496f5.json",
+          "bytes": 6325,
+          "sha256": "7b9dca765eab66b1ea0267e4f280b6c8736b0bdead7cd5ed2b1002cd91eabca4",
+          "commandId": "404e5ca6-7001-4fc5-a15f-fea15e2380f9",
+          "operation": "task.start",
+          "phase": "completed"
+        },
+        {
+          "file": "3dc110170051dccdebf0ba2ef81a0fd3f5e232782c02dcc11aceb67127c31f8a.json",
+          "bytes": 7083,
+          "sha256": "426c1bcc052ff0bbb9b046626c82a2ef205d0d3979d92b73fff4213e18fbcf72",
+          "commandId": "e4883379-33f2-4039-bd27-a38935c97f77",
+          "operation": "task.comment",
+          "phase": "completed"
+        },
+        {
+          "file": "b6dd70b3fcdb6b13636d610f8d40b233207f6612cbb1ad25f64d23966c5e25b0.json",
+          "bytes": 6561,
+          "sha256": "5a8cfd6f212b4b5b902b3ec4921db227613f8afc8dd3e68a36d56aaaa8f96f60",
+          "commandId": "d806d726-9e38-4c9c-99d0-e36de06cd422",
+          "operation": "task.lifecycle",
+          "phase": "completed"
+        },
+        {
+          "file": "5d423daa5c0137833a71bd81b4954200a2c28b36d99bae65ee27a7ef84dcc233.json",
+          "bytes": 6787,
+          "sha256": "74cd568b9723716f800cd3b5258f9d65aa7130626d7ff162821323031f245daa",
+          "commandId": "b975b07a-8a7b-404f-a1fd-74c31171addf",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "b1e6d4be3dc43186970ade19621bd9c00da9901e8d64a962f8608046e75a76e2.json",
+          "bytes": 7110,
+          "sha256": "39f029be080aedcdec7a7b6e1ba594abfe9536c619d34c129fae25fb7b80a876",
+          "commandId": "fa5a88c1-74c4-4caa-a210-8f6945fa3bd7",
+          "operation": "task.review",
+          "phase": "completed"
+        }
+      ],
+      "lastSettledCommand": {
+        "commandId": "fa5a88c1-74c4-4caa-a210-8f6945fa3bd7",
+        "operation": "task.review",
+        "action": "approve",
+        "receiptPhase": "completed",
+        "observedTaskStatus": "completed",
+        "monotonicMs": 232540
+      },
+      "lastRenderedState": {
+        "monotonicMs": 234815,
+        "status": "completed",
+        "reviewState": "approved",
+        "columnId": "approved",
+        "boardColumn": "approved"
+      },
+      "lastRecordedStep": {
+        "monotonicMs": 234945,
+        "action": "mouseWheel",
+        "label": "original Task card viewport",
+        "deltaY": 412
+      },
+      "retainedApprovedScreenshot": {
+        "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-task-review-approved.png",
+        "bytes": 96866,
+        "sha256": "bef3762ba06d65e4dc3af1da6f9adf2ecd741e9b342adf910ce550076c4ec688"
+      },
+      "approvedScreenshotQualification": "File was written before the original performance.timeOrigin read and Page.reload in the helper. The partial proof had not reached its final screenshot/receiptIds publication; existence is not a review-cycle PASS.",
+      "postReloadNoReplayAssertionsCompleted": false,
+      "disapproveCompleted": false
+    },
+    "reviewFlowUiProof": {
+      "entered": false,
+      "originalProofFieldPresent": false,
+      "footerFixTested": false,
+      "source": {
+        "path": "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts",
+        "sha256": "108c17af79eeb3381d4adb6aeea1f36cb7c84fbb25f3a6e348e0d9d7baf9c6c8",
+        "origin": "original receipt source freeze"
+      },
+      "qualification": "The earlier review-cycle throw prevented this helper from being called. This run gives no verdict on the four footer scroll additions."
+    }
+  },
+  "failure": {
+    "message": "CDP command timed out: Runtime.evaluate",
+    "source": {
+      "kind": "error",
+      "frames": []
+    },
+    "phase": "original post-Approve renderer reload wait",
+    "originalReadBudgetMs": 30000,
+    "readWaitObservation": {
+      "phase": "other",
+      "boundary": "evaluate",
+      "cutoff": "none",
+      "firstCheckAtMs": 1795037212101,
+      "lastCheckAtMs": 1795037215606,
+      "ownerStarted": 8,
+      "ownerResolved": 8,
+      "preparationStarted": 0,
+      "preparationResolved": 0,
+      "readsStarted": 8,
+      "readsResolved": 7,
+      "postReadLate": 0,
+      "contextRetries": 0,
+      "deadlineMs": 1795037242101
+    },
+    "readTimingQualification": "lastCheckAtMs is the last checkTime sample before the next synchronous owner census/evaluate boundary, not the timestamp at which the unresolved Runtime.evaluate was dispatched. Do not infer an exact dispatch or timeout time by adding 30 seconds to this field.",
+    "navigationTimeline": [
+      {
+        "monotonicMs": 235474,
+        "event": "original planned Page.reload navigation"
+      },
+      {
+        "monotonicMs": 235478,
+        "event": "new default context created"
+      },
+      {
+        "monotonicMs": 235521,
+        "event": "DOMContentLoaded after planned reload"
+      },
+      {
+        "monotonicMs": 235523,
+        "event": "load event after planned reload"
+      },
+      {
+        "monotonicMs": 300414,
+        "event": "navigation after renderer-loss recovery"
+      },
+      {
+        "monotonicMs": 300430,
+        "event": "recovered default context created"
+      },
+      {
+        "monotonicMs": 300766,
+        "event": "recovered document DOMContentLoaded/load events"
+      }
+    ],
+    "clockQualification": "Navigation and action times use receipt monotonicMs; read-wait samples are epoch milliseconds. No exact conversion between these clocks or kill timestamp is asserted.",
+    "rendererLoss": {
+      "appLogMarkers": [
+        {
+          "line": 289,
+          "text": "[App] Renderer process gone: killed 9"
+        },
+        {
+          "line": 290,
+          "text": "[App] Scheduling renderer recovery attempt 1 in 1000ms"
+        }
+      ],
+      "electronReason": "killed",
+      "electronExitCode": 9,
+      "signalSender": "unknown",
+      "oomEstablished": false,
+      "qualification": "The app recovery path receives render-process-gone first and then schedules a one-second reload. The retained killed/9 event does not identify the sender or establish OOM. No app-side renderer kill was found in the inspected Main recovery chain."
+    },
+    "capture": {
+      "rendererFailureSnapshot": {
+        "unavailable": true
+      },
+      "screenshot": {
+        "path": "/tmp/TEST-desktop-backend-SZFMmp/ui-failure.png",
+        "bytes": 1242303,
+        "sha256": "d5a5d091f3222cf00c43f6ea2d6e95f130477b3e461fce55f75c7c8c6c5c1a4b"
+      },
+      "approvedPngMtimeEpochNs": 1795037212092600761,
+      "failurePngMtimeEpochNs": 1795037279316191636,
+      "qualification": "Failure snapshot/screenshot capture occurs in the catch path before failure Quit and the finally-block group cleanup. The snapshot was unavailable; the PNG is later failure/recovery evidence, not a capture of the original stalled JavaScript frame."
+    },
+    "cleanupBoundary": "The later harness fallback cleanup is recorded separately below. Final network/GPU process errors near that cleanup are not treated as evidence of the initial reload-timeout cause."
+  },
+  "diagnostics": {
+    "rendererEventCount": 12,
+    "contextEventCount": 32,
+    "eventLimit": 96,
+    "eventLimitReached": false,
+    "exceptionCount": 0,
+    "retainedModuleStringCount": 0,
+    "eventTypes": {
+      "Network.loadingFailed": 4,
+      "Log.entryAdded": 4,
+      "Page.frameNavigated": 4
+    },
+    "postReloadBeforeRecovery": {
+      "startMs": 235474,
+      "endMs": 300414,
+      "exceptionCount": 0,
+      "javascriptLogEntryCount": 0
+    },
+    "coverage": "Generic console.warn/error is not retained. Runtime.consoleAPICalled accepts only a strict debug view-load schema bound to the initial document; Log text is filtered to module/syntax errors. No retained product exception establishes a JS-loop fix, but uncaptured console warnings or a busy loop cannot be excluded."
+  },
+  "continuation": {
+    "ownerRoutingEpochs": [],
+    "ownerContinuationStarted": false,
+    "laterFlowsQualified": false
+  },
+  "cleanup": {
+    "processGroup": 79,
+    "remaining": [],
+    "appExitCode": null,
+    "appSignalCode": "SIGTERM",
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded",
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": null,
+      "signalCode": null
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "unconfirmed",
+      "reason": "timeout",
+      "listenerAbsent": false
+    },
+    "beforeHarnessCleanupProcessCount": 13,
+    "hostObservedBeforeHarnessCleanup": {
+      "pid": 476,
+      "parentPid": 219,
+      "processGroup": 79,
+      "observed": true
+    },
+    "qualification": "Original public Quit was unconfirmed (3-second reply bound and 6-second listener observation). The fallback captured-group cleanup then observed Host absence and an empty group; app wrapper ended by SIGTERM. No separate Host exit code, successful ordinary Quit or runtime custody-release verdict is inferred."
+  },
+  "comparisonReference": {
+    "f60DerivedSummary": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-taskboard-f60dcc10-fixed1536-evidence.json",
+      "bytes": 30726,
+      "sha256": "1da1cd1be6c9a438a00dacc22a1d4450c45d5924a4b26f749b021a5abc171465"
+    },
+    "f60VisualDelta": "SHA1da1 verified; removing only independentVisualInspection matched the original edcabd48 summary before root copied the visual update into repository evidence.",
+    "f60ReviewCycleStatus": "PASS",
+    "f60CorrespondingReloadMs": 273688,
+    "f60FirstResumedSidebarHoverMs": 284074,
+    "comparisonQualification": "Different completed runs; F60 PASS is not rebound to 823. The corresponding F60 reload resumed UI action within10.386seconds without a retained JS exception."
+  },
+  "privacy": {
+    "projection": "Explicit metadata allowlist; no command payloads, environment maps, raw DOM, notification text, full logs or full1883source roster copied.",
+    "rawSourceArtifactsCopied": false
+  }
+}

@@ -1,0 +1,249 @@
+﻿2026-11-16T02:48:50.9864617Z Current runner version: '2.338.2'
+2026-11-16T02:48:50.9889923Z ##[group]Runner Image Provisioner
+2026-11-16T02:48:50.9890659Z Hosted Compute Agent
+2026-11-16T02:48:50.9891147Z Version: 20261103.629
+2026-11-16T02:48:50.9891675Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T02:48:50.9892304Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T02:48:50.9892877Z Worker ID: {43d71168-46cf-4b7f-ab5e-cb54a86b4389}
+2026-11-16T02:48:50.9893493Z Region: us-east-1
+2026-11-16T02:48:50.9893969Z Cloud: AWS
+2026-11-16T02:48:50.9894405Z ##[endgroup]
+2026-11-16T02:48:50.9895635Z ##[group]Operating System
+2026-11-16T02:48:50.9896142Z Ubuntu
+2026-11-16T02:48:50.9896548Z 24.04.5
+2026-11-16T02:48:50.9896956Z LTS
+2026-11-16T02:48:50.9897375Z ##[endgroup]
+2026-11-16T02:48:50.9897816Z ##[group]Runner Image
+2026-11-16T02:48:50.9898572Z Image: ubuntu-24.04
+2026-11-16T02:48:50.9899030Z Version: 20261111.127.1
+2026-11-16T02:48:50.9900153Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.127/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-16T02:48:50.9901544Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.127
+2026-11-16T02:48:50.9902403Z ##[endgroup]
+2026-11-16T02:48:50.9903563Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T02:48:50.9905647Z Actions: read
+2026-11-16T02:48:50.9906121Z Contents: read
+2026-11-16T02:48:50.9906561Z Metadata: read
+2026-11-16T02:48:50.9907026Z PullRequests: read
+2026-11-16T02:48:50.9907481Z ##[endgroup]
+2026-11-16T02:48:50.9909833Z Secret source: Actions
+2026-11-16T02:48:50.9910577Z Cache mode: write
+2026-11-16T02:48:50.9911166Z Prepare workflow directory
+2026-11-16T02:48:51.0289468Z Prepare all required actions
+2026-11-16T02:48:51.0341523Z Getting action download info
+2026-11-16T02:48:51.1625449Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T02:48:52.6148355Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T02:48:52.8087896Z Complete job name: Full qualification
+2026-11-16T02:48:52.8742464Z ##[group]Run actions/checkout@v6
+2026-11-16T02:48:52.8743249Z with:
+2026-11-16T02:48:52.8743685Z   repository: 777genius/agent-teams-ai
+2026-11-16T02:48:52.8747181Z   token: ***
+2026-11-16T02:48:52.8747589Z   ssh-strict: true
+2026-11-16T02:48:52.8747998Z   ssh-user: git
+2026-11-16T02:48:52.8748792Z   persist-credentials: true
+2026-11-16T02:48:52.8749288Z   clean: true
+2026-11-16T02:48:52.8749715Z   sparse-checkout-cone-mode: true
+2026-11-16T02:48:52.8750238Z   fetch-depth: 1
+2026-11-16T02:48:52.8750639Z   fetch-tags: false
+2026-11-16T02:48:52.8751101Z   show-progress: true
+2026-11-16T02:48:52.8751555Z   lfs: false
+2026-11-16T02:48:52.8751961Z   submodules: false
+2026-11-16T02:48:52.8752399Z   set-safe-directory: true
+2026-11-16T02:48:52.8752878Z   allow-unsafe-pr-checkout: false
+2026-11-16T02:48:52.8753525Z env:
+2026-11-16T02:48:52.8753948Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-16T02:48:52.8754381Z ##[endgroup]
+2026-11-16T02:48:55.8343874Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T02:48:55.8346591Z ##[group]Getting Git version info
+2026-11-16T02:48:55.8347819Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T02:48:55.8349783Z [command]/usr/bin/git version
+2026-11-16T02:48:56.0428684Z git version 2.56.1
+2026-11-16T02:48:56.0445088Z ##[endgroup]
+2026-11-16T02:48:56.0456248Z Temporarily overriding HOME='/home/runner/work/_temp/afd1572c-036c-42f3-b147-31cac9ff4764' before making global git config changes
+2026-11-16T02:48:56.0459280Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T02:48:56.0461508Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T02:48:56.0847088Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T02:48:56.0850590Z ##[group]Determining repository object format
+2026-11-16T02:48:56.0852610Z ##[endgroup]
+2026-11-16T02:48:56.0854461Z ##[group]Initializing the repository
+2026-11-16T02:48:56.0856580Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T02:48:56.1253541Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T02:48:56.1255608Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T02:48:56.1257541Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T02:48:56.1259732Z hint: call:
+2026-11-16T02:48:56.1260889Z hint:
+2026-11-16T02:48:56.1262301Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T02:48:56.1264037Z hint:
+2026-11-16T02:48:56.1265740Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T02:48:56.1268587Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T02:48:56.1270666Z hint:
+2026-11-16T02:48:56.1271830Z hint: 	git branch -m <name>
+2026-11-16T02:48:56.1273259Z hint:
+2026-11-16T02:48:56.1275119Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T02:48:56.1277878Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T02:48:56.1282190Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T02:48:56.1314651Z ##[endgroup]
+2026-11-16T02:48:56.1316802Z ##[group]Disabling automatic garbage collection
+2026-11-16T02:48:56.1319082Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T02:48:56.1342048Z ##[endgroup]
+2026-11-16T02:48:56.1343599Z ##[group]Setting up auth
+2026-11-16T02:48:56.1344684Z Removing SSH command configuration
+2026-11-16T02:48:56.1346385Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T02:48:56.1373806Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T02:48:56.4869652Z Removing HTTP extra header
+2026-11-16T02:48:56.4875583Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T02:48:56.4902377Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T02:48:56.5049079Z Removing includeIf entries pointing to credentials config files
+2026-11-16T02:48:56.5054245Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T02:48:56.5079030Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T02:48:56.5227509Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T02:48:56.5256790Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:48:56.5278941Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:48:56.5300611Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:48:56.5322446Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:48:56.5341309Z ##[endgroup]
+2026-11-16T02:48:56.5341746Z ##[group]Fetching the repository
+2026-11-16T02:48:56.5346738Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe:refs/remotes/pull/1192/merge
+2026-11-16T02:49:01.5970998Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T02:49:01.5971829Z  * [new ref]         a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe -> pull/1192/merge
+2026-11-16T02:49:01.5976726Z ##[endgroup]
+2026-11-16T02:49:01.5977477Z ##[group]Determining the checkout info
+2026-11-16T02:49:01.5978293Z ##[endgroup]
+2026-11-16T02:49:01.5982892Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T02:49:01.6043285Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T02:49:01.6065675Z ##[group]Checking out the ref
+2026-11-16T02:49:01.6068339Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/1192/merge
+2026-11-16T02:49:02.3310451Z Note: switching to 'refs/remotes/pull/1192/merge'.
+2026-11-16T02:49:02.3311380Z 
+2026-11-16T02:49:02.3311694Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T02:49:02.3312465Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T02:49:02.3313238Z state without impacting any branches by switching back to a branch.
+2026-11-16T02:49:02.3313540Z 
+2026-11-16T02:49:02.3313832Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T02:49:02.3314335Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T02:49:02.3314628Z 
+2026-11-16T02:49:02.3314784Z   git switch -c <new-branch-name>
+2026-11-16T02:49:02.3314995Z 
+2026-11-16T02:49:02.3315098Z Or undo this operation with:
+2026-11-16T02:49:02.3315341Z 
+2026-11-16T02:49:02.3315464Z   git switch -
+2026-11-16T02:49:02.3315635Z 
+2026-11-16T02:49:02.3315848Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T02:49:02.3316074Z 
+2026-11-16T02:49:02.3316363Z HEAD is now at a0e9dd7 Merge 0660c748f88675063e3051fb0f8b2022e8f6f056 into def734338f13bcc3209e78079a0cedbc48f05a5b
+2026-11-16T02:49:02.3344227Z ##[endgroup]
+2026-11-16T02:49:02.3387088Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T02:49:02.3409416Z a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe
+2026-11-16T02:49:02.3615008Z ##[group]Run actions/setup-node@v6
+2026-11-16T02:49:02.3615327Z with:
+2026-11-16T02:49:02.3615562Z   node-version-file: .node-version
+2026-11-16T02:49:02.3615828Z   check-latest: false
+2026-11-16T02:49:02.3617820Z   token: ***
+2026-11-16T02:49:02.3618046Z   package-manager-cache: true
+2026-11-16T02:49:02.3618518Z env:
+2026-11-16T02:49:02.3618725Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-16T02:49:02.3618966Z ##[endgroup]
+2026-11-16T02:49:02.4673963Z Node version file is not JSON file
+2026-11-16T02:49:02.4674605Z Resolved .node-version as 26.12.1
+2026-11-16T02:49:02.5004614Z Attempting to download 26.12.1...
+2026-11-16T02:49:02.9641015Z Acquiring 26.12.1 - x64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-linux-x64.tar.gz
+2026-11-16T02:49:03.4432245Z Extracting ...
+2026-11-16T02:49:03.4539179Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/4b8ee088-28b4-41c0-85a9-60949f0cd5ad -f /home/runner/work/_temp/51dc03b4-4858-4236-ac6e-8cc06ad0ac2c
+2026-11-16T02:49:04.6076253Z Adding to the cache ...
+2026-11-16T02:49:05.5620880Z ##[group]Environment details
+2026-11-16T02:49:05.8867218Z node: v26.12.1
+2026-11-16T02:49:05.8867510Z npm: 11.20.0
+2026-11-16T02:49:05.8867712Z yarn: 1.22.22
+2026-11-16T02:49:05.8868456Z ##[endgroup]
+2026-11-16T02:49:05.9069369Z ##[group]Run node scripts/ci/ci-feedback.mts gate
+2026-11-16T02:49:05.9069803Z [36;1mnode scripts/ci/ci-feedback.mts gate[0m
+2026-11-16T02:49:06.1475999Z shell: /usr/bin/bash -e {0}
+2026-11-16T02:49:06.1476326Z env:
+2026-11-16T02:49:06.1476583Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-16T02:49:06.1478658Z   JOB_RESULTS: {
+  "plan": {
+    "result": "success",
+    "outputs": {
+      "reuse": "false",
+      "image": "ubuntu24@20261111.370.1",
+      "linux_arch": "X64",
+      "scope": "full",
+      "full": "false",
+      "metadata": "false"
+    }
+  },
+  "validate": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "test": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "lint": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "task-change-ledger-windows": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "focused": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "source": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "dmg-artwork": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "retained-opencode-coexistence": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "codex-login-desktop": {
+    "result": "skipped",
+    "outputs": {}
+  }
+}
+2026-11-16T02:49:06.1480530Z   MODE_FULL: false
+2026-11-16T02:49:06.1480770Z   MODE_REUSE: false
+2026-11-16T02:49:06.1481008Z   SOURCE_RUN: 
+2026-11-16T02:49:06.1481238Z ##[endgroup]
+2026-11-16T02:49:06.2369863Z Draft feedback does not qualify for merge
+2026-11-16T02:49:06.2439758Z ##[error]Process completed with exit code 1.
+2026-11-16T02:49:06.2570135Z Post job cleanup.
+2026-11-16T02:49:06.3239061Z [command]/usr/bin/git version
+2026-11-16T02:49:06.3272913Z git version 2.56.1
+2026-11-16T02:49:06.3307785Z Temporarily overriding HOME='/home/runner/work/_temp/d91f7fee-2adb-4542-85d1-70d6c230e1a3' before making global git config changes
+2026-11-16T02:49:06.3324793Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T02:49:06.3326146Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T02:49:06.3338936Z Removing SSH command configuration
+2026-11-16T02:49:06.3344078Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T02:49:06.3370791Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T02:49:06.3555280Z Removing HTTP extra header
+2026-11-16T02:49:06.3560199Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T02:49:06.3584999Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T02:49:06.3750234Z Removing includeIf entries pointing to credentials config files
+2026-11-16T02:49:06.3755542Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T02:49:06.3776735Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T02:49:06.3778470Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T02:49:06.3779691Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T02:49:06.3780549Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T02:49:06.3784080Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T02:49:06.3798455Z /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3805651Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3830912Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T02:49:06.3845991Z /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3853184Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3874319Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T02:49:06.3889453Z /github/runner_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3897476Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3922823Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T02:49:06.3946750Z /github/runner_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.3983785Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config
+2026-11-16T02:49:06.4009242Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T02:49:06.4168516Z Removing credentials config '/home/runner/work/_temp/git-credentials-198c7df5-44c9-4b8c-8aa7-f88a9e902f55.config'
+2026-11-16T02:49:06.4277072Z Cleaning up orphan processes

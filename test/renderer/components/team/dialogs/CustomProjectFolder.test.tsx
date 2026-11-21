@@ -79,9 +79,23 @@ async function render(element: React.ReactElement): Promise<{
 }
 
 describe('custom project folder notice model', () => {
+  it.each([
+    { path: '', status: 'missing' as const },
+    { path: '   ', status: 'missing' as const },
+    { checking: true, status: 'missing' as const },
+    { status: 'idle' as const },
+    { status: 'unknown' as const },
+    { status: 'checking' as const },
+    { status: 'exists' as const },
+  ])('does not promise creation without confirmed absence: %j', (overrides) => {
+    expect(getCustomProjectFolderNotice(model(overrides))).toBeNull();
+  });
+
   it('only promises creation on submit where the dialog really creates the folder', () => {
     expect(
       getCustomProjectFolderNotice({
+        path: '/tmp/new-project',
+        checking: false,
         status: 'missing',
         createsMissingOnSubmit: true,
         requiredBeforeSubmit: false,
@@ -89,6 +103,8 @@ describe('custom project folder notice model', () => {
     ).toEqual({ tone: 'muted', message: 'folder.missingCreatedOnSubmit', canCreate: true });
     expect(
       getCustomProjectFolderNotice({
+        path: '/tmp/new-project',
+        checking: false,
         status: 'missing',
         createsMissingOnSubmit: false,
         requiredBeforeSubmit: false,
@@ -96,6 +112,8 @@ describe('custom project folder notice model', () => {
     ).toEqual({ tone: 'error', message: 'folder.missingMustExist', canCreate: true });
     expect(
       getCustomProjectFolderNotice({
+        path: '/tmp/new-project',
+        checking: false,
         status: 'unknown',
         createsMissingOnSubmit: false,
         requiredBeforeSubmit: false,
@@ -103,6 +121,8 @@ describe('custom project folder notice model', () => {
     ).toEqual({ tone: 'error', message: 'folder.unknown', canCreate: false });
     expect(
       getCustomProjectFolderNotice({
+        path: '/tmp/new-project',
+        checking: false,
         status: 'exists',
         createsMissingOnSubmit: true,
         requiredBeforeSubmit: true,
@@ -113,6 +133,8 @@ describe('custom project folder notice model', () => {
   it('asks for the folder up front when OpenCode needs it for preflight', () => {
     expect(
       getCustomProjectFolderNotice({
+        path: '/tmp/new-project',
+        checking: false,
         status: 'missing',
         createsMissingOnSubmit: true,
         requiredBeforeSubmit: true,

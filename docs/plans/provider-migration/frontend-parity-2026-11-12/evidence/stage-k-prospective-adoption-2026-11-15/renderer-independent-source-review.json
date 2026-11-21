@@ -1,0 +1,297 @@
+{
+  "schema": "independent-source-review",
+  "reviewer": "ui_failures",
+  "baseCommit": "462845722260dfd91111c37cb66fc54a01a3ecb7",
+  "sourceCommit": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "sourceTree": "df57310cd096bfc628b31ca05b0caae91eb5ae09",
+  "verdict": "Renderer and strict read-side design accepted with two concrete fixture/source-closure corrections required before prospective integration; this is not resulting-source execution qualification.",
+  "reviewedLeaves": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "bytes": 19629,
+      "lines": 248,
+      "gitBlob": "52227dc108a65347aa5dea7995d0ee6e3f3fbc45",
+      "sha256": "0d73881d457e53587d139129987b8ab24327509c9bc6f46e071400b363c793aa",
+      "unchangedSince462": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "bytes": 14790,
+      "lines": 236,
+      "gitBlob": "5fbc886bdd2f4fe9c2914844b94bbd16f3224075",
+      "sha256": "7abcc59e586b8534f612f6edd90cd3e3db3b0a039403801db638fec5330b65f4",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "bytes": 17358,
+      "lines": 538,
+      "gitBlob": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "sha256": "29ef5c69ce683182bde2085fcbf10290f61a2eb6a3c317d2ac4572a627eff26b",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/shared/types/teamActivity.ts",
+      "bytes": 4045,
+      "lines": 134,
+      "gitBlob": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "sha256": "c7e772c925928a4d900f0c90b02f0e7b75e60c8745e9690103a54491a7b157e0",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "bytes": 20076,
+      "lines": 500,
+      "gitBlob": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "sha256": "b34c2c8ac933fa322792c75934a7a8675c66e6809955f4c48f7f116bc58d1d55",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "bytes": 11387,
+      "lines": 317,
+      "gitBlob": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "sha256": "fb686dd83830031ae319f646b50a9df9c5e0ab8d51e3b8914dfb9cec75dbf1db",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "bytes": 6046,
+      "lines": 164,
+      "gitBlob": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "sha256": "216316cc70cbd609fb27a2e85823d26366d5da44009c90c844bc61abba7e2d10",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "bytes": 8203,
+      "lines": 243,
+      "gitBlob": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "sha256": "053f9c4e6c8109ffd48bb745821eb59ff0b013671c1e602762bc9af420bafd53",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "bytes": 21034,
+      "lines": 586,
+      "gitBlob": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "sha256": "965106c5d406e60dfbfa87218d30bd73ce18452210d64576f26098f2d89964e5",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "bytes": 13931,
+      "lines": 360,
+      "gitBlob": "f24568c549ed723ad9f5c228a6b3c6e04771869b",
+      "sha256": "84ec3e031568ec31c7a70b7614475cf0211b9cc3352f85aaa081e4febfff442c",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "bytes": 1975,
+      "lines": 65,
+      "gitBlob": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "sha256": "1dabc02dc7661ddedfb40d4f9e1bff941d3e953049c6bca0949a0a4c8e8f1998",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "bytes": 28105,
+      "lines": 751,
+      "gitBlob": "112623fefdd629c05c414951a57c81afb2f1ca79",
+      "sha256": "bc4e589274afd44768da770a8b9ccadba45e36bcd9821ed67ce72b8f18ff8e2b",
+      "unchangedSince462": false
+    },
+    {
+      "path": "src/renderer/components/team/taskLogs/HostTaskActivityViews.tsx",
+      "bytes": 5575,
+      "lines": 163,
+      "gitBlob": "9bf8b2004155591817aae0115305320edb672c08",
+      "sha256": "734d7106abf1a49ff72289351c97c60fba7e25c271c86a0854564fa5a66e6336",
+      "unchangedSince462": true
+    },
+    {
+      "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "bytes": 7926,
+      "lines": 241,
+      "gitBlob": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb",
+      "sha256": "db8ad2dba3b3e1e98f8a84ad88237e1156b02193e2923c168f3e9d1c4e9f000d",
+      "unchangedSince462": true
+    },
+    {
+      "path": "src/renderer/components/team/useClaudeLogsController.ts",
+      "bytes": 24271,
+      "lines": 718,
+      "gitBlob": "1b2f56e6a847d7bc62646b48e709ac4d6beb14db",
+      "sha256": "8474c89e9505f65d4460c268413bd56d011183730f3beec9bef9248df58037b2",
+      "unchangedSince462": true
+    },
+    {
+      "path": "src/features/member-log-reads/renderer/useCompletionRead.ts",
+      "bytes": 6986,
+      "lines": 220,
+      "gitBlob": "9b11407001b7519841f06d404b35de96e4518295",
+      "sha256": "bae2df86398486bda1bffa52a9dbd67785307e15dee3a1e79b6d7b9e1c72f1ac",
+      "unchangedSince462": true
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "bytes": 13948,
+      "lines": 395,
+      "gitBlob": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91",
+      "unchangedSince462": false
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "bytes": 36912,
+      "lines": 1022,
+      "gitBlob": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265",
+      "unchangedSince462": false
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "bytes": 38842,
+      "lines": 1229,
+      "gitBlob": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "sha256": "e31e2296cc7db26add9b2ba0b27ac136338398f08f49b341be4861d57b6edb69",
+      "unchangedSince462": false
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "bytes": 19002,
+      "lines": 480,
+      "gitBlob": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "sha256": "a7c536da9ad51ef4eca441d3da7fcda74bcd9589ee6aa4207fc3d10cd76d18c7",
+      "unchangedSince462": false
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "bytes": 20552,
+      "lines": 581,
+      "gitBlob": "de455b7999a367b3ed697d6560b408991129c931",
+      "sha256": "f8e0a844d6fe578755358e6994c86e933369bf5c5648ebdb04847f8485917c87",
+      "unchangedSince462": false
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "bytes": 379,
+      "lines": 12,
+      "gitBlob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+      "unchangedSince462": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "bytes": 21463,
+      "lines": 428,
+      "gitBlob": "b030c7030ed39b1091c56dca6f1317e0f5372477",
+      "sha256": "a2777652fb2a4155bfc011a21ac278c810a1d381b938204245399877cee41dad",
+      "unchangedSince462": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 57780,
+      "lines": 666,
+      "gitBlob": "cb3974254caf54d40d560eff2ad5419adcedae3c",
+      "sha256": "20d8cec4bfc143b51e6df5bce01c55fa3f4f7f5fc51973ce2bea5cad7eda3f12",
+      "unchangedSince462": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "bytes": 34086,
+      "lines": 377,
+      "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+      "unchangedSince462": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20446,
+      "lines": 315,
+      "gitBlob": "c76e4a5a447e87b90e731e1bf6da8c62b526e712",
+      "sha256": "aa314afcb7119aaed9eeec8700c4f5a9c37838babb427b7a551b76d195fbcbc9",
+      "unchangedSince462": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "lines": 800,
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "unchangedSince462": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96552,
+      "lines": 1248,
+      "gitBlob": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+      "sha256": "2aa609c4dd7e068fcd8f0ca469ac8c0c1bd6602aa2eb1d983be3a837479cf8ae",
+      "unchangedSince462": false
+    }
+  ],
+  "findings": [
+    {
+      "area": "Actual lead and controls",
+      "conclusion": "Canonical Host selection resolves the actual roster lead, preferring a nonremoved lead and otherwise retaining the original removed lead. No lead means no invented team-lead read. Existing member selector, toolbar/search/clear/stream/kind controls are reused. Raw getClaudeLogs controller is disabled for Host, including loadOlder/applyPending paths; it supplies only persisted presentation state."
+    },
+    {
+      "area": "One reader and closure",
+      "conclusion": "Compact body is unmounted while fullscreen is open; dialog receives enabled=open and shares presentation state. CollapsibleTeamSection default does not keep children mounted while closed. MemberLogsTab combines enabled with the existing active-tab guard and unchanged member-log scope/coordinator. Original settlement-based poll has no overlap, disposes subscriptions/timer on source/scope/unmount and refuses obsolete delivery. Host member reads now continue while an owned viewer is active; background error retains the same-source value and shows the error."
+    },
+    {
+      "area": "Rich facts",
+      "conclusion": "Dedup sorts by sequence before filtering, scopes text/thinking by input plus child identity plus kind/messageRef/block, and does not replace completed content with a late snapshot. Tool/result association is input/child/toolRef-specific. Real text/Thinking, structured tool input/result, actual isError, child grouping, explicit gaps, current viewport and expanded-state restoration use original UI components without fake transcript chunks or native clocks. Existing Markdown copy receives real text; new source tests check copied bytes and tool result content."
+    },
+    {
+      "area": "Stream and search semantics",
+      "conclusion": "Only actual process-output facts receive stderr provenance. Unmarked SDK/HTTP facts retain the legacy pass-through semantics under stream selection. Query/kind filtering occurs after dedup; gaps remain visible. Process events dedup by eventId so separate equal lines survive. Search/tool/result rendering remains subject to original projected content bounds."
+    },
+    {
+      "area": "Strict projection extraction",
+      "conclusion": "All five shared primitives are byte-identical except export. The extracted activity block preserves existing finite/state/member/cursor/page/content limits; declared changes are thinking, top-level stderr only, and rejection of nested or input-attributed process output. Stderr additionally has a 24KiB UTF-8 limit and rejects NUL. Unknown/private fields are discarded. Data validation occurs before constructing other event fields, with no observed acceptance broadening. DTO/shared types exclude nested process output."
+    },
+    {
+      "area": "Exact Task reads",
+      "conclusion": "The adapter still filters by original input and hashes exact content for sourceGeneration. Thinking/output count once per distinct original messageRef within each input. Member-only stderr is excluded from exact Task data, source generation and counts. Original stale/currentness/history negative assertions remain; new tests cover exact thinking bytes and stale mutation plus stderr exclusion."
+    },
+    {
+      "area": "Original test preservation",
+      "conclusion": "All deleted lines in the five reviewed test diffs are imports/mock adaptation or equivalent formatting of the existing launch guard; no prior behavioral assertion was removed. New tests use actual HostMemberActivityLog, Markdown, viewport hook, MemberLogsTab/completion hook or production facade where stated; Section-only route ownership tests mock data readers and do not by themselves prove native execution."
+    },
+    {
+      "area": "Desktop adaptation",
+      "conclusion": "Original stream partial/no-terminal and single release remain. Added Team Logs controls read the retained event and assert unchanged original input/commands/provider-effect counters; real stderr is shown only for existing Claude/Codex finite peers, excluded from exact Task logs. Existing reload and Stop/currentness/cleanup gates remain. Collaboration reads the actual Bob member log without creating another business turn."
+    }
+  ],
+  "concreteCorrections": [
+    {
+      "id": "common-roster",
+      "observedSource": "New52 literal source entries and one comment were appended inside desktopProofWindowsRetrySources rather than common desktopProofSupplementarySources. Ordinary Desktop source closure therefore omits new producers/readers.",
+      "disposition": "Root will move the exact block into common Supplementary; migration_scope owns exact set/order proof and permanent command coverage. Native Windows Set union can preserve membership. No competing patch was written."
+    },
+    {
+      "id": "task-activity-markup",
+      "observedSource": "Both Activity detail and Stream use the new HostMemberActivityLog. Original Activity branch still searches pre plus sequence span, whereas the component now renders collapsed BaseItem and Markdown paragraphs. This is a deterministic source fixture mismatch; no observed CI failure is claimed.",
+      "disposition": "Exact corrected Runtime UI069111cf is independently approved in runtime-ui-independent-review.json5c7536e2. Both original tabs reuse visibleLogFact and Task-only current-header capture inside its final DOM expression; all prior source/header/counter/cleanup assertions remain."
+    }
+  ],
+  "capFindings": {
+    "HostMemberActivityLog": 360,
+    "MemberLogsTab": 751,
+    "projectRuntimeActivity": 317,
+    "projectBackendResult": 500,
+    "rootRoster": 800,
+    "supplementaryRoster": 315,
+    "correctedRuntimeUi": 659
+  },
+  "qualificationLimits": [
+    "No project command, test, compiler, parser, native/provider launch, CI mutation, tracked source application or ref write was performed for this review.",
+    "Author Plan32/33 local validation claims were read as author records, not independently re-executed or raw-log-verified here.",
+    "Current27b Desktop and frontend jobs were queued at22:47:03; macOS Creation SUCCESS is only an unrelated terminal job status until its artifact is audited.",
+    "Thinking producer normalization and exact checked-provider archive adoption are still held. This read-side implementation and source tests do not establish full Thinking end-to-end parity.",
+    "The six renderer/adapter suites and required Host stderr suites, existing compilers/lint/guards, resulting-source original UI screenshots/actions/no-replay/physical cleanup and native platform gates remain necessary.",
+    "Host capture/redaction/fence implementation was separately reviewed by native_failures; this report does not duplicate or enlarge its authority/custody conclusion."
+  ]
+}

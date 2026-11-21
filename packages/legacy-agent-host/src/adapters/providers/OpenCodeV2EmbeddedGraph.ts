@@ -156,8 +156,9 @@ export async function verifyOpenCodeV2EmbeddedGraph(
     }
   }
   let observed = 0;
-  async function walk(relative: string): Promise<void> {
+  async function inspectDirectory(relative: string): Promise<string[]> {
     signal?.throwIfAborted();
+    const children: string[] = [];
     for (const child of await readdir(path.join(selection.directory, relative), {
       withFileTypes: true,
     })) {
@@ -165,14 +166,27 @@ export async function verifyOpenCodeV2EmbeddedGraph(
       if (child.isSymbolicLink()) return hold();
       if (child.isDirectory()) {
         if (!directories.has(name)) return hold();
-        await walk(name);
+        children.push(name);
       } else if (child.isFile()) {
         if (name !== manifestName && !entries.has(name)) return hold();
         if (name !== manifestName) observed++;
       } else return hold();
     }
+    return children;
   }
-  await walk('');
+  const pendingDirectories = [''];
+  while (pendingDirectories.length) {
+    // Only descend through directory entries accepted by the original parent read.
+    // Independent directories can be inspected together within the same validation.
+    const batch = await Promise.allSettled(
+      pendingDirectories.splice(0, 12).map(inspectDirectory)
+    );
+    // All original reads settle before refusal, another batch or byte checks.
+    for (const result of batch) {
+      if (result.status === 'rejected') throw result.reason;
+      for (const child of result.value) pendingDirectories.push(child);
+    }
+  }
   if (observed !== entries.size) return hold();
   const remaining = entries.values();
   await Promise.all(

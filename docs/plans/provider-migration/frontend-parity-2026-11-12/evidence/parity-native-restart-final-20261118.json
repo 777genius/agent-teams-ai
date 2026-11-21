@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "kind": "reviewed-factory-readiness-allocation-fix",
+  "createdAt": "2026-11-18T20:55:00.841642+00:00",
+  "repository": "777genius/agent-teams-ai",
+  "baseHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "sourceChanges": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "mode": "100644",
+      "preimageGitBlob": "6564afa0153446efef60a7dc20e23fcd1f466514",
+      "preimageSha256": "6eddff59c94ed0d9639d7066a0e2ce3aaf2954753f2370496c8cb793620b6e69",
+      "postimageGitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e",
+      "postimageSha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+      "physicalLinesBefore": 367,
+      "physicalLinesAfter": 371,
+      "sourceReadbackExact": true
+    }
+  ],
+  "change": "Allocation uses the existing unbatched readiness inspector; explicit original team and owner identity pins surround unchanged authority and allocation checks. The optional surrounding Team fence is removed only from this factory call, so its allocation guard can enter the separate launch-store fence.",
+  "invariants": [
+    "authority.assertCurrent and assertAllocation remain in their original order.",
+    "Original team and owner pointers are checked before and after every composite guard.",
+    "Default inspector retains consumer identity, source/account, expiry, reference equality and final authority checks.",
+    "Preclaim account batching and TeamOwnerStore exact-instance fencing remain unchanged.",
+    "No test/oracle/deadline/compiler/production-contract changes."
+  ],
+  "evidence": {
+    "originalSourceReproduction": {
+      "blob": "b8601a668ab5686dea67213cccbbfd22c3d5fd2f",
+      "sha256": "a0b38d895bf3b67124d527efb793f11697b99876d3c68c5cb5836447196be0c1",
+      "bytes": 258498
+    },
+    "passiveExistingChannel": {
+      "blob": "a007f2749134b1abac66483d63193b3b24f36042",
+      "sha256": "b823a0df85e1136b9cfb5e93b060bc8c8eea9dfacfd7b57bb08369aca7f3f0c2",
+      "bytes": 12709
+    },
+    "originalGreen": {
+      "blob": "e0b88a3f3c5a479b79e7a4a3876aa516c91e84e2",
+      "sha256": "6b38af89b7a57350af366e70d485b9d113a4d94d344ad497c4be41f8319f397e",
+      "bytes": 15485
+    },
+    "negativeBatch": {
+      "blob": "42c3883afb0240d05e8631a70f93c40479c15a67",
+      "sha256": "a81f3264d6c7da6acdff3fc6fb32f483b31b3416ddbd2bc49c956d48f926b8a2",
+      "bytes": 7022
+    },
+    "independentR2": {
+      "blob": "e5491b6ae09b99106b44b7225c554b75aa69fc6c",
+      "sha256": "69c2647b33366ad4ae9582928cbee8f4248bad73a1c90e61c706faa6168feab6",
+      "bytes": 10788,
+      "readbackExactReported": true
+    }
+  },
+  "verification": {
+    "originalCase": {
+      "redFailed": 1,
+      "greenPassed": 1,
+      "sameTestSha256": "57da5343062b7137560514d60762800369e9d173fbb4eaf8e33ef5a77316789f",
+      "initialResourceClosureFailureRetained": true,
+      "passiveDiagnosticFailureRetained": true
+    },
+    "negativeCases": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "productionSize": {
+      "limit": 800,
+      "actual": 371,
+      "pass": true
+    },
+    "currentSourceClosure": {
+      "currentHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "totalTrackedFiles": 804,
+      "unchangedCurrentTrackedFiles": 803,
+      "reviewedCandidateFiles": 1,
+      "allSourceAndPreparedResourceHashesUnchangedAfterBatch": true,
+      "manifestSha256": "4d31d845be02b3295b84ec001d323e68c168fb57b224940fc2804add5c01f697"
+    }
+  },
+  "qualification": "Finite exact-source scope only. No current compiled Host build, native subprocess, vendor auth, GUI or release qualification. Durations do not establish a performance improvement.",
+  "publication": "Source blob and evidence blobs only; no commit, ref change, PR change or CI action performed by this agent."
+}

@@ -1,0 +1,69 @@
+{
+  "stage": "renderer-test-only-RED",
+  "sourceHead": "89c0e99f1a7d570ec4e3517d64264f95fbaf24c2",
+  "sourceTree": "be4e3c446dfd995937f990d3542fcb9904482ef7",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--maxWorkers=1",
+    "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+    "test/features/agent-backend/hostProvisioningProgress.test.ts",
+    "test/features/agent-backend/hostTeamChanges.test.ts",
+    "test/renderer/store/teamSlice.test.ts",
+    "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+    "test/renderer/store/teamProvisioningStateRules.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "startedAtUTC": "2026-11-15T17:30:40.253856+00:00",
+  "preflightMetadataSHA256": "538b2987519e3b2f7e3ff598ea7c8466daf270b5f83956680f092120fc47b551",
+  "builds": [
+    {
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/task-change-ledger",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exitCode": 0,
+      "log": "stage1-ledger-direct-build.log"
+    },
+    {
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exitCode": 0,
+      "log": "stage1-host-direct-build.log"
+    }
+  ],
+  "abortedPnpmBootstrap": {
+    "exitCode": 130,
+    "qualified": false,
+    "log": "stage1-ledger-build.log"
+  },
+  "developmentBuildFingerprints": [
+    {
+      "package": "task-change-ledger",
+      "files": 216,
+      "developmentFingerprintSHA256": "34d28dace37d1035d3ddce2a6f25341d4d9d8bd2f8576f1f305f201b19e2a454"
+    },
+    {
+      "package": "legacy-agent-host",
+      "files": 1230,
+      "developmentFingerprintSHA256": "ff5da9f86eafbba1a4122562159b54ddad58dd14583f23d4ed040fd9bfdb45d3"
+    }
+  ],
+  "exitCode": 1,
+  "elapsedSeconds": 10.74557307199575,
+  "finishedAtUTC": "2026-11-15T17:30:51.075918+00:00",
+  "logBytes": 35321,
+  "logSHA256": "ff125fda326082031758435b051706fa1c13ea1d566db86ee4474b3c52963379",
+  "sourceHeadAfter": "89c0e99f1a7d570ec4e3517d64264f95fbaf24c2",
+  "statusAfter": ""
+}

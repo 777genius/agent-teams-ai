@@ -1,0 +1,51 @@
+{
+  "artifact": {
+    "id": 14177492593,
+    "name": "opencode-v2-embedded-native-darwin-arm64",
+    "size_in_bytes": 10467,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177492593",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177492593/zip",
+    "expired": false,
+    "created_at": "2026-11-15T19:53:39Z",
+    "expires_at": "2026-11-22T19:53:38Z",
+    "updated_at": "2026-11-15T19:53:39Z",
+    "digest": "sha256:4941518348e969dade72962221e782f8b76a07e8efe0e58a1107d5442690c13d",
+    "workflow_run": {
+      "id": 43751070783,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+    }
+  },
+  "zip": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-v2-darwin-arm64.zip",
+  "bytes": 10467,
+  "sha256": "4941518348e969dade72962221e782f8b76a07e8efe0e58a1107d5442690c13d",
+  "crc": "pass",
+  "uniquePaths": true,
+  "safePaths": true,
+  "symlinks": false,
+  "extraction": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/v2_darwin_arm",
+  "files": [
+    {
+      "path": "opencode-v2-darwin-custody.json",
+      "bytes": 1442,
+      "sha256": "639a7bff407b5a85fea4d6132c2882683b294f7b6b5b4b0890dd8d701a60700c"
+    },
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 94993,
+      "sha256": "5cc0588411fa8cc45223eeb1e4151aa19693c05aaa56244960547e4dd9ead4c1"
+    },
+    {
+      "path": "opencode-v2-posix-exec.json",
+      "bytes": 14566,
+      "sha256": "4c30439607e076a24e055b011d8b03affa6ac0792705d667aa1085a7264b9375"
+    },
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 2374,
+      "sha256": "35489e6c86fe3c53120502e6b7c4b83e75fc0bee6e84d2b3bf46ee91f09beaf5"
+    }
+  ]
+}

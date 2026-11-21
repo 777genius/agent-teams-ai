@@ -1,0 +1,38 @@
+{
+  "schema": "conditional-future-green-preview/v1",
+  "applied": false,
+  "sourceBase": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+  "preimage": {
+    "bytes": 7855,
+    "lines": 165,
+    "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+    "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+  },
+  "candidate": {
+    "bytes": 8310,
+    "lines": 172,
+    "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+  },
+  "added": 8,
+  "deleted": 1,
+  "priorReviewedCorrection": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+  "testCandidate": "0727339627757c3a96d54da2933eb7c1b60685f7",
+  "patch": {
+    "bytes": 1081,
+    "lines": 18,
+    "blob": "958de68314a85da4ef85237c3af79d72d3d623d1",
+    "sha256": "1de755555f8fa3963abab4f0dd744456b96f4db3191e0f40eac19093ab555196"
+  },
+  "bounds": [
+    "Exactly the original8-line replacement applied in-memory to6b6c; endpoint optional type/conditional values remain.",
+    "Every other incoming6b6c byte is unchanged.",
+    "24KiB line/output, dump state,512 scan tail, observers, stream/custody and original deadlines unchanged."
+  ],
+  "prerequisites": [
+    "An exact published resulting-source R1 and independent review.",
+    "Actual original full10-file Team CI reaches three held-value semantic REDs, followed by independent raw evidence review.",
+    "This preview neither applies a fix nor authorizes a new command, CI action or qualification."
+  ]
+}

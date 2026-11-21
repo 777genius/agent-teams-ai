@@ -1,0 +1,637 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual-main-solo-publication-finite-verification",
+  "createdAt": "2026-11-19T00:31:37.149667+00:00",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "manifest": {
+    "schemaVersion": 1,
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+    "origin": "Prior uncommitted workspace changes, copied without modifying external worktree; independently under review. Older external STATUS/evidence not adopted.",
+    "externalHeadAtCapture": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "capturedAt": "2026-11-19T00:17:39.545144+00:00",
+    "changes": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+          "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+          "bytes": 44561,
+          "lines": 600
+        },
+        "after": {
+          "gitBlob": "de7adc5a25d63b84888460dc08a518de426946e7",
+          "sha256": "8de1ca5ecbfbfe9823478dd370f861234c05c74e3bf67f35a7fb95fc5ecbf798",
+          "bytes": 44827,
+          "lines": 603
+        }
+      },
+      {
+        "path": "src/main/services/team/TeamLaunchStateStore.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "b376015ab1f2ebb2dd17e72f95616e9ef38afa6c",
+          "sha256": "8b24a41e9bdc89dcdfdb66f905eb196961314821ce5e5bd7389241e4c14116a0",
+          "bytes": 21967,
+          "lines": 564
+        },
+        "after": {
+          "gitBlob": "b1aa8fe6afded73ad22b41784e94ce42b18142a4",
+          "sha256": "f44abe9b34f83a2738342ba84f0cf99ed134b357eb36b9e51844b94249604c41",
+          "bytes": 23353,
+          "lines": 596
+        }
+      },
+      {
+        "path": "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "9bb0d8ba6f4f9b97cd85060f17dfa56d28bbb58f",
+          "sha256": "32acec3ecb7fb22993ef573311945885955d8d10f31373cf3a7014dc8285aca4",
+          "bytes": 18578,
+          "lines": 473
+        },
+        "after": {
+          "gitBlob": "f8e2479b4b5c3a555f94bb283e4a1cdd65ccfa59",
+          "sha256": "7465b7a62856f0cc6d654df57033cec3b48e63b1b4ee763ec920a949c143fb97",
+          "bytes": 19156,
+          "lines": 491
+        }
+      },
+      {
+        "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "d1f772de3f883e6f420d1261a0fbeff5ee3cd034",
+          "sha256": "5e8c407802b207883f5f080663351fd06e471e4b10e5981f89037e9d3b1f7a07",
+          "bytes": 7339,
+          "lines": 181
+        },
+        "after": {
+          "gitBlob": "2f61a31f00a759a68091b0fd9c90df1c7259713e",
+          "sha256": "dce03e1761ad9886296e930422b8242f7330c183a8254f2c477e587e4e96c161",
+          "bytes": 10081,
+          "lines": 256
+        }
+      },
+      {
+        "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "0ee8c0fe11176e181d9c2a1f5df87ad2a5eb99b5",
+          "sha256": "1e5f5861084a4fd47c354837d3d70ffa482668fc0f75b59ff9d2198bbd518769",
+          "bytes": 10687,
+          "lines": 259
+        },
+        "after": {
+          "gitBlob": "1af3316624c7d46629ca275638f38707259ae0d1",
+          "sha256": "e3f57dcb97331a166751395bdccddc41538b686061cd7574a05e855eb3486bdc",
+          "bytes": 12871,
+          "lines": 309
+        }
+      },
+      {
+        "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "2ff65bb7cb7ff8f79d5d43b59e47b965660e3812",
+          "sha256": "02fde2ac79d77be3310fba387b746709853101d7e2ce3e77ed2b04265d333c8e",
+          "bytes": 9591,
+          "lines": 257
+        },
+        "after": {
+          "gitBlob": "ff077d66c2f1b027d8fc42bd4e517090b4df1316",
+          "sha256": "7b154e6a055f067315f4d414f9241356696ca680376b2ed67feeeb28a0ff47cd",
+          "bytes": 11223,
+          "lines": 299
+        }
+      },
+      {
+        "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "1e16d14d9b5daf96c102d4df2d90e80a981dd14f",
+          "sha256": "15dce5094aa3bf3056af2bec3e27073a3924fae5d5d76a9270c7c6f92b3af38c",
+          "bytes": 16831,
+          "lines": 418
+        },
+        "after": {
+          "gitBlob": "7ca326f89632042a98c5bc459250df221980bdd4",
+          "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+          "bytes": 28169,
+          "lines": 684
+        }
+      },
+      {
+        "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "d310431a7424065600ff28668f32184d80e2dc3a",
+          "sha256": "f2509b229cc09cef7e997f707a7b6b3bd2d87cd9b72b89da6e2b1e727c63388e",
+          "bytes": 27999,
+          "lines": 731
+        },
+        "after": {
+          "gitBlob": "ebc6e322cc41d83fd8ecb07b5d4bdc7dab927c6e",
+          "sha256": "f198cafb5532b7028d7c50537592f2ceda7afdcc73735e0c2ce29fa56c916843",
+          "bytes": 33407,
+          "lines": 892
+        }
+      }
+    ],
+    "runtimeAcceptance": "Not established by capture; finite actual-source verification and independent R2 pending",
+    "revision": "Root test-only correction scopes POSIX custody scenarios using canonical skipIf; production bytes unchanged from captured external origin.",
+    "revisedAt": "2026-11-19T00:28:30.996224+00:00"
+  },
+  "manifestPin": {
+    "gitBlob": "65af99844299af94128c5ac7f3551a2e83244c48",
+    "sha256": "7f71a8362e8d2f622a28d7c6f86c443a614fc46fb3b8192db8cec1e32c575921",
+    "bytes": 5341
+  },
+  "priorExternalOrigin": {
+    "manifest": {
+      "schemaVersion": 1,
+      "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+      "origin": "Prior uncommitted workspace changes, copied without modifying external worktree; independently under review. Older external STATUS/evidence not adopted.",
+      "externalHeadAtCapture": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+      "capturedAt": "2026-11-19T00:17:39.545144+00:00",
+      "changes": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+            "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+            "bytes": 44561,
+            "lines": 600
+          },
+          "after": {
+            "gitBlob": "de7adc5a25d63b84888460dc08a518de426946e7",
+            "sha256": "8de1ca5ecbfbfe9823478dd370f861234c05c74e3bf67f35a7fb95fc5ecbf798",
+            "bytes": 44827,
+            "lines": 603
+          }
+        },
+        {
+          "path": "src/main/services/team/TeamLaunchStateStore.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "b376015ab1f2ebb2dd17e72f95616e9ef38afa6c",
+            "sha256": "8b24a41e9bdc89dcdfdb66f905eb196961314821ce5e5bd7389241e4c14116a0",
+            "bytes": 21967,
+            "lines": 564
+          },
+          "after": {
+            "gitBlob": "b1aa8fe6afded73ad22b41784e94ce42b18142a4",
+            "sha256": "f44abe9b34f83a2738342ba84f0cf99ed134b357eb36b9e51844b94249604c41",
+            "bytes": 23353,
+            "lines": 596
+          }
+        },
+        {
+          "path": "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "9bb0d8ba6f4f9b97cd85060f17dfa56d28bbb58f",
+            "sha256": "32acec3ecb7fb22993ef573311945885955d8d10f31373cf3a7014dc8285aca4",
+            "bytes": 18578,
+            "lines": 473
+          },
+          "after": {
+            "gitBlob": "f8e2479b4b5c3a555f94bb283e4a1cdd65ccfa59",
+            "sha256": "7465b7a62856f0cc6d654df57033cec3b48e63b1b4ee763ec920a949c143fb97",
+            "bytes": 19156,
+            "lines": 491
+          }
+        },
+        {
+          "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "d1f772de3f883e6f420d1261a0fbeff5ee3cd034",
+            "sha256": "5e8c407802b207883f5f080663351fd06e471e4b10e5981f89037e9d3b1f7a07",
+            "bytes": 7339,
+            "lines": 181
+          },
+          "after": {
+            "gitBlob": "2f61a31f00a759a68091b0fd9c90df1c7259713e",
+            "sha256": "dce03e1761ad9886296e930422b8242f7330c183a8254f2c477e587e4e96c161",
+            "bytes": 10081,
+            "lines": 256
+          }
+        },
+        {
+          "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "0ee8c0fe11176e181d9c2a1f5df87ad2a5eb99b5",
+            "sha256": "1e5f5861084a4fd47c354837d3d70ffa482668fc0f75b59ff9d2198bbd518769",
+            "bytes": 10687,
+            "lines": 259
+          },
+          "after": {
+            "gitBlob": "1af3316624c7d46629ca275638f38707259ae0d1",
+            "sha256": "e3f57dcb97331a166751395bdccddc41538b686061cd7574a05e855eb3486bdc",
+            "bytes": 12871,
+            "lines": 309
+          }
+        },
+        {
+          "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "2ff65bb7cb7ff8f79d5d43b59e47b965660e3812",
+            "sha256": "02fde2ac79d77be3310fba387b746709853101d7e2ce3e77ed2b04265d333c8e",
+            "bytes": 9591,
+            "lines": 257
+          },
+          "after": {
+            "gitBlob": "73f01438512bbc4ba7b348a5afd400779b5d8e94",
+            "sha256": "36504246168fcaca2251e1986774101e6980154c4b645a506fdc094283378719",
+            "bytes": 11104,
+            "lines": 296
+          }
+        },
+        {
+          "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "1e16d14d9b5daf96c102d4df2d90e80a981dd14f",
+            "sha256": "15dce5094aa3bf3056af2bec3e27073a3924fae5d5d76a9270c7c6f92b3af38c",
+            "bytes": 16831,
+            "lines": 418
+          },
+          "after": {
+            "gitBlob": "dc69e03fb34989fa674bcb04e1dc29efc963ba88",
+            "sha256": "4540ed9c7718845fda8312ec6f7c96119d313d7652b5913e67135e0fc79bf699",
+            "bytes": 27662,
+            "lines": 681
+          }
+        },
+        {
+          "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+          "mode": "100644",
+          "before": {
+            "gitBlob": "d310431a7424065600ff28668f32184d80e2dc3a",
+            "sha256": "f2509b229cc09cef7e997f707a7b6b3bd2d87cd9b72b89da6e2b1e727c63388e",
+            "bytes": 27999,
+            "lines": 731
+          },
+          "after": {
+            "gitBlob": "ebc6e322cc41d83fd8ecb07b5d4bdc7dab927c6e",
+            "sha256": "f198cafb5532b7028d7c50537592f2ceda7afdcc73735e0c2ce29fa56c916843",
+            "bytes": 33407,
+            "lines": 892
+          }
+        }
+      ],
+      "runtimeAcceptance": "Not established by capture; finite actual-source verification and independent R2 pending"
+    },
+    "pin": {
+      "gitBlob": "fe3259c377e8f44d1fe730ea6cede11874b2371a",
+      "sha256": "088d32905df7146118ea704bf4ae4ba35158d5722ea8a57f9a5f31642a89d696",
+      "bytes": 5134
+    },
+    "externalWorktreeModifiedByThisWork": false,
+    "rootCorrection": "Two POSIX custody test scopes only, no production byte change from original captured candidate"
+  },
+  "causalOriginal": {
+    "job": 135167682976,
+    "proof": "parity-030-job-135167682976.json",
+    "limit": "Original finite Create producer did not observe a v2 launch-state publication before90s; import was unentered, failure cleanup retained orphan debt. Missing snapshot fix does not certify that separate cleanup."
+  },
+  "verification": {
+    "node": "v24.22.3",
+    "vitest": "3.2.6",
+    "eslint": "9.39.4",
+    "preparedDependenciesOnly": true,
+    "noBuildAppNativeOrVendorProcess": true,
+    "workspaceSource": "Immutable547 src/test plus exact030 production delta; original bodies before, four edited production bodies after; only candidate tests overlay both",
+    "missingHarnessRepair": {
+      "file": "runtime.lock.json",
+      "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "matchesImmutable030Tree": true,
+      "reason": "Two suites in initial attempt failed resolution before discovery; repair uses immutable source, not test oracle changes"
+    },
+    "executionFlags": [
+      "AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE=1",
+      "--pool=forks",
+      "--maxWorkers=1",
+      "--minWorkers=1",
+      "--no-file-parallelism"
+    ],
+    "redAccounting": "Initial attempt:2 semantic Factory failures and2 suite import errors. After immutable lock repair:2 semantic failures in Store/Reconcile,53 intentionally unselected tests. Four semantic RED assertions total; no claim initial full3-suite execution.",
+    "greenAccounting": "All98 tests in4 related files pass with0fail0skip. Tests use in-memory child custody and actual existing store, queue, Stop authority and sandbox filesystem. No physical process-custody/native/GUI acceptance.",
+    "lintAccounting": "All8 changed paths:0errors0warnings, fast untyped lint only; full candidate typecheck/typed lint remain original CI gates.",
+    "receipts": {
+      "before-result.json": {
+        "pin": {
+          "gitBlob": "94ac1b42d5a90104b0ca52d50d9e5d3661856521",
+          "sha256": "6e17e64af4d34b193a2cb22cefe2d4d68f193dbb2c66ccecdeda63e2c75a9447",
+          "bytes": 7580
+        },
+        "success": false,
+        "total": 8,
+        "passed": 0,
+        "failed": 2,
+        "pending": 6,
+        "suites": [
+          {
+            "file": "test/main/services/team/TeamLaunchStateStore.test.ts",
+            "status": "failed",
+            "suiteError": "Failed to resolve import \"../../../../../runtime.lock.json\" from \"src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract.ts\". Does the file exist?",
+            "passed": 0,
+            "failed": 0,
+            "pending": 0,
+            "failures": [],
+            "passedTestNames": []
+          },
+          {
+            "file": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+            "status": "failed",
+            "suiteError": "",
+            "passed": 0,
+            "failed": 2,
+            "pending": 0,
+            "failures": [
+              {
+                "fullName": "TeamProvisioningLiveLaunchSnapshotBoundaryFactory projects completed owned solo run when isLaunch=false",
+                "messages": [
+                  "AssertionError: expected null to match object { Object (version, teamName, ...) }\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at /workspace/scratch/c714f5bce554/solo-publication-030-candidate/verify-before/src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts:173:75\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:863:59\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)"
+                ]
+              },
+              {
+                "fullName": "TeamProvisioningLiveLaunchSnapshotBoundaryFactory projects completed owned solo run when isLaunch=true",
+                "messages": [
+                  "AssertionError: expected null to match object { Object (version, teamName, ...) }\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at /workspace/scratch/c714f5bce554/solo-publication-030-candidate/verify-before/src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts:173:75\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:863:59\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)"
+                ]
+              }
+            ],
+            "passedTestNames": []
+          },
+          {
+            "file": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+            "status": "failed",
+            "suiteError": "Failed to resolve import \"../../../../../runtime.lock.json\" from \"src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract.ts\". Does the file exist?",
+            "passed": 0,
+            "failed": 0,
+            "pending": 0,
+            "failures": [],
+            "passedTestNames": []
+          }
+        ]
+      },
+      "before-fixed-harness-result.json": {
+        "pin": {
+          "gitBlob": "01efe58bb2953924511d4011ec216d2e038091f4",
+          "sha256": "2112f9138ecbb40f263c548aecd463ea967a10dc6ea4fbf51cde4224de1a82a9",
+          "bytes": 20130
+        },
+        "success": false,
+        "total": 55,
+        "passed": 0,
+        "failed": 2,
+        "pending": 53,
+        "suites": [
+          {
+            "file": "test/main/services/team/TeamLaunchStateStore.test.ts",
+            "status": "failed",
+            "suiteError": "",
+            "passed": 0,
+            "failed": 1,
+            "pending": 0,
+            "failures": [
+              {
+                "fullName": "TeamLaunchStateStore acknowledges an owned finished solo launch only with its freshness and cannot reopen its Stop",
+                "messages": [
+                  "AssertionError: expected \"spy\" to be called 3 times, but got 2 times\n    at /workspace/scratch/c714f5bce554/solo-publication-030-candidate/verify-before/test/main/services/team/TeamLaunchStateStore.test.ts:607:61\n    at Timeout.checkCallback (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/vi.bdSIJ99Y.js:3731:20)\n    at listOnTimeout (node:internal/timers:685:17)\n    at processTimers (node:internal/timers:618:7)"
+                ]
+              }
+            ],
+            "passedTestNames": []
+          },
+          {
+            "file": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+            "status": "failed",
+            "suiteError": "",
+            "passed": 0,
+            "failed": 1,
+            "pending": 0,
+            "failures": [
+              {
+                "fullName": "owned solo publication through the real Main snapshot and store owners publishes an original solo Create, retains live reads, and enables only its exact owned Stop proof",
+                "messages": [
+                  "AssertionError: expected null to match object { version: 2, …(6) }\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at /workspace/scratch/c714f5bce554/solo-publication-030-candidate/verify-before/src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts:568:46\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+                ]
+              }
+            ],
+            "passedTestNames": []
+          }
+        ]
+      },
+      "after-result.json": {
+        "pin": {
+          "gitBlob": "4f8cffc6e8ca73d6294298bae6ab9231d98b7a4e",
+          "sha256": "4c4e46abf94f258e9ff28c17f0d6d97d5b232706565d1c67cf6b38cfe723ea43",
+          "bytes": 36397
+        },
+        "success": true,
+        "total": 98,
+        "passed": 98,
+        "failed": 0,
+        "pending": 0,
+        "suites": [
+          {
+            "file": "test/main/services/team/TeamLaunchStateStore.test.ts",
+            "status": "passed",
+            "suiteError": "",
+            "passed": 38,
+            "failed": 0,
+            "pending": 0,
+            "failures": [],
+            "passedTestNames": [
+              "TeamLaunchStateStore keeps Stop final while rejecting oversized or incomplete optional historical identity",
+              "TeamLaunchStateStore captures original member identities before cleanup and retains them through repeated STOP",
+              "TeamLaunchStateStore never retains another publication or a conflicting member candidate at STOP admission",
+              "TeamLaunchStateStore rejects a versioned snapshot whose persisted team identity does not match its path",
+              "TeamLaunchStateStore separates a launch state that is absent from one it could not read",
+              "TeamLaunchStateStore reports a launch state the filesystem refused as unreadable, not absent",
+              "TeamLaunchStateStore holds a caller-supplied publication until an in-flight stop has finished",
+              "TeamLaunchStateStore rejects when a live team directory cannot persist the complete launch publication",
+              "TeamLaunchStateStore resolves only after both files from the snapshot generation are persisted",
+              "TeamLaunchStateStore serializes publications across store instances so snapshot generations cannot interleave",
+              "TeamLaunchStateStore publishes a complete successor generation after a partial publication fails",
+              "TeamLaunchStateStore does not revoke a publication while its summary is still being persisted",
+              "TeamLaunchStateStore keeps the deleted-team directory race as a compatible no-op",
+              "TeamLaunchStateStore rejects a missing temporary file when the team directory still exists",
+              "TeamLaunchStateStore rejects when the team directory probe cannot confirm revocation",
+              "TeamLaunchStateStore rejects an incomplete revocation after attempting to clear both publication files",
+              "TeamLaunchStateStore drops both publications and records the stop marker when a team is marked stopped",
+              "TeamLaunchStateStore keeps the stop marker as a compatible no-op when the team directory disappeared",
+              "TeamLaunchStateStore records the stop marker and still reports a publication that survived the stop",
+              "TeamLaunchStateStore reports every publication that survived the stop",
+              "TeamLaunchStateStore ignores a late reconciled launch-state write while the team is stopped",
+              "TeamLaunchStateStore acknowledges an owned finished solo launch only with its freshness and cannot reopen its Stop",
+              "TeamLaunchStateStore does not let an ordinary finished solo snapshot initialize freshness or lift Stop",
+              "TeamLaunchStateStore refuses an owned solo publication with 'foreign run' before writing",
+              "TeamLaunchStateStore refuses an owned solo publication with 'malformed session' before writing",
+              "TeamLaunchStateStore refuses an owned solo publication with 'nonempty roster' before writing",
+              "TeamLaunchStateStore refuses an owned solo publication with 'missing owner authorization' before writing",
+              "TeamLaunchStateStore refuses an owned solo publication with 'refused new-run authority' before writing",
+              "TeamLaunchStateStore lifts the stop marker when a real launch publishes an active snapshot",
+              "TeamLaunchStateStore ignores a republished active snapshot while the team is stopped",
+              "TeamLaunchStateStore publishes a republished active snapshot for a team that was never stopped",
+              "TeamLaunchStateStore keeps the stop marker across a launch-state clear",
+              "TeamLaunchStateStore still revokes both publications for a team that was never marked stopped",
+              "TeamLaunchStateStore publishes a reconciled snapshot for a team that was never marked stopped",
+              "TeamLaunchStateStore reports every I/O failure when neither publication file can be revoked",
+              "readPersistedLaunchRuntimePidsSync collects the deduplicated recorded runtime pids of persisted launch members",
+              "readPersistedLaunchRuntimePidsSync answers no pids when the launch state is absent or does not describe a launch",
+              "readPersistedLaunchRuntimePidsSync answers no pids when the persisted launch state names a different team"
+            ]
+          },
+          {
+            "file": "src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchStateStoreBoundary.test.ts",
+            "status": "passed",
+            "suiteError": "",
+            "passed": 35,
+            "failed": 0,
+            "pending": 0,
+            "failures": [],
+            "passedTestNames": [
+              "TeamProvisioningLaunchStateStoreBoundary builds service-shaped boundary ports and mirrors launch-state writes",
+              "TeamProvisioningLaunchStateStoreBoundary notifies readers only after both service stores confirm the publication",
+              "TeamProvisioningLaunchStateStoreBoundary clears the default store after an injected store clear fails and preserves the error",
+              "TeamProvisioningLaunchStateStoreBoundary skips stale clears when the tracked run id differs",
+              "TeamProvisioningLaunchStateStoreBoundary clears run-scoped persisted state, last-written state, and runtime caches",
+              "TeamProvisioningLaunchStateStoreBoundary preserves successor bootstrap state when a run-scoped clear loses authority",
+              "TeamProvisioningLaunchStateStoreBoundary keeps team-scoped bootstrap clearing for compatibility with unscoped clears",
+              "TeamProvisioningLaunchStateStoreBoundary applies both write overlays and updates the last-written run id",
+              "TeamProvisioningLaunchStateStoreBoundary does not attach durable evidence from an old lane run to an unbound replacement lane",
+              "TeamProvisioningLaunchStateStoreBoundary does not resurrect stopped lane evidence when the 'lane index entry was removed'",
+              "TeamProvisioningLaunchStateStoreBoundary does not resurrect stopped lane evidence when the 'manifest active run was cleared'",
+              "TeamProvisioningLaunchStateStoreBoundary returns the previous snapshot on no-op skip when refresh is not due",
+              "TeamProvisioningLaunchStateStoreBoundary forces a write when a no-op refresh is due",
+              "TeamProvisioningLaunchStateStoreBoundary writes run-scoped snapshots when the tracked run id is null",
+              "TeamProvisioningLaunchStateStoreBoundary writes run-scoped snapshots when the tracked run id is undefined",
+              "TeamProvisioningLaunchStateStoreBoundary rejects an unobserved strictly tracked snapshot when the tracked run id is null",
+              "TeamProvisioningLaunchStateStoreBoundary rejects an unobserved strictly tracked snapshot when the tracked run id is undefined",
+              "TeamProvisioningLaunchStateStoreBoundary does not overwrite a successor snapshot when a stale write starts after authority changed",
+              "TeamProvisioningLaunchStateStoreBoundary does not persist a run snapshot after tracking has been cleared",
+              "TeamProvisioningLaunchStateStoreBoundary removes a pending snapshot write after run tracking has been cleared",
+              "TeamProvisioningLaunchStateStoreBoundary preserves previous truth when the store suppresses a stale publication",
+              "TeamProvisioningLaunchStateStoreBoundary never queues a compensating write over a later stop or successor",
+              "TeamProvisioningLaunchStateStoreBoundary serializes queued operations and only removes the current queue entry",
+              "TeamProvisioningLaunchStateStoreBoundary enqueue coalescing merges a request into a pending, not-yet-started tail with the same coalesce key",
+              "TeamProvisioningLaunchStateStoreBoundary enqueue coalescing does not merge into a tail that has already started executing",
+              "TeamProvisioningLaunchStateStoreBoundary enqueue coalescing only ever compares against the tail — an intervening uncoalesced operation forces separate execution",
+              "TeamProvisioningLaunchStateStoreBoundary enqueue coalescing does not merge across different subjects or different keys",
+              "TeamProvisioningLaunchStateStoreBoundary enqueue coalescing propagates a shared rejection to both merged callers without blocking what follows",
+              "TeamProvisioningLaunchStateStoreBoundary whenIdle / isIdle reports idle and resolves immediately when nothing is queued",
+              "TeamProvisioningLaunchStateStoreBoundary whenIdle / isIdle does not resolve while an operation is running, and resolves once it settles",
+              "TeamProvisioningLaunchStateStoreBoundary whenIdle / isIdle stays unresolved when another operation is appended before the current one drains",
+              "TeamProvisioningLaunchStateStoreBoundary whenIdle / isIdle resolves after the last operation settles even when it rejects",
+              "TeamProvisioningLaunchStateStoreBoundary whenIdle / isIdle does not delay whenIdle for a different, unrelated team",
+              "TeamProvisioningLaunchStateStoreBoundary metaMembers write option skips reading members meta when metaMembers is provided, and forwards it to the overlay",
+              "TeamProvisioningLaunchStateStoreBoundary metaMembers write option reads members meta exactly once when metaMembers is not provided"
+            ]
+          },
+          {
+            "file": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+            "status": "passed",
+            "suiteError": "",
+            "passed": 8,
+            "failed": 0,
+            "pending": 0,
+            "failures": [],
+            "passedTestNames": [
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory syncs live run member statuses from persisted snapshots and preserves pending restarts",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory prefers mixed launch snapshots before building from runtime statuses",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory builds runtime snapshots only for launches with expected members",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory projects completed owned solo run when isLaunch=false",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory projects completed owned solo run when isLaunch=true",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory emits member spawn changes and checks launch notification readiness for the tracked run",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory does not check launch notification readiness for a different tracked team",
+              "TeamProvisioningLiveLaunchSnapshotBoundaryFactory builds boundary deps from service-shaped host wiring"
+            ]
+          },
+          {
+            "file": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+            "status": "passed",
+            "suiteError": "",
+            "passed": 17,
+            "failed": 0,
+            "pending": 0,
+            "failures": [],
+            "passedTestNames": [
+              "TeamProvisioningPersistenceReconcileFacade persists run launch snapshots through the queued boundary and filters removed members",
+              "TeamProvisioningPersistenceReconcileFacade clears persisted launch state instead of writing absent or finished clean snapshots",
+              "TeamProvisioningPersistenceReconcileFacade does not resurrect cleaned success during a successor in final reporting",
+              "TeamProvisioningPersistenceReconcileFacade does not resurrect cleaned success during a stop in final reporting",
+              "TeamProvisioningPersistenceReconcileFacade passes facade-owned persistence ports into the reconcile runner",
+              "TeamProvisioningPersistenceReconcileFacade wires the tracked run of the service into the reconcile ports",
+              "TeamProvisioningPersistenceReconcileFacade persistLaunchStateSnapshot coalescing through a real boundary collapses two synchronous requests for the same run and phase into a single build",
+              "TeamProvisioningPersistenceReconcileFacade persistLaunchStateSnapshot coalescing through a real boundary does not collapse requests for the same run with different phases",
+              "owned solo publication through the real Main snapshot and store owners publishes an original solo Create, retains live reads, and enables only its exact owned Stop proof",
+              "owned solo publication through the real Main snapshot and store owners refuses a solo completion whose original stop changes during the first await",
+              "owned solo publication through the real Main snapshot and store owners refuses a solo completion whose original replacement changes during the first await",
+              "owned solo publication through the real Main snapshot and store owners refuses a solo completion whose original session changes during the first await",
+              "owned solo publication through the real Main snapshot and store owners refuses a solo completion whose original cancelled changes during the first await",
+              "owned solo publication through the real Main snapshot and store owners refuses a solo completion whose original closed changes during the first await",
+              "owned solo publication through the real Main snapshot and store owners refuses a solo completion whose original custody changes during the first await",
+              "owned solo publication through the real Main snapshot and store owners rolls back the real solo publication if ownership changes after its first file commit",
+              "owned solo publication through the real Main snapshot and store owners keeps unreadable solo roster metadata unknown instead of authorizing an empty roster"
+            ]
+          }
+        ]
+      },
+      "after-fastlint.json": {
+        "pin": {
+          "gitBlob": "052bab995bbbf9a1093fb0d816f3a5e4c9cb755e",
+          "sha256": "67117ea7b68df7b7ffb4404a13d930b17dcaa7f3e780801c9e716756e630e9dc",
+          "bytes": 2631
+        },
+        "files": 8,
+        "errors": 0,
+        "warnings": 0,
+        "paths": [
+          "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+          "src/main/services/team/TeamLaunchStateStore.ts",
+          "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+          "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+          "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+          "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+          "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+          "test/main/services/team/TeamLaunchStateStore.test.ts"
+        ]
+      }
+    },
+    "rawReceiptBundle": {
+      "relativeFile": "parity-solo-publication-finite-receipts-20261119.json.gz",
+      "gitBlob": "080cdbbfb345297d4253e0a1100a4e3697204a51",
+      "sha256": "6f6a395535672a1283ad2ee51a086e75ea1b0179bf62554d60849eaa90bbe165",
+      "bytes": 7489,
+      "uncompressedBytes": 71308,
+      "uncompressedSha256": "92240c6b1722bcc107c5bdead3b4abd896f4d49ac4b8b737e793275c75d01b0b",
+      "gzipMtime": 0
+    }
+  },
+  "sourceReview": {
+    "independentR2": "parity-solo-publication-r2-20261119.json",
+    "rootReadActualFourProductionDiffs": true,
+    "guardsPreserved": [
+      "captured POSIX child and birth identity",
+      "same tracked run and session",
+      "Anthropic/default provider with all rosters explicitly empty",
+      "current publication epoch and explicit Stop flags",
+      "current authority before/after each relevant await",
+      "unreadable metadata remains unknown",
+      "existing queued writes and beforeCommit rollback",
+      "finished launch phase preserved"
+    ]
+  },
+  "acceptance": "Finite source PASS; original976 desktop producer and cleanup remain unqualified until new original CI."
+}

@@ -6,7 +6,14 @@ import { validateCommandEntry, teamCommandPath } from '../../packages/legacy-age
 import { projectDesktopHarnessFailure } from './desktop-backend-observations.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { runDesktopTaskBoardUiSmoke } from './desktop-task-board-ui-smoke.ts';
-import { runDesktopTaskReviewCycleUiSmoke, runDesktopTaskNotificationUiSmoke } from './desktop-task-review-cycle-ui-smoke.ts';
+import { runDesktopTaskReviewCycleUiSmoke } from './desktop-task-review-cycle-ui-smoke.ts';
+import { runDesktopReviewFlowUiSmoke } from './desktop-review-flow-ui-smoke.ts';
+import {
+  runDesktopTaskNotificationUiSmoke,
+  runDesktopTaskNotificationMarkReadUiSmoke,
+} from './desktop-task-notification-ui-smoke.ts';
+import { runDesktopF08ReadTimingProof } from './desktop-host-routing-proof.ts';
+import { runDesktopTaskTrashRestoreUiSmoke } from './desktop-task-trash-ui-smoke.ts';
 import { runDesktopCrossTeamUiSmoke } from './desktop-cross-team-ui-smoke.ts';
 import { runDesktopOversizedCommentUiSmoke } from './desktop-oversized-comment-ui-smoke.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
@@ -141,22 +148,36 @@ export async function runDesktopOfflineTaskBoardUiSmoke(
   }
   if (mode === 'task-board-ui') {
     await runDesktopTaskNotificationUiSmoke(cdp, options);
-    return;
+  } else {
+    await runDesktopTaskReviewCycleUiSmoke(cdp, options);
+    await runDesktopReviewFlowUiSmoke(cdp, options);
+    await runDesktopTaskNotificationUiSmoke(cdp, options);
+    await runDesktopCrossTeamUiSmoke(cdp, options);
+    // UI composer is intentionally capped; this tests accepted large Host
+    // comments through the existing Task detail after a cold renderer reload.
+    assert.ok(options.seed.taskId && options.seed.subject, 'original TEST Task identity required');
+    const steps: Record<string, unknown>[] = [];
+    options.evidence.oversizedCommentUiProof = await runDesktopOversizedCommentUiSmoke(cdp, {
+      root: options.root,
+      handleId: options.handleId,
+      taskId: options.seed.taskId,
+      subject: options.seed.subject,
+      assertOwnedRenderer: options.assertOwnedRenderer,
+      step: (row) => { steps.push(row); },
+    });
+    options.evidence.oversizedCommentUiSteps = steps;
   }
-  await runDesktopTaskReviewCycleUiSmoke(cdp, options);
-  await runDesktopTaskNotificationUiSmoke(cdp, options);
-  await runDesktopCrossTeamUiSmoke(cdp, options);
-  // UI composer is intentionally capped; this tests accepted large Host
-  // comments through the existing Task detail after a cold renderer reload.
-  assert.ok(options.seed.taskId && options.seed.subject, 'original TEST Task identity required');
-  const steps: Record<string, unknown>[] = [];
-  options.evidence.oversizedCommentUiProof = await runDesktopOversizedCommentUiSmoke(cdp, {
-    root: options.root,
-    handleId: options.handleId,
-    taskId: options.seed.taskId,
-    subject: options.seed.subject,
-    assertOwnedRenderer: options.assertOwnedRenderer,
-    step: (row) => { steps.push(row); },
-  });
-  options.evidence.oversizedCommentUiSteps = steps;
+  if (mode === 'task-board-cross-team-ui')
+    await runDesktopF08ReadTimingProof(cdp, {
+      root: options.root, handleId: options.handleId, seed: options.seed,
+      evidence: options.evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+  if (mode === 'task-board-ui' || mode === 'task-board-cross-team-ui')
+    await runDesktopTaskTrashRestoreUiSmoke(cdp, {
+      root: options.root, repo: options.repo, handleId: options.handleId,
+      seed: options.seed, evidence: options.evidence,
+      assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+  if (mode === 'task-board-ui')
+    await runDesktopTaskNotificationMarkReadUiSmoke(cdp, options);
 }

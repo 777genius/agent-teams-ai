@@ -50,6 +50,7 @@ export function createTeamReadQueries(options: {
   return Object.freeze({
     getTeam: (cursor?: string) => read(() => options.getTeam(cursor)),
     getKanbanState: (settings?: { strict?: boolean }) => read(() => options.reads.getKanbanState(settings)),
+    getReviewFlowSettings: () => read(() => options.reads.getReviewFlowSettings()),
     listReviewers: () => read(() => options.reads.listReviewers()),
     getTaskComment: (taskId: string, commentId: string) =>
       read(() => {

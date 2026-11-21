@@ -8,6 +8,7 @@ import { createTeamController } from '../../packages/legacy-agent-host/dist/adap
 import { readDesktopTaskBoardGroupSnapshot } from './desktop-task-board-group-page-read.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
+  clickDesktopTaskBoardClearedClose,
   desktopTaskBoardAssignmentReadyExpression,
   desktopTaskCommentInputExpression,
 } from './desktop-task-comment-input-target.ts';
@@ -450,7 +451,7 @@ export async function runDesktopTaskBoardUiSmoke(
   // settling sample before one physical press. No effect retry.
   await ui.clickExpression(
     `(async()=>{
-      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })};
+      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId }, 'clarification')};
       if(!owner)return null;
       return ${pointOf(`
         const dialog=document.getElementById(owner.inputId)?.closest('[role="dialog"]');
@@ -458,10 +459,11 @@ export async function runDesktopTaskBoardUiSmoke(
         return buttons.length===1?buttons[0]:null;
       `)};
     })()`,
-    'clear original clarification once'
+    'clear original clarification once', undefined, undefined, { waitForFinalReadiness: true }
   );
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,
+    `(async()=>Boolean(await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })}) &&
+      !document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you'))()`,
     'clarification banner cleared'
   );
   assert.equal((await task(taskId)).needsClarification, undefined);
@@ -470,7 +472,7 @@ export async function runDesktopTaskBoardUiSmoke(
     taskId,
     (payload) => payload.value === null
   );
-  await ui.click('[role="dialog"] button', 'close original Task detail', 'Close');
+  await clickDesktopTaskBoardClearedClose(ui, options.handleId, taskId, { contextId, surfaceId });
   await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'Task detail closed');
 
   await ui.click('button[aria-label="Columns view"]', 'switch existing board to Columns');
@@ -624,7 +626,7 @@ export async function runDesktopTaskBoardUiSmoke(
   assert.ok(blockedReason.includes('unresolved dependencies'));
   assert.ok(blockedReason.includes(`#${String(before[0]!.displayId || before[0]!.id)} (pending)`));
   proof.exactBlockedReason = blockedReason;
-  const hoverCard = async (id: string) => {
+  const hoverCard = async (id: string, completedBlocker = false) => {
     // After a drag, the pointer can already be inside the reordered trigger.
     // Move to a non-tooltip control, then dismiss the focused HoverCard with Escape.
     const outside = record(
@@ -654,7 +656,11 @@ export async function runDesktopTaskBoardUiSmoke(
       'original Task hover cards closed after pointer leave and Escape'
     );
     await ui.hoverExpression(
-      pointOf(`return document.querySelector(${desktopJsLiteral(card(id))});`),
+      pointOf(`${completedBlocker ? `
+        const seed = document.querySelectorAll(${desktopJsLiteral(card(options.seed.taskId))});
+        const headings = seed.length === 1 ? seed[0].closest('section.kanban-column-glow')?.querySelectorAll(':scope > header.kanban-column-header-glow > h4') : null;
+        if (headings?.length !== 1 || headings[0].textContent?.trim() !== 'DONE') return null;
+      ` : ''}return document.querySelector(${desktopJsLiteral(card(id))});`),
       'stable visible original Task card'
     );
     const hovered = record(
@@ -701,7 +707,7 @@ export async function runDesktopTaskBoardUiSmoke(
       .length,
     1
   );
-  await hoverCard(taskId);
+  await hoverCard(taskId, true);
   await ui.click(
     `${openToolbar} button[aria-label="Start"]`,
     'same original Start after resolved dependency'

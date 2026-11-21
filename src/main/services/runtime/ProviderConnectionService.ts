@@ -31,7 +31,9 @@ import {
 } from './anthropicCompatibleEndpoint';
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { type CodexLaunchDialect, isCodexExecBinary } from './codexCliBinary';
+import { originalRuntimeProviderConnectionPort } from './OriginalRuntimeScope';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
+import { resolveCodexDisplayCatalog } from './resolveCodexDisplayCatalog';
 
 import type {
   AnthropicCompatibleEndpointConfig,
@@ -416,8 +418,7 @@ export class ProviderConnectionService {
   private codexAccountFeature: CodexAccountSnapshotReader | null = null;
   private codexModelCatalogFeature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null =
     null;
-  private readonly anthropicApiKeyVerificationCache = new Map<
-    string,
+  private readonly anthropicApiKeyVerificationCache = new Map<string,
     { result: AnthropicApiKeyVerificationResult; at: number }
   >();
 
@@ -429,7 +430,7 @@ export class ProviderConnectionService {
   ) {}
 
   static getInstance(): ProviderConnectionService {
-    ProviderConnectionService.instance ??= new ProviderConnectionService();
+    ProviderConnectionService.instance ??= originalRuntimeProviderConnectionPort(new ProviderConnectionService());
     return ProviderConnectionService.instance;
   }
 
@@ -1187,9 +1188,11 @@ export class ProviderConnectionService {
       const orchestratorCatalog = isUsableCodexModelCatalog(withConnection.modelCatalog)
         ? withConnection.modelCatalog
         : null;
-      const catalog =
-        orchestratorCatalog ??
-        (this.codexModelCatalogFeature ? await this.codexModelCatalogFeature.getCatalog() : null);
+      const catalog = await resolveCodexDisplayCatalog(
+        orchestratorCatalog,
+        this.codexModelCatalogFeature,
+        options.hydrateModelCatalog !== false
+      );
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }

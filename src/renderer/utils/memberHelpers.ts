@@ -1623,5 +1623,6 @@ export const REVIEW_STATE_DISPLAY: Record<
 > = {
   review: { label: 'In Review', bg: 'bg-amber-500/15', text: 'text-amber-400' },
   needsFix: { label: 'Needs Fixes', bg: 'bg-rose-500/15', text: 'text-rose-400' },
+  reviewed: { label: 'Reviewed · Awaiting human', bg: 'bg-sky-500/15', text: 'text-sky-400' },
   approved: { label: 'Approved', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
 };

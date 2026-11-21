@@ -53,7 +53,11 @@ describe('MemberWorkSyncNudge', () => {
   it('tells lead to move escalated clarification to user on the board', () => {
     const payload = buildMemberWorkSyncNudgePayload(makeStatus());
 
-    expect(payload.text).toContain('mcp__agent-teams__member_work_sync_status');
+    expect(payload.text).toContain('preserving any server prefix and including commandId when required');
+    expect(payload.text).toContain(
+      'include teamName "sable-ops" and memberName "team-lead" only when that field is declared in its schema; otherwise omit it'
+    );
+    expect(payload.text).not.toMatch(/mcp__(?:agent-teams|team)__/);
     expect(payload.text).toContain('A status-only tool call is incomplete');
     expect(payload.text).toContain(
       'update the task board first with task_set_clarification value "user"'
@@ -130,7 +134,11 @@ describe('MemberWorkSyncNudge', () => {
 
     expect(payload.workSyncIntent).toBe('review_pickup');
     expect(payload.text).toContain('A status-only tool call is incomplete');
-    expect(payload.text).toContain('mcp__agent-teams__member_work_sync_report');
+    expect(payload.text).toContain('preserving any server prefix and including commandId when required');
+    expect(payload.text).toContain(
+      'include teamName "sable-ops" and memberName "bob" only when that field is declared in its schema; otherwise omit it'
+    );
+    expect(payload.text).not.toMatch(/mcp__(?:agent-teams|team)__/);
   });
 
   it('adds proof-missing recovery context to agenda sync nudges', () => {

@@ -59,12 +59,13 @@ export class FileRuntimeSourceIndex {
 
   constructor(
     root: string,
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly readOnly = false
   ) {
     assertWriter();
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root) held();
     this.directory = join(root, 'runtime-sources');
-    try {
+    if (!readOnly) try {
       mkdirSync(this.directory, { mode: 0o700 });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
@@ -148,6 +149,7 @@ export class FileRuntimeSourceIndex {
   }
 
   publish(record: RuntimeSourceRecord, seedRevision: string): void {
+    if (this.readOnly) held();
     const index = this.read();
     if (
       index.records.some(

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "aad5c2f8bedc7782f6d5f3746a47b74f0c3735d6",
+  "sourceTree": "a2d6de72a62c778642b207dff5939d1e1cc9ff43",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "executionVenue": "existing provider repository build and original packed-consumer tooling; exact checked working tree published without source changes",
+  "previousConsumer": {
+    "implementationSourceCommit": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+    "implementationSha256": "b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a"
+  },
+  "packages": {
+    "agent-teams-provider-implementations-0.0.0.tgz": {
+      "bytes": 190710,
+      "sha256": "91a1c6f62ccd249868adfa0299ea03d828e50db1ca6821beb9d0a65e26cdc4ca",
+      "integrity": "sha512-D5h4j3SH4lVVZYATakmYVCKe/qDsFBAW515ExgBqsgoGO4Dpyr+lcg3E+Lkm2GdewfRF4Pj5XOTAYUt0Xb4Qtw==",
+      "gitBlob": "f6ea4b51dcd580b2710ce75282c11ddec66f790a"
+    },
+    "agent-teams-provider-session-contracts-0.0.0.tgz": {
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+      "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+    }
+  },
+  "archiveCompatibility": {
+    "addedMembers": [
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-media.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-media.js"
+    ],
+    "deletedMembers": [],
+    "changedImplementationMembers": [
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+      "package/dist/features/provider-session-implementation/adapters/provider-session-io/attachments.js"
+    ],
+    "packageManifestUnchanged": true,
+    "claudeCodexAndNativeSuggestionsMembersUnchanged": true,
+    "sessionContractsArchiveByteIdentical": true
+  },
+  "checks": [
+    {
+      "logFile": "media-check-20261118.log",
+      "logBytes": 70571,
+      "logSha256": "1285c2549f071ae3f59cf705f3cf4fadc20ca30a8c926a9ee5dba4dc26d88237"
+    },
+    {
+      "logFile": "media-check-final-20261118.log",
+      "logBytes": 63175,
+      "logSha256": "1295405a74cf3c7b0d738b2992bdb03cc33e3af65cc9556c1997c767f1f376a7"
+    },
+    {
+      "logFile": "media-targeted-20261118.log",
+      "logBytes": 1740,
+      "logSha256": "cdb255f1b9d39a48d257057be36867a2d36b7f2c45d6eea3ba60158c1e515d1a"
+    },
+    {
+      "logFile": "media-packed-final-20261118.log",
+      "logBytes": 984,
+      "logSha256": "234ca136448674ab2e7b9ac83a63e4a8cc03b9a054825de79aa25c22bf34f1b9"
+    }
+  ],
+  "validationSummary": "Pinned Node 24.21.0 / pnpm 11.18.0 / TypeScript 7.0.2. Build and typecheck passed. Initial full source suite 577/577 passed; final count-limit suite 576/577 with one unchanged Codex 3s fixture failure during concurrent compilation, then original Codex file 4/4 and affected suites 19/19 passed in isolation. Original implementation packed consumer passed; exact output bytes retained. Full pnpm check command did not pass as a single uninterrupted run. No native Host or packaged Electron qualification claimed.",
+  "mediaBoundary": {
+    "sourceFileMaxBytes": 4194304,
+    "sourceTotalMaxBytes": 8388608,
+    "maxCount": 5,
+    "mimeTypes": [
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "application/pdf"
+    ],
+    "videos": false,
+    "revision": "opencode-2.1.4-native-media-v1",
+    "rawTransportLimitsUnchanged": true
+  },
+  "executionLimits": "No real Claude/Codex CLI or vendor inference. Source tests use finite peers and localhost HTTP. New 6MiB media fixture has its own 10s I/O budget; existing 2s fixture defaults and production/native deadlines remain unchanged.",
+  "archiveCustody": "Exact bytes retained by AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR from the original packed-consumer gate; copied without editing or repacking.",
+  "builtOutputCensus": {
+    "sourceHead": "aad5c2f8bedc7782f6d5f3746a47b74f0c3735d6",
+    "sourceTree": "a2d6de72a62c778642b207dff5939d1e1cc9ff43",
+    "sourceClean": true,
+    "packages": [
+      {
+        "package": "provider-implementations",
+        "distFiles": 252,
+        "distCensusSha256": "3e9af588f5f6020667c1610a08f862b13c03f1b5cb621b57d7a471d4e17b43e0",
+        "archiveSha256": "91a1c6f62ccd249868adfa0299ea03d828e50db1ca6821beb9d0a65e26cdc4ca",
+        "exactCurrentDist": true
+      },
+      {
+        "package": "provider-session-contracts",
+        "distFiles": 10,
+        "distCensusSha256": "1a9365243dea8e1380b34f87d43da8a72918fbc50a9e44696851b5e91caf95ed",
+        "archiveSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "exactCurrentDist": true
+      }
+    ]
+  },
+  "consumerInstallation": {
+    "command": [
+      "pnpm",
+      "install",
+      "--frozen-lockfile",
+      "--ignore-scripts"
+    ],
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "exitCode": 0,
+    "supplyChainEntriesVerified": 2533
+  }
+}

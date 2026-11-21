@@ -1,0 +1,1510 @@
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -771,7 +771,7 @@
+           assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+           assert.deepEqual(r.cleanupErrors, []); assert.deepEqual(r.modelFailures, []);
+           assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
+-          assert.equal(r.build.providerDigest, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
++          assert.equal(r.build.providerDigest, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+           assert.equal(r.inputs.kind, 'TEST_DESKTOP_V1_SOURCE_INPUTS'); assert.equal(r.inputs.status, 'READY');
+           assert.equal(r.inputs.v1.version, '1.19.4');
+           assert.equal(r.inputs.v1.sha256, '538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7');
+@@ -1256,7 +1256,7 @@
+             sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
+           };
+           const currentProvider = await readNativeProviderArtifact(repo);
+-          assert.equal(currentProvider.sha256, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
++          assert.equal(currentProvider.sha256, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+           await verifyNativeProviderArtifact(donor, oldProvider);
+           await verifyNativeProviderArtifact(repo, currentProvider);
+           const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+@@ -1451,8 +1451,8 @@
+           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+           const provider = await readNativeProviderArtifact(process.cwd());
+           assert.deepEqual(provider, {
+-            path: 'vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz',
+-            sha256: '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94',
++            path: 'vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz',
++            sha256: '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267',
+           });
+           await verifyNativeProviderArtifact(process.cwd(), provider);
+           const stage = process.env.CODEX_CANDIDATE_STAGE;
+@@ -1485,8 +1485,8 @@
+           LEGACY_CODEX_TEAM_GO=1 \
+           LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
+           LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
+-          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz \
+-          LEGACY_NATIVE_PROVIDER_SHA256=91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94 \
++          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz \
++          LEGACY_NATIVE_PROVIDER_SHA256=24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267 \
+           "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
+           "$selected_node" --input-type=module <<'NODE'
+           import assert from 'node:assert/strict';
+@@ -1500,7 +1500,7 @@
+           assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
+           assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
+           assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
+-          assert.equal(receipt.artifacts.provider.sha256, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
++          assert.equal(receipt.artifacts.provider.sha256, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+           assert.equal(receipt.artifacts.node.version, 'v24.21.0');
+           assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
+           assert.equal(receipt.catalog.originalChildExited, true);
+--- a/packages/legacy-agent-host/package.json
++++ b/packages/legacy-agent-host/package.json
+@@ -271,6 +271,10 @@
+     "./owned-process": {
+       "types": "./dist/owned-process/index.d.ts",
+       "import": "./dist/owned-process/index.js"
++    },
++    "./diagnostics/assignments": {
++      "types": "./dist/diagnostics/redactDiagnosticAssignments.d.ts",
++      "import": "./dist/diagnostics/redactDiagnosticAssignments.js"
+     }
+   },
+   "bin": {
+@@ -289,8 +293,8 @@
+     "@typescript/native": "npm:typescript@7.0.2"
+   },
+   "dependencies": {
+-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz",
+-    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
++    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
++    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+     "@modelcontextprotocol/sdk": "1.32.0",
+     "agent-teams-controller": "workspace:*",
+     "zod": "4.6.7",
+--- a/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
+@@ -1,3 +1,4 @@
++import { redactDiagnosticAssignments } from '../../diagnostics/redactDiagnosticAssignments.js';
+ import {
+   RUNTIME_DIAGNOSTIC_DUMP_HIDDEN, runtimeDiagnosticDumpBoundary,
+   sanitizeRuntimeDiagnosticText, stripRuntimeDiagnosticAnsi,
+@@ -11,42 +12,79 @@
+ const privateName = (name: string) => /api[_-]?key|auth|token|secret|password|credential|cookie|private[_-]?key/i.test(name);
+ const normalize = (value: string) => stripRuntimeDiagnosticAnsi(value).replace(/\0/g, '\uFFFD');
+ type StderrContext = Pick<MemberProviderContext, 'observeProcessOutput'> & {
+-  endpoint: Pick<MemberProviderContext['endpoint'], 'bearerToken'>;
++  endpoint: Pick<MemberProviderContext['endpoint'], 'bearerToken'> & Partial<Pick<MemberProviderContext['endpoint'], 'url'>>;
+   profile: Pick<MemberProviderContext['profile'], 'environment' | 'capturedMcpServers'>;
+ };
+ 
+-/** Only values already present in this selected launch; no environment or credential discovery. */
+-function privatePattern(context: StderrContext, args: readonly string[]): RegExp | undefined {
+-  const values = [context.endpoint.bearerToken];
+-  const environment = (entries: Record<string, string> = {}) => {
+-    for (const [key, value] of Object.entries(entries)) if (privateName(key)) values.push(value);
+-  };
+-  const argumentsOf = (selected: readonly string[]) => {
+-    for (let index = 0; index < selected.length; index++) {
+-      const argument = selected[index]!;
+-      const separator = argument.indexOf('=');
+-      const name = separator < 0 ? argument : argument.slice(0, separator);
+-      if (!privateName(name)) continue;
+-      const value = separator < 0 ? selected[index + 1] : argument.slice(separator + 1);
+-      if (!value) continue;
+-      values.push(value);
+-      try { const decoded: unknown = JSON.parse(value); if (typeof decoded === 'string') values.push(decoded); }
+-      catch { /* Native arguments may be plain strings rather than JSON settings. */ }
++function redactSyntax(value: string): string {
++  // The raw line is already bounded. Classify before exact masking can alter a key or URL,
++  // and do not truncate a held value before its complete sanitized form is masked.
++  return sanitizeRuntimeDiagnosticText(redactDiagnosticAssignments(value, privateName), Number.MAX_SAFE_INTEGER) ?? '';
++}
++
++function privateValues(context: StderrContext, args: readonly string[]): string[] {
++  const values = [context.endpoint.bearerToken, ...(context.endpoint.url ? [context.endpoint.url] : [])];
++  const assignments = (source: Readonly<Record<string, string>> | undefined): void => {
++    for (const [key, value] of Object.entries(source ?? {})) {
++      if (privateName(key)) values.push(value);
+     }
+   };
+-  environment(context.profile.environment);
++  const argumentsOf = (args: readonly string[] | undefined): void => {
++    for (let index = 0; index < (args?.length ?? 0); index++) {
++      const arg = args![index]!;
++      const match = /^(?:--)?([^=:\s]+)(?:[=:](.*))?$/s.exec(arg);
++      if (!match || !privateName(match[1]!)) continue;
++      const value = match[2] ?? args![index + 1];
++      if (value !== undefined) {
++        values.push(value);
++        try { const decoded: unknown = JSON.parse(value); if (typeof decoded === 'string') values.push(decoded); }
++        catch { /* Literal argv values are still removed exactly. */ }
++      }
++    }
++  };
++  assignments(context.profile.environment);
+   argumentsOf(args);
+   for (const server of Object.values(context.profile.capturedMcpServers ?? {})) {
+-    if (server.type === 'stdio') { environment(server.env); argumentsOf(server.args ?? []); }
+-    else for (const value of Object.values(server.headers ?? {}))
+-      values.push(value, value.replace(/^(?:bearer|basic)\s+/i, ''));
++    if (server.type === 'stdio') { assignments(server.env); argumentsOf(server.args); }
++    else for (const value of Object.values(server.headers ?? {})) {
++      values.push(value, value.replace(/^(?:Bearer|Basic)\s+/i, ''));
++    }
+   }
+-  const candidates = new Set(values.flatMap(value => normalize(value).split(/\r?\n/)
+-    .flatMap(line => [line, line.replace(/\s+/g, ' ').trim(), JSON.stringify(line).slice(1, -1)])));
+-  const selected = [...candidates].filter(value => value.length > 0 && Buffer.byteLength(value) <= MAX_LINE_BYTES)
+-    .sort((a, b) => b.length - a.length);
+-  // One replacement pass prevents short private values from re-matching our replacement marker.
+-  return selected.length ? new RegExp(selected.map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g') : undefined;
++  const forms = new Set<string>();
++  for (const value of values) {
++    const text = normalize(value);
++    const lines = text.split(/\r?\n/);
++    for (const component of [text, ...lines, ...lines.map(line => line.replace(/\s+/g, ' ').trim())]) {
++      if (!component) continue;
++      forms.add(component);
++      forms.add(JSON.stringify(component).slice(1, -1));
++      try { forms.add(encodeURIComponent(component)); } catch { /* Malformed Unicode has no URI form. */ }
++    }
++  }
++  for (const value of [...forms]) {
++    const redacted = redactSyntax(value);
++    if (redacted) forms.add(redacted);
++  }
++  // A whole existing marker wins over any overlapping short private value inside it.
++  forms.add('[redacted]');
++  return [...forms].sort((a, b) => b.length - a.length);
++}
++
++function redactPrivateValues(text: string, secrets: readonly string[]): string {
++  const hidden = new Uint8Array(text.length);
++  for (const secret of secrets) {
++    for (let at = text.indexOf(secret); at !== -1; at = text.indexOf(secret, at + 1))
++      hidden.fill(1, at, at + secret.length);
++  }
++  let result = '', start = 0;
++  while (start < text.length) {
++    const masked = hidden[start] === 1;
++    let end = start + 1;
++    while (end < text.length && (hidden[end] === 1) === masked) end++;
++    result += masked ? '[redacted]' : text.slice(start, end);
++    start = end;
++  }
++  return result;
+ }
+ 
+ /** Observe the original target stderr; custody and native protocol streams keep their existing owners. */
+@@ -58,10 +96,10 @@
+   const emit = (value: RuntimeProcessOutput) => {
+     try { observer(value); } catch { /* Observations never replace provider outcomes. */ }
+   };
+-  let secrets: RegExp | undefined;
+-  try { secrets = privatePattern(context, args); }
++  let secrets: string[];
++  try { secrets = privateValues(context, args); }
+   catch { emit({ kind: 'gap', reason: 'oversized' }); return; }
+-  let pending = Buffer.alloc(0), oversized = false, suppressed = false, finished = false;
++  let pending = Buffer.alloc(0), oversized = false, suppressed = false, finished = false, scanTail = '';
+   const line = (bytes: Buffer) => {
+     const value = normalize(bytes.toString('utf8'));
+     const boundary = runtimeDiagnosticDumpBoundary(value);
+@@ -71,15 +109,14 @@
+       emit({ kind: 'process-output', stream: 'stderr', text: RUNTIME_DIAGNOSTIC_DUMP_HIDDEN });
+       return;
+     }
+-    const normalized = value.replace(/\s+/g, ' ').trim();
+-    const text = sanitizeRuntimeDiagnosticText(secrets ? normalized.replace(secrets, '[redacted]') : normalized, MAX_LINE_BYTES);
++    const text = redactPrivateValues(redactSyntax(value), secrets);
+     if (text) emit(Buffer.byteLength(text) > MAX_LINE_BYTES
+       ? { kind: 'gap', reason: 'oversized' }
+       : { kind: 'process-output', stream: 'stderr', text });
+   };
+   const complete = () => {
+     const bytes = pending, dropped = oversized;
+-    pending = Buffer.alloc(0); oversized = false;
++    pending = Buffer.alloc(0); oversized = false; scanTail = '';
+     if (dropped) emit({ kind: 'gap', reason: 'oversized' });
+     else if (bytes.length) line(bytes);
+   };
+@@ -90,11 +127,17 @@
+       for (let offset = 0; offset < bytes.length && !finished;) {
+         const newline = bytes.indexOf(10, offset);
+         const end = newline < 0 ? bytes.length : newline;
++        const scanned = normalize(scanTail + bytes.subarray(offset, end).toString('utf8')).replace(/\s+/g, ' ');
++        const discardedDump = runtimeDiagnosticDumpBoundary(scanned) === 'start';
++        scanTail = scanned.slice(-512);
++        if (oversized && (discardedDump || scanned.includes('\u001b'))) suppressed = true;
+         if (!oversized) {
+           const available = MAX_LINE_BYTES - pending.length;
+           pending = Buffer.concat([pending, bytes.subarray(offset, Math.min(end, offset + available))]);
+           if (end - offset > available) {
+-            suppressed ||= runtimeDiagnosticDumpBoundary(normalize(pending.toString('utf8'))) === 'start';
++            const prefix = normalize(pending.toString('utf8'));
++            // An unfinished escape can hide a dump opener whose prefix is about to be lost.
++            suppressed ||= discardedDump || prefix.includes('\u001b') || runtimeDiagnosticDumpBoundary(prefix) === 'start';
+             pending = Buffer.alloc(0); oversized = true;
+           }
+         }
+--- /dev/null
++++ b/packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts
+@@ -0,0 +1,134 @@
++/** Redact credential fields inside prose, JSON, and environment assignments.
++ * Scan quoted values before callers collapse whitespace or truncate the input:
++ * escaped quotes and newlines can be part of a secret, and an unfinished quoted
++ * value must fail closed through the end of the diagnostic.
++ */
++export function redactDiagnosticAssignments(
++  value: string,
++  isSensitiveKey: (key: string) => boolean
++): string {
++  // Do not restart at every hyphen in a non-assignment: that makes long dashed
++  // diagnostics quadratic before the bridge has a chance to cap the result.
++  const assignments = /(?<![a-z0-9_-])([a-z0-9_-]+)(\\*["'`])?\s*([:=])\s*/gi;
++  let result = '';
++  let cursor = 0;
++  let match: RegExpExecArray | null;
++  while ((match = assignments.exec(value)) !== null) {
++    const key = match[1];
++    if (!key || !isSensitiveKey(key)) continue;
++
++    const jsonField = match[2] !== undefined && match[3] === ':';
++    let start = assignments.lastIndex;
++    // A bare Authorization header has a scheme followed by its credential.
++    const scheme = /^(?:Bearer|Basic)\s+/i.exec(value.slice(start));
++    if (scheme) start += scheme[0].length;
++    const quote = value[start + (value[start] === '\\' ? 1 : 0)];
++    const quoted = quote === '"' || quote === "'" || quote === '`';
++    const container =
++      (value[start] === '{' || value[start] === '[') && !value.startsWith('[redacted]', start);
++    let end = start;
++    // Support raw and once-escaped JSON. Deeper or unsupported encodings must
++    // not expose a suffix when their quote boundaries cannot be established.
++    if (!jsonField && /cookie/i.test(key)) {
++      // Bare cookie headers can contain several whitespace-delimited pairs.
++      // Without a JSON field boundary, discard the remaining diagnostic.
++      end = value.length;
++    } else if (!jsonField && /authorization/i.test(key) && !scheme) {
++      // Unknown HTTP auth schemes may carry several credential parameters.
++      end = value.length;
++    } else if ((match[2]?.length ?? 1) > 2 || value.startsWith('\\\\', start)) {
++      end = value.length;
++    } else if (quoted) {
++      end = quotedValueEnd(value, start);
++    } else if (jsonField && value.startsWith('[redacted]', start)) {
++      end += '[redacted]'.length;
++    } else if (container) {
++      end = containerValueEnd(value, start, match[2]?.startsWith('\\') ?? false);
++    } else {
++      const delimiter = jsonField ? /[\s,"'`;}\]]/ : /[\s"'`]/;
++      while (end < value.length && !delimiter.test(value.charAt(end))) {
++        // Shell escapes/concatenation have no reliable boundary in diagnostic prose.
++        if (!jsonField && value[end] === '\\') {
++          end = value.length;
++          break;
++        }
++        end += 1;
++      }
++      if (!jsonField && /["'`]/.test(value.charAt(end))) end = value.length;
++    }
++    if (
++      (container || quoted) &&
++      !jsonField &&
++      end < value.length &&
++      !/\s/.test(value.charAt(end))
++    ) {
++      end = value.length;
++    }
++    if (jsonField) {
++      // A valid value followed by malformed text is still unsafe; this also
++      // keeps re-redaction from exposing a suffix after our own marker.
++      let next = end;
++      while (next < value.length && /\s/.test(value.charAt(next))) next += 1;
++      if (next < value.length && !/[,;}\]]/.test(value.charAt(next))) end = value.length;
++    }
++    result += value.slice(cursor, start) + '[redacted]';
++    cursor = Math.min(end, value.length);
++    assignments.lastIndex = cursor;
++  }
++  return result + value.slice(cursor);
++}
++
++function quotedValueEnd(value: string, start: number): number {
++  const escapedQuote = value[start] === '\\';
++  const quote = value[start + (escapedQuote ? 1 : 0)];
++  let end = start + (escapedQuote ? 2 : 1);
++  while (end < value.length) {
++    if (value[end] === '\\') {
++      if (escapedQuote) {
++        const slashStart = end;
++        while (value[end] === '\\') end += 1;
++        // In JSON-escaped text, \" closes a value, but \\\" is content.
++        if (value[end] === quote && (end - slashStart) % 4 === 1) return end + 1;
++        if (value[end] === quote) end += 1;
++      } else {
++        end += 2;
++      }
++    } else if (value[end++] === quote && !escapedQuote) {
++      return end;
++    }
++  }
++  return value.length;
++}
++
++/** Consume the whole sensitive object/array, including nested and quoted data.
++ * Unclosed strings/containers or mismatched brackets discard the remaining text.
++ */
++function containerValueEnd(value: string, start: number, escaped: boolean): number {
++  const closers: string[] = [];
++  let end = start;
++  while (end < value.length) {
++    const char = value.charAt(end);
++    if (/["'`]/.test(char) || (char === '\\' && /["'`]/.test(value.charAt(end + 1)))) {
++      end = quotedValueEnd(value, end);
++      continue;
++    }
++    if (char === '{' || char === '[') {
++      closers.push(char === '{' ? '}' : ']');
++    } else if (char === '}' || char === ']') {
++      if (closers.pop() !== char) return value.length;
++      if (closers.length === 0) {
++        try {
++          const text = value.slice(start, end + 1);
++          const decoded: unknown = escaped ? JSON.parse(`"${text}"`) : text;
++          if (typeof decoded !== 'string') return value.length;
++          JSON.parse(decoded);
++          return end + 1;
++        } catch {
++          return value.length;
++        }
++      }
++    }
++    end += 1;
++  }
++  return value.length;
++}
+--- a/packages/legacy-agent-host/src/runtime/normalizeActivity.ts
++++ b/packages/legacy-agent-host/src/runtime/normalizeActivity.ts
+@@ -70,6 +70,7 @@
+   try {
+     switch (event.kind) {
+       case 'text':
++      case 'thinking':
+         if (
+           !id(event.messageRef) ||
+           !Number.isSafeInteger(event.block) ||
+@@ -80,7 +81,7 @@
+           return gap('unsupported');
+         if (Buffer.byteLength(event.text) > 24 * 1024) return gap('oversized');
+         return {
+-          kind: 'text',
++          kind: event.kind,
+           messageRef: event.messageRef,
+           block: event.block,
+           text: event.text,
+--- a/packages/legacy-agent-host/tests/captured-claude-process.test.ts
++++ b/packages/legacy-agent-host/tests/captured-claude-process.test.ts
+@@ -20,6 +20,9 @@
+ import { test } from 'node:test';
+ 
+ import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
++import { createClaudeMemberProvider } from '../dist/adapters/providers/ClaudeMemberProvider.js';
++import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
++import { startTeamMcpEndpoint } from '../dist/mcp/endpoint.js';
+ import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';
+ import type { RuntimeMemberProfile } from '../dist/composition/runtimeProfile.js';
+ import type { RuntimeProcessOutput } from '../dist/runtime/providerActivityContracts.js';
+@@ -97,6 +100,53 @@
+     }
+   });
+ 
++test('original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail',
++  { skip: process.platform === 'win32' }, async () => {
++    const { root, profile } = await setup(`#!${process.execPath}
++const { writeSync } = require('node:fs');
++writeSync(2, 'TEST original Claude startup diagnostic\\n');
++writeSync(2, 'TEST original Claude final tail');
++process.exit(7);
++`);
++    try {
++      const binding = { backendId: 'TEST-backend', teamId: profile.teamId, teamName: 'test-claude-stderr' };
++      const delivery = { ...binding, runId: 'TEST-run', memberId: profile.memberId, generation: '1' };
++      const owner = createFilesystemTeamOwner({
++        root, binding,
++        members: [{ memberId: profile.memberId, name: 'alice', role: 'lead', delivery }],
++        grants: [{ principalId: profile.principalId, memberName: 'alice',
++          permissions: ['read', 'task.write', 'message.write'] }],
++      });
++      const connection = owner.connect(profile.principalId);
++      const endpoint = await startTeamMcpEndpoint({ connection, binding: delivery,
++        expiresAtMs: Date.now() + profile.limits.timeoutMs, isCurrentBinding: () => true });
++      try {
++        const request = { tenantId: 'TEST-tenant', projectId: 'TEST-project',
++          sessionId: profile.sessionId, generation: profile.generation,
++          configRevision: profile.configRevision, requiredCapabilities: ['session.conversation'] };
++        const observations: RuntimeProcessOutput[] = [];
++        let progress = 0;
++        const provider = createClaudeMemberProvider({
++          profile, request, endpoint, connection, instructions: 'TEST finite selected Node child only',
++          isCurrent: () => true, canAllocate: () => true,
++          readCheckpoint: async () => { throw new Error('TEST checkpoint must not be read'); },
++          observeProcessOutput: value => observations.push(value), onProgress: () => { progress++; },
++        });
++        try {
++          await assert.rejects(provider.factory.open(request));
++          assert.equal(await provider.cleanup(), true, 'the original finite child is physically stopped');
++          assert.deepEqual(observations, [
++            { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude startup diagnostic' },
++            { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude final tail' },
++          ]);
++          assert.equal(provider.isReady(), false); assert.equal(progress, 0);
++        } finally {
++          provider.seal(); assert.equal(await provider.cleanup(), true);
++        }
++      } finally { await endpoint.close(); }
++    } finally { await rm(root, { recursive: true, force: true }); }
++  });
++
+ test('captured native executable is pinned again at launch and sealing forbids late allocation', async () => {
+   const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');
+   try {
+--- a/packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts
++++ b/packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts
+@@ -218,7 +218,7 @@
+     // Only finite counters leave this TEST fixture; payload, paths, IDs and error text stay private.
+     try {
+       const kinds: Record<Event['kind'], number> = {
+-        compaction: 0, text: 0, tool: 0, 'tool-result': 0, usage: 0, result: 0, interaction: 0, diagnostic: 0,
++        compaction: 0, text: 0, thinking: 0, tool: 0, 'tool-result': 0, usage: 0, result: 0, interaction: 0, diagnostic: 0,
+       };
+       for (const kind of Object.keys(kinds) as Event['kind'][])
+         kinds[kind] = events.filter(event => event.kind === kind).length;
+--- a/packages/legacy-agent-host/tests/member-process-stderr.test.ts
++++ b/packages/legacy-agent-host/tests/member-process-stderr.test.ts
+@@ -128,3 +128,129 @@
+   }, []);
+   assert.equal(withoutObserver.child.stderr.listenerCount('data'), 0);
+ });
++
++test('held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes', async () => {
++  const f = fixture(), secret = 'alpha"TEST_PRIVATE_SUFFIX';
++  observeMemberProcessStderr(f.child, {
++    ...f.context, endpoint: { ...f.context.endpoint, url: 'http://127.0.0.1:12345/TEST-private' },
++    profile: { ...f.context.profile, environment: { API_KEY: secret,
++      AUTH_TOKEN: 'TEST_PRIVATE_FIRST\nTEST_PRIVATE_SECOND', PASSWORD: 'TEST  SPACED  SECRET' } },
++  }, []);
++  const output = ['TEST ordinary diagnostic', 'opaque=' + JSON.stringify(secret),
++    'opaque=' + encodeURIComponent(secret), 'TEST_PRIVATE_FIRST\nTEST_PRIVATE_SECOND',
++    'TEST  SPACED  SECRET', 'http://127.0.0.1:12345/TEST-private',
++    'password=' + JSON.stringify('TEST_UNHELD_PREFIX"TEST_UNHELD_SUFFIX')].join('\n');
++  for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
++  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++  const retained = JSON.stringify(f.observations);
++  assert.ok(retained.includes('TEST ordinary diagnostic'));
++  for (const fragment of ['alpha', 'TEST_PRIVATE_SUFFIX', 'TEST_PRIVATE_FIRST', 'TEST_PRIVATE_SECOND',
++    'SPACED', 'SECRET', '127.0.0.1:12345', 'TEST_UNHELD_PREFIX', 'TEST_UNHELD_SUFFIX'])
++    assert.equal(retained.includes(fragment), false, fragment);
++});
++
++for (const [secret, output] of [['ABABAB', 'ABABABAB'], ['a', 'aaaa']] as const) {
++  test(`overlapping held values are masked in one pass: ${secret}`, async () => {
++    const f = fixture();
++    observeMemberProcessStderr(f.child, { ...f.context,
++      profile: { ...f.context.profile, environment: { API_KEY: secret } } }, []);
++    f.child.stderr.write(output + '\n');
++    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
++  });
++}
++
++for (const oversized of [false, true]) {
++  test(`long split ANSI does not lose a dump opener before ${oversized ? 'discard' : 'flush'}`, async () => {
++    const f = fixture(); f.attach();
++    f.child.stderr.write('environment\u001b[' + '1;'.repeat(300));
++    f.child.stderr.write('m dump ' + (oversized ? 'x'.repeat(25 * 1024) : '') + '\n');
++    f.child.stderr.write('TEST_DUMP_CONTINUATION_CANARY\n--- End ---\nTEST safe\n');
++    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++    assert.equal(JSON.stringify(f.observations).includes('TEST_DUMP_CONTINUATION_CANARY'), false);
++    assert.equal(f.observations.at(-1)?.kind, 'process-output');
++    assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
++  });
++}
++
++test('dump detection continues through already discarded oversized fragments', async () => {
++  const f = fixture(); f.attach();
++  f.child.stderr.write('x'.repeat(25 * 1024));
++  f.child.stderr.write(' environ'); f.child.stderr.write('ment dump\nTEST_DISCARDED_DUMP_CANARY\n');
++  f.child.stderr.write('--- End ---\nTEST safe\n');
++  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++  assert.equal(JSON.stringify(f.observations).includes('TEST_DISCARDED_DUMP_CANARY'), false);
++  assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
++});
++
++for (const [secret, text] of [
++  ['s', 'password="TEST_UNHELD_CANARY"'],
++  ['a', 'Bearer TEST_UNHELD_CANARY'],
++  ['h', 'http://user:TEST_UNHELD_CANARY@example.invalid/visible'],
++] as const) {
++  test(`a short held value cannot destroy sensitive syntax before classification: ${secret}`, async () => {
++    const f = fixture();
++    observeMemberProcessStderr(f.child, { ...f.context,
++      profile: { ...f.context.profile, environment: { API_KEY: secret } } }, []);
++    f.child.stderr.write(text + '\n');
++    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++    assert.equal(JSON.stringify(f.observations).includes('TEST_UNHELD_CANARY'), false);
++  });
++}
++
++test('syntax redaction cannot expose fragments of a transformed held value', async () => {
++  const f = fixture();
++  observeMemberProcessStderr(f.child, { ...f.context,
++    endpoint: { ...f.context.endpoint, url: 'http://127.0.0.1:12345/TEST_PRIVATE_PATH?token=TEST_PRIVATE_QUERY' },
++    profile: { ...f.context.profile, environment: { API_KEY: 'TEST_PREFIX password=TEST_INNER TEST_SUFFIX', SHORT_TOKEN: 'a' } },
++  }, []);
++  f.child.stderr.write('url http://127.0.0.1:12345/TEST_PRIVATE_PATH?token=TEST_PRIVATE_QUERY\n');
++  f.child.stderr.write('opaque TEST_PREFIX password=TEST_INNER TEST_SUFFIX\n');
++  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++  const retained = JSON.stringify(f.observations);
++  for (const canary of ['127.0.0.1:12345', 'TEST_PRIVATE_PATH', 'TEST_PRIVATE_QUERY', 'TEST_PREFIX', 'TEST_INNER', 'TEST_SUFFIX'])
++    assert.equal(retained.includes(canary), false, canary);
++  assert.equal(retained.includes('[red[redacted]'), false, 'existing markers are not expanded by short held values');
++});
++
++for (const alreadyDiscarded of [false, true]) {
++  test(`an ANSI prefix larger than the line budget remains fail-closed (${alreadyDiscarded})`, async () => {
++    const f = fixture(); f.attach();
++    if (alreadyDiscarded) f.child.stderr.write('x'.repeat(25 * 1024));
++    f.child.stderr.write('environment\u001b[' + '1;'.repeat(13 * 1024));
++    f.child.stderr.write('m dump\nTEST_LONG_CSI_DUMP_CANARY\n--- End ---\nTEST safe\n');
++    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++    assert.equal(JSON.stringify(f.observations).includes('TEST_LONG_CSI_DUMP_CANARY'), false);
++    assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
++  });
++}
++
++for (const [label, separator] of [['space', ' '], ['tab', '\t'], ['mixed', ' \t  ']] as const) {
++  test(`held whitespace values cannot leak after contextual syntax redaction (${label})`, async () => {
++    const f = fixture();
++    observeMemberProcessStderr(f.child, { ...f.context,
++      profile: { ...f.context.profile, environment: { API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX' } } }, []);
++    const output = `Bearer TEST_HELD_PREFIX${separator}TEST_HELD_SUFFIX\n`;
++    for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
++    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++    const retained = JSON.stringify(f.observations);
++    assert.equal(retained.includes('TEST_HELD_SUFFIX'), false, 'the complete already-held value stays private');
++    assert.equal(retained.includes('TEST_HELD_PREFIX'), false);
++    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
++  });
++}
++
++test('safe diagnostics and unambiguous held-value context remain readable', async () => {
++  const f = fixture();
++  observeMemberProcessStderr(f.child, { ...f.context,
++    profile: { ...f.context.profile, environment: { API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX' } } }, []);
++  f.child.stderr.write('TEST ordinary public diagnostic\n');
++  f.child.stderr.write('prefix TEST_HELD_PREFIX TEST_HELD_SUFFIX suffix\n');
++  f.child.stderr.write('status password=TEST_UNHELD_VALUE tail\n');
++  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++  assert.deepEqual(f.observations, [
++    { kind: 'process-output', stream: 'stderr', text: 'TEST ordinary public diagnostic' },
++    { kind: 'process-output', stream: 'stderr', text: 'prefix [redacted] suffix' },
++    { kind: 'process-output', stream: 'stderr', text: 'status [redacted] tail' },
++  ]);
++});
+--- a/packages/legacy-agent-host/tests/native-claude-host.native.ts
++++ b/packages/legacy-agent-host/tests/native-claude-host.native.ts
+@@ -20,7 +20,7 @@
+ const DONOR_ARTIFACT = 'vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz';
+ const DONOR_SHA256 = 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89';
+ const CONTRACTS_SHA256 = 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db';
+-const CURRENT_SHA256 = '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94';
++const CURRENT_SHA256 = '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267';
+ 
+ function donorSourceCurrent(repo: string): void {
+   assert.equal(execFileSync('git', ['-C', repo, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), DONOR_COMMIT);
+--- a/packages/legacy-agent-host/tests/native-codex-team.native.ts
++++ b/packages/legacy-agent-host/tests/native-codex-team.native.ts
+@@ -148,7 +148,7 @@
+     if (candidateVersion) {
+       assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
+       assert.equal(process.version, 'v24.21.0');
+-      assert.equal(expectedProviderSha, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
++      assert.equal(expectedProviderSha, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+       await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
+         owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
+         current: () => current(delivery), cleanup: setupCleanup,
+--- a/packages/legacy-agent-host/tests/runtime-activity.test.ts
++++ b/packages/legacy-agent-host/tests/runtime-activity.test.ts
+@@ -1066,3 +1066,35 @@
+   assert.deepEqual(after, prior);
+   assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+ });
++
++test('distinct Thinking retains original attribution without becoming text, conversation or state', async t => {
++  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
++  const before = owner.readSession(binding()).record!;
++  const cursor = owner.readActivitySnapshot(binding()).cursor;
++  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-message', block: 0,
++    text: 'TEST visible answer', phase: 'complete' });
++  const thought: Extract<Event, { kind: 'thinking' }> = { ...attribution,
++    sessionRef: session.sessionRef, kind: 'thinking', messageRef: 'TEST-message', block: 0,
++    text: 'TEST distinct thought', phase: 'snapshot' };
++  session.raw(thought);
++  session.raw({ ...thought, text: 'TEST completed thought', phase: 'complete' });
++  await tick();
++  const feed = owner.readActivityFeed(binding(), cursor);
++  const thinking = feed.events.filter(event => event.data.kind === 'thinking');
++  assert.equal(thinking.length, 2);
++  assert.ok(thinking.every(event => event.inputId === attribution.inputId &&
++    event.operationRef === attribution.operationRef && event.data.block === 0 &&
++    event.data.messageRef === 'TEST-message'));
++  assert.deepEqual(thinking.map(event => event.data.phase), ['snapshot', 'complete']);
++  const latest = owner.readActivitySnapshot(binding()).latest.text;
++  assert.deepEqual(latest.map(event => event.data.text), ['TEST visible answer']);
++  const conversation = owner.readConversation(binding(), 'messages');
++  assert.ok(JSON.stringify(conversation).includes('TEST visible answer'));
++  assert.equal(JSON.stringify(conversation).includes('thought'), false);
++  const after = owner.readSession(binding()).record!;
++  assert.deepEqual(after.inputs, before.inputs);
++  assert.equal(after.phase, before.phase); assert.equal(after.nativeReady, before.nativeReady);
++  const cold = f.make('cold-host'), restored = cold.readActivitySnapshot(binding());
++  const retained = cold.readActivityFeed(binding(), { ...restored.cursor, sequence: cursor.sequence });
++  assert.deepEqual(retained.events.filter(event => event.data.kind === 'thinking'), thinking);
++});
+--- a/packages/legacy-agent-host/tests/runtime-team-host.test.ts
++++ b/packages/legacy-agent-host/tests/runtime-team-host.test.ts
+@@ -2499,6 +2499,111 @@
+   }
+ );
+ 
++test('composed original stderr survives failed startup before Runtime installs a native session', async t => {
++  const opening = deferred<void>();
++  let observations = 0;
++  const f = await fixture(t, {
++    open: opening.promise.then(() => { throw new Error('TEST original startup failed'); }),
++    onProvider(context) {
++      const binding = normalizeBinding(context.endpoint.binding), store = new FileRuntimeStore(context.profile.cwd);
++      const before = store.fenced(binding, tx => tx.get())!;
++      assert.equal(before.phase, 'opening'); assert.equal(before.sessionRef, undefined);
++      assert.deepEqual(before.inputs, []);
++      const conversation = store.readConversation(binding), observe = context.observeProcessOutput;
++      assert.ok(observe, 'the actual provider composition must supply the retained callback');
++      observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original startup diagnostic' });
++      const after = store.fenced(binding, tx => tx.get())!;
++      assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
++      assert.equal(after.nativeReady, before.nativeReady); assert.equal(after.sessionRef, undefined);
++      assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
++      assert.deepEqual(store.readConversation(binding), conversation);
++      observations++;
++    },
++  });
++  const pending = f.rpc('runtime.open', { memberId: 'alice-id' });
++  try {
++    await eventually(() => f.opens() === 1, 'the original provider open remains pending');
++    assert.equal(observations, 1);
++    opening.resolve(); await pending;
++    const store = new FileRuntimeStore(f.root), record = store.fenced(f.runtimeBinding, tx => tx.get())!;
++    assert.equal(record.phase, 'held'); assert.equal(record.diagnostic, 'open-unknown');
++    assert.equal(record.custody, 'unknown'); assert.equal(record.nativeReady, false);
++    assert.equal(record.sessionRef, undefined); assert.deepEqual(record.inputs, []);
++    const diagnostics = store.readActivity(f.runtimeBinding)!.events.filter(row => row.data.kind === 'process-output');
++    assert.equal(diagnostics.length, 1);
++    assert.equal(diagnostics[0]!.data.text, 'TEST original startup diagnostic');
++    assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
++    assert.equal(store.readConversation(f.runtimeBinding), undefined);
++    assert.equal(f.handoffs(), 0); assert.equal(f.session().submits.length, 0);
++  } finally { opening.resolve(); await pending; }
++});
++
++test('composed original stderr accepts closing diagnostics without settling Runtime state or inputs', async t => {
++  const f = await fixture(t);
++  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
++  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);
++  assert.ok(observe);
++  const conversation = store.readConversation(f.runtimeBinding), close = f.session().close;
++  let observations = 0;
++  f.session().close = async () => {
++    const before = store.fenced(f.runtimeBinding, tx => tx.get())!;
++    assert.equal(before.phase, 'closing'); assert.equal(before.sealed, true);
++    assert.equal(before.custody, 'owned'); assert.equal(before.nativeReady, false);
++    assert.equal(context.isCurrent(), true, 'the original source grant remains valid while closing');
++    observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original closing diagnostic' });
++    const after = store.fenced(f.runtimeBinding, tx => tx.get())!;
++    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
++    assert.equal(after.sealed, before.sealed); assert.equal(after.nativeReady, before.nativeReady);
++    assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
++    assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
++    observations++;
++    return close();
++  };
++  const stopped = await f.rpc('runtime.stop', { memberId: 'alice-id' }) as {
++    ok: boolean; value: { phase: string; custody: string };
++  };
++  assert.equal(stopped.ok, true); assert.equal(stopped.value.phase, 'closed');
++  assert.equal(stopped.value.custody, 'released'); assert.equal(observations, 1);
++  const activity = store.readActivity(f.runtimeBinding)!;
++  const diagnostics = activity.events.filter(row => row.data.kind === 'process-output');
++  assert.equal(diagnostics.length, 1); assert.equal(diagnostics[0]!.data.text, 'TEST original closing diagnostic');
++  assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST after original release' });
++  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);
++  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
++  assert.equal(f.session().submits.length, 0); assert.equal(f.session().closeCalls, 1);
++});
++
++test('composed original stderr rejects changed member authority, revocation and a sealed Host', async t => {
++  const f = await fixture(t);
++  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
++  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);
++  assert.ok(observe);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original current diagnostic' });
++  const activity = store.readActivity(f.runtimeBinding), record = store.fenced(f.runtimeBinding, tx => tx.get());
++  const conversation = store.readConversation(f.runtimeBinding), memberId = context.profile.memberId;
++  try {
++    context.profile.memberId = 'bob-id';
++    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST wrong member' }));
++  } finally { context.profile.memberId = memberId; }
++  const path = join(f.root, 'teams/test-runtime-host/.host-owner/state.json'), original = readFileSync(path, 'utf8');
++  const state = JSON.parse(original) as { grants: { principalId: string; revoked?: boolean }[] };
++  state.grants.find(grant => grant.principalId === context.profile.principalId)!.revoked = true;
++  try {
++    writeFileSync(path, JSON.stringify(state));
++    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST revoked source' }));
++  } finally { writeFileSync(path, original); }
++  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);
++  assert.deepEqual(store.fenced(f.runtimeBinding, tx => tx.get()), record);
++  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
++  assert.equal(context.isCurrent(), true, 'restoring the exact original grant restores the same authority');
++  assert.equal((await f.dispose()).cleanup, 'completed');
++  const closed = store.readActivity(f.runtimeBinding);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST sealed Host diagnostic' });
++  assert.deepEqual(store.readActivity(f.runtimeBinding), closed);
++  assert.equal(f.session().submits.length, 0); assert.equal(f.opens(), 1);
++});
++
+ test(
+   'activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps',
+   // Persisting and paging this bounded native event fixture validates correctness, not latency.
+@@ -3284,6 +3389,20 @@
+   assert.notEqual(result.value.generation, opened.value.generation);
+   assert.deepEqual(f.restored, [{ history: ['TEST_HISTORY_A'] }]);
+   assert.equal(f.contexts.at(-1)?.request.generation, 2);
++  const restoredContext = f.contexts.at(-1)!, restoredBinding = normalizeBinding(restoredContext.endpoint.binding);
++  const diagnosticStore = new FileRuntimeStore(f.root), beforeDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;
++  assert.equal(beforeDiagnostic.config?.checkpointRef, captured.value.reference);
++  assert.ok(restoredContext.observeProcessOutput);
++  const restoredConversation = diagnosticStore.readConversation(restoredBinding);
++  restoredContext.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST exact restored process diagnostic' });
++  const restoredDiagnostic = diagnosticStore.readActivity(restoredBinding)!.events.find(row => row.data.kind === 'process-output')!;
++  assert.equal(restoredDiagnostic.data.text, 'TEST exact restored process diagnostic');
++  assert.equal(restoredDiagnostic.inputId, undefined); assert.equal(restoredDiagnostic.operationRef, undefined);
++  const afterDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;
++  assert.deepEqual(afterDiagnostic.inputs, beforeDiagnostic.inputs);
++  assert.equal(afterDiagnostic.phase, beforeDiagnostic.phase); assert.equal(afterDiagnostic.nativeReady, beforeDiagnostic.nativeReady);
++  assert.equal(afterDiagnostic.custody, beforeDiagnostic.custody);
++  assert.deepEqual(diagnosticStore.readConversation(restoredBinding), restoredConversation);
+   const restoredProfile = f.contexts.at(-1)!.profile;
+   assert.equal(restoredProfile.model, 'TEST-selected-model');
+   assert.equal(restoredProfile.provider, 'claude');
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -5,7 +5,7 @@
+   excludeLinksFromLockfile: false
+ 
+ overrides:
+-  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
++  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz
+   '@openuidev/react-headless>@ag-ui/core': 1.0.3
+   zod@4: 4.6.7
+   '@modelcontextprotocol/sdk': 1.32.0
+@@ -837,11 +837,11 @@
+   packages/legacy-agent-host:
+     dependencies:
+       '@agent-teams/provider-implementations':
+-        specifier: file:../../vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz
+-        version: file:vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
++        specifier: file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz
++        version: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
+       '@agent-teams/provider-session-contracts':
+-        specifier: file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
+-        version: file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
++        specifier: file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz
++        version: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz
+       '@agent-teams/task-change-ledger':
+         specifier: workspace:*
+         version: link:../task-change-ledger
+@@ -897,13 +897,13 @@
+       zod:
+         optional: true
+ 
+-  '@agent-teams/provider-implementations@file:vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz':
+-    resolution: {integrity: sha512-ONJ+9vpRJp7AsdnDof2fSN6sAPEu/aRaUKSNL39C/knqQ+4fEK5FuqRFer/C5wx9g7dkDw63XMMemR8d8RAVFw==, tarball: file:vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz}
++  '@agent-teams/provider-implementations@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz':
++    resolution: {integrity: sha512-97w75rWGES5ITobUIXcPu2S4JNgsd4HH3IpyQLECi68+iCNr/BYj9W+Uc8h7gDtKHU5o6sW+mueG2VDiNvBFcQ==, tarball: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz}
+     version: 0.0.0
+     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
+ 
+-  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz':
+-    resolution: {integrity: sha512-DnVXK40iBmyDx/lRRGYPY65Ek6yCbyncbqMs8Ridcc7kXthAl/aAc4wO4idedyNDKm1QG/tgxYJb9YVMqs4KMw==, tarball: file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz}
++  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz':
++    resolution: {integrity: sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==, tarball: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz}
+     version: 0.0.0
+     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
+ 
+@@ -12788,9 +12788,9 @@
+     optionalDependencies:
+       zod: 4.6.7
+ 
+-  '@agent-teams/provider-implementations@file:vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
+-    dependencies:
+-      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
++  '@agent-teams/provider-implementations@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
++    dependencies:
++      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz
+       '@anthropic-ai/claude-agent-sdk': 0.3.305(@anthropic-ai/sdk@0.122.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
+       '@anthropic-ai/sdk': 0.122.0(zod@4.6.7)
+       '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.7)
+@@ -12799,7 +12799,7 @@
+       - '@cfworker/json-schema'
+       - supports-color
+ 
+-  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz': {}
++  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz': {}
+ 
+   '@alloc/quick-lru@5.2.0': {}
+ 
+--- a/pnpm-workspace.yaml
++++ b/pnpm-workspace.yaml
+@@ -35,7 +35,7 @@
+     '@nuxt/schema': '3.21.11'
+ 
+ overrides:
+-  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz'
++  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz'
+   # Fixed Zod collections; retain the headless consumer's unchanged EventType wire API.
+   '@openuidev/react-headless>@ag-ui/core': '1.0.3'
+   'zod@4': '4.6.7'
+--- a/scripts/legacy-agent-host/desktop-activity-ui-smoke.ts
++++ b/scripts/legacy-agent-host/desktop-activity-ui-smoke.ts
+@@ -161,7 +161,7 @@
+     assert.ok(log.events.some((event) => event.data.kind === 'tool'));
+     assert.ok(
+       log.events.some((event) => event.data.kind === 'tool-result' && event.data.isError),
+-      'actual failed Bash outcome remains visible'
++      'actual failed native tool outcome remains visible'
+     );
+     assert.ok(log.events.some((event) => event.data.kind === 'text'));
+     assert.ok(stats.observedMessages > 0);
+@@ -279,20 +279,37 @@
+       event.data.kind === 'tool' && event.data.toolRef === failed.toolRef);
+     assert.ok(toolEvent && toolEvent.data.kind === 'tool');
+     const fact = (event: typeof failedEvent) => panel + ' [data-host-log-event-id=' + desktopJsLiteral(event.eventId) + ']';
++    const toolAnchor = (event: typeof failedEvent) => JSON.stringify([expected.log.sessionId,
++      JSON.stringify([event.inputId ?? null, null, event.data.kind, failed.toolRef])]);
+     await ui.scrollTo(fact(toolEvent) + ' [role="button"]', 'original correlated tool');
+     await ui.waitRead(`(()=>{const e=document.querySelector(${desktopJsLiteral(fact(toolEvent))});return e&&
+       e.dataset.hostLogSequence===${desktopJsLiteral(String(toolEvent.sequence))}&&e.dataset.hostLogKind==='tool'&&
++      e.dataset.hostLogAnchor===${desktopJsLiteral(toolAnchor(toolEvent))}&&
+       e.innerText.includes(${desktopJsLiteral(toolEvent.data.name)})&&e.innerText.includes(${desktopJsLiteral(failed.toolRef)})})()`,
+       'exact original tool reference and name');
+     await ui.scrollTo(fact(failedEvent) + ' [role="button"]', 'original failed tool result');
+     await ui.waitRead(`(()=>{const e=document.querySelector(${desktopJsLiteral(fact(failedEvent))});
+       const dot=e?.querySelector('.base-item-status-dot');return e&&e.dataset.hostLogIsError==='true'&&
+       e.dataset.hostLogSequence===${desktopJsLiteral(String(failedEvent.sequence))}&&e.dataset.hostLogKind==='tool-result'&&
++      e.dataset.hostLogAnchor===${desktopJsLiteral(toolAnchor(failedEvent))}&&
+       e.innerText.includes(${desktopJsLiteral(toolEvent.data.name + ' result')})&&dot?.getClientRects().length&&
+       getComputedStyle(dot).backgroundColor==='rgb(239, 68, 68)'})()`, 'actual failed result identity and visible error state');
+     await ui.click(fact(failedEvent) + ' [role="button"]', 'expand actual failed result');
++    let content = failed.content;
++    if (typeof content === 'string') {
++      try {
++        const parsed: unknown = JSON.parse(content);
++        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] !== null && typeof parsed[0] === 'object' &&
++          !Array.isArray(parsed[0]) && typeof parsed[0].type === 'string') content = parsed;
++      } catch { /* native non-JSON tool output */ }
++    }
++    let expectedContent = typeof content === 'string' ? content : Array.isArray(content)
++      ? content.map(value => value && typeof value === 'object' && !Array.isArray(value) && typeof value.text === 'string'
++        ? value.text : JSON.stringify(value, null, 2)).join('\n') : JSON.stringify(content, null, 2);
++    try { expectedContent = JSON.stringify(JSON.parse(expectedContent), null, 2); } catch { /* native non-JSON tool output */ }
+     await ui.waitRead(`(()=>{const body=document.querySelector(${desktopJsLiteral(fact(failedEvent) + ' [data-host-log-content]')});
+-      return body?.getClientRects().length&&body.textContent.trim().length>0})()`, 'actual retained error content renders');
++      return body?.getClientRects().length&&body.querySelector('pre')?.textContent===${desktopJsLiteral(expectedContent)}})()`,
++      'full actual retained error content renders');
+     const childEvent = expected.log.events.find(
+       (event) =>
+         event.data.kind === 'subagent' &&
+@@ -320,6 +337,7 @@
+     await ui.waitRead(
+       `(()=>{const e=document.querySelector(${desktopJsLiteral(childRow)});return e&&
+         e.dataset.hostLogSequence===${desktopJsLiteral(String(childEvent.sequence))}&&e.dataset.hostLogKind==='subagent'&&
++        e.dataset.hostLogAnchor===${desktopJsLiteral(JSON.stringify([expected.log.sessionId, childEvent.eventId]))}&&
+         e.querySelector('[data-host-log-content] pre')?.textContent===${desktopJsLiteral(childText)}})()`,
+       'exact original child identity, phase and counters are rendered'
+     );
+--- a/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
++++ b/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
+@@ -143,10 +143,14 @@
+   };
+   const logFactSelector = (scope: string, event: Row) => `${scope} [data-host-log-event-id=${literal(event.eventId)}]`;
+   const visibleLogFact = async (scope: string, event: Row, sourceTitle?: string) => {
+-    const selector = logFactSelector(scope, event), text = String(record(event.data).text);
+-    assert.ok(['text', 'process-output'].includes(String(record(event.data).kind)));
++    const selector = logFactSelector(scope, event), data = record(event.data), text = String(data.text);
++    assert.ok(['text', 'thinking', 'process-output'].includes(String(data.kind)));
++    const identity = data.kind === 'process-output' ? event.eventId
++      : JSON.stringify([event.inputId ?? null, null, data.kind, data.messageRef, data.block]);
++    const anchor = JSON.stringify(['host-activity-' + leadSourceId, identity]);
+     await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${literal(selector)})];return rows.length===1&&
+-      rows[0].dataset.hostLogSequence===${literal(String(event.sequence))}&&rows[0].dataset.hostLogKind===${literal(record(event.data).kind)}})()`,
++      rows[0].dataset.hostLogSequence===${literal(String(event.sequence))}&&rows[0].dataset.hostLogKind===${literal(data.kind)}&&
++      rows[0].dataset.hostLogAnchor===${literal(anchor)}})()`,
+       'exact original retained Logs event identity');
+     if (!await cdp.evaluate(`Boolean(document.querySelector(${literal(selector + ' [data-host-log-content]')}))`)) {
+       await ui.scrollTo(selector + ' [role="button"]', 'original output disclosure');
+@@ -164,26 +168,52 @@
+       return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()${sourceTitle === undefined ? '' : ',source'}}})()`,
+       'actual retained output is visible inside Logs'));
+   };
+-  const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', runtimeDigest(record((await session()).binding)) + '.json');
++  const leadBinding = record((await session()).binding), leadSourceId = runtimeDigest(leadBinding);
++  const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', leadSourceId + '.json');
+   const stream = await send('TEST_UI_STREAM');
+   await visible('TEST stream partial');
+   assert.equal(await cdp.evaluate('document.body.innerText.includes("TEST stream partial complete")'), false);
+   assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
+   proof.partialScreenshot = await screenshot('partial');
+-  const streamEvent = async (text: string) => {
+-    const event = await poll(async () => array((await json(leadActivityPath)).events).filter(row =>
+-      row.inputId === stream.inputId && record(row.data).kind === 'text' && record(row.data).text === text).at(-1),
++  const streamEvent = async (text: string, kind: 'text' | 'thinking' = 'text') => {
++    const event = await poll(async () => {
++      const retained = await json(leadActivityPath), { digest, ...body } = retained;
++      assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, leadBinding);
++      return array(retained.events).filter(row => row.inputId === stream.inputId &&
++        record(row.data).kind === kind && record(row.data).text === text).at(-1);
++    },
+     value => value !== undefined, 'original stream fact retained before Logs observation');
+-    assert.ok(event); return event;
++    assert.ok(event);
++    const input = array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId);
++    assert.ok(input); assert.equal(event.operationRef, input.operationRef); return event;
+   };
+   await openLeadLogs();
+   const partialEvent = await streamEvent('TEST stream partial');
+   const partialLog = await visibleLogFact(leadLogs, partialEvent);
++  const partialThought = provider === 'codex' ? null : await streamEvent('TEST stream thought partial', 'thinking');
++  if (partialThought) {
++    assert.equal(record(partialThought.data).phase, 'snapshot');
++    await visibleLogFact(leadLogs, partialThought);
++  }
++  assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
+   await writeFile(join(fixture.emulatedRuntime.peers[0]!.root, 'release-stream'), 'TEST release once\n', { mode: 0o600, flag: 'wx' });
+   await terminal(stream.inputId); await visible('TEST stream partial complete');
+   proof.completedScreenshot = await screenshot('completed');
+   const completeEvent = await streamEvent('TEST stream partial complete');
+   const completeLog = await visibleLogFact(leadLogs, completeEvent);
++  const completeThought = partialThought ? await streamEvent('TEST stream thought complete', 'thinking') : null;
++  if (completeThought && partialThought) {
++    assert.equal(record(completeThought.data).phase, 'complete');
++    for (const key of ['messageRef', 'block'])
++      assert.equal(record(completeThought.data)[key], record(partialThought.data)[key]);
++    await visibleLogFact(leadLogs, completeThought);
++    await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialThought))})`,
++      'completed Thinking replaces only the original partial block');
++    for (const key of ['messageRef', 'block'])
++      assert.equal(record(completeEvent.data)[key], record(partialEvent.data)[key]);
++    await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialEvent))})`,
++      'completed output replaces the original partial block');
++  }
+   const stderrText = 'TEST selected member stderr';
+   const stderrEvent = provider === 'opencode' ? null : await poll(async () =>
+     array((await json(leadActivityPath)).events).find(event => record(event.data).kind === 'process-output' &&
+@@ -223,6 +253,11 @@
+   await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');
+   await ui.click('[data-radix-popper-content-wrapper] button', 'save original content filter', 'Save');
+   await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})`, 'Output filter applies to actual facts');
++  if (completeThought) await visibleLogFact(leadLogs, completeThought);
++  await filterLogs(); await ui.click('#filter-kind-thinking', 'exclude Thinking independently');
++  await ui.click('[data-radix-popper-content-wrapper] button', 'save original Thinking filter', 'Save');
++  if (completeThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, completeThought))})`,
++    'Thinking filter excludes actual retained thought');
+   await filterLogs(); await ui.click('[data-radix-popper-content-wrapper] button', 'reset original Logs filters', 'Reset');
+   await ui.click('[data-radix-popper-content-wrapper] button', 'close restored Logs filters', 'Save');
+   const fullscreenEvent = stderrEvent ?? completeEvent, fullscreenText = String(record(fullscreenEvent.data).text);
+@@ -250,6 +285,8 @@
+   assert.deepEqual(await commandRows(), beforeLogControls.commands);
+   assert.equal((await effects()).filter(row => row.event === 'input').length, beforeLogControls.inputEffects);
+   proof.leadLogs = { partial: partialLog, complete: completeLog, fullscreen: fullscreenLog, actualClipboard: true,
++    thinking: completeThought ? { partialEventId: partialThought!.eventId, completeEventId: completeThought.eventId,
++      messageRef: record(completeThought.data).messageRef, block: record(completeThought.data).block } : null,
+     stderr: stderrEvent ? { eventId: stderrEvent.eventId, sequence: stderrEvent.sequence, text: stderrText, inputId: null } : null,
+     defaultLeadRoute: true, filtersAndSearch: true, addedInputs: 0, addedBusinessCommands: 0 };
+   const sheet = 'div.fixed.bottom-4';
+@@ -265,6 +302,41 @@
+     const path = join(fixture.emulatedRuntime.peers[0]!.root, 'approved-effect.txt');
+     if (allowed) assert.equal(await readFile(path, 'utf8'), provider === 'claude' ? 'TEST approved effect\n' : 'TEST approved once\n');
+     else await assert.rejects(readFile(path), { code: 'ENOENT' });
++  }
++  if (provider !== 'codex') {
++    const allowed = commands.find(row => row.text === 'TEST_UI_APPROVAL_ALLOW'); assert.ok(allowed);
++    const retained = await json(leadActivityPath), { digest, ...body } = retained;
++    assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, leadBinding);
++    const source = array((await session()).inputs).find(row => record(row.intent).inputId === allowed.inputId); assert.ok(source);
++    const events = array(retained.events).filter(row => row.inputId === allowed.inputId && row.operationRef === source.operationRef);
++    const result = events.filter(row => record(row.data).kind === 'tool-result').at(-1); assert.ok(result);
++    const toolRef = record(result.data).toolRef;
++    const tool = events.filter(row => record(row.data).kind === 'tool' && record(row.data).toolRef === toolRef).at(-1); assert.ok(tool);
++    const before = { inputs: structuredClone((await session()).inputs), commands: await commandRows(), effects: await effects() };
++    await openLeadLogs(); await filterLogs();
++    await ui.click('#filter-kind-output', 'show Tools without Output'); await ui.click('#filter-kind-thinking', 'show Tools without Thinking');
++    await ui.click('[data-radix-popper-content-wrapper] button', 'save original Tools-only filter', 'Save');
++    for (const event of [tool, result]) {
++      const anchor = JSON.stringify(['host-activity-' + leadSourceId,
++        JSON.stringify([allowed.inputId, null, record(event.data).kind, toolRef])]);
++      await ui.scrollTo(logFactSelector(leadLogs, event) + ' [role="button"]', 'original approval tool fact');
++      await ui.waitRead(`(()=>{const e=document.querySelector(${literal(logFactSelector(leadLogs, event))});return e&&
++        e.dataset.hostLogAnchor===${literal(anchor)}&&e.dataset.hostLogSequence===${literal(String(event.sequence))}&&
++        e.innerText.includes(${literal(record(tool.data).name)})&&e.getClientRects().length})()`, 'original tool/result identity and name are visible');
++    }
++    await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})&&
++      !document.querySelector(${literal(leadLogs + ' [data-host-log-kind="thinking"]')})`, 'Tools-only excludes Output and Thinking');
++    await filterLogs(); await ui.click('#filter-kind-output', 'restore Output before excluding Tools');
++    await ui.click('#filter-kind-tool', 'exclude actual Tools');
++    await ui.click('[data-radix-popper-content-wrapper] button', 'save original Tools exclusion', 'Save');
++    await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, tool))})&&
++      !document.querySelector(${literal(logFactSelector(leadLogs, result))})`, 'Tools exclusion hides the actual call and result');
++    await filterLogs(); await ui.click('[data-radix-popper-content-wrapper] button', 'restore original Logs controls', 'Reset');
++    await ui.click('[data-radix-popper-content-wrapper] button', 'close original restored filters', 'Save');
++    assert.deepEqual((await session()).inputs, before.inputs); assert.deepEqual(await commandRows(), before.commands);
++    assert.deepEqual(await effects(), before.effects);
++    proof.leadLogTools = { inputId: allowed.inputId, toolRef, eventIds: [tool.eventId, result.eventId],
++      addedInputs: 0, addedBusinessCommands: 0, addedProviderActions: 0 };
+   }
+   if (provider !== 'opencode') for (const [marker, allow] of [['TEST_UI_QUESTION', true], ['TEST_UI_QUESTION_DECLINE', false]] as const) {
+     const sent = await send(marker);
+@@ -378,6 +450,7 @@
+   await openLeadLogs();
+   proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);
+   if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);
++  if (completeThought) proof.thinkingLogsAfterReload = await visibleLogFact(leadLogs, completeThought);
+   assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);
+   proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;
+ 
+--- a/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
++++ b/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
+@@ -262,6 +262,11 @@
+   'test/features/agent-backend/tsconfig.json',
+   'src/renderer/vite-env.d.ts',
+   'test/types/better-sqlite3-node.d.ts',
++  'packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts',
++  'src/shared/utils/redactDiagnosticAssignments.ts',
++  'packages/legacy-agent-host/tests/runtime-team-host.test.ts',
++  'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts',
++  'src/renderer/components/team/sidebar/teamSidebarUiState.ts',
+ ];
+ 
+ /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
+--- a/src/renderer/components/team/members/HostMemberActivityLog.tsx
++++ b/src/renderer/components/team/members/HostMemberActivityLog.tsx
+@@ -27,11 +27,21 @@
+ }
+ 
+ /** Reuses the existing Logs viewport address across reads and fullscreen remounts. */
+-export function useHostLogViewport(view: HostLogViewOptions | undefined, logs: readonly unknown[]) {
++export function useHostLogViewport(
++  view: HostLogViewOptions | undefined,
++  logs: readonly unknown[],
++  sourceKey: string
++) {
+   const ref = useRef<HTMLDivElement>(null);
++  const selectedSource = useRef(sourceKey);
+   useLayoutEffect(() => {
++    const changed = selectedSource.current !== sourceKey;
++    selectedSource.current = sourceKey;
+     const element = ref.current,
+-      viewport = view?.viewerState.viewport;
++      viewport = changed
++        ? { mode: 'edge' as const, edge: 'newest' as const }
++        : view?.viewerState.viewport;
++    if (changed && view && viewport) view.onViewerStateChange({ ...view.viewerState, viewport });
+     if (!element || !viewport) return;
+     if (viewport.mode === 'edge') {
+       element.scrollTop = viewport.edge === 'newest' ? 0 : element.scrollHeight;
+@@ -45,7 +55,7 @@
+         anchor.getBoundingClientRect().top -
+         element.getBoundingClientRect().top -
+         viewport.offsetTop;
+-  }, [logs, view?.viewerState]);
++  }, [logs, sourceKey, view]);
+   const onScroll = (event: UIEvent<HTMLDivElement>) => {
+     if (!view) return;
+     const element = event.currentTarget;
+--- a/src/renderer/components/team/members/MemberLogsTab.tsx
++++ b/src/renderer/components/team/members/MemberLogsTab.tsx
+@@ -145,7 +145,11 @@
+     },
+   });
+   const logs = summary.value ?? EMPTY_LOGS;
+-  const viewport = useHostLogViewport(hostView, logs);
++  const viewport = useHostLogViewport(
++    hostView,
++    logs,
++    JSON.stringify([scope.key, summaryPresentationKey])
++  );
+   const [initialNow] = useState(() => Date.now());
+   const summaryNow = summary.settledAt ?? initialNow;
+   const loading = summary.loading;
+--- a/src/shared/utils/redactDiagnosticAssignments.ts
++++ b/src/shared/utils/redactDiagnosticAssignments.ts
+@@ -1,134 +1 @@
+-/** Redact credential fields inside prose, JSON, and environment assignments.
+- * Scan quoted values before callers collapse whitespace or truncate the input:
+- * escaped quotes and newlines can be part of a secret, and an unfinished quoted
+- * value must fail closed through the end of the diagnostic.
+- */
+-export function redactDiagnosticAssignments(
+-  value: string,
+-  isSensitiveKey: (key: string) => boolean
+-): string {
+-  // Do not restart at every hyphen in a non-assignment: that makes long dashed
+-  // diagnostics quadratic before the bridge has a chance to cap the result.
+-  const assignments = /(?<![a-z0-9_-])([a-z0-9_-]+)(\\*["'`])?\s*([:=])\s*/gi;
+-  let result = '';
+-  let cursor = 0;
+-  let match: RegExpExecArray | null;
+-  while ((match = assignments.exec(value)) !== null) {
+-    const key = match[1];
+-    if (!key || !isSensitiveKey(key)) continue;
+-
+-    const jsonField = match[2] !== undefined && match[3] === ':';
+-    let start = assignments.lastIndex;
+-    // A bare Authorization header has a scheme followed by its credential.
+-    const scheme = /^(?:Bearer|Basic)\s+/i.exec(value.slice(start));
+-    if (scheme) start += scheme[0].length;
+-    const quote = value[start + (value[start] === '\\' ? 1 : 0)];
+-    const quoted = quote === '"' || quote === "'" || quote === '`';
+-    const container =
+-      (value[start] === '{' || value[start] === '[') && !value.startsWith('[redacted]', start);
+-    let end = start;
+-    // Support raw and once-escaped JSON. Deeper or unsupported encodings must
+-    // not expose a suffix when their quote boundaries cannot be established.
+-    if (!jsonField && /cookie/i.test(key)) {
+-      // Bare cookie headers can contain several whitespace-delimited pairs.
+-      // Without a JSON field boundary, discard the remaining diagnostic.
+-      end = value.length;
+-    } else if (!jsonField && /authorization/i.test(key) && !scheme) {
+-      // Unknown HTTP auth schemes may carry several credential parameters.
+-      end = value.length;
+-    } else if ((match[2]?.length ?? 1) > 2 || value.startsWith('\\\\', start)) {
+-      end = value.length;
+-    } else if (quoted) {
+-      end = quotedValueEnd(value, start);
+-    } else if (jsonField && value.startsWith('[redacted]', start)) {
+-      end += '[redacted]'.length;
+-    } else if (container) {
+-      end = containerValueEnd(value, start, match[2]?.startsWith('\\') ?? false);
+-    } else {
+-      const delimiter = jsonField ? /[\s,"'`;}\]]/ : /[\s"'`]/;
+-      while (end < value.length && !delimiter.test(value.charAt(end))) {
+-        // Shell escapes/concatenation have no reliable boundary in diagnostic prose.
+-        if (!jsonField && value[end] === '\\') {
+-          end = value.length;
+-          break;
+-        }
+-        end += 1;
+-      }
+-      if (!jsonField && /["'`]/.test(value.charAt(end))) end = value.length;
+-    }
+-    if (
+-      (container || quoted) &&
+-      !jsonField &&
+-      end < value.length &&
+-      !/\s/.test(value.charAt(end))
+-    ) {
+-      end = value.length;
+-    }
+-    if (jsonField) {
+-      // A valid value followed by malformed text is still unsafe; this also
+-      // keeps re-redaction from exposing a suffix after our own marker.
+-      let next = end;
+-      while (next < value.length && /\s/.test(value.charAt(next))) next += 1;
+-      if (next < value.length && !/[,;}\]]/.test(value.charAt(next))) end = value.length;
+-    }
+-    result += value.slice(cursor, start) + '[redacted]';
+-    cursor = Math.min(end, value.length);
+-    assignments.lastIndex = cursor;
+-  }
+-  return result + value.slice(cursor);
+-}
+-
+-function quotedValueEnd(value: string, start: number): number {
+-  const escapedQuote = value[start] === '\\';
+-  const quote = value[start + (escapedQuote ? 1 : 0)];
+-  let end = start + (escapedQuote ? 2 : 1);
+-  while (end < value.length) {
+-    if (value[end] === '\\') {
+-      if (escapedQuote) {
+-        const slashStart = end;
+-        while (value[end] === '\\') end += 1;
+-        // In JSON-escaped text, \" closes a value, but \\\" is content.
+-        if (value[end] === quote && (end - slashStart) % 4 === 1) return end + 1;
+-        if (value[end] === quote) end += 1;
+-      } else {
+-        end += 2;
+-      }
+-    } else if (value[end++] === quote && !escapedQuote) {
+-      return end;
+-    }
+-  }
+-  return value.length;
+-}
+-
+-/** Consume the whole sensitive object/array, including nested and quoted data.
+- * Unclosed strings/containers or mismatched brackets discard the remaining text.
+- */
+-function containerValueEnd(value: string, start: number, escaped: boolean): number {
+-  const closers: string[] = [];
+-  let end = start;
+-  while (end < value.length) {
+-    const char = value.charAt(end);
+-    if (/["'`]/.test(char) || (char === '\\' && /["'`]/.test(value.charAt(end + 1)))) {
+-      end = quotedValueEnd(value, end);
+-      continue;
+-    }
+-    if (char === '{' || char === '[') {
+-      closers.push(char === '{' ? '}' : ']');
+-    } else if (char === '}' || char === ']') {
+-      if (closers.pop() !== char) return value.length;
+-      if (closers.length === 0) {
+-        try {
+-          const text = value.slice(start, end + 1);
+-          const decoded: unknown = escaped ? JSON.parse(`"${text}"`) : text;
+-          if (typeof decoded !== 'string') return value.length;
+-          JSON.parse(decoded);
+-          return end + 1;
+-        } catch {
+-          return value.length;
+-        }
+-      }
+-    }
+-    end += 1;
+-  }
+-  return value.length;
+-}
++export { redactDiagnosticAssignments } from '@agent-teams/legacy-agent-host/diagnostics/assignments';
+--- a/test/renderer/components/team/members/hostLogStatsTabs.test.tsx
++++ b/test/renderer/components/team/members/hostLogStatsTabs.test.tsx
+@@ -454,7 +454,7 @@
+   }
+ });
+ 
+-it('restores the viewed anchor when the compact viewport is replaced by fullscreen', async () => {
++it('restores the same source across fullscreen remounts and resets its viewport when the source changes', async () => {
+   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+   const view: HostLogViewOptions = {
+     ...createDefaultClaudeLogsSidebarUiState(),
+@@ -462,8 +462,8 @@
+       view.viewerState = state;
+     },
+   };
+-  function Probe() {
+-    const viewport = useHostLogViewport(view, facts.events);
++  function Probe({ source = 'original-source' }: { source?: string }) {
++    const viewport = useHostLogViewport(view, facts.events, source);
+     return (
+       <div
+         onScroll={viewport.onScroll}
+@@ -502,6 +502,11 @@
+     expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(200);
+     await act(async () => root.render(<Probe key="fullscreen-reopened" />));
+     expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(200);
++    await act(async () => root.render(<Probe key="fullscreen-reopened" source="other-source" />));
++    expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(0);
++    expect(view.viewerState.viewport).toEqual({ mode: 'edge', edge: 'newest' });
++    await act(async () => root.render(<Probe key="compact-reopened" source="other-source" />));
++    expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(0);
+   } finally {
+     await act(async () => root.unmount());
+     host.remove();
+--- a/tools/owned-process-broker/debugServiceTest.h
++++ b/tools/owned-process-broker/debugServiceTest.h
+@@ -77,8 +77,8 @@
+   writeAdmissionBarrier(L".dispatched",admissionNonce,36);
+   waitAdmissionBarrier(L".dispatch-continue");
+   const auto pending=scopes.query(key);
+-  if(pending.queryError||!pending.active||!scopes.testOriginalDispatch(key,child))
+-    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot be retired as an empty original Job.
++  if(pending.queryError||owned_service::absent(pending)||!scopes.testOriginalDispatch(key,child))
++    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot complete the original scope.
+   checkAdmissionDeadline();
+ }
+ inline void admittedBarrier(const owned_service::Scope& child) {
+--- a/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs
++++ b/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs
+@@ -210,12 +210,19 @@
+   frame({ type: 'message_start', message: message(input.messageId, []) });
+   frame({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
+   frame({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
++  if (input.marker === 'TEST_UI_STREAM') {
++    frame({ type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } });
++    frame({ type: 'content_block_delta', index: 1,
++      delta: { type: 'thinking_delta', thinking: 'TEST stream thought partial' } });
++  }
+   effect({ event: 'partial', inputId: input.id, marker: input.marker, text });
+ };
+ function finish(input, text, { interrupted = false, localCommand } = {}) {
+   assert.equal(active, input, 'authority');
+   clearTimeout(streamTimer); streamTimer = undefined;
+-  if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text }]);
++  if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text },
++    ...(input.marker === 'TEST_UI_STREAM' ? [{ type: 'thinking', thinking: 'TEST stream thought complete',
++      signature: 'TEST_SIGNATURE_NOT_LOGGED' }] : [])]);
+   const counted = localCommand !== 'usage';
+   if (counted) resultCount++;
+   const cost = Number((resultCount * 0.0123).toFixed(4));
+--- a/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs
++++ b/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs
+@@ -414,6 +414,10 @@
+   const finish = (turn, text, outcome = 'succeeded') => {
+     assert.equal(active, turn); assert.equal(pending, undefined);
+     if (text !== undefined) turn.assistant.parts[0].text = text;
++    if (turn.marker === 'TEST_UI_STREAM' && outcome === 'succeeded') {
++      const thought = turn.assistant.parts.find(part => part.type === 'reasoning');
++      assert.ok(thought); thought.text = 'TEST stream thought complete'; thought.time.end = Date.now();
++    }
+     turn.assistant.info.time.completed = Date.now();
+     if (outcome === 'succeeded') turn.assistant.info.finish = 'stop';
+     else { assert.equal(outcome, 'cancelled'); turn.assistant.info.error = { name: 'MessageAbortedError', data: { message: 'TEST interrupted' } }; }
+@@ -426,6 +430,9 @@
+       marker, raw: turn.raw, inputId: turn.userId, mcp, tools, current: () => assert.equal(active, turn), effect }));
+     if (marker === 'TEST_UI_BOOT') return finish(turn, 'TEST boot ready');
+     if (marker === 'TEST_UI_STREAM') {
++      turn.assistant.parts.push({ id: `prt_reasoning${turns}`, sessionID: sessionId,
++        messageID: turn.assistant.info.id, type: 'reasoning', text: 'TEST stream thought partial',
++        time: { start: Date.now() } });
+       partial(turn, 'TEST stream partial');
+       const gate = join(root, 'release-stream'), deadline = Date.now() + 60_000;
+       while (active === turn && !existsSync(gate)) {
+--- a/tools/owned-process-broker/nativeDebugServiceScenario.ts
++++ b/tools/owned-process-broker/nativeDebugServiceScenario.ts
+@@ -192,11 +192,12 @@
+     assert.ok(BigInt('0x' + selected.key) > (mode === 'service-pair' ? 64n : 0n),
+       'scope keys never restart or alias after cumulative native retirement');
+     const key = encodeServiceScope(selected.key);
+-    const observe = async () => {
++    const observe = async (requireActive = true) => {
+       const facts = decodeServiceFacts(await request(Op.serviceQuery, Op.serviceObserved, key));
+       assert.equal(facts.key, selected.key); assert.equal(facts.birth, service.birth);
+       assert.equal(facts.queryError, 0); assert.equal(facts.dispatchError, 0);
+-      assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');
++      if (requireActive)
++        assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');
+       return facts;
+     };
+     assert.equal((await observe()).rootExited, mode === 'service-first');
+@@ -236,7 +237,14 @@
+     void pendingStop.then(() => { stopReplied = true; }, () => undefined);
+     if (mode === 'service-race') {
+       await waitBarrier(`${admissionBarrier}.dispatched`);
+-      await observe(); // Original Job accounting retains the pending CREATE during termination.
++      // Termination may empty Job accounting before the original root HANDLE signals.
++      const pending = await observe(false);
++      console.error(JSON.stringify({ nativeServicePendingCreate: {
++        rootExited: pending.rootExited, activeProcesses: pending.activeProcesses,
++        queryError: pending.queryError, dispatchError: pending.dispatchError, stopReplied,
++      } }));
++      assert.ok(!pending.rootExited || pending.activeProcesses > 0,
++        'Pending CREATE cannot complete the original scope');
+       assert.equal(stopReplied, false, 'The one original Stop still waits for pending CREATE cleanup');
+       assert.equal(decodeServiceRefusal(await request(Op.serviceSettle, Op.serviceRefused, key)).reason,
+         ServiceRefusal.invalid, 'Pending CREATE cannot settle or retire the original terminating scope');
+--- /dev/null
++++ b/vendor/provider-migration/host-logs-thinking-9423f600/README.md
+@@ -0,0 +1,7 @@
++# Checked provider archives for Host Logs
++
++Both archives are the original bytes from provider commit `9423f600dfb04d04448326dbced89919924b0b5f`, checked by source and packed-consumer CI on Node 24.21.0 and 26.11.1 with TypeScript 7.0.2. The original receipt is retained beside the source receipt.
++
++This paired update adds distinct Claude and OpenCode V1 Thinking observations. The implementation archive also contains the previously merged, opt-in prompt-suggestions module; Host does not enable its binding. Runtime dependencies are unchanged from the previous checked archive.
++
++The 53 original OpenCode matrix jobs passed: 51 positive receipts and two expected HOLD controls. These provider checks do not qualify the application, native Host, vendor authentication/inference, or packaged Electron. Current application qualification remains a separate obligation. Historical donor archives remain unchanged.
+--- /dev/null
++++ b/vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json
+@@ -0,0 +1,19 @@
++{
++  "schemaVersion": 1,
++  "sourceCommit": "9423f600dfb04d04448326dbced89919924b0b5f",
++  "packages": [
++    {
++      "file": "agent-teams-provider-implementations-0.0.0.tgz",
++      "bytes": 185996,
++      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
++    },
++    {
++      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
++      "bytes": 6230,
++      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
++    }
++  ],
++  "qualification": "source-and-packed-consumer-only",
++  "nativeHostQualified": false,
++  "packagedElectronQualified": false
++}
+--- /dev/null
++++ b/vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json
+@@ -0,0 +1,61 @@
++{
++  "schemaVersion": 1,
++  "sourceRepository": "agent-teams-ai/old-provider-implementations",
++  "sourceCommit": "9423f600dfb04d04448326dbced89919924b0b5f",
++  "sourceTree": "a873a5f9ad8e6da1d8894db22a02d8c8efb37199",
++  "qualification": "source-and-packed-consumer-only",
++  "nativeHostQualified": false,
++  "packagedElectronQualified": false,
++  "fullChecks": [
++    {
++      "node": "24.21.0",
++      "pnpm": "11.18.0",
++      "command": "pnpm check",
++      "result": "PASS",
++      "runId": 43768692114,
++      "jobId": 132979504266,
++      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43768692114/job/132979504266"
++    },
++    {
++      "node": "26.11.1",
++      "pnpm": "11.18.0",
++      "command": "pnpm check",
++      "result": "PASS",
++      "runId": 43768692114,
++      "jobId": 132979503956,
++      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43768692114/job/132979503956"
++    }
++  ],
++  "checkedArtifact": {
++    "id": 14183890131,
++    "name": "opencode-v2-spi-consumer-checked-9423f600dfb04d04448326dbced89919924b0b5f",
++    "bytes": 193146,
++    "sha256": "01aa79d2dbca55c9dbcb6d271d0ee745339e03c5a226b8f1067b851fbed4ff96",
++    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43768692114/artifacts/14183890131"
++  },
++  "packages": {
++    "provider-implementations": {
++      "file": "agent-teams-provider-implementations-0.0.0.tgz",
++      "oldSha256": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
++      "newSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
++      "bytes": 185996,
++      "integrity": "sha512-97w75rWGES5ITobUIXcPu2S4JNgsd4HH3IpyQLECi68+iCNr/BYj9W+Uc8h7gDtKHU5o6sW+mueG2VDiNvBFcQ=="
++    },
++    "provider-session-contracts": {
++      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
++      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
++      "newSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
++      "bytes": 6230,
++      "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g=="
++    }
++  },
++  "nativeChecks": {
++    "runId": 43768692096,
++    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43768692096",
++    "result": "PASS",
++    "successfulJobs": 53,
++    "positiveReceipts": 51,
++    "expectedHoldReceipts": 2,
++    "applicationQualified": false
++  }
++}

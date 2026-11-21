@@ -3,7 +3,7 @@ import { constants, promises as fs } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, parse as parsePath, resolve, sep } from 'node:path';
 
-import { actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema, parseLiveRosterResponse } from '@agent-teams/legacy-agent-host/team-host';
+import { actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema, parseLiveRosterResponse } from '@agent-teams/legacy-agent-host/team-host/readiness';
 import {
   createOpenCodeGlobalConfigEnvironmentResolver,
   isPrivateNetworkRuntimeLocalProviderUrl,
@@ -14,7 +14,7 @@ import {
   OPENCODE_PROJECT_CONFIG_CANDIDATES,
   readOpenCodeConfigTarget,
   resolveConfiguredProviderPreset,
-} from '@features/runtime-provider-management/main';
+} from '@features/runtime-provider-management/main/readiness';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { getNodeValue, parseTree } from 'jsonc-parser';
 

@@ -61,6 +61,7 @@ export function getProjectSelectionResetState(): Partial<AppState> {
 export function getContextScopedTeamResetState(): Partial<AppState> {
   return {
     teams: [],
+    teamsUnavailable: [],
     teamManagementNoticeByTeam: {},
     teamByName: {},
     teamBySessionId: {},
@@ -68,6 +69,7 @@ export function getContextScopedTeamResetState(): Partial<AppState> {
     teamsLoading: false,
     teamsError: null,
     globalTasks: [],
+    globalTasksUnavailable: [],
     globalTasksLoading: false,
     globalTasksInitialized: false,
     globalTasksError: null,

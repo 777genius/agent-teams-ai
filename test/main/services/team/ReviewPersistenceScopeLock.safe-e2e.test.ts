@@ -12,7 +12,6 @@ interface WorkerResult {
 
 const temporaryRoots: string[] = [];
 const workerPath = path.resolve('test/fixtures/reviewPersistenceScopeLockWorker.ts');
-const tsxPath = path.resolve('node_modules/tsx/dist/cli.mjs');
 
 function runWorker(
   mode: 'run' | 'crash',
@@ -25,7 +24,7 @@ function runWorker(
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
-      [tsxPath, workerPath, mode, root, logPath, counterPath, workerId, String(delayMs)],
+      ['--import', 'tsx', workerPath, mode, root, logPath, counterPath, workerId, String(delayMs)],
       {
         cwd: process.cwd(),
         env: { ...process.env, NODE_ENV: 'test' },

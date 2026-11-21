@@ -1,0 +1,36 @@
+{
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "status": "SOURCE_INCONSISTENCY_REPRODUCED_NOT_FULL_ORIGINAL_REVIEW_CAUSE_QUALIFICATION",
+  "observedOriginalJob": 135261471191,
+  "originalOutcome": "Original Launch pointer click and successful model preflight, then generic capture-result-unknown; business Review not entered. The private inner rejection cause was not logged.",
+  "exactSourceFault": "isUnstartedCaptureEditable always excluded an original seed without team.capture. Model reads and probe used retained seed source, while runtime capture selected the current published source. A newly published same-provider TEST source therefore could not receive the source-bound probe required for the prospective capture.",
+  "actualPureProfileProjection": {
+    "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/profile-mechanism-analysis.json",
+    "bytes": 12240,
+    "lines": 264,
+    "gitBlob": "fd73807179baf23d88596a60b1f949e225cde547",
+    "sha256": "d982d786b9dbcdcc7fa0415b8fe752e071eb517577f0764f82ff3b6e3ad34467"
+  },
+  "proofBoundary": "Actual captured profile projection matches the original saved seed probe and differs from published global/project candidates. This does not prove that original runtime capture reached that exact private validation branch, nor reconstruct publication ordering not present in the receipt.",
+  "change": "Allow only a true original seed with absent capture/configurationRevision/launchId through the existing never-started, current-roster and all-retained-launch released-custody checks. A failed or unavailable seed check preserves its existing retained model read and refuses prospective evidence; complete-capture errors still propagate.",
+  "negativeCases": [
+    "attached native child",
+    "held or unknown native custody",
+    "admitted pending input",
+    "unavailable runtime read"
+  ],
+  "preservedBoundaries": [
+    "No runtime allocation during model preflight",
+    "No profile, team or launch publication writes",
+    "Existing retained configuration remains unchanged",
+    "Source updates invalidate old prospective probes",
+    "Current complete-capture error behavior preserved",
+    "Original launch.read is inside the seed fallback boundary"
+  ],
+  "notClaimed": [
+    "Original Review E2E PASS",
+    "Actual native process or paid provider acceptance",
+    "Full exact-head project typecheck",
+    "Source refresh authorization after runtime admission"
+  ]
+}

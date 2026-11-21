@@ -116,6 +116,22 @@ declare module 'agent-teams-controller' {
     unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
   }
 
+  export type ControllerReviewFlow = 'agent_approval' | 'human_approval' | 'lead_then_human';
+
+  export interface ControllerReviewFlowSettings {
+    reviewFlow: ControllerReviewFlow;
+    reviewFlowPrompt?: string;
+  }
+
+  /** Global review-flow default shared by teams without their own override. */
+  export interface ReviewFlowDefaultsApi {
+    read(claudeDir: string): { reviewFlow: ControllerReviewFlow; reviewFlowPrompt: string };
+    write(
+      claudeDir: string,
+      settings: ControllerReviewFlowSettings
+    ): { reviewFlow: ControllerReviewFlow; reviewFlowPrompt: string };
+  }
+
   export interface ControllerKanbanReadApi {
     getKanbanState(): unknown;
     listReviewers(): string[];
@@ -127,6 +143,8 @@ declare module 'agent-teams-controller' {
     addReviewer(reviewer: string): string[];
     removeReviewer(reviewer: string): string[];
     updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
+    /** A complete override unit, or `null` to follow the global default again. */
+    setReviewFlowSettings(settings: ControllerReviewFlowSettings | null): unknown;
   }
 
   export interface ControllerTaskBoardKanbanApi
@@ -148,6 +166,11 @@ declare module 'agent-teams-controller' {
   export interface ControllerReviewWriteApi {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    approveAsHuman(taskId: string): unknown;
+    approveReviewFromUser(taskId: string, flags?: Record<string, unknown>): unknown;
+    requestChangesFromUser(taskId: string, flags?: Record<string, unknown>): unknown;
+    requestChangesAsHuman(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }
@@ -157,6 +180,7 @@ declare module 'agent-teams-controller' {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.approveReview. */
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestChanges. */
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.startReview. */
@@ -263,6 +287,7 @@ declare module 'agent-teams-controller' {
   }
 
   export const agentBlocks: AgentBlocksApi;
+  export const reviewFlowDefaults: ReviewFlowDefaultsApi;
 
   /** Context-free protocol text builders, shared across lead and member prompts. */
   export interface ProtocolsApi {

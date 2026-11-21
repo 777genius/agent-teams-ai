@@ -46,7 +46,7 @@ export function projectHostProvisioningProgress(
   const state: TeamProvisioningProgress['state'] = unknown
     ? 'disconnected'
     : stopped
-      ? 'cancelled'
+      ? 'disconnected'
       : failed.length && !pending
         ? 'failed'
         : ready

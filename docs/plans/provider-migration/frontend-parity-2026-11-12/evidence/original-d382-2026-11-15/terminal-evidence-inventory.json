@@ -1,0 +1,59 @@
+{
+  "kind": "ORIGINAL_D382_PACKAGED_TERMINAL_EVIDENCE",
+  "evidenceOnly": true,
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runId": 43736377103,
+  "attempt": 1,
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/receipt-audit-packaged-linux.json",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-packaged-linux.json",
+      "bytes": 12465,
+      "blob": "29086c459863633b273d2fae3788aa7ad9885530",
+      "sha256": "0c0b09d14b9eb88328a3c0ff1e6df6663fce3e9297a18575db780beb9d151165"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/job-132896822005.log",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896822005.log",
+      "bytes": 185353,
+      "blob": "f7357890b23ea431c90e66a2bca196a71dd8ac5d",
+      "sha256": "b378107630540efa38cc940776e777ef69b132a0797e64cd8e7fb8ace36cce85"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/archive-audit-packaged-linux.json",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/archive-audit-packaged-linux.json",
+      "bytes": 4119,
+      "blob": "7a58c686688ddc5f05fc54df368ec1f3aeede2d9",
+      "sha256": "b5009581d73594a398ccb1656cc0e9aee67c57104879a0285e26b4bda2990a56"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/d382-native-audit-index-20261115-1900.json",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-native-audit-index-20261115-1900.json",
+      "bytes": 19787,
+      "blob": "457813fb9ae3d33400e5891a20a368015f4818bb",
+      "sha256": "0afd252ce6ec42843340e21113f05d40e5a54b40ea7b6725ee3bfe3f347738a2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/d382-native-audit-index-20261115-1904.json",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-native-audit-index-20261115-1904.json",
+      "bytes": 20684,
+      "blob": "0073b4394e4d588197f3a59ef13bd8c3e20fd6cf",
+      "sha256": "474e2e40beaa517beb5469d7a922c423653277425b087b023f30d88026d1b423"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/packaged-status-20261115-190405.json",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged-status-20261115-190405.json",
+      "bytes": 2015,
+      "blob": "bc9d59a8d5312bd1370a146fb7cd83400194b2a9",
+      "sha256": "adf54f9a2c33fcefec385f75542aa186ca4e70a7786b8cd9bc7f4b70812910dd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-d382-2026-11-15/d382-packaged-run-terminal-api.json",
+      "local": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-run-terminal-api.json",
+      "bytes": 13829,
+      "blob": "67158b08829e94e3355c4072fda92dc249e35371",
+      "sha256": "11f41229d5b057b1d3941c069779bf79d57208a12348d6620c791bb9274cecda"
+    }
+  ],
+  "qualification": "Three original packaged native V2 leaves passed; both original Windows P08 leaves failed. The aggregate and run ended cancelled. No qualification transfers to later source."
+}

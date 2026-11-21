@@ -1,0 +1,94 @@
+## Stage M R1 — bounded incoming9e reconciliation, original CI RED, and complete affected fast-lint scope
+
+This is a prospective exact source/application plan. At preparation, the clean local checkout and published followup head are L db8b470bf3c530928fef9ad4a2b582a417d436bd, tree a36be1fc640e0750a1d792ef3e26fd49a731f9eb. L's ordered parents are documentation6341437d2344bbba9cf63640d90502188216e759 and incoming1f9242563bec2641b25077c3aa83a999bd7f4871. Complete root and independent published readbacks establish all30 selected Git/worktree/candidate bytes,9,959 other leaves and9,989 total leaves. The original missing Git-fetch completion receipt remains unavailable; the later successful detached checkout and separate read-only refetch exit0 are separate observations, not a reconstructed first exit.
+
+The author independently advanced Draft PR1192 to9e542899f36c47598a88c764c9e6745589fea3e1, its sole parent1f924. That bounded incoming cut changes17 source/test/fixture paths and appends existing Plans32/33. Its implemented coordination/scheduled-log scope follows the prospective published71/1f amendments. This R1 composes that exact incoming source with L instead of discarding either parent. No M source or project execution has been performed by this proposal.
+
+### Exact source and history boundary
+
+Publish this plan, complete source table/patch, composition previews and independent exact reviews in a documentation-only child of L before source application. The source commit then uses that actual documentation commit as first parent and exact9e as second parent. Both commits are immediately normally pushed to the existing followup branch using fresh expected-SHA leases. After full tree/byte/parent readbacks and useful-cohort evidence assessment, only an ordinary fast-forward of the existing PR branch is eligible. A changed branch lease requires reading and preserving new author history; it is never reset or forced. Do not retarget this frozen R1 in place.
+
+The exact source cut is18 existing paths: fourteen byte-identical incoming9e leaves, three explicitly composed overlapping leaves, and one bounded existing-workflow operand correction. No source path is created or deleted. The source-only overlay on L has9,989 leaves, with9,971 other leaves unchanged; new M documentation is assembled separately and does not change this source inventory. The exact source table and complete patch below are authoritative, including all preimages, incoming bytes, SHA-256 values, modes inherited from L and selected postimages.
+
+Source table: Git blob 166e3c37f4227cd4cee48339d0733267f5313ce6, 23604 bytes, SHA-256 5306f2db5b82f318fef9d7e54661eb77d17ffcf13fb9821aaa15a554389dbca8.
+Complete source patch: Git blob a28b2f93f3c24d3bd75cf9a31d7b68078bdc5af4, 78799 bytes, SHA-256 5cb5a2a290df19084078fb6f05b042149cf53e0065a63e9fd917a440a9c7d331.
+Source-only projection tree: af96aaf355f0765aa0c2a7416e6e9789c5a63840.
+
+| Existing path | Selected Git blob | Bytes / lines | Selection |
+| --- | --- | ---: | --- |
+| .github/workflows/host-emulated-acceptance.yml | dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6 | 101741 / 1312 | original fast-lint scope extension |
+| packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts | 186171f456cc99a18e12f0b87c4bd508936d6243 | 25689 / 454 | exact incoming |
+| packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts | e6861511417070c9202458253a16a3ffb20216ae | 10051 / 166 | exact incoming |
+| packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts | 6b6c7003960eb4075d74ca449d303602e99ef83e | 7855 / 165 | exact incoming |
+| packages/legacy-agent-host/src/composition/HostScheduledRuns.ts | 13fd4d190e0a50267a295cb75cbf50320fa36d5a | 17375 / 297 | exact incoming |
+| packages/legacy-agent-host/src/composition/scheduledRunProjection.ts | 46613a43c30311321280f11129ed02df18ef527a | 5047 / 74 | exact incoming |
+| packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts | ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf | 26288 / 610 | exact incoming |
+| packages/legacy-agent-host/src/runtime/activityContracts.ts | d6a001c625d4369147811ee4d97b9853ff1c86c1 | 4476 / 130 | exact incoming |
+| packages/legacy-agent-host/tests/captured-claude-process.test.ts | d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c | 17005 / 366 | exact incoming |
+| packages/legacy-agent-host/tests/management-model-probe.test.ts | d13aa0c846dbf97aff99786e1165aa214aab93c7 | 47440 / 850 | exact incoming |
+| packages/legacy-agent-host/tests/member-process-stderr.test.ts | 0727339627757c3a96d54da2933eb7c1b60685f7 | 16103 / 277 | composition |
+| packages/legacy-agent-host/tests/runtime-activity.test.ts | 077ad7ea54675a4782984fcb5399f9964d5ec5e6 | 60689 / 1186 | exact incoming |
+| packages/legacy-agent-host/tests/scheduled-run-host.test.ts | dbbd17b11db24a9dc3fb989e0266101847f0a778 | 41863 / 598 | exact incoming |
+| packages/legacy-agent-host/tests/team-activity-read.test.ts | 881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb | 14327 / 381 | exact incoming |
+| scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts | 1bde37adb7cba710ad77784eedbbe0d6c6e556df | 68760 / 788 | composition |
+| scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts | f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d | 20996 / 323 | composition |
+| test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx | a367866923405e4d584fac1145b56fe27bf37b5a | 7490 / 232 | exact incoming |
+| tools/owned-process-broker/fixtures/claudeProviderPeer.mjs | 920b40fa594f7aa65e11d1ec1f31d2aa69581a01 | 32221 / 463 | exact incoming |
+
+### Incoming production and test limits
+
+The coordination consumer adds Thinking to the existing usage-ignore branch only after unchanged session/input/operation identity, revocation, byte/event budgets and deadline checks. Thinking supplies neither the actual answer nor either required MCP effect nor a successful result. Seven existing-file cases preserve the valid original MCP sequence and refusal boundaries. The author's recorded earlier causal RED and129/66 inventory remain author/source-specific history; this continuation has not independently executed or reclassified those local logs.
+
+The scheduled Runtime snapshot derives its optional internal Thinking/stderr projection from the same original authorized journal read. Original usage/interactions/tools/text/subagents retain their unchanged first priority and256KiB accounting. Thinking and then unattributed stderr consume only remaining space. Auxiliary truncation sets only its local flag; it cannot create a global Stats gap. Root Thinking uses input/operation/message/block identity and complete-over-later-snapshot precedence; child projection additionally scopes child/parent identities and retains original eventId/sequence. The outward mapper keeps its existing whitelist. There is no new persisted schema, wire field, RPC, cursor owner, cache, log reader or fabricated model result.
+
+ScheduledRunProvider attaches the original bounded sanitizer synchronously to the original Claude/Codex child from the existing launch hook. Its endpoint becomes optional only where no Team endpoint exists. HostScheduledRuns closes over cloned binding/request/capture and exact owner/principal/profile/source identity, checks the original active entry and Team revision, and revalidates inside Runtime's existing append fence. Ordinary unreleased cancellation-closing observations remain possible; Host seal, writer/source/revision replacement, foreign selection and released custody refuse observation. Diagnostics do not become Runtime input, tool, usage, outcome or cleanup facts. No real Claude or Codex executable is authorized, including version calls.
+
+Scheduled compatibility stdout retains the original512KiB bound and ordinary reader. Stderr retains the first16KiB including the reserved fixed warning and avoids an incomplete final UTF-8 code point. Existing source/outcome/duration/cold/parallel/no-replay tests remain; their new finite observations use the existing original native peer and one business input. Team Stats excludes only separate computedAt values in its comparison, matching the existing neighboring oracle; content, known cost, gap and state remain compared. The existing Task Activity renderer test targets its original event's true error flag, rendered red status and complete content in that card, retaining its other source/tab/stale-read assertions. This is an explicit incoming test-oracle adaptation, not a claim that every assertion byte stayed unchanged.
+
+### Three exact compositions
+
+1. Runtime UI selects1bde37adb7cba710ad77784eedbbe0d6c6e556df: full L plus the exact56 incoming additions;788 physical lines. It retains the three K corrections: rich actual event DOM in both original Task tabs and the unique current source title joined inside the same existing wait. Incoming Thinking query/filter/fullscreen/copy/collapse/cold and standalone retained-source/dialog assertions are preserved. Incoming review-approved disclosure/copy interactions are real extra presentation interactions; no extra business input, replay, native call, timer or deadline is claimed. Original mandatory Stop and physical absence checks stay intact.
+
+2. The supplementary roster selectsf1bfeb0235ed6fc4f80daba16aefda0364ee7e9d: all232 L common entries keep their complete original order, with only the three incoming existing scheduled projection/capture/contracts paths appended. Common235, Process27 and Windows46 arrays have exactly the same per-array sets as9e; the latter two arrays are byte-identical to both parents. Incoming9e places its five35+three9e paths before the moved52 Logs block; M keeps the previously reviewed L order52, then five, then three. No pin is lost or duplicated, and each52-row block keeps its internal order. There is no filesystem discovery or new roster.
+
+3. Stderr tests select0727339627757c3a96d54da2933eb7c1b60685f7: all incoming e52785444caebdc8c698d87ac122f4a13742b5cc bytes plus the identical L1,861-byte/30-line four-case suffix. Thus the new optional-endpoint case and every existing canary/cleanup oracle coexist. RuntimeTeam's L c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79 remains unchanged, preserving all incoming35 cases and the earlier eight deadline/capture cases.
+
+### One existing fast-lint command — exact scope repair
+
+K's43-file fast-lint stage was never reached after its first Host compiler died by SIGKILL. L preserved the original Host workflow's38 operands; General fast lint covers src and does not establish the missing package/test/fixture gate. M explicitly resolves that pending scope in the same original Team-lane command: retain all38 operands in their original order and append55 unique missing operands. The93-path result covers the complete59-path union of K43, L20 and incoming M17 changed JavaScript/TypeScript files. The full old/new command and every operand are retained in lint-coverage-metadata.json.
+
+All workflow bytes outside that one operand list are exact L bytes, including the original full ten-file Team test argv, matrices, selectors,45-minute cutoff, Node24.21.0, frozen install, fresh builds, full workspace types and four typed-lint commands. No workflow, job, retry, compiler option, time budget, provider execution, exclusion or cap exception is added. This exact93-operand proposal supersedes only the previous unpublished85-operand scratch preview; it does not retroactively qualify any lint command. It follows the Team test step, so a genuine RED stops before it: that lint/type stage is then NOT RUN, never PASS.
+
+### Mandatory original-CI RED before the production privacy repair
+
+M deliberately leaves the incoming helper at6b6c7003960eb4075d74ca449d303602e99ef83e. Its syntax-first masking still admits the source-proven held-value suffix counterexample. This is a staged regression source, not completed secure behavior. The existing four canaries were approved before L and are preserved exactly. The whole stderr file now has24 cases;21 PASS and three semantic privacy FAIL are predictions only. No static emulation, module/build/setup error, timeout or missing dependency can count as this RED.
+
+No local install/bootstrap/compiler/test/Node invocation is authorized for this stage. The original PR-triggered Host Emulated Acceptance job Offline Host Desktop (linux-x64, team) is the execution venue. Confirm exact resulting source and unchanged checked9423 tarball paths/SRIs, Node24.21.0 and the actual original dependency installation, Electron rebuild and fresh complete Host/controller/MCP prerequisites from the original logs. The later captured-Corepack input step occurs after Team testing and must not be cited as preceding a failed RED. Do not use retained D/K outputs as a fresh M build.
+
+Run only the original naturally triggered full command, preserved byte-identically:
+
+    node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts
+
+Retain the whole original ten-file command's counts/logs/cleanup separately from the stderr24-case subsection. All three failures must be the held-suffix absence assertion for space/tab/mixed whitespace on the actual unchanged helper. All original files run together; a narrowed helper-only surrogate is not qualification. Independently review and publish the actual raw RED evidence, exact source/dependency/fresh-build joins, original failure locations and full counts before any helper application.
+
+### Conditional later GREEN preimage, still excluded from M
+
+The earlier reviewed eight-added/one-removed-line helper correction is prospectively composed onto the current optional-endpoint helper rather than restoring old21aa wholesale. Its full unchanged surrounding bytes and both endpoint-optional hunks must remain. The independently prepared candidate is bound below and is not among M's18 selected leaves. Only after the exact semantic RED gate and independent raw-evidence R2 may a separately published actual-source/readback record precede this one-helper source application. If any preimage or test byte changes, stop this conditional application and obtain a fresh exact R1/R2 composition; never reinterpret another failure as the prescribed RED.
+
+Future helper preview: 0b0fc2a68fe678ebbce24227bf6e6002d12701d9, 8310 bytes, SHA-256 10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7.
+Future patch: 958de68314a85da4ef85237c3af79d72d3d623d1, 1081 bytes, SHA-256 1de755555f8fa3963abab4f0dd744456b96f4db3191e0f40eac19093ab555196.
+Future composition metadata: 017125ff914da8c11bb6edb6b3f6e7e96c0e8ab4, 1601 bytes, SHA-256 28b744940a841add648a39ace91b1ace62f7a7957348ea1fb7a8b890dc934382.
+
+The correction conservatively emits one [redacted] diagnostic when syntax redaction changes the line and a complete already-held value is present in either raw or normalized text. It does not claim exact span intersection; safe context may be lost in that ambiguous line. Existing framing, ANSI/NUL handling, dump suppression, size/count bounds, final-tail behavior and listener cleanup remain. The same24-case test file and complete original ten-file command must then pass on a fresh resulting-source build with no skip/cancel; an unexpected failure needs its own evidence and review. Actual post-RED useful original cohorts must be assessed and preserved before another ordinary PR-head advance. No manual dispatch, retry or cancellation is authorized.
+
+### Evidence, remaining gates and delivery invariants
+
+Retain incoming Plans32/33 as exact full9e files; their added source-specific claims are not new local execution by this root. Preserve full L actual readbacks and original historical raw evidence/checkpoints rather than replacing earlier failures with later PASS. Original1f cohorts are now terminal; Windows/Darwin successes, the two distinct Darwin P09 failures and cancelled Linux/general/other leaves retain their exact source and scope. The separate new9e cohorts are owned and polled no more often than every five minutes; stop a cohort when terminal. Captured native and Desktop bundles are recoverable source-bound evidence, not M qualification.
+
+Before each primary-branch integration, assess and retain still-useful current-source original cohort evidence. Queued/running work is neither PASS nor an automatic owner blocker; the earlier useful-cohort rule is not a universal all-jobs-terminal requirement. Preserve source-specific remaining native/frontend/Desktop evidence and state any unresolved observation precisely. No cancellation cause is inferred from time proximity, and no manual Actions operation is introduced.
+
+Full resulting-source frontend shards, actual Desktop journeys, original Process/native/V2/packaged, full workspace types and typed lint remain mandatory. The full original Process command already includes management-model-probe and scheduled-run-host, and the original Host standalone management lane also includes scheduled-run-host; this change does not replace either with a new narrow command. Actual source-size/architecture guards remain required. All changed non-test code is at or below800 lines; UI788; no new source file or exception;141 frozen exceptions and TeamSlice5020 ceiling stay fixed. Source review and author's scoped results do not qualify full current-head acceptance.
+
+P08 same-Main Windows packaged recovery and P09 selected-byte/writer/script-consumption remain open. The existing F_SETLEASE survey is exhausted; no repeated probe or wider contract is authorized without concrete new evidence and exact R1/R2. This stage adds no writer/path/format/permission change, no universal OS impossibility claim and no automatic owner blocker from §75.7.
+
+PR1192 remains open Draft on feat/provider-host-frontend-parity-20261112, exact base def734338f13bcc3209e78079a0cedbc48f05a5b. Preserve all contributor history, original business actions, absolute deadlines, captured source/custody/currentness, no-replay and negative/physical-cleanup oracles. No Ready, main merge, release, default Host activation or Stage2. No real Claude/Codex including version commands. No third local full/dedicated backend compiler retry or narrowed substitute; no repeat of K's failed validation. All new commits require immediate ordinary expected-SHA push and actual readback. This R1 is not GOAL_COMPLETE.

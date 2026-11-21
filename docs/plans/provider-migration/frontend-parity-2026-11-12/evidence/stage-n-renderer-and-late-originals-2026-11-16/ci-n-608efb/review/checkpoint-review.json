@@ -1,0 +1,212 @@
+{
+  "kind": "N608_ORIGINAL_SYNTHETIC_REVIEW_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441661,
+  "scope": "review-ui plus separate original review-readback-ui",
+  "payloadCount": 10,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/job-133062441661.log",
+      "bytes": 187747,
+      "gitBlob": "c5405ee0301caaad4551908c2a9d7e8cc649217b",
+      "sha256": "287d27daea169dd6a2646d2aec3fd704f20e339e16a6cc8ec0f7b36b370e347b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/original-job-log-response.json",
+      "bytes": 197984,
+      "gitBlob": "d99d628d9c53aec6f352f403c3ae634b432ed974",
+      "sha256": "25a592d50b0773bc22dac93b4e7c4662eccc56af1cfd9b9b37026bb9e5a8a9ad"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/artifact-14196496672.zip",
+      "bytes": 997173,
+      "gitBlob": "2c578b90a25a38a91ca22d5397af8816deb22e8a",
+      "sha256": "1d6cd13554357982033e76c26ff26659946c8869d4008905f791b89f392a167c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/archive-retention.json",
+      "bytes": 4778,
+      "gitBlob": "aac5b7d80a6731f59e2e5e413831a7f721debd1a",
+      "sha256": "b0578bca3709aec9879ab58c6fa4d32fa93c29bedb68cb81e06f82629e200b90"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0410.json",
+      "bytes": 9484,
+      "gitBlob": "f34ca6154c2b6e7016dcde8480bdd086e0f442e1",
+      "sha256": "badac9e3b213551e9b4ed59e9236c657320b8f834d2c9120b0009092d8feb670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0409.json",
+      "bytes": 92338,
+      "gitBlob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+      "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/audit.json",
+      "bytes": 135267,
+      "gitBlob": "b1064956060ede01764f275a6b8b54507667fc7a",
+      "sha256": "41178c2c52b4b1615675c14f95c228e685920127e2022b62b518430bc56cc116"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/Plan29-review-synthetic-history-appendix.md",
+      "bytes": 7314,
+      "gitBlob": "a3701f8daf99c7dcae5415b675fa29dfb3e64923",
+      "sha256": "44410446afeee5da54cfa508bde09ed07325f13cfc24712098a90d6e834a7756"
+    }
+  ],
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-i4tVnE/desktop-app.log",
+      "bytes": 17421,
+      "sha256": "c28ded35328ee89b9651b34701ede1751f276f3b2a1c05ae3af8078a6fde7935",
+      "crc32": "1ae47604"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/desktop-backend-receipt.json",
+      "bytes": 733410,
+      "sha256": "e6878f809cdcfe03d7c3b67c5e7d3250d3942feb720600a6f212818ca027760d",
+      "crc32": "98d73620"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/desktop-descriptor.json",
+      "bytes": 1925,
+      "sha256": "7b0eaf09fd4e52bb420032fbd7cb1e9bcf1c69b7692aedd0ad168a878087543f",
+      "crc32": "b0b33ac4"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/desktop-review-readback-app.log",
+      "bytes": 14805,
+      "sha256": "b0a03dab662d0582e9b569a680c506ef6c8dc52fcf5c841109e5c25d86aa9b9f",
+      "crc32": "dd51abf2"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/desktop-review-readback-receipt.json",
+      "bytes": 702142,
+      "sha256": "a378085c37203c310ec09caab0fafea6515f90f0c16e22a77570e56b998ba243",
+      "crc32": "2d725081"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/host-profile.json",
+      "bytes": 1200,
+      "sha256": "1f5695957f8303e4ec3ee4d80f956e3b53175d4c83963dae6e38ed0a56c80d48",
+      "crc32": "a5d6abba"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/review-ui-initial-git-diff.txt",
+      "bytes": 386,
+      "sha256": "2fc5ff53a4f545d632661526c2c791562ffb5e9d523eb659b08204fef3465383",
+      "crc32": "d14b3a2a"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/review-ui-seed.json",
+      "bytes": 1328,
+      "sha256": "df88158e37bff265e0d2ce2d5d3f432d0ce3109d96a27e87539d36c910e94b95",
+      "crc32": "c58ef9f9"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/sentinel-invocations.ndjson",
+      "bytes": 192,
+      "sha256": "6a654a1a19ba032449ef95df2bef8c8d31dbcd57e4c694085e111dc483c2fa8f",
+      "crc32": "5c83c4f5"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/ui-review-history.png",
+      "bytes": 88056,
+      "sha256": "5c3f27ea3965f058f45158aca388704c52a5a8414c7c005e0bfae21a5b74630b",
+      "crc32": "4d209590"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/ui-review-host-restarted.png",
+      "bytes": 56885,
+      "sha256": "7e2e29c76f71298c7ada32477b90da8a067288fa1cce34029930270938b3cf1a",
+      "crc32": "b045ff2d"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/ui-review-reloaded.png",
+      "bytes": 57192,
+      "sha256": "da5ce72582c2d9c5a814eba7823ee896bf183f7efa31b5e7c9c18e8949b5fd79",
+      "crc32": "611a0d95"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/ui-review-stale-refused.png",
+      "bytes": 66473,
+      "sha256": "3aeca9f8132c445357a70f5d921c4e2c6580254b94cf3f9cb308fd7fe2e8728c",
+      "crc32": "97ac7e05"
+    },
+    {
+      "path": "TEST-desktop-backend-i4tVnE/ui-seed-receipt.json",
+      "bytes": 2037,
+      "sha256": "d1c34a625a0358f8b0c1fc81159bbff76cdd116e7319e3c9b33feb53f40d5b14",
+      "crc32": "90309ad9"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-pMWRHk/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-pMWRHk/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "b7133f15e17897a0b902de3c5449fff2257540db625991c9606c400983e8725a",
+      "crc32": "a1993413"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "06d93a38fa1c2330a5d57bea9ad834d9059f11ce9501460097e9a2e0ff2a5cd8",
+      "crc32": "49e9a259"
+    },
+    {
+      "path": "host-emulated-review-readback-ui.log",
+      "bytes": 241,
+      "sha256": "bb9c6ced0fd14d288b202285ff9cf6f3e709331392291a49b47b6ac27685ac45",
+      "crc32": "79bdc10b"
+    },
+    {
+      "path": "host-emulated-review-ui.log",
+      "bytes": 225,
+      "sha256": "93fd7d7b3c3ac4a8abbfe884c3847cc5d37bdae567f1eef6a114452076d2ac78",
+      "crc32": "b9484527"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 995,
+      "sha256": "7c7dbf1a83d4004eefc1d47cb8a6f45e9bdb819b2edc93f135c8e5346fd9aaf4",
+      "crc32": "41b5bc8b"
+    }
+  ],
+  "actuallyViewedPngCount": 4,
+  "limits": [
+    "This is original synthetic two-hunk Task-ledger UI acceptance only. M13 native attribution, native inference, injected crash recovery and a separate Apply button are explicitly excluded; instant apply is enabled.",
+    "Both receipts report runtimeConfigured:false/managementConfigured:false and no native Host children. Sentinel version checks and ordinary helper processes are not agent execution, native tools or vendor qualification.",
+    "Original first-app Keep/Reject/Undo/Redo, durable history and real renderer reload precede one separate original app/Host readback. The second app does not replay the four review actions.",
+    "The stale check observes a disabled Undo and external-change warning and reads unchanged external bytes; it never clicks disabled Undo. No attempted stale write/refusal command, crash recovery or arbitrary conflict resolution is qualified.",
+    "Canonical persistence is retained as complete value+file hash in three equal snapshots. Its declared hash is independently reproduced by exact two-space JSON serialization without trailing newline; the original persistence file, workspace/value.ts, Git index and unrelated dirty file are not separate ZIP members. Audit reconstructs no missing runtime outcome.",
+    "The four PNG are actually viewed individually. The last editor shows retained mixed content while warning about external changes; the externally appended line is proven by original filesystem assertion/hash, not a screenshot rendering claim.",
+    "Both app/launcher exit0/null and captured Host absence are retained. Only the first app has the originalExitedGroup fresh settled/descendant absence record; the second has beforeHarnessCleanup[] and no such field. Separate passive Main original-child callbacks report both Host exits0/null; these are not atomic executable/native custody certificates.",
+    "The final two-row sentinel file is cumulative across both apps; the first receipt retains its one-row prefix. Neither receipt contains afterQuit/cleanup or refused sentinel invocations.",
+    "Four ordered1757 source arrays equal the freshly checked608efb Git census;14selected paths were freshly read. Recorded compiled hashes are not an archived compiled payload or independent rebuild.",
+    "Original608efb Review PASS does not itself qualify separately executed Team privacyGREEN, native Review, all Desktop lanes, release or merge readiness."
+  ],
+  "independentReviewPending": true
+}

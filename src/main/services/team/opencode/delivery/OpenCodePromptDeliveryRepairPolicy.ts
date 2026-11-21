@@ -57,6 +57,7 @@ const SIDE_EFFECT_TOOL_NAMES = new Set([
 const REVIEW_WORKFLOW_TOOL_NAMES = new Set([
   'review_start',
   'review_approve',
+  'review_complete',
   'review_request_changes',
 ]);
 

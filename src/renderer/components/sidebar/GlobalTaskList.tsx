@@ -23,6 +23,7 @@ import { Check, ChevronDown, ChevronRight, ListTodo, Pin, Search, X } from 'luci
 import { useShallow } from 'zustand/react/shallow';
 
 import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
+import { TeamAggregateReadNotice } from '../team/TeamAggregateReadNotice';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 import {
@@ -563,12 +564,16 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   onFiltersPopoverOpenChange: externalOnFiltersPopoverOpenChange,
 }: GlobalTaskListProps): React.JSX.Element {
   const { t } = useAppTranslation('common');
+  const { t: tTeam } = useAppTranslation('team');
   const { isLight } = useTheme();
   const {
     globalTasks,
     globalDeletedTasks,
     globalTasksLoading,
     globalTasksInitialized,
+    globalTasksUnavailable = [],
+    globalTasksError = null,
+    openTeamTab,
     fetchAllTasks,
     fetchAllDeletedTasks,
     restoreTask,
@@ -579,12 +584,16 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       globalDeletedTasks: s.globalDeletedTasks,
       globalTasksLoading: s.globalTasksLoading,
       globalTasksInitialized: s.globalTasksInitialized,
+      globalTasksUnavailable: s.globalTasksUnavailable,
+      globalTasksError: s.globalTasksError,
+      openTeamTab: s.openTeamTab,
       fetchAllTasks: s.fetchAllTasks,
       fetchAllDeletedTasks: s.fetchAllDeletedTasks,
       restoreTask: s.restoreTask,
       softDeleteTask: s.softDeleteTask,
     }))
   );
+  const incomplete = globalTasksUnavailable.length > 0 || globalTasksError !== null;
   const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
   const teamCatalogKey = useStore((s) => s.teams.map((team) => team.teamName).join('|'));
@@ -963,6 +972,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
   return (
     <div className="flex size-full min-w-0 flex-col overflow-x-hidden">
+      <TeamAggregateReadNotice
+        surface="tasks" unavailable={globalTasksUnavailable} error={globalTasksError}
+        loadedCount={globalTasks.length} loading={globalTasksLoading}
+        onRefresh={() => { void fetchAllTasks(); }} onOpenTeam={openTeamTab}
+      />
       {!hideHeader && (
         <div
           className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5"
@@ -1072,7 +1086,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
         {searchVisible && (
           <div className="flex items-center gap-1.5 px-2 pb-1.5">
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1">
               <Search className="size-3 shrink-0 text-text-muted" />
               <input
                 ref={searchInputRef}
@@ -1106,6 +1120,9 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
           <div className="flex items-center gap-1 px-2 py-1">
             <Pin className="size-3 text-text-muted" />
             <span className="text-[11px] text-text-muted">{t('tasksPanel.pinned')}</span>
+            {incomplete && <span className="text-[10px] text-text-muted">
+              {tTeam('list.aggregate.loadedCount', { count: pinnedTasks.length })}
+            </span>}
           </div>
           <TaskRows
             contextId={contextId}
@@ -1145,7 +1162,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-text-muted">
             <ListTodo className="size-8 opacity-40" />
             <span className="text-[12px]">
-              {searchQuery || selectedProjectPath
+              {incomplete ? tTeam('list.aggregate.emptyTasks') : searchQuery || selectedProjectPath
                 ? t('tasksPanel.empty.noMatchingTasks')
                 : t('tasksPanel.empty.noTasks')}
             </span>
@@ -1180,8 +1197,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
               group.tasks.length
             );
             return (
+              <div key={group.projectKey} data-task-count-scope={incomplete ? 'loaded' : 'complete'}>
+                {incomplete && <p className="px-2 pt-1 text-[10px] text-text-muted">
+                  {tTeam('list.aggregate.loadedTasks')}
+                </p>}
               <ProjectTaskGroup
-                key={group.projectKey}
                 projectKey={group.projectKey}
                 projectLabel={group.projectLabel}
                 taskCount={group.tasks.length}
@@ -1220,6 +1240,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                   getOwnerColorName={getOwnerColorName}
                 />
               </ProjectTaskGroup>
+              </div>
             );
           })}
 
@@ -1243,7 +1264,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                   )}
                   <span className="truncate">{dateCategoryLabels[category] ?? category}</span>
                   <span className="ml-auto shrink-0 text-[10px] font-normal text-text-muted">
-                    {tasks.length}
+                    {incomplete ? tTeam('list.aggregate.loadedCount', { count: tasks.length }) : tasks.length}
                   </span>
                 </button>
 

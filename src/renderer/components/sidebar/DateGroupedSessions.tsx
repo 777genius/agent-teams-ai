@@ -756,7 +756,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
       )}
 
       <div
-        className="mb-[5px] flex shrink-0 items-center gap-1.5 border-b px-2 py-1"
+        className="mb-[5px] flex shrink-0 items-center gap-1.5 border-b bg-[var(--color-form-control-bg)] px-2 py-1"
         style={{ borderColor: 'var(--color-border)' }}
       >
         <Search className="size-3 shrink-0 text-text-muted" />

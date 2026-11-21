@@ -6,6 +6,8 @@ export default defineConfig({
     include: [
       'tools/owned-process-broker/protocol.test.ts',
       'tools/owned-process-broker/nativeGateEvents.test.ts',
+      'tools/owned-process-broker/nativeGateContext.test.ts',
+      'tools/owned-process-broker/nativeSourceSelfDigest.test.ts',
     ],
     testTimeout: 5000,
   },

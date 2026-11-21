@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
+  selectTeamIsAliveForName,
   selectTeamMemberSnapshotsForName,
 } from '@renderer/store/slices/teamSlice';
 import { buildTeamMemberLaunchDiagnosticsPayloads } from '@renderer/utils/memberLaunchDiagnostics';
@@ -27,6 +28,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
   const { t } = useAppTranslation('team');
   const {
     progress,
+    isTeamAlive,
     cancelProvisioning,
     retryFailedOpenCodeSecondaryLanes,
     teamMembers,
@@ -38,6 +40,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
   } = useStore(
     useShallow((s) => ({
       progress: getCurrentProvisioningProgressForTeam(s, teamName),
+      isTeamAlive: selectTeamIsAliveForName(s, teamName),
       cancelProvisioning: s.cancelProvisioning,
       retryFailedOpenCodeSecondaryLanes: s.retryFailedOpenCodeSecondaryLanes,
       teamMembers: selectTeamMemberSnapshotsForName(s, teamName),
@@ -50,8 +53,9 @@ export function useTeamProvisioningPresentation(teamName: string): {
   );
 
   const presentation = useMemo(
-    () =>
-      applyLeadActivityToProvisioningPresentation(
+    () => {
+      if (progress?.state === 'ready' && isTeamAlive === false) return null;
+      return applyLeadActivityToProvisioningPresentation(
         buildTeamProvisioningPresentation({
           progress,
           members: teamMembers,
@@ -70,8 +74,10 @@ export function useTeamProvisioningPresentation(teamName: string): {
             defaultValue: 'Lead is working while startup checks finish.',
           }),
         }
-      ),
+      );
+    },
     [
+      isTeamAlive,
       memberSpawnSnapshot,
       memberSpawnStatuses,
       progress,

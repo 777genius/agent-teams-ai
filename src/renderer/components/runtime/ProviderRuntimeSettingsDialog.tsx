@@ -757,14 +757,15 @@ export const ProviderRuntimeSettingsDialog = ({
   );
 
   const apiKeyDetailsRequestedRef = useRef(false);
+  const apiKeyStorageRequestedRef = useRef(false);
+  const apiKeyInitialSelectionRef = useRef<CliProviderId | null>(null);
   const requestApiKeyDetails = useCallback(
     (providerId: CliProviderId): void => {
       if (!open || !isApiKeyProviderId(providerId) || apiKeyDetailsRequestedRef.current) return;
       apiKeyDetailsRequestedRef.current = true;
       void fetchApiKeys();
-      void fetchApiKeyStorageStatus();
     },
-    [fetchApiKeyStorageStatus, fetchApiKeys, open]
+    [fetchApiKeys, open]
   );
 
   useEffect(() => {
@@ -773,6 +774,7 @@ export const ProviderRuntimeSettingsDialog = ({
       return;
     }
 
+    apiKeyInitialSelectionRef.current = initialProviderId;
     setSelectedProviderId(initialProviderId);
     requestApiKeyDetails(initialProviderId);
   }, [initialProviderId, open, requestApiKeyDetails]);
@@ -1062,6 +1064,19 @@ export const ProviderRuntimeSettingsDialog = ({
     apiKeyConfig &&
     (selectedProvider?.providerId !== 'codex' || !selectedProvider.connection?.supportsOAuth)
   );
+  useEffect(() => {
+    if (!open) {
+      apiKeyStorageRequestedRef.current = false;
+      return;
+    }
+    const initialSelection = apiKeyInitialSelectionRef.current;
+    if (initialSelection !== null && initialSelection !== selectedProviderId) return;
+    apiKeyInitialSelectionRef.current = null;
+    if (!showApiKeySection || !selectedApiKey || apiKeyStorageRequestedRef.current) return;
+    apiKeyStorageRequestedRef.current = true;
+    void fetchApiKeyStorageStatus();
+  }, [fetchApiKeyStorageStatus, open, selectedApiKey, selectedProviderId, showApiKeySection]);
+
   const connectionAlert =
     selectedProvider && !maskCodexNegativeBootstrapState
       ? getConnectionAlert(selectedProvider, t)
@@ -2454,11 +2469,7 @@ export const ProviderRuntimeSettingsDialog = ({
                     </div>
                   </div>
                 ) : null}
-
-                {selectedProvider.providerId === 'anthropic' ||
-                selectedProvider.providerId === 'codex' ? (
-                  <NativeNextPromptProviderSetting providerId={selectedProvider.providerId} />
-                ) : null}
+                <NativeNextPromptProviderSetting providerId={selectedProvider.providerId} disabled={connectionBusy} />
 
                 {selectedProvider.providerId === 'codex' ? (
                   <div

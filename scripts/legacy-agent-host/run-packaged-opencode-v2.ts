@@ -203,7 +203,11 @@ finally {
     }
   }
   if (canRestore && bundleMoved && !sourceMoved) {
-    try { await rename(relocatedBundle, originalBundle); bundleMoved = false; }
+    try {
+      if (process.platform === 'win32') await renameCapturedPackagedBundle(relocatedBundle, originalBundle);
+      else await rename(relocatedBundle, originalBundle);
+      bundleMoved = false;
+    }
     catch (error) {
       cleanupErrors.push(error);
       cleanupObservation.firstRestorationFailure ??= cleanupFailure('bundle-restore', error);

@@ -32,9 +32,10 @@ import type { IpcMainInvokeEvent } from 'electron';
 
 // This controlled shebang child has POSIX custody. Native Windows qualification is separate.
 const posixIt = it.skipIf(process.platform === 'win32');
+const codex0169Qualified = process.platform === 'darwin' && process.arch === 'arm64';
 
 /** Actual account IPC/Main → Host/D → controlled child. Electron UI/vendor login are separate gates. */
-async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false) {
+async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false, protocolRevision: '0.162.0' | '0.169.0' = '0.162.0') {
   const repo = resolve(import.meta.dirname, '../../..');
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-codex-login-main-')));
   for (const name of [
@@ -81,7 +82,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
     management: await Promise.all(
       ['a', 'b'].map(async (key) => ({
         provider: 'codex' as const,
-        protocolRevision: '0.162.0' as const,
+        protocolRevision,
         profileId: 'TEST-profile-' + key,
         configRevision: 'TEST-config-' + key,
         accountBinding: 'TEST-account-' + key,
@@ -92,6 +93,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
           HOME: join(root, key, 'home'),
           CODEX_HOME: join(root, key, 'codex'),
           TEST_LOGIN: scenario,
+          ...(protocolRevision === '0.169.0' ? { TEST_CODEX_0169: '1' } : {}),
           ...(key === 'a' ? { OPENAI_API_KEY: 'TEST-captured-private-key' } : {}),
         },
       }))
@@ -228,7 +230,8 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
 
 for (const mode of ['browser', 'device_code'] as const) {
   posixIt(`account IPC preserves ${mode} login, exact account readiness, private presentation and refresh/logout`, async () => {
-    const f = await fixture(mode === 'browser' ? 'early' : 'pending', mode === 'device_code');
+    const protocolRevision = mode === 'browser' && codex0169Qualified ? '0.169.0' : '0.162.0';
+    const f = await fixture(mode === 'browser' ? 'early' : 'pending', mode === 'device_code', protocolRevision);
     try {
       const api = f.create();
       const snapshots: CodexAccountSnapshotDto[] = [];
@@ -277,7 +280,8 @@ for (const mode of ['browser', 'device_code'] as const) {
       await vi.waitFor(
         () =>
           expect(snapshots.at(-1)).toMatchObject({
-            managedAccount: { type: 'chatgpt', email: 'test@example.invalid' },
+            managedAccount: { type: 'chatgpt', email: protocolRevision === '0.169.0' ? null : 'test@example.invalid',
+              planType: protocolRevision === '0.169.0' ? 'unknown' : 'plus' },
             login: { status: 'idle' },
             preferredAuthMode: 'api_key',
             effectiveAuthMode: 'api_key',
@@ -286,6 +290,9 @@ for (const mode of ['browser', 'device_code'] as const) {
         { timeout: 10_000 }
       );
       expect(snapshots.at(-1)!.login.authUrl).toBeUndefined();
+      expect(JSON.stringify(snapshots)).not.toMatch(/TEST-private-workspace|TEST-private-user/);
+      expect((await f.wire('a')).filter(row => row.method === 'initialize').every(row =>
+        (row.params?.capabilities as Record<string, unknown> | undefined)?.requiredHumanApproval === undefined)).toBe(true);
       expect(api.feature.getCachedSnapshot()).toBeNull();
       expect(snapshots.some((snapshot) => snapshot.login.status === 'starting')).toBe(true);
       expect(await f.store.pendingLogin()).toBeNull();
@@ -314,6 +321,30 @@ for (const mode of ['browser', 'device_code'] as const) {
     }
   }, 30_000);
 }
+
+it('admits Codex 0.169 metadata only on its qualified tuple and otherwise refuses before native allocation', async () => {
+  const f = await fixture('early', false, '0.169.0');
+  try {
+    const api = f.create();
+    if (codex0169Qualified) {
+      expect(await api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT)).toMatchObject({
+        apiKey: { available: true, source: 'environment' }, managedAccount: null, launchAllowed: true,
+      });
+      expect((await f.wire('a')).filter(row => row.method === 'initialize')).toHaveLength(1);
+    } else {
+      await expect(api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT)).rejects.toThrow('Captured Codex metadata is unavailable.');
+      for (const key of ['a', 'b']) {
+        await expect(readFile(join(f.root, key, 'home/TEST-login-processes.ndjson'), 'utf8'))
+          .rejects.toMatchObject({ code: 'ENOENT' });
+        expect(await f.wire(key)).toEqual([]);
+      }
+    }
+    expect((await f.wire('a')).filter(row => row.method === 'account/login/start')).toEqual([]);
+    expect(await f.store.pendingLogin()).toBeNull();
+  } finally {
+    await f.cleanup();
+  }
+}, 30_000);
 
 posixIt('exact native rejection clears the private intent after cleanup and permits only an explicit new login', async () => {
   const f = await fixture('rejected-then-pending');

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import type { Dirent } from 'node:fs';
 import { lstat, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { command, groupMembers, processTable } from './desktop-backend-observations.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -10,6 +13,10 @@ import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 type QuitModel = Awaited<ReturnType<typeof startNativeTeamModel>> | Awaited<ReturnType<typeof startOpenCodeModel>>;
+
+const { acquireFileLockSync } = createRequire(import.meta.url)(
+  'agent-teams-controller/src/internal/fileLock.js'
+) as { acquireFileLockSync(scope: string, options: { createParent: false; acquireTimeoutMs: 0 }): () => void };
 
 const record = (raw: unknown): Record<string, unknown> => {
   assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
@@ -27,6 +34,35 @@ async function until(test: () => Promise<boolean>, label: string): Promise<void>
   }
   throw new Error(`${label}; no action retry`);
 }
+function assertRecordEntries(entries: Dirent[]): void {
+  try {
+    assert.ok(
+      entries.length <= 256 &&
+        entries.every((entry) => entry.isFile() && /^[a-zA-Z0-9_-]+\.json$/.test(entry.name))
+    );
+  } catch (error) {
+    try {
+      const sample = entries.slice(0, 256);
+      const shape = { count: Math.min(entries.length, 257), sampled: sample.length,
+        truncated: entries.length > sample.length, regular: 0, validJsonName: 0,
+        regularJson: 0, directory: 0, symbolicLink: 0, otherType: 0 };
+      for (const entry of sample) {
+        const regular = entry.isFile(), directory = entry.isDirectory(), symbolicLink = entry.isSymbolicLink();
+        const validJsonName = /^[a-zA-Z0-9_-]+\.json$/.test(entry.name);
+        if (regular) shape.regular++;
+        if (validJsonName) shape.validJsonName++;
+        if (regular && validJsonName) shape.regularJson++;
+        if (directory) shape.directory++;
+        if (symbolicLink) shape.symbolicLink++;
+        if (!regular && !directory && !symbolicLink) shape.otherType++;
+      }
+      console.log(JSON.stringify({ kind: 'TEST_DESKTOP_RECORD_ENTRY_SHAPE', shape }));
+    } catch {
+      // Only already-read Dirents are sampled; reporting cannot replace the original refusal.
+    }
+    throw error;
+  }
+}
 async function files(
   directory: string,
   allowAbsent = false
@@ -35,10 +71,7 @@ async function files(
     if (allowAbsent && (error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
   });
-  assert.ok(
-    entries.length <= 256 &&
-      entries.every((entry) => entry.isFile() && /^[a-zA-Z0-9_-]+\.json$/.test(entry.name))
-  );
+  assertRecordEntries(entries);
   return Promise.all(
     entries
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -47,6 +80,29 @@ async function files(
         value: record(await json(join(directory, entry.name))),
       }))
   );
+}
+/** Busy original writers defer to the existing UI poll; no nested wait or partial snapshot. */
+function liveCommandFiles(root: string): { name: string; value: Record<string, unknown> }[] | undefined {
+  const owner = join(root, 'hoststore/teams/test-desktop-backend/.host-owner');
+  const authority = join(owner, 'authority');
+  let release: () => void;
+  try {
+    release = acquireFileLockSync(authority, { createParent: false, acquireTimeoutMs: 0 });
+  } catch (error) {
+    if (error instanceof Error && error.message === `File lock timeout: ${authority}`) return undefined;
+    throw error;
+  }
+  try {
+    const directory = join(owner, 'commands');
+    const entries = readdirSync(directory, { withFileTypes: true });
+    assertRecordEntries(entries);
+    return entries.sort((a, b) => a.name.localeCompare(b.name)).map(entry => ({
+      name: entry.name,
+      value: record(JSON.parse(readFileSync(join(directory, entry.name), 'utf8'))),
+    }));
+  } finally {
+    release();
+  }
 }
 async function originalSession(root: string): Promise<Record<string, unknown>> {
   const sessions = await readDesktopNativeStopSessions(root);
@@ -236,9 +292,8 @@ export async function runDesktopNativeQuitMode(
     );
     let id = '';
     await until(async () => {
-      const commands = await files(
-        join(options.root, 'hoststore/teams/test-desktop-backend/.host-owner/commands')
-      );
+      const commands = liveCommandFiles(options.root);
+      if (commands === undefined) return false;
       const matching = commands.filter(
         ({ value }) =>
           value.principalId === 'TEST-human' &&

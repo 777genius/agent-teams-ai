@@ -1,0 +1,427 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-20",
+  "parentHead": "4159f6ce20dc6d37eab2f5f9f079cedc59c59ea0",
+  "purpose": "Reduce retained executable-image allocation while preserving fresh Node24 descriptor-byte semantics and original native custody checks",
+  "sourceFiles": [
+    {
+      "path": "packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts",
+      "sha256": "1085b060ae3c22d6bd0e4b0f7417bf72148f62fa4bcd06f4de047a128ea5f101",
+      "bytes": 8683
+    },
+    {
+      "path": "packages/legacy-agent-host/src/process/LinuxRegisteredProcess.ts",
+      "sha256": "a8d5344ceeb5cc7f7b69cb2f7dad7af89c940b6f234fc549fbbd7accb2966dbb",
+      "bytes": 10144
+    },
+    {
+      "path": "packages/legacy-agent-host/src/process/digestOpenExecutable.ts",
+      "sha256": "34f273599cfb1be78b9d2697ea4732ca28d951bd597eb4251fc9d20e319ab848",
+      "bytes": 1469
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable-digest.test.ts",
+      "sha256": "41b3921f36a8c5b327e3f3abe99215ec113e57dd0e4123d89459c6aa73aba9c7",
+      "bytes": 10157
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "sha256": "20be4bf7fca120993884586a606bb184dd2d7549d24ac812fab301c8a7e919ad",
+      "bytes": 52453
+    }
+  ],
+  "scope": {
+    "adapters": [
+      "DarwinRegisteredProcess",
+      "LinuxRegisteredProcess"
+    ],
+    "privateHelper": "digestOpenExecutable",
+    "maximumReadBufferBytes": 524288,
+    "unchanged": [
+      "caller 512 MiB executable limit",
+      "file and native identity before and after reads",
+      "currentness",
+      "SHA-256 comparison",
+      "caller finally-close",
+      "deadlines",
+      "mutations",
+      "public API"
+    ],
+    "noCaching": true
+  },
+  "nodeReadCompatibility": [
+    "fresh descriptor stat",
+    "borrowed current offset",
+    "positive size boundary",
+    "positive short-read loop",
+    "short EOF hashes available prefix",
+    "zero size reads through EOF",
+    "original positive 2 GiB error boundary",
+    "caller owns descriptor close"
+  ],
+  "checks": [
+    {
+      "scope": "canonical Host build",
+      "result": "PASS",
+      "log": "digest-host-build.log",
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "scope": "canonical full Host test types",
+      "result": "PASS",
+      "log": "digest-host-test-types.log",
+      "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+    },
+    {
+      "scope": "fast lint five files",
+      "result": "PASS",
+      "log": "digest-fast-lint.log",
+      "sha256": "fbc26bc4b82166862293fe1871f00b94f5930cc6ae105e639051753ee5b47008"
+    },
+    {
+      "scope": "source size guard5171files",
+      "result": "PASS",
+      "log": "digest-size-guard.log",
+      "sha256": "abcf962a8eba4cc20cce7fd7e502525274e330af1ca05ccabdc52da7891d2e46"
+    },
+    {
+      "scope": "bounded-buffer RED against original expression",
+      "result": "22PASS/1expectedFAIL",
+      "log": "red.log",
+      "sha256": "95c9656eff72d0f2856c5a346dbf8791f50722f453735d7ec60ce52f1a3ddd6f"
+    },
+    {
+      "scope": "digest + existing process owner GREEN",
+      "result": "27/27PASS,0skipped",
+      "log": "green.log",
+      "sha256": "5acdcc32b6ea722d4981d2337402ce26da62ac03cbfed3697210ad63e76e04cc"
+    }
+  ],
+  "reviews": {
+    "recover_checkout": "Independent design and final source review: no findings after removing proposed new EOF/growth policy.",
+    "parity_plan_audit": "Independent final source review against pinned Node 24 built-in implementation: no findings.",
+    "formalGithubApproval": false
+  },
+  "benchmark": {
+    "image": "/workspace/scratch/38cae95a211b/darwin-digest-benchmark/bun-darwin-arm64-v1.4.4",
+    "expected": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+    "iterations": 6,
+    "node": "v24.21.0",
+    "platform": "linux",
+    "helperModule": "/workspace/scratch/38cae95a211b/agent-teams-ai/packages/legacy-agent-host/dist/process/digestOpenExecutable.js",
+    "helperModuleSha256": "2e191a3f20f5e3bf8b558d3b6c4d19d30a14c57a0e20f9885247c89e3034976b",
+    "helperSource": "/workspace/scratch/38cae95a211b/agent-teams-ai/packages/legacy-agent-host/src/process/digestOpenExecutable.ts",
+    "helperSourceSha256": "34f273599cfb1be78b9d2697ea4732ca28d951bd597eb4251fc9d20e319ab848",
+    "architecture": "x64",
+    "note": "Filesystem cache not controlled; balanced process order; Darwin executable bytes read on Linux, never executed; no native custody qualification.",
+    "results": [
+      {
+        "mode": "original",
+        "timesMs": [
+          560.3548400000001,
+          169.25061300000004,
+          341.40978799999993,
+          505.71967300000006,
+          212.61132500000008,
+          106.03325699999982
+        ],
+        "before": {
+          "rss": 60977152,
+          "heapTotal": 12361728,
+          "heapUsed": 7175568,
+          "external": 4084490,
+          "arrayBuffers": 146559
+        },
+        "maximumExternal": 270067102,
+        "maximumArrayBuffers": 177468303,
+        "resourceUsage": {
+          "userCPUTime": 926876,
+          "systemCPUTime": 1247617,
+          "maxRSS": 232708,
+          "sharedMemorySize": 0,
+          "unsharedDataSize": 0,
+          "unsharedStackSize": 0,
+          "minorPageFault": 135324,
+          "majorPageFault": 1,
+          "swappedOut": 0,
+          "fsRead": 173248,
+          "fsWrite": 0,
+          "ipcSent": 0,
+          "ipcReceived": 0,
+          "signalsCount": 0,
+          "voluntaryContextSwitches": 135,
+          "involuntaryContextSwitches": 12
+        },
+        "cpuMicroseconds": {
+          "user": 792401,
+          "system": 1163624
+        },
+        "verifiedHashEveryIteration": true
+      },
+      {
+        "mode": "bounded",
+        "timesMs": [
+          78.26185999999998,
+          76.56363200000001,
+          75.868875,
+          70.283751,
+          68.33415400000001,
+          72.14624200000003
+        ],
+        "before": {
+          "rss": 61014016,
+          "heapTotal": 12361728,
+          "heapUsed": 7353104,
+          "external": 4084490,
+          "arrayBuffers": 146559
+        },
+        "maximumExternal": 7230238,
+        "maximumArrayBuffers": 3292303,
+        "resourceUsage": {
+          "userCPUTime": 496612,
+          "systemCPUTime": 91935,
+          "maxRSS": 62784,
+          "sharedMemorySize": 0,
+          "unsharedDataSize": 0,
+          "unsharedStackSize": 0,
+          "minorPageFault": 6247,
+          "majorPageFault": 0,
+          "swappedOut": 0,
+          "fsRead": 0,
+          "fsWrite": 0,
+          "ipcSent": 0,
+          "ipcReceived": 0,
+          "signalsCount": 0,
+          "voluntaryContextSwitches": 88,
+          "involuntaryContextSwitches": 22
+        },
+        "cpuMicroseconds": {
+          "user": 367477,
+          "system": 79720
+        },
+        "verifiedHashEveryIteration": true
+      },
+      {
+        "mode": "bounded",
+        "timesMs": [
+          72.860144,
+          70.608787,
+          76.120215,
+          71.098255,
+          71.24779000000001,
+          70.30942599999997
+        ],
+        "before": {
+          "rss": 60596224,
+          "heapTotal": 12361728,
+          "heapUsed": 7175664,
+          "external": 4084490,
+          "arrayBuffers": 146559
+        },
+        "maximumExternal": 7230238,
+        "maximumArrayBuffers": 3292303,
+        "resourceUsage": {
+          "userCPUTime": 502610,
+          "systemCPUTime": 46117,
+          "maxRSS": 62504,
+          "sharedMemorySize": 0,
+          "unsharedDataSize": 0,
+          "unsharedStackSize": 0,
+          "minorPageFault": 6240,
+          "majorPageFault": 0,
+          "swappedOut": 0,
+          "fsRead": 0,
+          "fsWrite": 0,
+          "ipcSent": 0,
+          "ipcReceived": 0,
+          "signalsCount": 0,
+          "voluntaryContextSwitches": 88,
+          "involuntaryContextSwitches": 14
+        },
+        "cpuMicroseconds": {
+          "user": 399357,
+          "system": 38015
+        },
+        "verifiedHashEveryIteration": true
+      },
+      {
+        "mode": "original",
+        "timesMs": [
+          105.33552600000002,
+          110.82989800000001,
+          446.18667700000003,
+          133.767515,
+          109.101271,
+          103.03218300000003
+        ],
+        "before": {
+          "rss": 60723200,
+          "heapTotal": 12361728,
+          "heapUsed": 7175712,
+          "external": 4084490,
+          "arrayBuffers": 146559
+        },
+        "maximumExternal": 270067102,
+        "maximumArrayBuffers": 177468303,
+        "resourceUsage": {
+          "userCPUTime": 672728,
+          "systemCPUTime": 521144,
+          "maxRSS": 232568,
+          "sharedMemorySize": 0,
+          "unsharedDataSize": 0,
+          "unsharedStackSize": 0,
+          "minorPageFault": 135327,
+          "majorPageFault": 0,
+          "swappedOut": 0,
+          "fsRead": 0,
+          "fsWrite": 0,
+          "ipcSent": 0,
+          "ipcReceived": 0,
+          "signalsCount": 0,
+          "voluntaryContextSwitches": 156,
+          "involuntaryContextSwitches": 13
+        },
+        "cpuMicroseconds": {
+          "user": 583208,
+          "system": 490166
+        },
+        "verifiedHashEveryIteration": true
+      },
+      {
+        "mode": "original",
+        "timesMs": [
+          100.918759,
+          278.09823100000006,
+          382.39767800000004,
+          126.03925399999991,
+          127.4754079999999,
+          102.74043200000006
+        ],
+        "before": {
+          "rss": 60526592,
+          "heapTotal": 12361728,
+          "heapUsed": 7167408,
+          "external": 4084490,
+          "arrayBuffers": 146559
+        },
+        "maximumExternal": 270067102,
+        "maximumArrayBuffers": 177468303,
+        "resourceUsage": {
+          "userCPUTime": 526714,
+          "systemCPUTime": 781262,
+          "maxRSS": 232432,
+          "sharedMemorySize": 0,
+          "unsharedDataSize": 0,
+          "unsharedStackSize": 0,
+          "minorPageFault": 135276,
+          "majorPageFault": 0,
+          "swappedOut": 0,
+          "fsRead": 0,
+          "fsWrite": 0,
+          "ipcSent": 0,
+          "ipcReceived": 0,
+          "signalsCount": 0,
+          "voluntaryContextSwitches": 141,
+          "involuntaryContextSwitches": 15
+        },
+        "cpuMicroseconds": {
+          "user": 404294,
+          "system": 777441
+        },
+        "verifiedHashEveryIteration": true
+      },
+      {
+        "mode": "bounded",
+        "timesMs": [
+          67.809588,
+          180.688274,
+          171.91555899999997,
+          72.01948099999993,
+          77.198173,
+          72.76226899999995
+        ],
+        "before": {
+          "rss": 60792832,
+          "heapTotal": 12361728,
+          "heapUsed": 7175568,
+          "external": 4084490,
+          "arrayBuffers": 146559
+        },
+        "maximumExternal": 7230238,
+        "maximumArrayBuffers": 3292303,
+        "resourceUsage": {
+          "userCPUTime": 635235,
+          "systemCPUTime": 222279,
+          "maxRSS": 62568,
+          "sharedMemorySize": 0,
+          "unsharedDataSize": 0,
+          "unsharedStackSize": 0,
+          "minorPageFault": 6235,
+          "majorPageFault": 0,
+          "swappedOut": 0,
+          "fsRead": 0,
+          "fsWrite": 0,
+          "ipcSent": 0,
+          "ipcReceived": 0,
+          "signalsCount": 0,
+          "voluntaryContextSwitches": 88,
+          "involuntaryContextSwitches": 12
+        },
+        "cpuMicroseconds": {
+          "user": 525607,
+          "system": 185435
+        },
+        "verifiedHashEveryIteration": true
+      }
+    ],
+    "order": [
+      "original",
+      "bounded",
+      "bounded",
+      "original",
+      "original",
+      "bounded"
+    ]
+  },
+  "benchmarkLimit": "Exact original Darwin Bun bytes read, never executed, on Linux with Node 24.21. Filesystem cache was not controlled. Allocation evidence only; not native Darwin latency or E2E qualification.",
+  "benchmarkScript": {
+    "archivePath": "compare.mjs",
+    "sha256": "ddc01ee7e09aff4a2b01279763fd687618a656564a681c85edd652234c85cdce"
+  },
+  "originalDarwinQuitInference": {
+    "runtimeSessionCreatedAt": 1795133343852,
+    "instructionEntryAt": 1795133347530,
+    "modelReferenceExpiresAt": 1795133348584,
+    "runtimeDriverOpenRefusalAt": 1795133349427,
+    "runtimeSessionMessages": 0,
+    "verdict": "Consistent with reference expiry during late initial admission. The original first refusal reason was not retained, so definitive causality is not claimed.",
+    "modelProbeReleaseIsNotRuntimeCleanup": true
+  },
+  "parentPublication": {
+    "head": "4159f6ce20dc6d37eab2f5f9f079cedc59c59ea0",
+    "tree": "e3dad06d2b01e6a22760dc89a640ba676b7667b4",
+    "exactGitBlobsVerified": 22,
+    "parentVerified": true
+  },
+  "lastParentCiObservation": {
+    "observedAt": "2026-11-20T13:42:56.672Z",
+    "hostRun": 44745764310,
+    "hostWorkJobs": 29,
+    "status": "All queued; no runner assigned",
+    "sourceCiRun": 44745764307,
+    "sourcePlan": "queued",
+    "manualCiActions": [],
+    "qualification": "NONE: new-source CI has not executed"
+  },
+  "delivery": {
+    "pr": 1192,
+    "draft": true,
+    "fullE2EComplete": false,
+    "newSourceOriginalNativeRequired": true
+  },
+  "rawChecks": {
+    "archive": "executable-digest-checks-20261120.tar.gz",
+    "sha256": "6e44faad4454ddb30e2cda3ba5c25eb5179497b69d9ef9700f3c7cd639e2a501",
+    "bytes": 3530
+  }
+}

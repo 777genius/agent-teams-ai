@@ -38,6 +38,7 @@ import {
   listeners,
   assertListenerOwnership,
   assertPortAvailable,
+  allocateIsolatedCdpPort,
   fixtureShim,
   launchCommand,
   isolatedEnvironment,
@@ -98,11 +99,12 @@ async function ownedProcesses() {
 }
 
 async function assertOwnedDebugEndpoint(receipt) {
+  const cdpPort = (await manifest()).cdpPort ?? 9222;
   // Retain the existing bounded recheck, without assuming the cause of snapshot differences.
   // Missing/reused launcher or foreign listeners still fail closed.
   for (let attempt = 0; attempt < 3; attempt++) {
     // Read listeners first so children born during lsof are in the later ancestry snapshot.
-    const ids = listeners();
+    const ids = listeners(cdpPort);
     const owned = await ownedProcesses();
     try {
       assertListenerOwnership(ids, owned);
@@ -171,7 +173,7 @@ async function assertOwnedDebugEndpoint(receipt) {
       try {
         receipt.verifiedOwnership = {
           at: Date.now(),
-          endpointPort: 9222,
+          endpointPort: cdpPort,
           browser: listenerProcesses.slice(0, 8).map((p) => ({
             pid: p.pid,
             parent: p.parent,
@@ -226,6 +228,7 @@ if (mode === 'seed-packaged') {
     temp: path.join(dir, 'tmp'),
     node: process.execPath,
     platform: process.platform,
+    cdpPort: await allocateIsolatedCdpPort(),
   };
   await prepareRealRuntimeFixture(data, repo);
   await writeFile(path.join(dir, 'scenario'), 'real-connected');
@@ -246,6 +249,7 @@ if (mode === 'seed-packaged') {
     node: process.execPath,
     fixture: path.join(dir, 'fixture.cjs'),
     platform: process.platform,
+    cdpPort: await allocateIsolatedCdpPort(),
   };
   for (const value of [data.home, data.userData, data.bin, data.temp])
     await mkdir(value, { recursive: true });
@@ -442,17 +446,18 @@ if (mode === 'seed-packaged') {
       'App artifact changed'
     );
   } else assertNoInstalledOpenCode(data);
-  await assertPortAvailable();
+  const cdpPort = data.cdpPort ?? 9222;
+  await assertPortAvailable(cdpPort);
   const launch = data.packaged
     ? {
         command: data.artifact.app.path,
         args: [
-          '--remote-debugging-port=9222',
+          `--remote-debugging-port=${cdpPort}`,
           '--remote-debugging-address=127.0.0.1',
           `--user-data-dir=${data.userData}`,
         ],
       }
-    : launchCommand();
+    : launchCommand(process.platform, cdpPort);
   if (data.packaged) {
     // The foreground harness is the ancestor; the Electron main process owns CDP.
     data.launcher = processes().find((p) => p.pid === process.pid);
@@ -504,9 +509,10 @@ if (mode === 'seed-packaged') {
   });
 } else if (mode === 'inspect' || mode === 'verify') {
   const data = await manifest();
+  const cdpPort = data.cdpPort ?? 9222;
   await assertOwnedDebugEndpoint();
   const targets = await (
-    await fetch('http://127.0.0.1:9222/json/list', { signal: AbortSignal.timeout(10000) })
+    await fetch(`http://127.0.0.1:${cdpPort}/json/list`, { signal: AbortSignal.timeout(10000) })
   ).json();
   const target = data.packaged
     ? packagedTarget(targets, data.artifact.renderer, true, path.win32)
@@ -517,7 +523,7 @@ if (mode === 'seed-packaged') {
   const endpoint = new URL(target.webSocketDebuggerUrl);
   assert(
     ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) &&
-      endpoint.port === '9222' &&
+      endpoint.port === String(cdpPort) &&
       endpoint.protocol === 'ws:',
     'Unexpected CDP endpoint'
   );

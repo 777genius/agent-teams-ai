@@ -1,0 +1,91 @@
+{
+  "schema": "fresh-M-one-helper-privacy-GREEN-exact-R1/v1",
+  "applied": false,
+  "sourceBase": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "documentationBranchBase": "85355e11fcd08ffe87f96be5003675305458a354",
+  "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+  "preimage": {
+    "bytes": 7855,
+    "lines": 165,
+    "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+    "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+  },
+  "candidate": {
+    "bytes": 8310,
+    "lines": 172,
+    "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+  },
+  "patch": {
+    "bytes": 1081,
+    "lines": 18,
+    "blob": "958de68314a85da4ef85237c3af79d72d3d623d1",
+    "sha256": "1de755555f8fa3963abab4f0dd744456b96f4db3191e0f40eac19093ab555196"
+  },
+  "added": 8,
+  "deleted": 1,
+  "unchangedTest": {
+    "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "bytes": 16103,
+    "lines": 277,
+    "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+    "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+  },
+  "nonDocumentationSourceClosure": {
+    "encoding": "SHA256 of UTF8 compact sort_keys JSON array of path/mode/type/sha leaves sorted by path, excluding docs/ only",
+    "leafCount": 8798,
+    "baseSha256": "bc2cf7b3aba4eb3b6d14f3a8c41bd173150a77cf3a1035fc65a4fbd5839e8a7a",
+    "candidateSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+    "onlyChangedPath": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+  },
+  "actualOriginalRed": {
+    "runId": 43780997237,
+    "jobId": 133017916079,
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "fullLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/team-contracts/job-133017916079.log",
+      "bytes": 123603,
+      "lines": 1247,
+      "blob": "a077622804d499d0a8ca20465aa6d7eba62b2b5c",
+      "sha256": "8a07b50c59d8d8a7507c9b5279cae5cfe50f28895f90474a12518eddc8f7b27b"
+    },
+    "all10Files": {
+      "tests": 177,
+      "pass": 174,
+      "fail": 3,
+      "skip": 0,
+      "cancel": 0
+    },
+    "stderrWholeFile": {
+      "tests": 24,
+      "pass": 21,
+      "fail": 3,
+      "skip": 0
+    },
+    "failedLabels": [
+      "space",
+      "tab",
+      "mixed"
+    ],
+    "firstAssertion": "retained.includes(TEST_HELD_SUFFIX) actual true, expected false at test250/258; subsequent assertions not reached",
+    "independentR2RequiredBeforeApplication": true
+  },
+  "exactOriginalCommand": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+  "predictedGreenNotActual": {
+    "all10Files": {
+      "tests": 177,
+      "pass": 177,
+      "fail": 0,
+      "skip": 0
+    },
+    "stderrWholeFile": {
+      "tests": 24,
+      "pass": 24,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "venue": "Existing original CI only; no local project install/bootstrap/build/compiler/lint/test or alternate venue",
+  "publicationGate": "Publish full actual RED + independent R2 + this exact R1/source preview + independent source R2 in documentation before the separate one-helper source child; preserve useful original M evidence before primary advance",
+  "sourceAndCiMutation": false
+}

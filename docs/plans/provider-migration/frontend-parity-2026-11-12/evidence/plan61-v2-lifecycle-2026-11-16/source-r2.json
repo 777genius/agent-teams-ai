@@ -1,0 +1,380 @@
+{
+  "kind": "PLAN61_INDEPENDENT_ACTUAL_SOURCE_R2",
+  "reviewer": "installer_review",
+  "decision": "ACCEPT_SOURCE_ONLY",
+  "selectedPlan": {
+    "commit": "79f6ce6450197f0ff7199b093131da0621b84a4b",
+    "gitBlob": "f745e392df009585e2ad10bf6209d33f36be23a2",
+    "sha256": "2084afb4deb74f5d98a20ff1bd1cca7398c17e883b54086c131198e33c6d8692"
+  },
+  "packet": {
+    "manifestSha256": "c35a7dfdfbba07d23dabb47745d95ec44ce15b37f17b3bcc029d090401a3a6b2",
+    "patchSha256": "3b4fa0a339a307915cb2890d1b0231aa5b985ded0c98f2835413bad99a60b749",
+    "before": {
+      "gitBlob": "4211a5b6de087018bdbf5a4ad41d488f16f61646",
+      "sha256": "e30db362721a07c03ca00ad5dbb4cb0da2297e92337089ad3fbfda1b4bbf180c",
+      "bytes": 123074,
+      "lines": 1562
+    },
+    "after": {
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+      "bytes": 141809,
+      "lines": 1767
+    }
+  },
+  "scope": {
+    "paths": [
+      ".github/workflows/host-emulated-acceptance.yml"
+    ],
+    "added": 265,
+    "removed": 60,
+    "hunks": 10,
+    "lintOperands": 132,
+    "artifactsBefore": 72,
+    "artifactsAfter": 80
+  },
+  "checks": [
+    {
+      "check": "Exact frozen manifest",
+      "passed": true
+    },
+    {
+      "check": "Exact published selection",
+      "passed": true
+    },
+    {
+      "check": "One selected source path",
+      "passed": true
+    },
+    {
+      "check": "Immutable preimage matches independent official read",
+      "passed": true
+    },
+    {
+      "check": "Frozen postimage",
+      "passed": true
+    },
+    {
+      "check": "Exact file and patch sizes",
+      "passed": true
+    },
+    {
+      "check": "Exact patch digest",
+      "passed": true
+    },
+    {
+      "check": "Independent complete diff regeneration",
+      "passed": true
+    },
+    {
+      "check": "Full forward text replay",
+      "passed": true
+    },
+    {
+      "check": "Full inverse text replay",
+      "passed": true
+    },
+    {
+      "check": "Disclosed diff scope",
+      "passed": true
+    },
+    {
+      "check": "No added trailing whitespace",
+      "passed": true
+    },
+    {
+      "check": "YAML data parse; unchanged jobs and step count",
+      "passed": true
+    },
+    {
+      "check": "All original job budgets unchanged",
+      "passed": true
+    },
+    {
+      "check": "Unrelated jobs byte exact",
+      "passed": true
+    },
+    {
+      "check": "Five exact closed Darwin ARM64 descriptors",
+      "passed": true
+    },
+    {
+      "check": "Original matrix prefix/order preserved",
+      "passed": true
+    },
+    {
+      "check": "Exact six-lane preparation/generic/retention lists",
+      "passed": true
+    },
+    {
+      "check": "Exact five-lane shared-step lists",
+      "passed": true
+    },
+    {
+      "check": "All other original steps including Settings and C8 unchanged",
+      "passed": true
+    },
+    {
+      "check": "All other parsed workflow configuration preserved",
+      "passed": true
+    },
+    {
+      "check": "Original typed lint command/132 operands retained",
+      "passed": true
+    },
+    {
+      "check": "Optional selectors absent before each original invocation",
+      "passed": true
+    },
+    {
+      "check": "Only exact warm selector exported by closed case",
+      "passed": true
+    },
+    {
+      "check": "Single warm and optional cold original invocation",
+      "passed": true
+    },
+    {
+      "check": "V2 selected; Review log and receipt names resolve unchanged",
+      "passed": true
+    },
+    {
+      "check": "Only original root/full receipt SHA published for external cold",
+      "passed": true
+    },
+    {
+      "check": "Prepared record reader byte exact",
+      "passed": true
+    },
+    {
+      "check": "Entire common receipt loop byte exact",
+      "passed": true
+    },
+    {
+      "check": "Original assertion lines preserved except five reviewed routing substitutions",
+      "passed": true,
+      "detail": {
+        "assert.equal(prepared.length, 1, 'one original native Review attempt');": 1,
+        "assert.equal(receipt.root, root); assert.equal(receipt.mode, 'native-review-ui'); assert.equal(receipt.status, 'PASS');": 1,
+        "assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');": 1,
+        "assert.deepEqual(cold.receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));": 1,
+        "assert.equal(proof.metadataAbsentBeforeHarnessCleanup, true);": 1
+      }
+    },
+    {
+      "check": "All Review proof assertions exact modulo indentation",
+      "passed": true
+    },
+    {
+      "check": "Original full root/SHA join and failure-aware gate retained",
+      "passed": true
+    },
+    {
+      "check": "Existing source/clean/platform/preparation assertions retained",
+      "passed": true
+    },
+    {
+      "check": "Resume first snapshot and second current dist are separate",
+      "passed": true
+    },
+    {
+      "check": "Original first Quit reply/physical closure and scoped Resume witnesses retained",
+      "passed": true
+    },
+    {
+      "check": "Pending physical absence does not clear held/unknown debt",
+      "passed": true
+    },
+    {
+      "check": "Active Quit identities and queued cancellation retained",
+      "passed": true
+    },
+    {
+      "check": "Actual Quit readback fields only",
+      "passed": true
+    },
+    {
+      "check": "PNG actual screenshot/native image SHA and saved fields",
+      "passed": true
+    },
+    {
+      "check": "Original metadata owners, no-child conflation avoided",
+      "passed": true
+    },
+    {
+      "check": "Original screenshot path/signature/hash checks retained",
+      "passed": true
+    },
+    {
+      "check": "72 original artifact operands exact ordered prefix of 80",
+      "passed": true
+    },
+    {
+      "check": "Exactly eight selected artifact additions",
+      "passed": true
+    },
+    {
+      "check": "Qualification limits unchanged",
+      "passed": true
+    },
+    {
+      "check": "No new delays or native/effect primitives",
+      "passed": true
+    },
+    {
+      "check": "All 18 retained immutable helper bytes match",
+      "passed": true,
+      "detail": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+          "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+          "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+          "gitBlob": "6f82097909474e95a34608338753251cb9c087c2",
+          "sha256": "c4eb94a344b80dc11c4124dcf515ef31bb249f13907258652d7368ec5a551d8e",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+          "gitBlob": "cf7d2eb9f7b8c1f1397980f7f0feef2e310efdfb",
+          "sha256": "b1ab72d21f81e777a9698b9491ad735bb6a7eaf228c6abfef30bcfe4debde34e",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+          "gitBlob": "428fad07141d46553b261864ce9985bd746aa17a",
+          "sha256": "776df02aeb4d8c8eec24d302475075625d2479f6e4c095ffd020000405c9fd91",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+          "gitBlob": "4415bad7752c91a0c0fbad789f5c712908643425",
+          "sha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+          "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+          "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+          "gitBlob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b",
+          "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-resume-ui-smoke.ts",
+          "gitBlob": "1a21e95f73196616ef79e60fa7877b8d79fa6595",
+          "sha256": "cec4ff07707568bd3ecadfe4993d7838435c4962a682b1ab67dffbc28c03d8c8",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+          "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-readback-fixture.ts",
+          "gitBlob": "c50bb37b63a707ab771eda478e336483c8850931",
+          "sha256": "eb37cc1698fe78acaa0a1a4e68339ee621e157d710117ee83c5f1a52950cae30",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+          "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+          "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+          "gitBlob": "4f26fd0f9654dd40f4591c5078a5cf7dc119e769",
+          "sha256": "6c75fec75d81407cec6d1552d4a6a3a87ccac3145cdaa0aca7fb0187308f8db0",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts",
+          "gitBlob": "2859c6944113e57c71fc726b30c3d866022414aa",
+          "sha256": "86772cbc3a3d99005226ab8c7d6819d4d8eaa702afbab3fadc71fd6d45922f1c",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+          "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+          "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+          "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "gitBlob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+          "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+          "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+          "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+          "matches": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+          "gitBlob": "79c288d8cd5f6dc432177a2047ce517f174d11b4",
+          "sha256": "fac4d4bf3d7b662efe23f921f05d5a76277f294ace34de3053c3447d0dd4347f",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "check": "Actual source scopes Resume sessions to original launch",
+      "passed": true
+    },
+    {
+      "check": "Actual Quit source uses arrays and retained unknown branch",
+      "passed": true
+    },
+    {
+      "check": "Actual PNG source uses outer screenshot and native image hash",
+      "passed": true
+    },
+    {
+      "check": "Actual cold boundary records first snapshot and first metadata absence",
+      "passed": true
+    }
+  ],
+  "failures": [],
+  "assessment": [
+    "Five closed Darwin ARM64 descriptors route four additional original journeys through the original four Review steps. Resume has no external cold invocation. Optional product selectors are absent unless its exact warm mode requires one.",
+    "The shared prepared reader and common receipt loop are byte-identical. Every original assertion is retained except five explicit routing substitutions reviewed for equivalent Review behavior. All original Review proof assertions are exact modulo indentation.",
+    "Quit retains pending held/unknown debt and actual input arrays. Resume keeps first-epoch snapshot versus current second-epoch compiled bytes, no fictitious firstEpoch status, both physical cleanup epochs and original launch-scoped sessions. PNG uses actual outer screenshot, native image SHA and saved attachment fields.",
+    "Metadata validation uses original retained owners and pure lineage predicate; the cold metadata child is distinct from zero Runtime allocations. No new native action, census, timer, retry, replay or source-owner behavior is added.",
+    "Publisher must recheck the exact one-file preimage against its actual current parent and preserve incoming work."
+  ],
+  "limits": [
+    "Static source and inert data analysis only; no generated validator, workflow shell, project test/compiler/linter/provider/GUI/native code was executed.",
+    "Exact-head original CI journeys still require successful receipts and physical cleanup. This is not runtime-fit or native acceptance.",
+    "No genuine Claude/Codex, Windows P08/W07, P09, full Stage1/M13/Ready/default-on/release qualification is claimed.",
+    "The dependencies retain immutable 209a source bindings and were rehashed here; no fresh full-repository or final independent Bun/graph rehash is claimed."
+  ],
+  "executions": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "ci": false,
+    "remoteWrites": false
+  }
+}

@@ -1,3 +1,6 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { isTeamReadUnavailable } from '@shared/utils/normalizeTeamAggregateRead';
+
 import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
@@ -6,7 +9,7 @@ import {
 import { captureTeamLocalStateEpoch, isTeamLocalStateEpochCurrent } from './teamLocalStateEpoch';
 
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
-import type { TeamChangeEvent, TeamSummary } from '@shared/types';
+import type { TeamChangeEvent, TeamReadUnavailable, TeamSummary } from '@shared/types';
 
 type Notices = Record<string, TeamManagementCommittedChange>;
 
@@ -69,12 +72,17 @@ export function retainTeamManagementNotice(
 export function reconcileTeamManagementNotices(
   current: Notices,
   atReadStart: Notices,
-  teams: readonly TeamSummary[]
+  teams: readonly TeamSummary[],
+  unavailable: readonly TeamReadUnavailable[] = [],
+  previous: Readonly<Record<string, TeamSummary>> = {}
 ): Notices {
   const names = new Set(teams.map((team) => team.teamName));
+  const hasUnknownOwner = unavailable.some((row) => row.kind === 'owner');
   const stale = Object.keys(current).filter(
     (name) =>
-      current[name] === atReadStart[name] && !names.has(name) && current[name].kind !== 'trashed'
+      current[name] === atReadStart[name] && !names.has(name) && current[name].kind !== 'trashed' &&
+      !isTeamReadUnavailable(unavailable, previous[name] ?? { teamName: name }) &&
+      !(hasUnknownOwner && isHostTeamSelectionKey(name) && previous[name]?.ownerResourceRef === undefined)
   );
   if (!stale.length) return current;
   const next = { ...current };

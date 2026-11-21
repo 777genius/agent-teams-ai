@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-retained-observer-finite-receipts",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "candidateManifest": {
+    "sha": "15f9cec259b074ca5a073d6b9d6d571a13ddea7c",
+    "sha256": "f6d7fb4a1d6ce391300c4b1b5e340b7ca97629d0c49949ea3dbca35dd409795a",
+    "bytes": 5811,
+    "lines": 149
+  },
+  "archive": {
+    "relativeFile": "parity-retained-eligibility-finite-receipts-20261119.json.gz",
+    "sha": "d51aa3f0397ca3f09b417b841a9d70970e811fda",
+    "sha256": "5c0652d68e52c0e0a378742113e805eb7bb6f83fa9adf17582434b96b551b766",
+    "bytes": 11150,
+    "uncompressedBytes": 160670,
+    "uncompressedSha256": "cd7c1ed6aaad164e480a210d1bdaac43638bfe4c104458f47076fc11cda55525"
+  },
+  "members": [
+    {
+      "filename": "after-fastlint.json",
+      "sha": "f6bd275ec67f2bff9d13350a0ecd90b8c702083c",
+      "sha256": "2f7f6069bea859484c05380e50cb431a486430d0b45e068579e5f42aaf248be2",
+      "bytes": 1013
+    },
+    {
+      "filename": "after-fastlint.log",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "filename": "after-initial-incomplete-harness-result.json",
+      "sha": "4ecafd1eed051f0e32a55d787099aea4f6fbbcf3",
+      "sha256": "63b63213fdb4d42dc6cfc865cbd4bb8dad36c76457b5ebb6599db95e13c566d0",
+      "bytes": 22613
+    },
+    {
+      "filename": "after-initial-incomplete-harness-run.log",
+      "sha": "0404c045019e610a1e54c1be1c17ab5ce0999759",
+      "sha256": "1cbfa683c77a47280c9439753df39bf6ea51bbc2c4a80c160a834a677fb6fa75",
+      "bytes": 128
+    },
+    {
+      "filename": "after-missing-pricing-harness-result.json",
+      "sha": "58a4940b83a26fb5b8d47246cbccb09b42891a5d",
+      "sha256": "080c34eafe88e9f13e0baf52ce6387e1b8f897eee03c3c61a7480ec5a9fd345a",
+      "bytes": 22566
+    },
+    {
+      "filename": "after-missing-pricing-harness-run.log",
+      "sha": "0404c045019e610a1e54c1be1c17ab5ce0999759",
+      "sha256": "1cbfa683c77a47280c9439753df39bf6ea51bbc2c4a80c160a834a677fb6fa75",
+      "bytes": 128
+    },
+    {
+      "filename": "after-result.json",
+      "sha": "cf1763329c1f7f64c5de09389b6237ab792599ab",
+      "sha256": "648418fab2daebfe208a7c55a7e2bd1dfee4519f1af23b128e14ed4696804e2a",
+      "bytes": 27298
+    },
+    {
+      "filename": "after-run.log",
+      "sha": "0404c045019e610a1e54c1be1c17ab5ce0999759",
+      "sha256": "1cbfa683c77a47280c9439753df39bf6ea51bbc2c4a80c160a834a677fb6fa75",
+      "bytes": 128
+    },
+    {
+      "filename": "before-initial-incomplete-harness-result.json",
+      "sha": "e5e3c22d8a65f783c7658846112c988964817dcb",
+      "sha256": "dbf06e0f3b4bd5ef19ac56d9172f18b7c1715be1913c0a2ec9d9231dfe8c96be",
+      "bytes": 22603
+    },
+    {
+      "filename": "before-initial-incomplete-harness-run.log",
+      "sha": "10609ab598889584807160c616a293ef3a72f393",
+      "sha256": "6b6efd612e841264a31e5cd20debc582b4732eb516dcce6633533e2f237026d6",
+      "bytes": 129
+    },
+    {
+      "filename": "before-missing-pricing-harness-result.json",
+      "sha": "bada0b5c419eba7e9bbea41322767cedda3617dd",
+      "sha256": "bf230d988e4725929c787aa45a8c437d1e3104df1be44772cc0d694a48cd648e",
+      "bytes": 22566
+    },
+    {
+      "filename": "before-missing-pricing-harness-run.log",
+      "sha": "10609ab598889584807160c616a293ef3a72f393",
+      "sha256": "6b6efd612e841264a31e5cd20debc582b4732eb516dcce6633533e2f237026d6",
+      "bytes": 129
+    },
+    {
+      "filename": "before-result.json",
+      "sha": "753dc4f0464ce9fad2c42a0913dc9b2330d358c7",
+      "sha256": "48ff5ce69ae8acfb7d1d93e7fa36ea246873ed2ba3f7e0cc90ffc4e45814f151",
+      "bytes": 31790
+    },
+    {
+      "filename": "before-run.log",
+      "sha": "10609ab598889584807160c616a293ef3a72f393",
+      "sha256": "6b6efd612e841264a31e5cd20debc582b4732eb516dcce6633533e2f237026d6",
+      "bytes": 129
+    }
+  ],
+  "scope": "First two isolated harness setups had missing immutable assets; those failures are not semantic RED. Corrected before70tests62PASS8FAIL; after70PASS; unchanged57cases pass on both. No app/native/vendor/build/install."
+}

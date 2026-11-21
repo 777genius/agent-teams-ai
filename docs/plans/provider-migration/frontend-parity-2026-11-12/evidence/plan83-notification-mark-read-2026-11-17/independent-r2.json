@@ -1,0 +1,96 @@
+{
+  "decision": "GO_PLAN83_PROSPECTIVE_SELECTION",
+  "blockers": [],
+  "document": {
+    "gitBlob": "3e56194d7edc812352598205df1e43b60fb557ee",
+    "bytes": 11206,
+    "lf": 70,
+    "sha256": "a4970eb2fef579b267a8ae450d7707e010b05fde6c641ccd7e4fd02f432164dc",
+    "fullTextRead": true
+  },
+  "parent": {
+    "head": "baba8b311438aadde77afbe6eb9b88d0f3463cec",
+    "tree": "0199dbcddf9c7a6c32da485b183f2b3612766558",
+    "leaves": 11238
+  },
+  "existingPreimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "blob": "a311c7420a17ed1df8e230caae69e49c15f74fa5",
+      "bytes": 56387,
+      "lf": 799
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "blob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "bytes": 8576,
+      "lf": 162
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "blob": "df76ce10ba52725b11fea48659b4cb516fc6fddf",
+      "bytes": 33010,
+      "lf": 791
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "blob": "5a05f7a8bee998c40275b5ff428ffedee2cb9a2a",
+      "bytes": 23881,
+      "lf": 368
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "blob": "706f83a6052a4879dfe587c330f093cb188c2e59",
+      "bytes": 142701,
+      "lf": 1780
+    }
+  ],
+  "newPath": {
+    "path": "scripts/legacy-agent-host/desktop-task-notification-ui-smoke.ts",
+    "absent": true
+  },
+  "review": {
+    "scope": "Accepted M14 quick-action gap (matrix 430e0f6e980f674294df97681214ce1cb7881dd5). Preserve original View/Delete/conditional Mark-read; add a separate required positive proof with exactly one additional TEST Task and command only in task-board-ui.",
+    "ordering": "Smoke 473–482 places F08/Trash after the dispatcher. Moving those calls with identical argument keys, callback, guards and counts permits board → original notification → Trash → positive. Combined retains board/review/notification/cross/oversized/F08/Trash; cross-only retains its early return. Preserve the still-used HostRouting import, failure observation/rethrow and cleanup.",
+    "accounting": "Keep original two-Task/group/dependency assertions at their existing boundaries. Capture post-Trash old identities/bytes/commands before exactly one bare task.create on the same owner/handle/TEST-human. Require old2+new1, exactly one additional completed create/total command, unchanged old bytes and group/dependency membership. No reinvocation on missing/refused/UNKNOWN/ambiguous outcome.",
+    "publicReceipt": "Read projectBackendResult 133–193 (4906738e1f79011905abc2b0968ccf981033cd27) and full projectTaskSubmission (ac8ea1eacfee1f75f311cc32b87d25f58f2b9ace). Public result has task/taskSubmission, not effects. Join public task.id and original command payload to the canonical receipt's effects.taskId, commandId, binding, principal and completed phase.",
+    "positiveOracle": "Existing notification function 565–791 supplies bounded exact-target lookup, hover/action and immutable checks. Separate proof must observe one new task_created row and actual isRead=false; click real Mark as read once; require same notification UUID/target now true, every other field/neighbor unchanged and no extra notification. Missing/already-read/ambiguous is failure, not skip.",
+    "producer": "Viewed-Team synchronization returns null for Notifications, using its asynchronous existing setter. Loaded pane is not synthetic unread evidence. Producer initial/recovered snapshots seed history; later new Task identities emit task_created. This supports the selected post-original setup, not the rejected pre-Main seed. Actual false-to-true observation remains mandatory.",
+    "readOnlyBoundary": "Freeze Tasks/kanban/full bounded commands after intentional create, before Mark-read; require exact preservation across the UI action, final three-Task accounting and empty Runtime sessions. No forced isRead, direct setter/store edit, navigation to the new Task, replay, extra delete or synthetic cleanup.",
+    "extraction": "Hash-joined all five old writable bodies and fourteen source bodies overall to the complete parent tree. New module is absent. Preserve Taskboard 7707de6f387471609df97f0e1d93b93fbd4a1f77 (799 LF) and main roster a8be2617b2c765091cecce789f028ef2bf67af60 (800 LF); all touched/new TS must stay within 800 LF without packing."
+  },
+  "coverage": {
+    "common": {
+      "before": 1821,
+      "after": 1825,
+      "independentLiteralExpansion": true,
+      "allExistingPathsResolve": true,
+      "addedPaths": [
+        "scripts/legacy-agent-host/desktop-task-notification-ui-smoke.ts",
+        "src/renderer/store/viewedTeamNotificationSync.ts",
+        "src/renderer/store/slices/notificationSlice.ts",
+        "src/renderer/store/team/teamGlobalTaskNotifications.ts"
+      ],
+      "allFourCurrentlyAbsent": true,
+      "preserveOriginalOrder": true,
+      "process": 27,
+      "windowsRetry": 46
+    },
+    "fast": {
+      "before": 145,
+      "after": 147,
+      "all145Unique": true,
+      "append": [
+        "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-notification-ui-smoke.ts"
+      ],
+      "smokeAndReviewAlreadyIncluded": true,
+      "preserveOriginalOrder": true
+    },
+    "workflow": "Extend only task-board-ui verification: original notification/Trash PASS, separate positive proof, exact owner/Task/notification joins, +1 setup accounting, false-to-true and canonical immutability. Add explicit new-module sourceSha256 binding; no old hash comparison is assumed. Preserve every receipt/head/source-freeze/Runtime/Host/sentinel/cleanup gate; combined/cross require no new proof.",
+    "budgets": "Preserve existing 20s product-read, UI-control, 12-page hover and 100ms pause bounds; no new timer/retry/job/matrix/route/production API/native operation."
+  },
+  "evidenceScope": "Full plan/dispatcher/original notification function, relevant original caller/cleanup, producer/view-sync/slice/public-projection windows, static rosters and verifier. Remaining background-chain feasibility reuses closed root/P08 review; no new whole-application audit claimed.",
+  "gates": "Exact plan/review publication and independent actual-document gate precede source authoring. Then six-path full-body/strict forward-inverse/tree source R1/R2 and actual readback. Resulting-head original UI/effect/visual/cleanup evidence remains pending.",
+  "limits": "Prospective GO only. Zero source afterimages or execution; no Actions/GUI/native/artifact calls or mutations. No prior-head PASS transfer or change to Plan40/P10/genuine-provider/W01/M16/release/Stage2 holds."
+}

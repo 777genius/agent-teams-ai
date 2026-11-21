@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -120,6 +120,41 @@ test('delivery validation rejects symlinked graph files', tupleOptions, async (t
   await rm(target);
   await symlink(file, target);
   await assert.rejects(verifyOpenCodeV2EmbeddedGraph(selection));
+});
+
+test('delivery inventory rejects a linked manifest directory', tupleOptions, async (t) => {
+  const { directory, selection } = await fixture(t);
+  const external = await mkdtemp(path.join(tmpdir(), 'TEST-embedded-external-'));
+  t.after(() => rm(external, { recursive: true, force: true }));
+  const selected = path.join(directory, effect, 'dist');
+  const moved = path.join(external, 'dist');
+  await rename(selected, moved);
+  await symlink(moved, selected, process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(selection));
+});
+
+test('delivery inventory checks every branch of a wide manifest tree', tupleOptions, async (t) => {
+  const { directory, selection } = await fixture(t);
+  const manifestPath = path.join(directory, 'opencode-v2-engine-manifest.json');
+  const original = JSON.parse(await readFile(manifestPath, 'utf8'));
+  let last = '';
+  for (let index = 0; index < 17; index++) {
+    last = `local-cli/node_modules/TEST-branch-${String(index).padStart(2, '0')}/nested/index.js`;
+    const bytes = 'export const TEST = true;\n';
+    await mkdir(path.dirname(path.join(directory, last)), { recursive: true });
+    await writeFile(path.join(directory, last), bytes, { mode: 0o600 });
+    original.files.push({ path: last, bytes: Buffer.byteLength(bytes), sha256: hash(bytes), executable: false });
+  }
+  const manifest = JSON.stringify(original);
+  await writeFile(manifestPath, manifest);
+  const captured = { ...selection, manifestSha256: hash(manifest) };
+  await verifyOpenCodeV2EmbeddedGraph(captured);
+  const unexpected = path.join(path.dirname(path.join(directory, last)), 'foreign.js');
+  await writeFile(unexpected, 'TEST unlisted graph file');
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(captured));
+  await rm(unexpected);
+  await rm(path.join(directory, last));
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(captured));
 });
 
 test(

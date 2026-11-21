@@ -79,10 +79,12 @@ export function loadOpenCodeProjectModels(input: {
   providerId: string;
   modelId: string;
   refresh?: boolean;
-}): Promise<RuntimeProviderManagementModelsResponse> {
+}, scopedLoadModels?: typeof api.runtimeProviderManagement.loadModels): Promise<RuntimeProviderManagementModelsResponse> {
   const projectPath = input.projectPath.trim();
   const providerId = input.providerId.trim();
   const modelId = input.modelId.trim();
+  if (scopedLoadModels) return scopedLoadModels({ runtimeId: 'opencode', providerId, projectPath,
+    query: modelId, limit: PROJECT_MODELS_LIMIT });
   const cacheKey = getProjectModelsCacheKey(projectPath, providerId, modelId);
   if (input.refresh) {
     projectModelsCache.delete(cacheKey);

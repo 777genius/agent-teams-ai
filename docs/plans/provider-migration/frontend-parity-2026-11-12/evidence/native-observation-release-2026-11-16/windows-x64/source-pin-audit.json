@@ -1,0 +1,104 @@
+{
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "tree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "method": "Full inert copies hash-joined to the independently audited complete published e1d leaf map; native artifact contains source-head/binary hashes, not a full post-run source-byte manifest.",
+  "allCopiedSourceBlobsMatch": true,
+  "entries": [
+    {
+      "sourcePath": "tools/owned-process-broker/nativeGate.ts",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+      "immutableE1dBlob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 25009,
+      "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+      "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+      "immutableE1dBlob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/nativeGateEvents.ts",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "immutableE1dBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+      "immutableE1dBlob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/nativeGateOutput.ts",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/nativeGateOutput.ts",
+      "bytes": 1842,
+      "blob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1",
+      "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8",
+      "immutableE1dBlob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/nativeFixture.cpp",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19357,
+      "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+      "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+      "immutableE1dBlob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/debugServiceTest.h",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+      "immutableE1dBlob": "e17c33ba6a45d8a6471439907e50519af8d7338b"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/serviceScopes.h",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/serviceScopes.h",
+      "bytes": 16379,
+      "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+      "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+      "immutableE1dBlob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/serviceDebugLoop.h",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/serviceDebugLoop.h",
+      "bytes": 4891,
+      "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+      "immutableE1dBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/broker.cpp",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/broker.cpp",
+      "bytes": 25929,
+      "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+      "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+      "immutableE1dBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e"
+    },
+    {
+      "sourcePath": "tools/owned-process-broker/CMakeLists.txt",
+      "path": "native-e1d-win-x64-133120929510/source-reference/tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+      "immutableE1dBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410"
+    },
+    {
+      "sourcePath": ".github/workflows/host-process-acceptance.yml",
+      "path": "native-e1d-win-x64-133120929510/source-reference/.github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+      "immutableE1dBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e"
+    }
+  ]
+}

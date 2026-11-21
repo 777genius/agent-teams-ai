@@ -8,6 +8,9 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 interface SmokePackagedAppInternals {
+  prepareVendorMetadataFence(testRoot: string, userDataDir: string): {
+    CODEX_CLI_PATH: string; CLAUDE_CLI_PATH: string; CODEX_HOME: string;
+  };
   getInternalStorageVerificationError(userDataDir: string, log: string): string | null;
   terminateChild(
     child: { pid?: number; exitCode: number | null; signalCode: string | null; kill: () => void },
@@ -642,4 +645,56 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
       }
     }
   );
+});
+
+describe('smokePackagedApp finite vendor metadata fence', () => {
+  it('pins both CLI overrides and the cold Codex manifest to version-only TEST children', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "TEST packaged metadata ' "));
+    try {
+      const userData = path.join(root, 'user-data');
+      fs.mkdirSync(userData);
+      const environment = smokePackagedAppInternals.prepareVendorMetadataFence(root, userData);
+      expect(Object.keys(environment).sort()).toEqual(['CLAUDE_CLI_PATH', 'CODEX_CLI_PATH', 'CODEX_HOME']);
+      expect(environment.CODEX_HOME).toBe(path.join(root, 'TEST-codex-home'));
+      expect(fs.statSync(environment.CODEX_HOME).isDirectory()).toBe(true);
+      const manifest = JSON.parse(fs.readFileSync(
+        path.join(userData, 'data', 'runtimes', 'codex', 'current.json'), 'utf8'
+      )) as Record<string, unknown>;
+      expect(manifest).toMatchObject({
+        schemaVersion: 1, rootVersion: '0.164.0', platformVersion: '0.164.0',
+        platformTarget: 'TEST-' + process.platform + '-' + process.arch,
+        binaryPath: environment.CODEX_CLI_PATH, integrity: 'TEST-finite-metadata-only',
+      });
+      const { execCli } = await import('../../../src/main/utils/childProcess');
+      for (const [provider, selected, version] of [
+        ['codex', environment.CODEX_CLI_PATH, 'codex-cli 0.164.0'],
+        ['claude', environment.CLAUDE_CLI_PATH, '2.1.0 (Claude Code)'],
+      ] as const) {
+        expect(selected).toBe(path.join(root, 'TEST-' + provider + '-metadata.' +
+          (process.platform === 'win32' ? 'cmd' : 'cjs')));
+        expect(fs.lstatSync(selected).isSymbolicLink()).toBe(false);
+        const options = { cwd: root, timeout: 5000, windowsHide: true,
+          env: { ...process.env, ...environment, PATH: '' } };
+        await expect(execCli(selected, ['--version'], options)).resolves.toEqual({
+          stdout: version + '\n', stderr: '',
+        });
+        await expect(execCli(selected, ['--version', 'TEST-forbidden-extra'], options))
+          .rejects.toMatchObject({ code: 77, stdout: '' });
+      }
+      const rows = fs.readFileSync(path.join(root, 'TEST-provider-metadata.ndjson'), 'utf8')
+        .trim().split('\n').map(line => JSON.parse(line)) as {
+          provider: string; kind: string; args: string[];
+        }[];
+      expect(rows).toHaveLength(8);
+      for (const provider of ['codex', 'claude'])
+        expect(rows.filter(row => row.provider === provider)).toEqual([
+          { provider, kind: 'version', args: ['--version'] },
+          { provider, kind: 'refused', args: ['TEST-forbidden-native-command'] },
+          { provider, kind: 'version', args: ['--version'] },
+          { provider, kind: 'refused', args: ['--version', 'TEST-forbidden-extra'] },
+        ]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

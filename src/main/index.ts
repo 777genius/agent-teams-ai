@@ -228,7 +228,11 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { createDesktopCodexFeatures } from './composition/createDesktopCodexFeatures';
-import { createDesktopStoppedImportContext } from './composition/createDesktopStoppedImportContext';
+import {
+  captureDesktopNativeStopWorkSyncFence,
+  createDesktopStoppedImportContext,
+  createDesktopWorkSyncSourceAdmission,
+} from './composition/createDesktopStoppedImportContext';
 import { createDesktopOpenCodeLifecycle } from './composition/createDesktopOpenCodeLifecycle';
 import { createDesktopProviderManagementFeatures } from './composition/createDesktopProviderManagementFeatures';
 import {
@@ -1891,7 +1895,8 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService = createDefaultTeamProvisioningService(
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
-    gatewayLaunchRuntime.seams
+    gatewayLaunchRuntime.seams,
+    (teamName) => captureDesktopNativeStopWorkSyncFence(() => memberWorkSyncFeature, teamName)
   );
   teamDataService.setTeamProfileOwnership((teamName) =>
     teamProvisioningService.isTeamManagedByThisProfile(teamName)
@@ -2504,7 +2509,9 @@ async function initializeServices(): Promise<void> {
       logger: memberWorkSyncLogger,
     });
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
-    sourceWriteAdmission: initializedBackupOwner.sourceWriteAdmission,
+    sourceWriteAdmission: createDesktopWorkSyncSourceAdmission(
+      initializedBackupOwner, () => teamBackupService === initializedBackupOwner
+    ),
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,

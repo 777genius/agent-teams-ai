@@ -1,0 +1,21 @@
+{
+  "label": "opencode-configuration-source",
+  "sourceHead": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "sourceTree": "1db97f452abcd5996f061a8a3ed476a44cf33302",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T17:55:52.347693+00:00",
+  "finishedAtUTC": "2026-11-15T17:55:53.535210+00:00",
+  "elapsedSeconds": 1.1875108599924715,
+  "exitCode": 0,
+  "logBytes": 829,
+  "logSHA256": "1af3bf1d5638e400e97983e19f6fa17f221b5b0ffbd7b53cd935a74fd075af0a",
+  "sourceHeadAfter": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "statusAfter": ""
+}

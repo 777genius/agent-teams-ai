@@ -1,0 +1,206 @@
+from pathlib import Path
+import datetime
+import hashlib
+import json
+import subprocess
+import sys
+import time
+
+root = Path('/workspace/scratch/82d3f9ba6b85')
+repo = root / 'agent-teams-e2e'
+out = root / 'reconciled-source-local'
+review = root / 'source-deadline-handoff-r1'
+stage, operation = sys.argv[1:3]
+assert stage in ('B', 'C', 'D')
+name = stage + '-' + operation
+
+def ident(raw):
+    return {'bytes': len(raw), 'blob': hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest(),
+            'sha256': hashlib.sha256(raw).hexdigest()}
+
+def digest(path):
+    d = ident(path.read_bytes())
+    return {'bytes': d['bytes'], 'sha256': d['sha256']}
+
+def git(*argv):
+    return subprocess.check_output(['git', *argv], cwd=repo, text=True).strip()
+
+manifest_raw = (review / 'validation-manifest.json').read_bytes()
+assert ident(manifest_raw)['blob'] == 'f460cdba964ceca57f99c7752bc8519c477fc9b2'
+manifest = json.loads(manifest_raw)
+host_raw = (review / 'host-source-closure.json').read_bytes()
+assert ident(host_raw)['blob'] == '92fe358082aa8c5892c084798b2bdb8b5bdb106f'
+expected_host = json.loads(host_raw)
+bindings = json.loads((out / 'stage-bindings.json').read_bytes())
+binding = bindings['stages'][stage]
+expected_head, expected_tree = binding['head'], binding['tree']
+assert len(expected_head) == len(expected_tree) == 40 and binding['independentlyReviewed'] is True
+assert bindings['r1Published']['fullReadbackExact'] is True
+assert bindings['r1Published']['planBlob'] == 'e841ce552dbf0e5f367ced2dab45d9d233e54288'
+command = next(c for c in manifest['commands'] if c['stage'] == stage and c['name'] == operation)
+argv = [a.replace('${REVIEWED_PRE_STAGE_FOLLOWUP_HEAD}', bindings['r1Published']['head'])
+        .replace('${D_HEAD}', expected_head) for a in command['argv']]
+assert not any('${' in a for a in argv)
+cwd = Path(command['cwd'])
+node = manifest['node']['path']
+
+def source_state():
+    assert git('rev-parse', 'HEAD') == expected_head
+    assert git('rev-parse', 'HEAD^{tree}') == expected_tree
+    assert git('show', '-s', '--format=%P', 'HEAD').split() == binding['parents']
+    assert git('status', '--short') == ''
+    tree = {}
+    for line in git('ls-tree', '-r', 'HEAD').splitlines():
+        fields, path = line.split('\t', 1)
+        mode, kind, blob = fields.split()
+        tree[path] = (mode, kind, blob)
+    selected = []
+    for spec in manifest['selectedSourceLeaves']:
+        path = spec['path']
+        actual = ident((repo / path).read_bytes())
+        assert actual == spec[stage], path
+        assert tree[path] == ('100644', 'blob', actual['blob']), path
+        selected.append({'path': path, **actual})
+    host_paths = sorted(p for p in tree if p.startswith('packages/legacy-agent-host/src/'))
+    assert host_paths == [row['path'] for row in expected_host]
+    for row in expected_host:
+        p = row['path']
+        assert tree[p] == (row['mode'], 'blob', row['blob'])
+        assert ident((repo / p).read_bytes()) == {k: row[k] for k in ('bytes', 'blob', 'sha256')}, p
+    deps = []
+    for row in manifest['selectedDependencyInputs']:
+        actual = {'path': row['path'], 'realpath': str((repo / row['path']).resolve()), **digest(repo / row['path'])}
+        assert actual == row, row['path']
+        deps.append(actual)
+    assert (repo / 'packages/legacy-agent-host/node_modules/@agent-teams/task-change-ledger').resolve() == repo / 'packages/task-change-ledger'
+    for p in manifest['builtOutputPolicy']['ownedDirectories']:
+        assert (repo / p).resolve() == repo / p
+    return {'selectedSourceLeaves': selected, 'selectedDependencyInputs': deps,
+            'hostSourceCount': len(expected_host), 'hostSourceClosureSHA256': ident(host_raw)['sha256'],
+            'clean': True, 'sourceHead': expected_head, 'sourceTree': expected_tree,
+            'parents': binding['parents']}
+
+def outputs():
+    rows = []
+    for dirname in manifest['builtOutputPolicy']['ownedDirectories']:
+        directory = repo / dirname
+        assert directory.resolve() == directory
+        for path in sorted(directory.rglob('*')):
+            assert not path.is_symlink(), str(path)
+            if path.is_file():
+                rows.append({'path': path.relative_to(repo).as_posix(), **digest(path)})
+    return sorted(rows, key=lambda row: row['path'])
+
+def write_json(path, value):
+    with path.open('x') as f:
+        json.dump(value, f, indent=2)
+        f.write('\n')
+
+def read_record(record_name, expected_exit=0):
+    rec = json.loads((out / (record_name + '-metadata.json')).read_bytes())
+    assert rec['exitCode'] == expected_exit and rec['postflightExact'] is True
+    previous_stage = record_name.split('-', 1)[0]
+    assert rec['sourceHead'] == bindings['stages'][previous_stage]['head']
+    assert rec['sourceTree'] == bindings['stages'][previous_stage]['tree']
+    assert digest(out / (record_name + '.log')) == {'bytes': rec['logBytes'], 'sha256': rec['logSHA256']}
+    return rec
+
+def same_build(current, build_name, prefix=None):
+    rec = read_record(build_name)
+    assert rec['freshSelectedOutputs'] is True
+    saved_path = out / rec['outputInventoryAfter']['file']
+    assert digest(saved_path) == {k: rec['outputInventoryAfter'][k] for k in ('bytes', 'sha256')}
+    saved = json.loads(saved_path.read_bytes())
+    if prefix is not None:
+        current = [r for r in current if r['path'].startswith(prefix)]
+        saved = [r for r in saved if r['path'].startswith(prefix)]
+    assert current == saved, 'Built output bytes differ from the required source-bound build'
+
+before = source_state()
+version = subprocess.check_output([node, '--version'], text=True).strip()
+assert version == manifest['node']['expectedVersion']
+assert digest(Path(node))['sha256'] == manifest['node']['sha256']
+before_outputs = outputs()
+if operation == 'host-build':
+    same_build(before_outputs, stage + '-ledger-build', 'packages/task-change-ledger/')
+elif stage == 'B' and operation == 'runtime-red':
+    same_build(before_outputs, 'B-host-build')
+elif stage == 'C':
+    red = read_record('B-runtime-red', 1)
+    red_review = json.loads((out / 'actual-red-review.json').read_bytes())
+    assert red_review['sourceHead'] == bindings['stages']['B']['head']
+    assert red_review['logSHA256'] == red['logSHA256']
+    assert red_review['rootApproved'] is True and red_review['independentApproved'] is True
+    assert red_review['expectedSemanticFailures'] == 2 and red_review['unrelatedFailures'] == 0
+    same_build(before_outputs, 'B-host-build')
+elif stage == 'D':
+    read_record('C-runtime-green')
+    if operation != 'ledger-build':
+        same_build(before_outputs, 'D-host-build')
+    if operation in ('saved-probe-and-transport', 'captured-host-client'):
+        read_record('D-host-test-types')
+
+pre_path = out / (name + '-preflight.json')
+log_path = out / (name + '.log')
+meta_path = out / (name + '-metadata.json')
+assert not any(p.exists() for p in (pre_path, log_path, meta_path)), 'No replay or overwrite of an actual command'
+is_build = operation in ('ledger-build', 'host-build')
+inventory_before = None
+if is_build:
+    p = out / (name + '-outputs-before.json')
+    write_json(p, before_outputs)
+    inventory_before = {'file': p.name, **digest(p), 'count': len(before_outputs)}
+preflight = {**before, 'stage': stage, 'commandName': name,
+             'nodePath': node, 'nodeVersion': version, 'nodeSHA256': manifest['node']['sha256'],
+             'validationManifest': ident(manifest_raw), 'hostClosure': ident(host_raw),
+             'stageBinding': binding, 'r1Published': bindings['r1Published'],
+             'builtOutputsCountBefore': len(before_outputs), 'outputInventoryBefore': inventory_before,
+             'dependencyLimit': manifest['dependencyLimit']}
+write_json(pre_path, preflight)
+start = datetime.datetime.now(datetime.timezone.utc).isoformat()
+start_wall_ns = time.time_ns()
+clock = time.monotonic()
+with log_path.open('xb') as log:
+    result = subprocess.run(argv, cwd=cwd, stdout=log, stderr=subprocess.STDOUT)
+elapsed = time.monotonic() - clock
+end = datetime.datetime.now(datetime.timezone.utc).isoformat()
+after_outputs = None
+after = None
+postflight_error = None
+fresh = None
+inventory_after = None
+outputs_preserved = False
+postflight = False
+try:
+    after_outputs = outputs()
+    after = source_state()
+    if is_build:
+        prefix = 'packages/task-change-ledger/' if operation == 'ledger-build' else 'packages/legacy-agent-host/'
+        chosen = [p for p in manifest['builtOutputPolicy']['freshSelectedOutputs'] if p.startswith(prefix)]
+        fresh = bool(chosen) and all((repo / p).is_file() and (repo / p).stat().st_mtime_ns >= start_wall_ns for p in chosen)
+        p = out / (name + '-outputs-after.json')
+        write_json(p, after_outputs)
+        inventory_after = {'file': p.name, **digest(p), 'count': len(after_outputs)}
+    outputs_preserved = is_build or after_outputs == before_outputs
+    postflight = (after == before and outputs_preserved
+                  and digest(Path(node))['sha256'] == manifest['node']['sha256'])
+except Exception as error:
+    postflight_error = type(error).__name__ + ': ' + str(error)
+metadata = {'stage': stage, 'commandName': name, 'sourceHead': expected_head, 'sourceTree': expected_tree,
+            'parents': binding['parents'], 'cwd': str(cwd), 'argv': argv, 'nodeVersion': version,
+            'nodeSHA256': manifest['node']['sha256'], 'startedAtUTC': start, 'finishedAtUTC': end,
+            'elapsedSeconds': elapsed, 'exitCode': result.returncode,
+            'preflightMetadataSHA256': digest(pre_path)['sha256'], 'logBytes': log_path.stat().st_size,
+            'logSHA256': digest(log_path)['sha256'], 'postflightExact': postflight,
+            'postflightError': postflight_error, 'nonBuildOutputBytesPreserved': outputs_preserved,
+            'outputInventoryBefore': inventory_before, 'outputInventoryAfter': inventory_after,
+            'builtOutputsCountAfter': None if after_outputs is None else len(after_outputs), 'freshSelectedOutputs': fresh,
+            'selectedSourceCount': len(before['selectedSourceLeaves']),
+            'hostSourceCount': len(expected_host), 'selectedDependencyCount': len(before['selectedDependencyInputs'])}
+write_json(meta_path, metadata)
+print(json.dumps(metadata, indent=2))
+print(log_path.read_text(errors='replace')[-18000:])
+assert postflight, 'Original command exit retained, source/dependency postflight differs'
+if result.returncode == 0 and fresh is not None:
+    assert fresh, 'Build succeeded but required fresh selected outputs were not emitted'
+raise SystemExit(result.returncode)

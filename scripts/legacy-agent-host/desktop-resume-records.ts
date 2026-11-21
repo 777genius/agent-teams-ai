@@ -17,8 +17,11 @@ export async function json(path: string): Promise<Record<string, unknown>> {
 }
 export async function rows(path: string): Promise<Record<string, unknown>[]> {
   const entries = await readdir(path, { withFileTypes: true });
-  assert.ok(entries.length <= 256 && entries.every(entry => entry.isFile() && /^[A-Za-z0-9_-]+\.json$/.test(entry.name)));
-  return Promise.all(entries.map(entry => json(join(path, entry.name))));
+  // The controller publishes with rename; its exact regular staging file is not a receipt.
+  const staging = /^\.tmp\.[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+  assert.ok(entries.length <= 256 && entries.every(entry => entry.isFile() && !entry.isSymbolicLink() &&
+    (/^[A-Za-z0-9_-]+\.json$/.test(entry.name) || staging.test(entry.name))));
+  return Promise.all(entries.filter(entry => !staging.test(entry.name)).map(entry => json(join(path, entry.name))));
 }
 
 /** Private TEST evidence only. Reads the exact published payload, never creates a checkpoint. */

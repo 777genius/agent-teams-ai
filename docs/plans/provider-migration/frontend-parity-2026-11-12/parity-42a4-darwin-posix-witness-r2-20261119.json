@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-source-backed-darwin-posix-witness-classification",
+  "reviewer": "/root/composition_review_030",
+  "reviewedAt": "2026-11-19T01:58:34.213026+00:00",
+  "verdict": "CLASSIFICATION_CONFIRMED_P09_REMAINS_INCOMPLETE",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "sourcePins": [
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+      "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+      "bytes": 27709
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+      "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "bytes": 21219
+    }
+  ],
+  "variants": [
+    {
+      "arch": "x64",
+      "osBuild": "24G830",
+      "jobId": 135261468754,
+      "artifactId": 14489703382,
+      "log": {
+        "path": "ci-current-42a4/job-135261468754-terminal.log",
+        "bytes": 113036,
+        "sha256": "5c64e5243b202b15b3899018831a762a198ccb99a685fcf3d0a95383ea00b2ae",
+        "gitBlob": "ad7e103be4bf9cc44391e543a512a4952c7abeb9"
+      },
+      "receipts": [
+        {
+          "path": "ci-current-42a4/artifact-14489703382/opencode-v2-embedded-host.json",
+          "bytes": 96444,
+          "sha256": "88ec4c451f4eaed76f8b80788e905005e26e9664cb0960bde62dae1fe96c6644",
+          "gitBlob": "2e1238d079f62d2a01aece9a08336f5d2017769d"
+        },
+        {
+          "path": "ci-current-42a4/artifact-14489703382/opencode-v2-darwin-custody.json",
+          "bytes": 1444,
+          "sha256": "b834f7a4b104f4c64c2991b4ffa5750442c346966fe775b2c7139a5f7a33f2c9",
+          "gitBlob": "f649b29735bdecb59508ec72df907742c28cf841"
+        },
+        {
+          "path": "ci-current-42a4/artifact-14489703382/opencode-v2-posix-exec.json",
+          "bytes": 14528,
+          "sha256": "0cf8b01023c8a25b0812f5b8848911f449a352e95bdb50f9adb9ec9f282d6ee8",
+          "gitBlob": "aa0f1be080a0c428b04b5a10f9d2a193cdcccd1f"
+        }
+      ],
+      "embeddedHost": "PASS / cleanup=true",
+      "darwinCustody": "PASS / cleanup=confirmed",
+      "posixWitness": "INCOMPLETE / cleanup=true",
+      "firstAssertionLocation": "476:18",
+      "originalWitnessRows": 10,
+      "allWitnessOriginalChildrenReapedAndGroupsAbsent": true,
+      "selectedObservations": [
+        {
+          "label": "compiler-default:baseline",
+          "result": "INCOMPLETE",
+          "stage": "kernel-image-validity",
+          "errno": 13,
+          "execErrno": 0,
+          "codeSigningError": -67062,
+          "imageMatched": false,
+          "resumed": false,
+          "mutationAfterCheckErrno": -1,
+          "exitCode": -1,
+          "exitSignal": 9,
+          "markerLines": []
+        },
+        {
+          "label": "adhoc-test-only:after-check",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ]
+        },
+        {
+          "label": "adhoc-test-only:writer-open",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ]
+        },
+        {
+          "label": "script:script-negative",
+          "result": "COUNTEREXAMPLE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "SCRIPT:B"
+          ]
+        }
+      ],
+      "qualificationFlags": {
+        "productQualified": false,
+        "installedRuntimeQualified": false,
+        "customExecutableQualified": false,
+        "scriptQualified": false,
+        "nativeFixtureQualified": false
+      }
+    },
+    {
+      "arch": "arm64",
+      "osBuild": "24H232",
+      "jobId": 135261468687,
+      "artifactId": 14490956505,
+      "log": {
+        "path": "ci-current-42a4/job-135261468687-terminal.log",
+        "bytes": 108117,
+        "sha256": "88662b0abdad435ca2d1bb923eea9e9b209d4f339ef24542d04018b2f5a53957",
+        "gitBlob": "b9f6fa5531c2ceb0d8996a5cae976de7a1d98310"
+      },
+      "receipts": [
+        {
+          "path": "ci-current-42a4/artifact-14490956505/opencode-v2-embedded-host.json",
+          "bytes": 96419,
+          "sha256": "5d7657525f1965784e509bc6edaf5a6e94dd521e8d22783778afc8396acf659b",
+          "gitBlob": "96dce499ed59e239c31feb315957c7fcdbd10a42"
+        },
+        {
+          "path": "ci-current-42a4/artifact-14490956505/opencode-v2-darwin-custody.json",
+          "bytes": 1442,
+          "sha256": "14d2b891fcc6f1275b9ffc9018ae358538f5b1628be6ab858dce9ad1d926186e",
+          "gitBlob": "788d97fc4b7b99850be17480a472527c5a18fd46"
+        },
+        {
+          "path": "ci-current-42a4/artifact-14490956505/opencode-v2-posix-exec.json",
+          "bytes": 14566,
+          "sha256": "769abf68bb5f18d2fbcf241809f8ed7c4800d8a3cccd960478535b2b7470b6d4",
+          "gitBlob": "3c523c1f926cd3e6d26af27e58588cd868029be4"
+        }
+      ],
+      "embeddedHost": "PASS / cleanup=true",
+      "darwinCustody": "PASS / cleanup=confirmed",
+      "posixWitness": "INCOMPLETE / cleanup=true",
+      "firstAssertionLocation": "496:24",
+      "originalWitnessRows": 10,
+      "allWitnessOriginalChildrenReapedAndGroupsAbsent": true,
+      "selectedObservations": [
+        {
+          "label": "compiler-default:baseline",
+          "result": "PASS",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ]
+        },
+        {
+          "label": "adhoc-test-only:after-check",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ]
+        },
+        {
+          "label": "adhoc-test-only:writer-open",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ]
+        },
+        {
+          "label": "script:script-negative",
+          "result": "COUNTEREXAMPLE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "markerLines": [
+            "SCRIPT:B"
+          ]
+        }
+      ],
+      "qualificationFlags": {
+        "productQualified": false,
+        "installedRuntimeQualified": false,
+        "customExecutableQualified": false,
+        "scriptQualified": false,
+        "nativeFixtureQualified": false
+      }
+    }
+  ],
+  "sourceFindings": [
+    "The receipt sourceSha256 binds fixtures/posix-exec-native.c, not registered-process-executable.native.ts; both exact immutable42a4 source blobs were independently read and hashed.",
+    "On x64, compiler-default:baseline stops at original_image() stage kernel-image-validity. SecCodeCheckValidity(guest,kSecCSNoNetworkAccess,NULL) returns numeric codeSigningError-67062; original_image() returns its initialized EACCES. The observed errno13 is that helper result, while execErrno is0. This is not evidence of an execve errno13 denial, and no symbolic Security error name is inferred.",
+    "The x64 first assertion is the TypeScript fact.errno===0 check at476:18. The test retains failure via failure??=error and continues collecting later observations, so its final first-error stack does not erase later mutation failures. The earlier informal351 location was incorrect.",
+    "ARM64 compiler-default:baseline passes in its sampled24H232 tuple. Its first retained assertion is at496:24 in adhoc-test-only:after-check. Do not transpose the x64 baseline refusal onto ARM or infer CPU architecture alone caused the difference.",
+    "Both variants independently record adhoc after-check and writer-open with mutationAfterCheckErrno0, resumed=true, exitCode0 and LIB/BIN:A/MAIN:A markers. The existing branch requires no selected-library or payload markers after successful byte mutation (or an ETXTBSY refusal); these cases remain INCOMPLETE. Original A markers do not establish that replacement B code ran or that every consumed byte was identified.",
+    "Both script-negative cases intentionally retain COUNTEREXAMPLE with imageMatched=false and SCRIPT:B. An interpreter image observation cannot by itself validate script bytes. No script-support removal or new executable contract is selected.",
+    "All10 witness children per architecture are recorded reaped with original groups absent and cleanup=true. Cleanup does not establish executable identity or post-check mutation prevention.",
+    "Embedded Host journey PASS and Darwin custody PASS are separate original receipts and remain useful despite the later POSIX test failure. They do not qualify the POSIX witness, Desktop, real-vendor authentication or release. These failed assertions provide no driver-close-failed stage/outcome evidence."
+  ],
+  "scope": "Read only the already-captured original logs/receipts and two immutable source blobs. No endpoint request, native/app/build/install execution, test rerun, source change or broad custody audit.",
+  "decision": "No safe functional correction, weakened guard/oracle, timeout change, signing substitution, or P09 writer/path/consumed-byte contract selection is proposed. Overall original jobs remain failed and P09 remains incomplete."
+}

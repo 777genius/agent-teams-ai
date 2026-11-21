@@ -51,6 +51,41 @@ function fixture(t: { after(cleanup: () => void): void }) {
   return { root, home, project, xdg, input, write };
 }
 
+test('synchronous OpenCode configuration observation preserves clone isolation and closing freshness', (t) => {
+  const f = fixture(t), path = join(f.project, 'opencode.json');
+  const value = { provider: { 'TEST-local': { options: { apiKey: 'TEST-original-key' } } } };
+  f.write(path, value);
+  const captured = captureOpenCodeConfigurationSource(f.input, undefined, () => true, 'project', config => {
+    const provider = config.provider as typeof value.provider;
+    provider['TEST-local'].options.apiKey = 'TEST-observed-copy-only';
+  });
+  assert.equal(captured.selectedKeyOrigin('TEST-local')?.value, 'TEST-original-key');
+  assert.equal(((captured.read().provider as typeof value.provider)['TEST-local']).options.apiKey,
+    'TEST-original-key', 'the synchronous observer cannot mutate the retained parsed documents');
+  f.write(path, { model: 'TEST-replaced-after-capture' });
+  assert.equal(captured.isCurrent(), false);
+  assert.throws(captured.read, { reason: 'configuration-changed' },
+    'the capture still exposes only freshly guarded reads after return');
+
+  for (const change of ['source', 'owner'] as const) {
+    const changed = fixture(t), source = join(changed.project, 'opencode.json');
+    changed.write(source, value);
+    let current = true;
+    let derivedKey: unknown;
+    assert.throws(() => captureOpenCodeConfigurationSource(changed.input, undefined, () => current, 'project', config => {
+      derivedKey = (config.provider as typeof value.provider)['TEST-local'].options.apiKey;
+      if (change === 'owner') current = false;
+      else changed.write(source, { provider: { 'TEST-local': { options: { apiKey: 'TEST-replaced-key' } } } });
+    }), { reason: 'configuration-changed' }, 'a change after key derivation refuses the entire capture');
+    assert.equal(derivedKey, 'TEST-original-key', 'a derived key cannot escape a failed closing observation');
+  }
+  let observed = false;
+  assert.throws(() => captureOpenCodeConfigurationSource(f.input, undefined, () => false, 'project', () => {
+    observed = true;
+  }), { reason: 'configuration-changed' });
+  assert.equal(observed, false, 'original owner authority precedes configuration observation');
+});
+
 test('captured OpenCode config keeps donor precedence and stores only original source identities', async (t) => {
   const f = fixture(t);
   f.write(join(f.home, '.config/opencode/opencode.json'), {

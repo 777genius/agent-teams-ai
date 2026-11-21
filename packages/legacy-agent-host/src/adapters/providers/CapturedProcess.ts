@@ -10,9 +10,21 @@ import { ChildProcess } from 'node:child_process';
 import { WindowsCapturedProcess } from './WindowsCapturedProcess.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
+import type { RetainedWindowsLaunchPort } from '../../owned-process/HostWindowsLaunch.js';
 import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
+import type { OwnedLaunchPort } from '../../owned-process/contract.js';
+import type { WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 
-/** Process custody needs native selection only, independent of a Team member/session. */
+/**
+ * Private native selection, independent of a Team member/session.
+ *
+ * Original-path contract A binds trust to this executable/script's captured
+ * path and sha256. All actors retaining write or pathname-replacement authority,
+ * including same-UID actors and holders of already-open writable FD/mmap, are
+ * trusted to preserve that revision from verification through confirmed cleanup
+ * of every original process scope consuming it. This is a composition
+ * precondition, not a claim that other writers have been excluded.
+ */
 export type CapturedProcessProfile = NativeProcessProfile & {
   provider: 'claude' | 'codex' | 'opencode';
 };
@@ -23,6 +35,7 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
 export interface CapturedProcessPort {
   launch(request: CapturedProcessLaunch): ObservableNativeProcess;
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
+  prepareRegisteredWindowsProcess?(pid: number, registrar: RegistrarBinding): WindowsServiceIntent;
   seal(): void;
   isRunning(): boolean;
   confirmStopped(): Promise<boolean>;
@@ -54,12 +67,19 @@ export interface CapturedProcessTreeSource {
   ): CapturedProcessTree;
 }
 
+/**
+ * Copies the selected path, digest, cwd and environment. POSIX launches use the
+ * original pathname and caller's arguments without relocating scripts or resources.
+ * Sealing, currentness loss or root exit does not end the source trust obligation;
+ * cleanup of one scope cannot release another scope still consuming the source.
+ */
 export class CapturedProcess implements CapturedProcessPort {
   private readonly processRoots = new Map<
     ChildProcess,
     ReturnType<RegisteredProcessRootSource['captureRoot']> | undefined
   >();
   private readonly children = new Set<ChildProcess>();
+  private readonly closed = new Set<ChildProcess>();
   private readonly failed = new Set<ChildProcess>();
   private readonly retired = new Set<ChildProcess>();
   private readonly nativeTrees = new Map<ChildProcess, CapturedProcessTree>();
@@ -71,7 +91,8 @@ export class CapturedProcess implements CapturedProcessPort {
     private readonly canAllocate: () => boolean = () => true,
     private readonly processCustody?: RegisteredProcessRootSource,
     private readonly canCaptureRegisteredProcess: () => boolean = canAllocate,
-    private readonly processTreeSource?: CapturedProcessTreeSource
+    private readonly processTreeSource?: CapturedProcessTreeSource,
+    retainedWindowsPort?: OwnedLaunchPort & Partial<Pick<RetainedWindowsLaunchPort, 'registeredProcesses' | 'originalLauncher'>>
   ) {
     this.profile = { provider: profile.provider, cwd: profile.cwd,
       environment: { ...profile.environment }, executable: { ...profile.executable },
@@ -81,7 +102,7 @@ export class CapturedProcess implements CapturedProcessPort {
     this.windows = process.platform === 'win32' && !processTreeSource
       ? new WindowsCapturedProcess(this.profile, () => !this.sealed && this.canAllocate(), () => {
           this.verifyExecutable(); this.verifyDirectories();
-        })
+        }, retainedWindowsPort)
       : undefined;
   }
 
@@ -123,6 +144,7 @@ export class CapturedProcess implements CapturedProcessPort {
       detached: process.platform !== 'win32',
     });
     this.children.add(child);
+    child.once('close', () => { this.closed.add(child); });
     child.once('error', () => {
       if (child.pid === undefined) this.failed.add(child);
     });
@@ -166,6 +188,11 @@ export class CapturedProcess implements CapturedProcessPort {
     return tree.readExecutable();
   }
 
+  prepareRegisteredWindowsProcess(pid: number, registrar: RegistrarBinding): WindowsServiceIntent {
+    if (this.sealed || !this.canCaptureRegisteredProcess() || !this.windows) throw new Error('process:hold');
+    return this.windows.prepareRegisteredProcess(pid, registrar);
+  }
+
   captureRegisteredProcess(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture {
     if (this.sealed || !this.canCaptureRegisteredProcess()) throw new Error('process:hold');
     const matches: RegisteredProcessCapture[] = [];
@@ -189,7 +216,9 @@ export class CapturedProcess implements CapturedProcessPort {
   /** Read only the retained original tree; never issue another termination. */
   observeStopped(): boolean {
     if (this.windows) return this.windows.observeStopped();
-    return [...this.children].every((child) => this.exited(child) && !this.groupPresent(child));
+    // OS exit can precede final stdio delivery; retain the original close as well.
+    return [...this.children].every((child) =>
+      this.closed.has(child) && this.exited(child) && !this.groupPresent(child));
   }
 
   async confirmStopped(): Promise<boolean> {
@@ -259,8 +288,10 @@ export class CapturedProcess implements CapturedProcessPort {
     }
   }
   private verifyExecutable(): void {
+    // Observe the selected revision at this boundary. Hash/stat checks do not
+    // exclude later writes; original-path contract A covers the consumption lifetime.
     const { path, sha256 } = this.profile.executable;
-    const before = lstatSync(path);
+    const before = lstatSync(path, { bigint: true });
     if (
       !before.isFile() ||
       before.isSymbolicLink() ||
@@ -268,12 +299,13 @@ export class CapturedProcess implements CapturedProcessPort {
       createHash('sha256').update(readFileSync(path)).digest('hex') !== sha256
     )
       throw new Error('Native executable unavailable');
-    const after = lstatSync(path);
+    const after = lstatSync(path, { bigint: true });
     if (
       before.dev !== after.dev ||
       before.ino !== after.ino ||
       before.size !== after.size ||
-      before.mtimeMs !== after.mtimeMs
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs
     )
       throw new Error('Native executable changed');
   }

@@ -1,0 +1,89 @@
+{
+  "stage": "I",
+  "commandName": "I-scoped-fast-lint",
+  "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+  "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+  "parents": [
+    "d556e23288c820b983a33808117f624cb2e93e39",
+    "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/eslint/bin/eslint.js",
+    "--config",
+    "eslint.fast.config.js",
+    "--cache",
+    "--cache-location",
+    ".eslintcache-fast",
+    "--cache-strategy",
+    "content",
+    "--",
+    "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+    "scripts/legacy-agent-host/desktop-captured-app.ts",
+    "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+    "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+    "tools/owned-process-broker/nativeGate.ts",
+    "tools/owned-process-broker/nativeGateContext.test.ts",
+    "tools/owned-process-broker/nativeGateDiagnostics.ts",
+    "tools/owned-process-broker/nativeRetainedHostGate.ts",
+    "tools/owned-process-broker/nativeVendorGate.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T22:21:00.280126+00:00",
+  "finishedAtUTC": "2026-11-15T22:21:03.128208+00:00",
+  "elapsedSeconds": 2.84800288999395,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "189a7e3f308b7a64dde4f89f00ef713179d5ceb41cbe8ed81011f6b882d7b986",
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "builtOutputsCountAfter": 1446,
+  "selectedSourceCount": 76,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17,
+  "additionalYamlDependencyCount": 77,
+  "totalSelectedDependencyCount": 94,
+  "validationManifest": {
+    "bytes": 114714,
+    "blob": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+    "sha256": "bbc34c4aea78ce3cec706a8be9ffeb47d39e5fa76e9b5eaea834f9a69e0277e6"
+  },
+  "recorder": {
+    "bytes": 26293,
+    "blob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+    "sha256": "acdea416258ae569c7d0891115697ffae201d799537d229fb775dc71c463aeb1"
+  },
+  "newBuildPerformed": false,
+  "reusedBuild": {
+    "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+    "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+    "outputCount": 1446,
+    "reusedOnly": true,
+    "outputInventory": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+    },
+    "originalHostBuildMetadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-metadata.json",
+      "bytes": 1613,
+      "blob": "46fcbd461387e4ecc280845f6610c53c3ad2790a",
+      "sha256": "85ecadb70ae10c23e84e994324bd9efe42f9f374c6a9261c59a98ba76c029f4a"
+    },
+    "originalLedgerBuildMetadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-metadata.json",
+      "bytes": 1620,
+      "blob": "35330f31c2c9a4d91d275270f4e9de5016870041",
+      "sha256": "8f30dd274ba8df816b01850217dca18cbe62a66e4227e95cf98cf92c85c3f2ba"
+    }
+  }
+}

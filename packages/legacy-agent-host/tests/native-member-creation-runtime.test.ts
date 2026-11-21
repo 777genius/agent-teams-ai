@@ -610,10 +610,11 @@ test('cross-provider creation inherits original lead A and original locator; tar
     expectedGeneration: f.contexts[2]!.endpoint.binding.generation, action: 'restart' };
   await f.tool.callAsync('team_member_action_prepare', restart);
   assert.equal(f.probeAdmissions.length, 1, 'prepare is metadata only');
-  await f.tool.callAsync('team_member_action_execute', restart);
+  const restartResult = await f.tool.callAsync('team_member_action_execute', restart);
   assert.deepEqual(f.probeAdmissions, [{ opens: 2, closed: 0 }, { opens: 3, closed: 1 }],
     'same-target native Restart prepares only after original physical closure and before the successor factory');
-  assert.equal(f.contexts.length, 4);
+  assert.equal(f.contexts.length, 4,
+    f.contexts.length === 4 ? undefined : JSON.stringify(restartResult).slice(0, 4096));
   assert.equal(f.sessions[2]!.closed, true);
   await f.tool.callAsync('team_member_action_execute', restart);
   assert.equal(f.probeAdmissions.length, 2, 'same-ID replay never renews the original action proof');

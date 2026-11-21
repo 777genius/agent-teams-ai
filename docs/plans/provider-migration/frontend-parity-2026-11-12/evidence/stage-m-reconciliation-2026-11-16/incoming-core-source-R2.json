@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE_SOURCE_ONLY",
+  "reviewedAtUtc": "2026-11-16T00:04:20.011485+00:00",
+  "scope": "Four specified Host production paths and three specified existing test files; not approval of all 17 incoming source paths or a resulting integration tree.",
+  "incoming": {
+    "head": "9e542899f36c47598a88c764c9e6745589fea3e1",
+    "tree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+    "parents": [
+      "1f9242563bec2641b25077c3aa83a999bd7f4871"
+    ]
+  },
+  "publishedIsolatedL": {
+    "head": "db8b470bf3c530928fef9ad4a2b582a417d436bd",
+    "unchangedBeforeAfter": true,
+    "cleanTrackedStatusBeforeAfter": true,
+    "incomingNotApplied": true
+  },
+  "paths": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "preimage": {
+        "bytes": 15423,
+        "lines": 270,
+        "blob": "1db38b33e308071130543fecb62e8caaaa2c90b2",
+        "sha256": "fe9f75f954c4f15ad50396dd8757d34409d6ad533622ac512777b4d903da1323"
+      },
+      "incoming": {
+        "bytes": 17375,
+        "lines": 297,
+        "blob": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+        "sha256": "69b605e0720613e17b20dbe82c3fa2213f8f7e075359dd451c0a975b8b732e02"
+      },
+      "addedLines": 27,
+      "removedLines": 0,
+      "publishedLPreimageExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "preimage": {
+        "bytes": 4235,
+        "lines": 62,
+        "blob": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7",
+        "sha256": "79bbdce726ef5ba8d85e6d877686d93604531e361c341e1710fcf336c1a77142"
+      },
+      "incoming": {
+        "bytes": 5047,
+        "lines": 74,
+        "blob": "46613a43c30311321280f11129ed02df18ef527a",
+        "sha256": "ebf66eda6dfcd1cb907f6ce52ec1b4e3d3303774869e76e893063fd68302e8a3"
+      },
+      "addedLines": 16,
+      "removedLines": 4,
+      "publishedLPreimageExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "preimage": {
+        "bytes": 25074,
+        "lines": 589,
+        "blob": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+        "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb"
+      },
+      "incoming": {
+        "bytes": 26288,
+        "lines": 610,
+        "blob": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+        "sha256": "a801ffb0e299ab25dbdd66353d7be904f471571f679008c5c21a84ac317389c7"
+      },
+      "addedLines": 21,
+      "removedLines": 0,
+      "publishedLPreimageExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "preimage": {
+        "bytes": 4266,
+        "lines": 124,
+        "blob": "22503cf7430200a8e221c7495a320740bbe7a474",
+        "sha256": "415b5ba4edbcd78f587ad8826d5e2661aa7eb4f7245e2914b2a7e55e288f21ae"
+      },
+      "incoming": {
+        "bytes": 4476,
+        "lines": 130,
+        "blob": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+        "sha256": "84fa611fad41f75be7c3cc9798572db2c3e8d488c28258fbcd37c8408d0deb6f"
+      },
+      "addedLines": 6,
+      "removedLines": 0,
+      "publishedLPreimageExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "preimage": {
+        "bytes": 54523,
+        "lines": 1100,
+        "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+        "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+      },
+      "incoming": {
+        "bytes": 60689,
+        "lines": 1186,
+        "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      "addedLines": 86,
+      "removedLines": 0,
+      "publishedLPreimageExact": true,
+      "oldDeclaredTopLevelCases": 24,
+      "incomingDeclaredTopLevelCases": 26,
+      "originalCaseNamesPreserved": true,
+      "newDeclaredCaseNames": [
+        "scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery",
+        "auxiliary log trimming shares the existing byte budget without changing original groups or their completeness"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "preimage": {
+        "bytes": 28745,
+        "lines": 421,
+        "blob": "96a7f6ac29bbd830dffb60d80a910e3f26e76949",
+        "sha256": "2f55707a65dcdb1a4e23cbd84dcbe78c672982819d0b642c876ab9dc6191c3e4"
+      },
+      "incoming": {
+        "bytes": 41863,
+        "lines": 598,
+        "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+        "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5"
+      },
+      "addedLines": 189,
+      "removedLines": 12,
+      "publishedLPreimageExact": true,
+      "oldDeclaredTopLevelCases": 5,
+      "incomingDeclaredTopLevelCases": 8,
+      "originalCaseNamesPreserved": true,
+      "newDeclaredCaseNames": [
+        "original scheduled stderr is retained before SessionRef even when opening fails, without an input or replay",
+        "scheduled diagnostics refuse replaced selection, Team authority, workspace, writer and Host seal",
+        "scheduled stderr keeps the first 16 KiB on UTF-8 boundaries and one warning across cold reads"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "preimage": {
+        "bytes": 13673,
+        "lines": 373,
+        "blob": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+        "sha256": "ec56b1bea503eae250a4c2e7c9c3e7e8fc7fa53775b200a3c12a85bea43837be"
+      },
+      "incoming": {
+        "bytes": 14327,
+        "lines": 381,
+        "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      "addedLines": 8,
+      "removedLines": 0,
+      "publishedLPreimageExact": true,
+      "oldDeclaredTopLevelCases": 5,
+      "incomingDeclaredTopLevelCases": 5,
+      "originalCaseNamesPreserved": true,
+      "newDeclaredCaseNames": []
+    }
+  ],
+  "publishedPlanAuthorities": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "publishedProspectivePlan": {
+        "bytes": 36690,
+        "lines": 507,
+        "blob": "2305bbd7b340418f82b39e5bdb28f302735f7237",
+        "sha256": "4ed58ea26bab62673809a5c123a85492355671b58803b273a7d9757fa83d59b1"
+      },
+      "incomingCompletePlan": {
+        "bytes": 49788,
+        "lines": 694,
+        "blob": "27f455b058d999213277e396343016789163660f",
+        "sha256": "32cb9313cd505b9576662fc0453d2349f522b2ce0bb42092a2369b82b7539c05"
+      },
+      "exactPriorPrefixPreserved": true,
+      "appendedBytes": 13098
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "publishedProspectivePlan": {
+        "bytes": 26918,
+        "lines": 435,
+        "blob": "f5176d68c3e9fa81472d0a81f0cb324a210a4854",
+        "sha256": "37b6f1e4e05970db1acd1cb8c1edbc0ba99e087bd48f96a80b712d99280efbb5"
+      },
+      "incomingCompletePlan": {
+        "bytes": 28750,
+        "lines": 464,
+        "blob": "77cb678aef27ac3b744258e856deba479ea8c414",
+        "sha256": "1678842870b90126aef267c0bdb2e834254420d59d77c3c813dea310dd23b00f"
+      },
+      "exactPriorPrefixPreserved": true,
+      "appendedBytes": 1832
+    }
+  ],
+  "readSupportingClosure": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunCapture.ts",
+      "identity": {
+        "bytes": 7862,
+        "lines": 132,
+        "blob": "87ba64ee70f374021a04429c680eb9c7683cde4b",
+        "sha256": "a6b952a61d5f86d111c17849824779f3d131a2584c5e4f3660f8662c0ba58f01"
+      },
+      "unchangedFrom1f": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "identity": {
+        "bytes": 6110,
+        "lines": 171,
+        "blob": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+        "sha256": "1b9edac01901dda2f4b01eb39bc4268064163f402608d3be00d2dd63c13730c3"
+      },
+      "unchangedFrom1f": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "identity": {
+        "bytes": 5840,
+        "lines": 161,
+        "blob": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+        "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede"
+      },
+      "unchangedFrom1f": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/identity.ts",
+      "identity": {
+        "bytes": 1184,
+        "lines": 35,
+        "blob": "e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63",
+        "sha256": "e42ca92261537a5882e2bd9ec456e257042f9ad42bbc465fb5bc020c2ac4cc3c"
+      },
+      "unchangedFrom1f": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "identity": {
+        "bytes": 30469,
+        "lines": 757,
+        "blob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+        "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d"
+      },
+      "unchangedFrom1f": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/mcp-catalog/capturedSource.ts",
+      "identity": {
+        "bytes": 1706,
+        "lines": 38,
+        "blob": "49561e08ed6a2f2c9098479b08530178462eacef",
+        "sha256": "a7ac5e82dc98a759e4a0e3fde32158b2ae2d35700ae416a74e4f1eff5bd3e502"
+      },
+      "unchangedFrom1f": true
+    }
+  ],
+  "exactPreservationChecks": {
+    "allSevenPreimagesEqualCurrentPublishedL": true,
+    "hostScheduledRunsAllOriginalLinesInOrder": true,
+    "runtimeProcessOutputFenceByteIdentical": true,
+    "originalFiveGroupBudgetLoopByteIdentical": true,
+    "runtimeActivityTestEntireOriginalBytePrefix": true,
+    "teamActivityTestAllOriginalLinesInOrder": true,
+    "allOriginalCaseNamesRetained": true
+  },
+  "findings": [],
+  "reasoning": [
+    "Plan32 lines390–417 and Plan33 standalone amendment prospectively authorize exactly one optional internal logProjection computed from the existing authorized journal read. The outward runtimeActivityProjection mapper explicitly omits it; no persistent record, cache, RPC, extra feed read or owner is added.",
+    "Thinking keys are JSON tuples of inputId/operationRef/messageRef/block, with complete-over-later-snapshot precedence and original sequence/eventId retention. Child keys add input/operation/child/parent/kind/message/block/tool; the existing child wrapper identity is used, and child content does not enter root text summary.",
+    "The original usage/interactions/tools/text/subagents accounting loop is byte-identical. Thinking then top-level unattributed stderr consume only remaining 256 KiB. Their omission sets logProjection.truncated only; genuine original global gaps retain their previous Stats/cost meaning.",
+    "Scheduled projection retains original released/terminal decision, text-only summary500, observed-time duration, usage/result fields and stdout512KiB reserve. Sanitized stderr joins original sequence and retains the first16KiB including one fixed warning, using streaming UTF8 decoding to omit an incomplete final code point.",
+    "HostScheduledRuns captures cloned original binding/full request/capture plus selected entry, team/owner/principal and profile/base/owner digests before sharing the callback. Each diagnostic asserts writer, active exact entry, Host-not-sealed, immutable selection/request/profile/owner, original Team control revision, retained scheduled recipe/workspace and capturedMcpSourceCurrent; it does not retarget current source or look up Runtime.",
+    "The source assertion is called before delivery and again inside the unchanged Runtime process-output fence. The latter retains exact profile/incarnation/binding/config/openFingerprint/allowed-phase/unreleased checks and existing serialized event limits. Ordinary cancellation may observe closing while Host seal, revoked/replaced grant and release refuse. Callback exceptions cannot replace scheduled outcome or cleanup.",
+    "Test preservation: runtime-activity is whole-file append; team-activity is one insertion and excludes only generated computedAt when comparing unchanged Stats. Scheduled tests preserve all original cases/assertions, with explicit helper changes: emit factors original push+wake; default cwd/restart behavior remains equivalent; original warning literal becomes an exact shared constant. Added startup/authority/closing/cold/UTF8 and actual finite SDK assertions are source reviewed, not executed here."
+  ],
+  "qualificationLimits": [
+    "No build, test, compiler, lint, Node/provider/native execution, dependency install or CI/ref mutation was performed for this review.",
+    "Declared case counts and expected behavior above are source inventory only. Incoming Plan32/33 local execution counts, resource settings, compiler success/timeout and recovered-source claims are author-attributed until original raw evidence and source/toolchain joins are independently audited.",
+    "This source review does not qualify incoming Desktop, native, packaged, full workspace/typed lint or P08/P09, and does not transfer original1f receipts to9e.",
+    "Published L remains the RED-only privacy stage: unfixed helper3b2 and local d1b canaries must be preserved by the root-owned later composition. Provider/helper/security and UI/roster reviews are delegated to the named peer owners; their results are not claimed here.",
+    "Any adoption requires its separately published canonical R1, exact complete tree/parents and source readback; the existing required gate and useful-cohort preservation rules remain."
+  ]
+}
