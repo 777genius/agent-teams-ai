@@ -124,9 +124,9 @@ Impact is for a user who relies on the legacy feature. Effort: S under a day, M 
 | 6 | Live edit of a running team is refused | honest | medium | L | Legacy adds members to a running team. Needs defined semantics for the one running context and the stopped ones. |
 | 7 | Cross-team messaging cannot reach a per-project team | honest | medium | M | A recipient needs a context: the running one, else an explicit project. |
 | 8 | Agents and recipients see the internal alias name | cosmetic | low-medium | S | Pass the display name into prompts and the cross-team sender label. |
-| 9 | Per-member settings dialog and settings relaunch are hidden | honest | low-medium | M | Mostly UI wiring once the definition editor owns member settings. |
-| 10 | Gateway bindings are not projected | honest | low-medium | M | Bindings are keyed by team name; project them like the roster or key them by definition. |
-| 11 | Review flow and other per-team settings are per context | semantic | low | S-M | Product decision: team-wide or per project. |
+| 9 | ~~Per-member settings dialog and settings relaunch are hidden~~ done for teammates | honest | low-medium | M | The dialog edits the definition through the router while every project is stopped; the lead goes through Change runtime; a settings relaunch is refused (see the last update). |
+| 10 | Gateway bindings are not projected | honest | none in this build | M | Unreachable: no binding can be created in this build. When the selector returns, key bindings by the logical team and resolve them for the copy at launch (see the last update). |
+| 11 | ~~Review flow and other per-team settings are per context~~ decided: per project board | semantic | low | S-M | One setting per board (project copy), consistent in the board popover, the settings page and the controller; the logical team is refused with a reason. Team-wide would need a live projection. |
 | 12 | ~~Hosted web / HTTP create and launch~~ done | honest | depends on hosted plans | L | HTTP and MCP create with a history mode and launch a per-project team in a project through the launch use case of the app. |
 
 The **silent** list, the ones that can mislead: 2, 3, 5 (and the cosmetic alias leak in 8).
@@ -275,3 +275,27 @@ The app's own team list folds the copies into the logical team (`projectTeamSumm
 ## Update after launch settings
 
 Gap 5 is closed for provider, model, effort, fast mode, context limit and model sync: they belong to the team definition and follow it into every project (see [per-project-launch-settings.md](./per-project-launch-settings.md)). `skipPermissions`, `worktree` and `extraCliArgs` stay per project on purpose. The "Launch settings" row of section A and gap 5 above describe the state before this change.
+
+## Update: member settings, gateway bindings and review flow
+
+Gaps 9, 10 and 11. The rows of section A keep the audit record; this block is newer.
+
+| Row | Before | After |
+| --- | --- | --- |
+| Per-member settings dialog | hidden | works for teammates while every project is stopped: the dialog of the project screen edits the member **in the definition** (`members.meta.json` of the logical team) through the same router as the roster (classification, stopped gate and projection under the logical-team lock), then the stopped copies are refreshed. While the open project runs or is launching the action is hidden on its screen; any project that runs, launches or is unreconciled makes the main process refuse the save with the reason (the dialog now shows it). A project copy is refused (`PROJECT_COPY_EDIT_MESSAGE`) |
+| The lead in that dialog | hidden | not a member setting of a per-project team: its provider, model and effort are team launch settings (`TEAM_META_FIELD_OWNER`), so the lead's action opens Change runtime (the launch dialog, which saves them for every project when the launch is accepted); a direct lead request is refused in main |
+| Settings-originated relaunch | hidden | refused, in main (`replaceMembers` with `memberSettingsRelaunch` of a per-project team); never offered by the app |
+| Gateway member bindings | hidden | unchanged, on purpose: nothing in this build can create one (see below) |
+| Review flow settings | per context (untested) | one setting per **board**, i.e. per project copy, verified end to end; the logical team has no board and is refused with a reason; the settings page lists a per-project team once per project as `<team> · <project>` |
+
+Decisions and evidence:
+
+- **One write path.** `routeMemberSettingsWrites` (`src/main/composeTeamMemberSettings.ts`) uses the router's own primitives (`classifyDefinitionWrite`, `runLogicalDefinitionWrite` in `src/main/ipc/teams/teamProjectDefinitionEdit.ts`, which `withProjectDefinitionEdit` now uses too). The write is the ordinary member settings use case on the logical name: with no `config.json` it writes only `members.meta.json`. Its non-blocking roster lock (`tryRunLiveRosterMutation`) is now reentrant like `runLiveRosterMutation`, so it runs inside the logical-team lock instead of answering busy.
+- **What the dialog edits.** The fingerprint the use case compares includes the member's `agentId` and `joinedAt`, which the saved request does not carry and which differ between the definition and each copy. The dialog therefore reads the definition member through `getMemberSettingsTarget` (a read of the same repository) and shows exactly what is compared; the project copy's runtime member is never the baseline.
+- **Settings-originated relaunch: refused, not "write to the running copy".** A value written only into a running copy is overwritten by the next projection (`projectDefinitionToAlias` at every launch and every definition edit), which is the silent class this page tracks, and copies are never the target of a definition edit anywhere else. For a stopped team no teammate change needs a relaunch (the definition is not running), and the lead goes through Change runtime.
+- **Gateway bindings stay hidden.** The only writers of a binding or a gateway profile are `MemberGatewaySelector` and `GatewayProvidersSettingsSection`; neither is mounted anywhere in production code (`MemberDraftRow.tsx`: "Teammate gateway settings are temporarily hidden"), there is no HTTP or MCP route, and the add-member dialog of a per-project team does not even look bindings up. A per-project team (created since #1217) therefore cannot have one. When the selector comes back, bindings must belong to the logical team (the roster is the definition's) and be resolved for the copy at launch: the runtime looks them up by the launched (copy) name today, so a binding saved under the logical name would silently not apply.
+- **Review flow per board.** The override is stored in the board's `kanban-state.json` and read by the controller when a task on that board moves to review; each copy has its own board, the board popover of a project writes that copy, and a new project starts on the default. A team-wide override would need a live projection into running boards; that is a product decision, not taken here.
+
+Verification: unit tests for the route (real editor and gate), the router refusal, the reentrant lock, the target mapper (fingerprint round trip), the review-flow gateway and settings list; real Electron `verifyMemberSettingsAndReviewFlow` (dialog save and revert from the project screen, projection into both copies, refusals for a copy, the lead, a settings relaunch and a reserved project, review flow on board A only, the settings page label).
+
+Still open: gap 6 (live edit), and the lead's model and effort cannot be saved without a launch (Change runtime launches).

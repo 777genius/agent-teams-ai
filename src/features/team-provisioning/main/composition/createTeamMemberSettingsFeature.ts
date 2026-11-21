@@ -10,6 +10,7 @@ import { UpdateMemberSettingsUseCase } from '../../core/application/use-cases/Up
 import {
   createMemberSettingsFingerprint,
   normalizeEditableMemberSettings,
+  toMemberSettingsTarget,
 } from '../../core/domain/memberSettingsPolicy';
 import { LegacyMemberSettingsLifecycleAdapter } from '../adapters/output/LegacyMemberSettingsLifecycleAdapter';
 import { LegacyMemberSettingsMutationGateAdapter } from '../adapters/output/LegacyMemberSettingsMutationGateAdapter';
@@ -17,6 +18,8 @@ import { LegacyMemberSettingsRepositoryAdapter } from '../adapters/output/Legacy
 import { createNodeLegacyMemberSettingsRepositoryDependencies } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
 
 import type {
+  GetMemberSettingsTargetRequest,
+  MemberSettingsTarget,
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../contracts/memberSettings';
@@ -47,6 +50,9 @@ const MAX_IN_PROCESS_COMMANDS = 4_096;
 
 export interface TeamMemberSettingsFeatureApi {
   updateMemberSettings(request: UpdateMemberSettingsRequest): Promise<UpdateMemberSettingsResult>;
+  getMemberSettingsTarget(
+    request: GetMemberSettingsTargetRequest
+  ): Promise<MemberSettingsTarget | null>;
 }
 
 export interface TeamMemberSettingsFeatureDependencies {
@@ -222,6 +228,10 @@ export function createTeamMemberSettingsFeature(
   const fallback = new InProcessMemberSettingsCommandRunner();
 
   return {
+    async getMemberSettingsTarget(request) {
+      const target = await repository.findTarget(request.teamName, request.memberName);
+      return target ? toMemberSettingsTarget(target) : null;
+    },
     async updateMemberSettings(request) {
       const execute = () => useCase.execute(request);
       if (!dependencies.commandRunner) {

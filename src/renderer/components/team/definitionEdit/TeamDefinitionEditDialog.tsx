@@ -2,19 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
-import { Button } from '@renderer/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@renderer/components/ui/dialog';
 
 import { EditTeamDialog } from '../dialogs/EditTeamDialog';
 
 import { buildDefinitionEditorInput } from './definitionEditorInput';
+import { DefinitionLoadErrorDialog } from './DefinitionLoadErrorDialog';
 
 import type { DefinitionEditorInput } from './definitionEditorInput';
 
@@ -65,23 +57,8 @@ export const TeamDefinitionEditDialog = ({
     };
   }, [load]);
 
-  if (loadError !== null) {
-    return (
-      <Dialog open onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('detail.editDefinition.loadFailed')}</DialogTitle>
-            <DialogDescription>{loadError}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              {t('detail.actions.cancel')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  if (loadError !== null)
+    return <DefinitionLoadErrorDialog message={loadError} onClose={onClose} />;
   if (!input) return null;
 
   return (

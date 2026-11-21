@@ -38,6 +38,20 @@ describe('TeamKanbanReviewFlowGateway', () => {
     expect(fs.existsSync(path.join(teamsDir, 'gone'))).toBe(false);
   });
 
+  it('refuses a per-project team (no board of its own) and says where its review flow lives', async () => {
+    fs.mkdirSync(path.join(teamsDir, 'builders'));
+    fs.writeFileSync(
+      path.join(teamsDir, 'builders', 'team.meta.json'),
+      JSON.stringify({ version: 1, createdAt: 1, cwd: '', projectContextMode: 'per_project' })
+    );
+    const { gateway, writer } = createGateway();
+    const refused = gateway.writeOverride('builders', HUMAN);
+    await expect(refused).rejects.toBeInstanceOf(ReviewFlowValidationError);
+    await expect(refused).rejects.toThrow(/separate history per project/);
+    expect(writer.setReviewFlowSettings).not.toHaveBeenCalled();
+    expect(fs.existsSync(path.join(teamsDir, 'builders', 'kanban-state.json'))).toBe(false);
+  });
+
   it('rejects unsafe team names before touching the file system', async () => {
     const { gateway, writer } = createGateway();
     for (const name of ['../outside', 'a/b', '', '  ']) {

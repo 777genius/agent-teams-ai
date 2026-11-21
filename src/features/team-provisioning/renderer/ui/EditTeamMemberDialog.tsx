@@ -199,13 +199,17 @@ export const EditTeamMemberDialog = ({
           ? { targetKind: 'lead', leadRuntime: { model: settings.model, effort: settings.effort } }
           : { targetKind: 'member', settings }),
       });
-    } catch {
+    } catch (saveError) {
       try {
         await onRefresh();
       } catch {
         // Preserve the mutation failure while still attempting current-truth refresh.
       }
-      setError(t('editTeam.errors.saveFailed'));
+      // A refusal of the main process (for example a project of the team is running) says why.
+      const reason = saveError instanceof Error ? saveError.message.trim() : '';
+      setError(
+        reason ? t('editor.saveFailed', { error: reason }) : t('editTeam.errors.saveFailed')
+      );
       return;
     }
     const committedLeadRuntime =

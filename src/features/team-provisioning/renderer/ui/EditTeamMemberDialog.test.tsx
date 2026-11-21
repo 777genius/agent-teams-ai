@@ -392,6 +392,8 @@ describe('EditTeamMemberDialog', () => {
     await act(async () => saveButton().click());
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
+    // The refusal of the main process is shown with its reason, not as a bare failure.
+    expect(host.textContent).toContain('editor.saveFailed');
   });
 
   it('stays open and does not repeat refresh when refresh fails after a successful save', async () => {

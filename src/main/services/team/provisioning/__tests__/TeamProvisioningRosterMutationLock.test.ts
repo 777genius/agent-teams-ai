@@ -23,6 +23,31 @@ describe('team provisioning roster mutation lock', () => {
     await expect(first).resolves.toBe(true);
   });
 
+  it('admits a try-run inside its own roster lock, and stays busy for any other holder', async () => {
+    const service = new TeamProvisioningService();
+    const nested = vi.fn(async () => undefined);
+    let insideOwnLock: boolean | undefined;
+    await service.runLiveRosterMutation('Definition-Team', async () => {
+      insideOwnLock = await service.tryRunLiveRosterMutation(' definition-team ', nested);
+    });
+    expect(insideOwnLock).toBe(true);
+    expect(nested).toHaveBeenCalledOnce();
+
+    // Another caller (not inside the held lock) is still refused while the lock is held.
+    let release!: () => void;
+    const held = service.runLiveRosterMutation('definition-team', async () => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    });
+    await Promise.resolve();
+    const outsider = vi.fn(async () => undefined);
+    await expect(service.tryRunLiveRosterMutation('definition-team', outsider)).resolves.toBe(false);
+    expect(outsider).not.toHaveBeenCalled();
+    release();
+    await held;
+  });
+
   it('does not self-deadlock when the locked transaction delegates to member lifecycle', async () => {
     const service = new TeamProvisioningService();
     const lifecycleController = (

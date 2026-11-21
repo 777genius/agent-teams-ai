@@ -16,8 +16,6 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   assertMemberSettingsRelaunchRoster,
   type MemberSettingsRelaunchDraft,
-  refreshTeamMemberSettings,
-  TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
 import {
   type TaskDetailFileLinkIntent,
@@ -113,6 +111,7 @@ import { buildChangeRuntimeLaunchState } from './definitionEdit/changeRuntimeLau
 import { getDefinitionEditAccess } from './definitionEdit/definitionEditAccess';
 import { refreshAfterDefinitionEdit, routeMemberActions } from './definitionEdit/definitionEditActions';
 import { TeamDefinitionEditDialog } from './definitionEdit/TeamDefinitionEditDialog';
+import { TeamMemberSettingsDialogRoute } from './definitionEdit/TeamMemberSettingsDialogRoute';
 import { TeamScheduleSection } from './definitionEdit/TeamScheduleSection';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
@@ -2217,11 +2216,12 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSelectedMemberView(null);
   }, []);
   const handleEditMember = useCallback((member: ResolvedTeamMember) => {
-    if (member.removedAt || logicalTeamName) return;
+    if (member.removedAt) return;
+    if (logicalTeamName && isLeadMember(member)) { handleChangeLeadRuntime(); return; }
     setSelectedMember(null);
     setSelectedMemberView(null);
     setEditTarget({ kind: 'member', memberName: member.name });
-  }, [logicalTeamName]);
+  }, [handleChangeLeadRuntime, logicalTeamName]);
   const closeSelectedMemberDialog = useCallback(() => {
     setSelectedMember(null);
     setSelectedMemberView(null);
@@ -3173,7 +3173,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                       onMemberClick={handleSelectMember}
                       onSendMessage={handleSendMessageToMember}
                       onAssignTask={handleAssignTaskToMember}
-                      onEditMember={logicalTeamName ? undefined : handleEditMember}
+                      onEditMember={logicalTeamName && (!canEditDefinition || editUnavailableKey) ? undefined : handleEditMember}
                       onOpenTask={handleOpenTaskById}
                       onRestartMember={handleRestartMember}
                       onSkipMemberForLaunch={handleSkipMemberForLaunch}
@@ -3391,7 +3391,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   closeSelectedMemberDialog();
                   openTaskDetailDialog(task);
                 }}
-                onEditMember={logicalTeamName ? undefined : handleEditMember}
+                onEditMember={logicalTeamName && (!canEditDefinition || editUnavailableKey) ? undefined : handleEditMember}
                 onRemoveMember={canEditDefinition && !(logicalTeamName && editUnavailableKey) ? () => {
                   const name = selectedMember?.name;
                   if (!name) return;
@@ -3458,16 +3458,16 @@ export const TeamDetailView = memo(function TeamDetailView({
                 />
               )}
 
-              {!logicalTeamName && editTarget?.kind === 'member' ? (
-                <TeamMemberSettingsDialogBridge
+              {editTarget?.kind === 'member' ? (
+                <TeamMemberSettingsDialogRoute
                   teamName={teamName}
+                  logicalTeamName={logicalTeamName}
                   memberName={editTarget.memberName}
                   members={membersWithLiveBranches}
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
                   onClose={() => setEditTarget(null)}
-                  onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
                   onRelaunchRequired={handleChangeLeadRuntime}
                 />
               ) : null}

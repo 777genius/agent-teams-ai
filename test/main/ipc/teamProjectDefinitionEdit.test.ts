@@ -18,8 +18,10 @@ import {
   createProjectDefinitionEditRouting,
   NATIVE_LEAD_PROMPT_MESSAGE,
   PROJECT_COPY_EDIT_MESSAGE,
+  PROJECT_TEAM_SETTINGS_RELAUNCH_MESSAGE,
   readRosterForMutation,
   refuseLeadPromptOfNativeTeam,
+  refuseSettingsRelaunchOfDefinition,
   route,
   rosterOf,
 } from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
@@ -232,5 +234,54 @@ describe('lead instructions in the update-config route', () => {
     expect(refuseLeadPromptOfNativeTeam({ name: 'x' })).toBeNull();
     expect(refuseLeadPromptOfNativeTeam({ prompt: undefined })).toBeNull();
     expect(refuseLeadPromptOfNativeTeam({ prompt: '' })).toBe(NATIVE_LEAD_PROMPT_MESSAGE);
+  });
+});
+
+/**
+ * A settings-originated relaunch writes member settings into the team it
+ * relaunches. For a per-project team that would be a second writer of its
+ * definition, outside the stopped-team rule, so main refuses it; an ordinary
+ * team keeps it, and an ordinary roster replace of a per-project team still works.
+ */
+describe('settings-originated relaunch of a per-project team', () => {
+  function replaceRouting(target: TeamKind) {
+    const editor = {
+      classify: vi.fn(async () => target),
+      assertEditable: vi.fn(async () => undefined),
+      projectToAliases: vi.fn(async () => ({ failed: [] })),
+    };
+    const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
+    const wrapped = createProjectDefinitionEditRouting(
+      { data: () => ({ runConfigurationOperation: (_name: string, operation: () => Promise<unknown>) => operation() }) } as never,
+      () => editor as unknown as TeamProjectDefinitionEditor
+    )(handler, undefined, refuseSettingsRelaunchOfDefinition);
+    return { editor, handler, wrapped };
+  }
+  const relaunch = { members: [], memberSettingsRelaunch: { memberName: 'alice' } };
+
+  it('refuses it for a per-project team before the gate, writing nothing', async () => {
+    const r = replaceRouting('logical');
+    await expect(r.wrapped(event, 'builders', relaunch)).resolves.toEqual({
+      success: false,
+      error: PROJECT_TEAM_SETTINGS_RELAUNCH_MESSAGE,
+    });
+    expect(r.editor.assertEditable).not.toHaveBeenCalled();
+    expect(r.handler).not.toHaveBeenCalled();
+  });
+
+  it('keeps an ordinary roster replace of a per-project team and the relaunch of an ordinary team', async () => {
+    const logical = replaceRouting('logical');
+    await expect(logical.wrapped(event, 'builders', { members: [] })).resolves.toMatchObject({ success: true });
+    expect(logical.editor.projectToAliases).toHaveBeenCalledWith('builders');
+    const native = replaceRouting('native');
+    await expect(native.wrapped(event, 'legacy', relaunch)).resolves.toMatchObject({ success: true });
+    expect(native.handler).toHaveBeenCalledWith(event, 'legacy', relaunch);
+  });
+
+  it('names a refusal only for a request that carries the relaunch intent', () => {
+    expect(refuseSettingsRelaunchOfDefinition(undefined)).toBeNull();
+    expect(refuseSettingsRelaunchOfDefinition({ members: [] })).toBeNull();
+    expect(refuseSettingsRelaunchOfDefinition({ memberSettingsRelaunch: undefined })).toBeNull();
+    expect(refuseSettingsRelaunchOfDefinition(relaunch)).toBe(PROJECT_TEAM_SETTINGS_RELAUNCH_MESSAGE);
   });
 });
