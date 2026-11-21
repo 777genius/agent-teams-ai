@@ -155,12 +155,12 @@ export function validateTemplateContent(
     if (!name) {
       issues.push({ code: 'memberNameRequired', field: `${baseField}.name` });
     } else {
+      // Match creation's reserved-name policy even for a lone 'dev-2'.
+      const suffix = parseNumericSuffixName(name);
       if (
         validateTeamMemberNameFormat(name) ||
         isReservedName(name) ||
-        // Team creation rejects all runtime-managed suffixes >= 2, even when
-        // the base name is absent. Import/edit must apply the same policy.
-        ((suffix) => suffix !== null && suffix.suffix >= 2)(parseNumericSuffixName(name)) ||
+        (suffix !== null && suffix.suffix >= 2) ||
         !keepAutoSuffixedName(name) ||
         !keepNonProvisionerName(name)
       ) {
