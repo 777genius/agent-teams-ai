@@ -312,7 +312,10 @@ describe('InternalStorageWorkerCore', () => {
     restarted.close();
     await fs.unlink(marker);
     const acknowledged = track(makeCore(dbPath));
-    expect(acknowledged.handle('customTemplate.list', {})).toEqual([]);
+    expect(acknowledged.handle('customTemplate.list', {})).toEqual({
+      templates: [],
+      unreadableRecords: [],
+    });
   });
 
   it('records store imports idempotently (upsert by store + team)', async () => {
