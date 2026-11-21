@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { BoundControlContext } from '@features/external-agent-connection/main';
+import { TeamProjectContextRegistry } from '@features/team-project-context/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { registerTeamRoutes } from '@main/http/teams';
 import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
@@ -10,10 +11,11 @@ import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { createProjectTeamLaunch } from '@main/teamProjectContextLaunchPort';
 import { createTeamProjectDefinitionPort } from '@main/teamProjectDefinitionPort';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { vi } from 'vitest';
@@ -177,11 +179,14 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
 
 function createServices(claudeRoot: string): {
   createTeamCalls: TeamCreateRequest[];
+  /** Teams whose provisioning run is in flight, as the launch gate sees them. */
+  launching: Set<string>;
   teamDataService: TeamDataService;
   services: HttpServices;
 } {
   const teamDataService = new TeamDataService();
   const createTeamCalls: TeamCreateRequest[] = [];
+  const launching = new Set<string>();
   const aliveTeams = new Set<string>();
   const progressByRunId = new Map<string, TeamProvisioningProgress>();
   const runIdByTeam = new Map<string, string>();
@@ -331,6 +336,7 @@ function createServices(claudeRoot: string): {
 
   return {
     createTeamCalls,
+    launching,
     teamDataService,
     services: {
       projectScanner: {} as HttpServices['projectScanner'],
@@ -349,6 +355,12 @@ function createServices(claudeRoot: string): {
         runtimeControl: teamRuntimeControlApi,
         memberDiagnostics: teamMemberDiagnosticsApi,
       } satisfies TeamHttpHandlerApis,
+      projectTeamLaunch: () =>
+        createProjectTeamLaunch({
+          data: teamDataService,
+          runtime: teamRuntimeApi,
+          run: { hasProvisioningRun: (teamName) => launching.has(teamName) },
+        }),
     },
   };
 }
@@ -427,6 +439,8 @@ describe('MCP team tools over the local REST control API', () => {
       const created = parseJsonToolResult(
         await getTool('team_create').execute({
           ...base,
+          // Trash over MCP is for shared teams; a per-project team is trashed in the app.
+          projectContextMode: 'shared',
           runtimeSelectionVersion: 1,
           description: 'Initial',
           prompt: 'Saved lead instructions',
@@ -1884,6 +1898,244 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
+  // A team created over MCP with separate history per project (the mode is required) launches over
+  // MCP/HTTP through the same project-context launch as the app. Catches: the copy's
+  // readiness never confirmed (the team would read as "launching" forever), a refused request
+  // leaving a reservation (it blocks the team in every other project), a second copy for the same
+  // project, a draft rename reaching the copy, and a copy launched by its own name.
+  it('creates a per-project team over MCP and launches it in a project like the app', async () => {
+    const root = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-per-project-launch-')));
+    setClaudeBasePathOverride(root);
+    const projectA = path.join(root, 'project-a');
+    const projectB = path.join(root, 'project-b');
+    await mkdir(projectA);
+    await mkdir(projectB);
+    const projectKey = (value: string) =>
+      process.platform === 'win32' ? path.normalize(value).toLowerCase() : value;
+    const app = Fastify();
+    const { services, teamDataService, createTeamCalls, launching } = createServices(root);
+    const { context } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const controlUrl = 'http://per-project-launch.test';
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    const teamName = 'per-project-mcp';
+    const base = { claudeDir: root, controlUrl, teamName };
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const launchOverHttp = (payload: Record<string, unknown>) =>
+      app.inject({ method: 'POST', url: `/api/teams/${teamName}/launch`, payload });
+    try {
+      const created = parseJsonToolResult(
+        await getTool('team_create').execute({
+          ...base,
+          projectContextMode: 'per_project',
+          cwd: projectA,
+          providerId: 'codex',
+          members: [{ name: 'builder', role: 'Engineer' }],
+        })
+      );
+      expect(created).toMatchObject({ teamName, draft: true, projectContextMode: 'per_project' });
+      const logicalDir = path.join(root, 'teams', teamName);
+      expect(JSON.parse(await readFile(path.join(logicalDir, 'team.meta.json'), 'utf8'))).toMatchObject({
+        projectContextMode: 'per_project',
+      });
+
+      const launched = parseJsonToolResult(
+        await getTool('team_launch').execute({ ...base, cwd: projectA })
+      );
+      // The progress names the team, not its internal copy.
+      expect(launched).toMatchObject({ isAlive: true, progress: { state: 'ready', teamName } });
+      expect(createTeamCalls).toHaveLength(1);
+      const copy = createTeamCalls[0];
+      expect(copy.teamName).toMatch(/^ptc-[a-f0-9]{24}$/);
+      // The contexts index keys a Windows project folder in lower case.
+      expect(projectKey(copy.cwd)).toBe(projectKey(projectA));
+      expect(copy).toMatchObject({
+        projectContextMode: 'shared',
+        providerId: 'codex',
+        members: [expect.objectContaining({ name: 'builder', role: 'Engineer' })],
+      });
+      await vi.waitFor(async () =>
+        expect(await registry.find(teamName, projectA)).toMatchObject({
+          state: 'ready',
+          executionTeamName: copy.teamName,
+        })
+      );
+      await expect(readFile(path.join(logicalDir, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+
+      // The team runs in project A: project B is refused, over HTTP and MCP alike.
+      const elsewhere = await launchOverHttp({ cwd: projectB });
+      expect(elsewhere.statusCode).toBe(409);
+      expect(elsewhere.json()).toMatchObject({ code: 'TEAM_PROJECT_CONTEXT_RUNNING' });
+      await expect(getTool('team_launch').execute({ ...base, cwd: projectB })).rejects.toThrow(
+        /another project/
+      );
+      // A copy that is still launching blocks the other projects too.
+      launching.add(copy.teamName);
+      const whileLaunching = await launchOverHttp({ cwd: projectB });
+      launching.delete(copy.teamName);
+      expect(whileLaunching.statusCode).toBe(409);
+      expect(whileLaunching.json()).toMatchObject({
+        code: 'TEAM_PROJECT_CONTEXT_RUNNING',
+        error: expect.stringContaining('still launching'),
+      });
+      // Requests that can never succeed are refused before anything is reserved.
+      for (const payload of [
+        { cwd: projectB, teamName: 'renamed-team' },
+        { cwd: projectB, prompt: 5 },
+        { cwd: projectB, effort: 'not-an-effort' },
+        // The first launch in a project creates its copy: a bootstrap-only start cannot.
+        { cwd: projectB, bootstrapOnly: true },
+        {},
+        { cwd: path.join(root, 'no-such-project') },
+      ]) {
+        const refused = await launchOverHttp(payload);
+        expect(refused.statusCode, JSON.stringify(payload)).toBe(400);
+      }
+      expect(await registry.find(teamName, projectB)).toBeNull();
+      // A team without a chosen runtime is refused before its first copy is reserved.
+      const unresolved = 'per-project-unresolved';
+      const unresolvedCreate = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: unresolved,
+          projectContextMode: 'per_project',
+          runtimeSelectionVersion: 1,
+          expectedContext: context.snapshot(),
+          members: [{ name: 'builder' }],
+        },
+      });
+      expect(unresolvedCreate.statusCode).toBe(201);
+      const unresolvedLaunch = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${unresolved}/launch`,
+        payload: { cwd: projectB },
+      });
+      expect(unresolvedLaunch.statusCode).toBe(422);
+      expect(unresolvedLaunch.json()).toMatchObject({ code: 'RUNTIME_SELECTION_REQUIRED' });
+      expect(await registry.find(unresolved, projectB)).toBeNull();
+      const direct = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${copy.teamName}/launch`,
+        payload: { cwd: projectA },
+      });
+      expect(direct.statusCode).toBe(409);
+      expect(direct.json()).toMatchObject({ code: 'PROJECT_COPY_NOT_LAUNCHABLE' });
+
+      // Launching in project A again reuses its copy (and with it the history of that project).
+      const again = await launchOverHttp({ cwd: projectA });
+      expect(again.statusCode).toBe(200);
+      expect(createTeamCalls.map((call) => call.teamName)).toEqual([copy.teamName, copy.teamName]);
+      expect(await registry.list(teamName)).toHaveLength(1);
+
+      // A first launch that fails after its copy was reserved (the provider refuses) can be
+      // retried in the same project, like in the app: the reserved copy is reused, not a new one.
+      const retried = 'per-project-retry';
+      const createOver = (name: string) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/teams',
+          payload: { teamName: name, projectContextMode: 'per_project', providerId: 'codex', members: [] },
+        });
+      expect((await createOver(retried)).statusCode).toBe(201);
+      const start = services.teamApis!.provisioningStart;
+      const realCreate = start.createTeam;
+      start.createTeam = () => {
+        start.createTeam = realCreate;
+        return Promise.reject(
+          Object.assign(new Error('Provider is not authenticated'), {
+            name: 'TeamLaunchValidationError',
+          })
+        );
+      };
+      const launchTeam = (name: string, payload: Record<string, unknown>) =>
+        app.inject({ method: 'POST', url: `/api/teams/${name}/launch`, payload });
+      expect((await launchTeam(retried, { cwd: projectB })).statusCode).toBe(422);
+      const reserved = await registry.inspect(retried, projectB);
+      expect(reserved?.state).toBe('reserved');
+      expect((await launchTeam(retried, { cwd: projectB })).statusCode).toBe(200);
+      await vi.waitFor(async () =>
+        expect(await registry.find(retried, projectB)).toMatchObject({
+          state: 'ready',
+          executionTeamName: reserved?.executionTeamName,
+        })
+      );
+      expect(await registry.list(retried)).toHaveLength(1);
+
+      // Concurrent launches are serialized by the team lock: in two projects one wins and the
+      // other is refused without a reservation; twice in one project both reuse one copy.
+      const raced = 'per-project-race';
+      expect((await createOver(raced)).statusCode).toBe(201);
+      const twoProjects = await Promise.all([
+        launchTeam(raced, { cwd: projectA }),
+        launchTeam(raced, { cwd: projectB }),
+      ]);
+      expect(twoProjects.map((response) => response.statusCode).sort((a, b) => a - b)).toEqual([
+        200, 409,
+      ]);
+      expect(await registry.list(raced)).toHaveLength(1);
+      const twice = 'per-project-twice';
+      expect((await createOver(twice)).statusCode).toBe(201);
+      const sameProject = await Promise.all([
+        launchTeam(twice, { cwd: projectA }),
+        launchTeam(twice, { cwd: projectA }),
+      ]);
+      expect(sameProject.map((response) => response.statusCode)).toEqual([200, 200]);
+      expect(await registry.list(twice)).toHaveLength(1);
+
+      // What an HTTP launch states becomes the launch settings of the team and of its copy, like a
+      // launch from the app; a launch that found the copy already running records nothing.
+      const settled = 'per-project-settings';
+      expect((await createOver(settled)).statusCode).toBe(201);
+      const metaOf = async (name: string) =>
+        JSON.parse(await readFile(path.join(root, 'teams', name, 'team.meta.json'), 'utf8')) as Record<
+          string,
+          unknown
+        >;
+      const first = await launchTeam(settled, { cwd: projectA, model: 'gpt-5.4', effort: 'high' });
+      expect(first.statusCode).toBe(200);
+      const settledCopy = (await registry.inspect(settled, projectA))?.executionTeamName ?? '';
+      expect(await metaOf(settled)).toMatchObject({ model: 'gpt-5.4', effort: 'high' });
+      expect(await metaOf(settledCopy)).toMatchObject({ model: 'gpt-5.4', effort: 'high' });
+      const realLaunch = start.launchTeam;
+      start.launchTeam = () =>
+        Promise.resolve({ runId: 'run-running', launchStatus: 'already_running', alreadyRunning: true });
+      try {
+        const running = await launchTeam(settled, { cwd: projectA, model: 'gpt-9' });
+        expect(running.statusCode).toBe(200);
+      } finally {
+        start.launchTeam = realLaunch;
+      }
+      expect(await metaOf(settled)).toMatchObject({ model: 'gpt-5.4' });
+      expect(await metaOf(settledCopy)).toMatchObject({ model: 'gpt-5.4' });
+
+      // An effort only Codex knows is checked against the provider of the team on every launch in
+      // a project: the first one (its copy is a draft) and the next (the copy is configured).
+      const xhigh = 'per-project-xhigh';
+      expect((await createOver(xhigh)).statusCode).toBe(201);
+      const firstXhigh = await launchTeam(xhigh, { cwd: projectA, effort: 'xhigh' });
+      expect(firstXhigh.statusCode, firstXhigh.body).toBe(200);
+      const againXhigh = await launchTeam(xhigh, { cwd: projectA, effort: 'xhigh' });
+      expect(againXhigh.statusCode, againXhigh.body).toBe(200);
+      expect(createTeamCalls.at(-1)).toMatchObject({ effort: 'xhigh' });
+      // A provider stated by the request is still the one its effort is checked against.
+      const anthropicXhigh = await launchTeam(xhigh, {
+        cwd: projectA,
+        providerId: 'anthropic',
+        effort: 'xhigh',
+      });
+      expect(anthropicXhigh.statusCode).toBe(400);
+    } finally {
+      restoreFetch();
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('creates, gets, launches, and lists a team through MCP and REST end to end', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-'));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-e2e-'));
@@ -1901,6 +2153,8 @@ describe('MCP team tools over the local REST control API', () => {
           claudeDir: claudeRoot,
           controlUrl,
           teamName: 'mcp-e2e-team',
+          // The history mode is required over MCP; this flow is the one of a shared team.
+          projectContextMode: 'shared',
           displayName: 'MCP E2E Team',
           description: 'Created by MCP integration test',
           color: '#3366ff',
@@ -1937,6 +2191,7 @@ describe('MCP team tools over the local REST control API', () => {
       expect(created).toEqual({
         teamName: 'mcp-e2e-team',
         draft: true,
+        projectContextMode: 'shared',
         runtimeSelection: 'selected',
       });
 

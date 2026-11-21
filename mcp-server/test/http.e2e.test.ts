@@ -300,6 +300,7 @@ describe('agent-teams-mcp HTTP e2e', () => {
       await expect(call('app_get_connection_info', { controlUrl: fallbackUrl })).rejects.toThrow();
       const args = {
         teamName,
+        projectContextMode: 'shared',
         runtimeSelectionVersion: 1,
         expectedContext: context,
         members: [{ name: 'alice', role: 'developer', workflow: 'Implement scoped changes' }],

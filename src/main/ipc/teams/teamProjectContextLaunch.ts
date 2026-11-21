@@ -1,27 +1,28 @@
 import {
   classifyTeamKind,
+  launchInProjectContext,
   recordLaunchSettings,
+  rememberProjectRunIdentity,
   TeamProjectContextLaunchConflictError,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
 import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
 
-import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
-
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
-import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
-import type { DefinitionLaunchSettingsStore } from '@features/team-project-context/main';
+import type {
+  DefinitionLaunchSettingsStore,
+  ProjectContextLaunchPorts,
+  ProjectContextProgressMapper,
+} from '@features/team-project-context/main';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
 const logger = createLogger('IPC:teams:projectLaunch');
 
-export type ProjectContextProgressMapper = (
-  progress: TeamProvisioningProgress,
-  deliver: (progress: TeamProvisioningProgress) => void
-) => void;
+export type { ProjectContextProgressMapper };
+export type ProjectContextRuntimeParts = ReturnType<typeof createProjectContextRuntimeParts>;
 
 export interface PreparedTeamContextLaunch {
   request: TeamLaunchRequest;
@@ -42,9 +43,9 @@ export interface PreparedTeamContextLaunch {
 export async function prepareTeamContextLaunch(
   request: TeamLaunchRequest,
   ports: ProjectTeamRuntimePorts,
-  options: { expectedExecutionTeamName?: string } = {}
+  options: { expectedExecutionTeamName?: string; parts?: ProjectContextRuntimeParts } = {}
 ): Promise<PreparedTeamContextLaunch> {
-  const parts = createProjectContextRuntimeParts(ports);
+  const parts = options.parts ?? createProjectContextRuntimeParts(ports);
   const kind = await classifyTeamKind(parts.kinds, request.teamName);
   // Public launch requests must never bypass logical-team admission by
   // addressing the physical runtime alias directly (e.g. global tasks).
@@ -81,7 +82,7 @@ export async function prepareTeamContextLaunch(
     );
     const physical = await parts.materializer.ensureProjectDraft(canonicalAddress);
     if (physical.executionTeamName !== reserved.executionTeamName) {
-      throw new Error('Project context changed during launch admission');
+      throw new TeamProjectContextLaunchConflictError('Project context changed during launch admission');
     }
     return {
       request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },
@@ -128,32 +129,29 @@ export function buildTeamProgressReporter(
   };
 }
 
-/** Resolve only when needed, preserving the existing native launch path. */
-export async function withPreparedContextLaunch(
+/** The ports of the launch use case, bound to this app; `parts` are shared with the caller. */
+export function projectContextLaunchPorts(
+  ports: ProjectTeamRuntimePorts,
+  parts: ProjectContextRuntimeParts = createProjectContextRuntimeParts(ports)
+): ProjectContextLaunchPorts {
+  return {
+    getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
+    prepare: (request) => prepareTeamContextLaunch(request, ports, { parts }),
+    rememberRunIdentity: rememberProjectRunIdentity,
+  };
+}
+
+/** The desktop IPC adapter: resolve only when needed, preserving the native launch path. */
+export function withPreparedContextLaunch(
   request: TeamLaunchRequest,
   ports: ProjectTeamRuntimePorts,
   invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) =>
     Promise<IpcResult<TeamLaunchResponse>>
 ): Promise<IpcResult<TeamLaunchResponse> | null> {
-  // Validate explicit overrides BEFORE reserving native files. The original
-  // IPC handler still validates effective persisted settings before spawn.
-  // A missing provider override inherits the saved provider; Codex and
-  // Anthropic support levels beyond the legacy default set.
-  const saved = request.providerId ? null : await ports.data.getSavedRequest(request.teamName);
-  const effort = parseOptionalTeamEffort(request.effort, request.providerId ?? saved?.providerId);
-  if (!effort.valid) throw new Error(effort.error);
-  const fastMode = parseOptionalTeamFastMode(request.fastMode);
-  if (!fastMode.valid) throw new Error(fastMode.error);
-  const selected = await prepareTeamContextLaunch(request, ports);
-  if (selected.request.teamName === request.teamName) return null;
-  const result = await invoke(selected.request, selected.mapProgress);
-  if (result.success && result.data) {
-    rememberProjectRunIdentity(
-      result.data.runId, request.teamName, selected.request.teamName
-    );
-    await selected.recordLaunch?.(result.data);
-  }
-  return result;
+  return launchInProjectContext(request, projectContextLaunchPorts(ports), {
+    invoke,
+    started: (result) => (result.success ? (result.data ?? null) : null),
+  });
 }
 
 /**

@@ -13,8 +13,10 @@ import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/
 import { createReviewFlowFeature, registerReviewFlowIpc, removeReviewFlowIpc } from '@features/review-flow/main';
 import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
+  projectPublicProvisioningProgress,
   projectTeamSummaries,
   registerTeamProjectContextViewHandler,
+  resolveProjectRunDiagnosticsTeam,
   unregisterTeamProjectContextViewHandler,
 } from '@features/team-project-context/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
@@ -211,8 +213,7 @@ import { teamMessageNotificationScanner } from './teams/teamMessageNotificationS
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
-import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
+import { buildTeamProgressReporter, type ProjectContextProgressMapper, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
@@ -267,7 +268,6 @@ import type {
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type { RuntimeRosterMutationMember } from './teams/runtimeRosterMutationMember';
-import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {

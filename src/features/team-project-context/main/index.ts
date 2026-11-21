@@ -51,12 +51,25 @@ export {
   stopLogicalContexts,
 } from './logicalTeamRuntime';
 export { listOwnedContexts, ownsProjectHistory } from './ownedHistory';
+export type {
+  PreparedProjectContextLaunch,
+  ProjectContextLaunchPorts,
+  ProjectContextProgressMapper,
+  ProjectCopyLauncher,
+  ProjectTeamLaunch,
+} from './projectContextLaunch';
+export { launchInProjectContext } from './projectContextLaunch';
 export type { TeamModeMetaReader } from './projectContextMode';
 export {
   readTeamProjectContextMode,
   TeamMetadataUnreadableError,
 } from './projectContextMode';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
+export {
+  projectPublicProvisioningProgress,
+  rememberProjectRunIdentity,
+  resolveProjectRunDiagnosticsTeam,
+} from './projectRunIdentity';
 export { projectTeamSummaries } from './projectTeamSummaries';
 export type { ContextGroup, ResolvedTeamTarget, TeamTargetPorts } from './resolveTeamTarget';
 export {
@@ -73,6 +86,7 @@ export {
   isStoppedTeamRuntime,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextLaunchGate,
+  TeamProjectContextLaunchRefusedError,
 } from './TeamProjectContextLaunchGate';
 export type {
   OwnedExecutionAlias,

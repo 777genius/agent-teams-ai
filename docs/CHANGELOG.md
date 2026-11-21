@@ -6,8 +6,14 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking for HTTP and MCP clients:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (`shared` or `per_project`) and answer 400 with code `PROJECT_CONTEXT_MODE_REQUIRED` without it. Before, they always created a `shared` team. Migration: send `projectContextMode: "shared"` to keep the old behavior; `per_project` creates a team with separate history per project folder, which `team_launch` can launch (the task, message and review tools do not support it over MCP yet).
+- HTTP create and launch accept an empty `effort` or `fastMode` as "not set", like the app (they were refused with 400).
+
 ### Added
 
+- HTTP `POST /api/teams/:team/launch` and MCP `team_launch` launch a team with separate history per project in the project given by `cwd`, with the project-context launch of the app (reservation, launch gate, copy, launch settings). Like every HTTP launch, it does not mark the team as watched for the open app and does not take the backup identity fence the app takes for a draft.
 - GPT-5.6 Sol, Terra, and Luna fallback selection for Codex teams, dynamic future-model efforts, and in-app Codex CLI updates.
 - Traditional Chinese (Taiwan, `zh-TW`) app language with Taiwan terminology. Traditional Chinese system locales (zh-TW, zh-HK, zh-MO, zh-Hant) select it automatically, missing keys fall back to English instead of Simplified Chinese, and cron schedule descriptions use cronstrue's `zh_TW`.
 

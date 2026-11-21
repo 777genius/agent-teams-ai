@@ -313,6 +313,7 @@ export async function verifyNativeCodexMcp(
     const created = await call('team_create', {
       teamName: input.teamName,
       cwd: input.cwd,
+      projectContextMode: 'shared',
       runtimeSelectionVersion: 1,
       expectedContext: input.expectedContext,
       prompt: 'Coordinate this disposable native MCP contract team.',

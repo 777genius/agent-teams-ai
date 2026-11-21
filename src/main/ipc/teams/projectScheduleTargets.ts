@@ -1,6 +1,7 @@
 import {
   classifyTeamKind,
   pickDefinitionLaunchSettings,
+  rememberProjectRunIdentity,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextUnavailableError,
 } from '@features/team-project-context/main';
@@ -11,7 +12,6 @@ import * as path from 'path';
 
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { prepareTeamContextLaunch } from './teamProjectContextLaunch';
-import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { PreparedTeamContextLaunch } from './teamProjectContextLaunch';

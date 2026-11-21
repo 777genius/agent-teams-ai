@@ -3,9 +3,12 @@ import * as path from 'node:path';
 import {
   createTeamKindPorts,
   isConfirmedStoppedTeamRuntime,
+  rememberProjectRunIdentity,
   TeamProjectContextCreateCoordinator,
   TeamProjectContextDraftMaterializer,
+  TeamProjectContextLaunchConflictError,
   TeamProjectContextLaunchGate,
+  TeamProjectContextLaunchRefusedError,
   TeamProjectContextRegistry,
   TeamProjectContextRuntimeResolver,
 } from '@features/team-project-context/main';
@@ -17,7 +20,6 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
-import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type {
   TeamProvisioningRunApi,
@@ -60,13 +62,15 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     assertStoppedForRosterSync: async (name) => {
       if (ports.run.hasProvisioningRun(name) ||
           !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))) {
-        throw new Error('Stop this project runtime before applying team roster changes');
+        throw new TeamProjectContextLaunchConflictError(
+          'Stop this project runtime before applying team roster changes'
+        );
       }
     },
     assertOwnedAlias: async (teamName) => {
       const owner = await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName));
       if (owner !== resolveThisAppProfileScope()) {
-        throw new Error('Unowned project context: refusing native launch');
+        throw new TeamProjectContextLaunchRefusedError('Unowned project context: refusing native launch');
       }
     },
   });
