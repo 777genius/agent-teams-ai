@@ -3,6 +3,7 @@ import * as path from 'node:path';
 
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { syncDirectoryDurably } from '@main/utils/atomicWrite';
+import { syncFile } from '@main/utils/durableFileSync';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 /**
@@ -11,6 +12,14 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
  * The marker contains no roster data; the saved definition remains authoritative.
  */
 export class TeamProjectLiveEditJournal {
+  constructor(
+    private readonly synchronizeFile: (
+      filePath: string,
+      strict: boolean
+    ) => Promise<void> = syncFile,
+    private readonly synchronizeDirectory: (dirPath: string) => Promise<void> = syncDirectoryDurably
+  ) {}
+
   private marker(teamName: string): string {
     const valid = validateTeamName(teamName);
     if (!valid.valid || !valid.value) throw new Error('Invalid team identifier');
@@ -40,13 +49,33 @@ export class TeamProjectLiveEditJournal {
     await syncDirectoryDurably(path.dirname(marker));
   }
 
-  async clear(teamName: string): Promise<void> {
+  async clear(teamName: string, activeTeamName?: string): Promise<void> {
     const marker = this.marker(teamName);
     const stat = await fs.lstat(marker);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== 0) {
       throw new Error('The project team edit marker is unreadable; restore it before retrying');
     }
+    // The ordinary writers use atomic rename but do not all request strict durability.
+    // Synchronize their final files and directory entries before removing the durable fence.
+    for (const name of [teamName, ...(activeTeamName ? [activeTeamName] : [])]) {
+      const dir = path.dirname(this.marker(name));
+      for (const filename of ['team.meta.json', 'members.meta.json', 'config.json']) {
+        const filePath = path.join(dir, filename);
+        let fileStat;
+        try {
+          fileStat = await fs.lstat(filePath);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw error;
+        }
+        if (!fileStat.isFile() || fileStat.isSymbolicLink()) {
+          throw new Error(`Cannot synchronize team definition file: ${filename}`);
+        }
+        await this.synchronizeFile(filePath, true);
+      }
+      await this.synchronizeDirectory(dir);
+    }
     await fs.unlink(marker);
-    await syncDirectoryDurably(path.dirname(marker));
+    await this.synchronizeDirectory(path.dirname(marker));
   }
 }

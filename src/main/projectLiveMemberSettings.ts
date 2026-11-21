@@ -103,7 +103,7 @@ async function writeRunning(
         expectedFingerprint: createMemberSettingsFingerprint(physicalTarget),
       });
       if (active.outcome !== 'completed') {
-        await journal.clear(request.teamName);
+        await journal.clear(request.teamName, running.executionTeamName);
         if (active.outcome === 'busy') return { ...active, teamName: request.teamName };
         return {
           outcome: 'refused',
@@ -121,7 +121,7 @@ async function writeRunning(
         active.effect === 'team_relaunch_required' ||
         active.effect === 'lead_restart_rolled_back'
       ) {
-        await journal.clear(request.teamName);
+        await journal.clear(request.teamName, running.executionTeamName);
         return {
           ...active,
           previousFingerprint: request.expectedFingerprint,
@@ -144,7 +144,7 @@ async function writeRunning(
           'The running project changed but the team definition could not be saved; stop the team before retrying'
         );
       }
-      await journal.clear(request.teamName);
+      await journal.clear(request.teamName, running.executionTeamName);
       await refreshProjectCopies(editor, request.teamName, running.executionTeamName);
       return {
         ...active,

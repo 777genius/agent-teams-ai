@@ -114,6 +114,14 @@ describe('project live member settings', () => {
     expect(f.order).toEqual(['ptc-a', 'builders']);
   });
 
+  it('returns recovery and retains the fence when the durability barrier fails', async () => {
+    const f = fixture();
+    f.journal.clear.mockRejectedValueOnce(new Error('sync failed'));
+    expect(await f.writer(f.editor as never, request)).toMatchObject({ outcome: 'completed', effect: 'recovery_required' });
+    expect(f.journal.clear).toHaveBeenCalledWith('builders', 'ptc-a');
+    expect(f.pending()).toBe(true);
+  });
+
   it('does not write the definition when the runtime identity changes after the live update', async () => {
     const f = fixture();
     f.team.updateMemberSettings.mockImplementation(async (input) => {

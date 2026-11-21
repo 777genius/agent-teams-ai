@@ -183,7 +183,7 @@ async function runLogicalLiveDefinitionWrite<R>(
             error: `The team definition was saved, but its running project could not be updated (${active.error ?? 'unknown error'}). Stop the team before retrying; its project copy will be reconciled at the next launch.`,
           };
         }
-        await journal.clear(logicalName);
+        await journal.clear(logicalName, running.executionTeamName);
         await refreshProjectCopies(editor, logicalName, running.executionTeamName);
         return definition;
       } catch (error) {

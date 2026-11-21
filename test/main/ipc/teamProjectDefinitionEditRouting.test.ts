@@ -160,6 +160,17 @@ describe('definition edit routing with the real editor and gate', () => {
     expect(w.writes).not.toContain('project:ptc-a');
   });
 
+  it('keeps the marker and reports recovery if durability cannot be confirmed', async () => {
+    const w = world();
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    w.journal.clear = async () => { throw new Error('sync failed'); };
+    await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({
+      success: false, error: expect.stringMatching(/partially applied.*sync failed/),
+    });
+    expect(w.journal.pending).toBe(true);
+  });
+
   it('keeps a failed live edit blocked until the runtime stops, then lets the definition reconcile', async () => {
     const w = world();
     w.running.add('ptc-a');
