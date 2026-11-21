@@ -370,6 +370,21 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(store.resolve('token-3').status).toBe('found');
   });
 
+  it('reclaims a settled write before losing an unsubmitted preview', () => {
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => 0,
+      createToken: counterTokens(),
+      capacity: 2,
+    });
+    const settled = store.issue({ ...baseInput, templateId: 'tmpl-1' });
+    store.confirmSave(settled.token, { templateId: 'tmpl-1', name: 'One', nameKey: 'one' });
+    store.markSettledWrite(settled.token);
+    const preview = store.issue({ ...baseInput, templateId: 'tmpl-2' });
+    store.issue({ ...baseInput, templateId: 'tmpl-3' });
+    expect(store.resolve(settled.token).status).toBe('unknown');
+    expect(store.resolve(preview.token).status).toBe('found');
+  });
+
   it('keeps both pending operations when all preview slots are confirmed', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 0,

@@ -62,6 +62,8 @@ export interface CustomTeamTemplatePreviewState extends CustomTeamTemplatePrevie
    * commit. Cleared when a save or re-check establishes a definitive outcome.
    */
   hasUnresolvedWrite?: boolean;
+  /** A definitive successful save; no longer needs retention for re-check. */
+  hasSettledWrite?: boolean;
 }
 
 /**
@@ -149,9 +151,11 @@ export class InMemoryCustomTeamTemplatePreviewStore {
     while (this.entries.size >= this.capacity) {
       // A confirmed operation may still be running even when it has not yet
       // reported an unresolved outcome. Never evict its only re-check identity.
+      const settled = [...this.entries].find(([, state]) => state.hasSettledWrite);
       const unsubmitted = [...this.entries].find(([, state]) => !state.confirmedSave);
-      if (!unsubmitted) throw new CustomTemplatePreviewCapacityError();
-      this.entries.delete(unsubmitted[0]);
+      const evictable = settled ?? unsubmitted;
+      if (!evictable) throw new CustomTemplatePreviewCapacityError();
+      this.entries.delete(evictable[0]);
     }
 
     const token = this.allocateToken();
@@ -276,6 +280,14 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   /** Whether a previous save for this token left an unresolved write. */
   hasUnresolvedWrite(token: string): boolean {
     return this.entries.get(token)?.hasUnresolvedWrite === true;
+  }
+
+  /** A definitive save may be discarded before unsubmitted previews at capacity. */
+  markSettledWrite(token: string): void {
+    const state = this.entries.get(token);
+    if (state?.confirmedSave && !state.hasUnresolvedWrite) {
+      this.entries.set(token, { ...state, hasSettledWrite: true });
+    }
   }
 
   /** Drops every retained preview and confirmed operation (used on shutdown). */

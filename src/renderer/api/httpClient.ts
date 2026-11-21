@@ -5,7 +5,10 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-import { createHttpCustomTeamTemplatesApi, type CustomTeamTemplatesApi } from '@features/custom-team-templates';
+import {
+  createHttpCustomTeamTemplatesApi,
+  type CustomTeamTemplatesApi,
+} from '@features/custom-team-templates';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -452,12 +455,10 @@ export class HttpAPIClient implements ElectronAPI {
     forceRefreshToken?: boolean;
   }): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
-
   startCodexChatgptLogin = (
     _options?: CodexStartChatgptLoginOptions
   ): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
-
   cancelCodexChatgptLogin = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
 

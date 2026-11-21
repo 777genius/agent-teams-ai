@@ -228,6 +228,9 @@ export class SaveCustomTeamTemplateUseCase {
       result.status === 'templateIdConflict'
     ) {
       this.deps.previewStore.clearUnresolvedWrite(state.token);
+      if (result.status === 'created' || result.status === 'alreadySaved') {
+        this.deps.previewStore.markSettledWrite(state.token);
+      }
     }
     return result;
   }

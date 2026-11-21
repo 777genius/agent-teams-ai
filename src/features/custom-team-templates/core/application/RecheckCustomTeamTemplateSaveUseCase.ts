@@ -83,6 +83,7 @@ export class RecheckCustomTeamTemplateSaveUseCase {
     switch (check.status) {
       case 'saved':
         this.deps.previewStore.clearUnresolvedWrite(token);
+        this.deps.previewStore.markSettledWrite(token);
         return { status: 'saved', template: check.template };
       case 'conflict':
         this.deps.previewStore.clearUnresolvedWrite(token);

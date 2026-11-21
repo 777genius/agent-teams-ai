@@ -210,17 +210,15 @@ export function readSchemaVersion(db: SqliteDatabase): number {
 }
 
 export function runInternalStorageMigrations(db: SqliteDatabase): void {
-  const current = readSchemaVersion(db);
-  for (const migration of MIGRATIONS) {
-    if (migration.version <= current) {
-      continue;
-    }
-    const apply = db.transaction(() => {
-      for (const statement of migration.statements) {
-        db.exec(statement);
-      }
+  // Take a write lock before reading user_version. Concurrent app instances
+  // must not both attempt the same ALTER TABLE migration.
+  const apply = db.transaction(() => {
+    const current = readSchemaVersion(db);
+    for (const migration of MIGRATIONS) {
+      if (migration.version <= current) continue;
+      for (const statement of migration.statements) db.exec(statement);
       db.pragma(`user_version = ${migration.version}`);
-    });
-    apply();
-  }
+    }
+  });
+  apply.immediate();
 }
