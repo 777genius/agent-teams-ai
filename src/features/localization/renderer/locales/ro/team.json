@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Setările echipei au fost salvate, dar modificările membrilor au eșuat: {{message}}",
       "settingsSavedRefreshFailed": "Setările echipei au fost salvate, dar reîmprospătarea celei mai recente vizualizări a eșuat: {{message}}",
       "teamNameEmpty": "Numele echipei nu poate fi gol",
-      "unsupportedMixedPrimaryMutation": "Editările live ale coechipierilor deținuți de procesul primar în echipele OpenCode mixte nu sunt încă acceptate. Oprește echipa, editează lista, apoi relansează. Afectați: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Editările live ale coechipierilor deținuți de procesul primar în echipele OpenCode mixte nu sunt încă acceptate. Oprește echipa, editează lista, apoi relansează. Afectați: {{names}}",
+      "refusedProjectCopy": "Aceasta este o copie de proiect a unei echipe. Modifică setările în echipa însăși.",
+      "refusedProjectUnreconciled": "Un proiect al acestei echipe este încă în pregătire sau ultima lui pornire a fost întreruptă. Pornește din nou echipa în acel proiect, apoi editeaz-o.",
+      "refusedTeamUnreadable": "Setările salvate ale acestei echipe nu pot fi citite, așa că nu s-a schimbat nimic."
     },
     "fields": {
       "colorOptional": "Culoare (opțional)",
@@ -417,6 +420,11 @@
       "member_other": "membri",
       "title": "Echipa nu a fost încă lansată"
     },
+    "editDefinition": {
+      "loadFailed": "Setările echipei nu au putut fi încărcate",
+      "notFound": "Setările echipei nu au fost găsite",
+      "memberNotFound": "Acest membru nu mai este în setările echipei. Redeschide echipa pentru a vedea membrii actuali."
+    },
     "stopFailed": {
       "title": "Echipa nu a putut fi oprită",
       "message": "Echipa încă rulează. Verificați starea și apăsați din nou Oprește."
@@ -458,6 +466,7 @@
       "deleteTeam": "Șterge echipa",
       "editTeam": "Editează echipa",
       "editUnavailableProvisioning": "Editarea echipei este indisponibilă cât timp aprovizionarea este încă în curs",
+      "editUnavailableRunningProject": "Oprește această echipă în fiecare proiect pentru a o edita",
       "openBuiltInEditor": "Deschide proiectul în editorul integrat",
       "openTeamGraph": "Deschide graficul echipei",
       "stopTeam": "Oprește echipa",

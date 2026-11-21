@@ -2217,11 +2217,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, []);
   const handleEditMember = useCallback((member: ResolvedTeamMember) => {
     if (member.removedAt) return;
-    if (logicalTeamName && isLeadMember(member)) { handleChangeLeadRuntime(); return; }
     setSelectedMember(null);
     setSelectedMemberView(null);
     setEditTarget({ kind: 'member', memberName: member.name });
-  }, [handleChangeLeadRuntime, logicalTeamName]);
+  }, []);
   const closeSelectedMemberDialog = useCallback(() => {
     setSelectedMember(null);
     setSelectedMemberView(null);

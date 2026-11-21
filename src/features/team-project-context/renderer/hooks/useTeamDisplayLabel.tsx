@@ -1,6 +1,6 @@
 import { useStore } from '@renderer/store';
 
-import { findProjectCopyOwner, formatProjectCopyLabel } from '../../core';
+import { findProjectCopyOwner, projectCopyLabel } from '../../core';
 
 /**
  * How a physical team name is shown to a person. A project copy (`ptc-…`) of a
@@ -8,10 +8,7 @@ import { findProjectCopyOwner, formatProjectCopyLabel } from '../../core';
  * as is. Routing keeps the physical name: only the label changes.
  */
 export function useTeamDisplayLabel(teamName: string): string {
-  return useStore((state) => {
-    const owner = findProjectCopyOwner(state.teams, teamName);
-    return owner ? formatProjectCopyLabel(owner) : teamName;
-  });
+  return useStore((state) => projectCopyLabel(state.teams, teamName) ?? teamName);
 }
 
 /** The per-project team a project copy belongs to, so a copy does not offer its own team. */

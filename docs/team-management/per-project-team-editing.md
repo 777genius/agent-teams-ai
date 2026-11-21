@@ -27,8 +27,8 @@ A failed refresh of a copy does not fail the edit (the definition is already sav
 Member settings (the per-member dialog of the team screen) follow the same rules:
 
 - The dialog of a project screen edits the member **in the definition**: it reads the saved member of the logical team (`getMemberSettingsTarget`, whose identity fields match what the save compares) and saves through `updateMemberSettings` with the logical name. `routeMemberSettingsWrites` (`src/main/composeTeamMemberSettings.ts`) uses the router's primitives (`classifyDefinitionWrite`, `runLogicalDefinitionWrite`): the ordinary member settings use case writes `members.meta.json` of the logical team inside the logical-team lock after the stopped gate, then the stopped copies are refreshed. A project copy is refused like any other definition edit.
-- The lead of a per-project team has no member row in the definition: its provider, model and effort are team launch settings. Its card action opens Change runtime; a direct lead request is refused in main.
-- While the open project runs or is launching, the action is hidden on its screen. Any project that runs, launches or is unreconciled (also another one) makes the stopped gate refuse the save with the reason, which the dialog shows.
+- The lead of a per-project team has no member row in the definition: its provider, model and effort are team launch settings (`TEAM_META_FIELD_OWNER`). Its card opens the same dialog, which shows the definition's launch settings and saves the lead's model and effort with `DefinitionLaunchSettingsStore.save` (the store a launch records into) inside the same definition write, so the stopped copies follow through the ordinary projection. As for a stopped ordinary team, nothing is restarted; a launch picks the values up. The provider is changed with Change runtime (a launch), as before.
+- While the open project runs or is launching, the action is hidden on its screen. Any project that runs, launches or is unreconciled (also another one) makes the stopped gate refuse the save. A refusal is answered as `refused` with a stable code (`project_copy`, `project_running`, `project_launching`, `project_unreconciled`, `team_metadata_unreadable`, `MemberSettingsRefusalReason`), which the dialog shows in the user's language; the English text of main is only diagnostics.
 
 The review flow of a per-project team is a setting of a project board, not of the definition: each copy has its own override in its `kanban-state.json` (the controller reads it there), set from that project's board or from the settings page, where the team is listed once per project as `<team> · <project>`. An override for the logical team (no board) is refused with the reason.
 
@@ -45,7 +45,6 @@ Two more rules keep the router the only writer of the definition:
 - Gateway member bindings are keyed by team name and are not projected onto project copies. Nothing in this build can create one (the selector and the gateway settings are not mounted, there is no HTTP or MCP route), so a per-project team has none; when the selector returns, bindings must belong to the logical team and be resolved for the copy at launch.
 - A project context stuck in `reserved` after a crash blocks editing until the team is launched in that project again.
 - A settings-originated relaunch (`memberSettingsRelaunch`) of a per-project team: refused in main. A stopped definition needs no relaunch for a teammate change, and a value written only into a running copy would be overwritten by the next projection.
-- Saving the lead's model or effort without a launch: they are team launch settings, changed in the launch dialog (Change runtime) and saved for every project when the launch is accepted.
 
 ## Why the split is awkward, and a better target
 

@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Pengaturan tim disimpan, tapi perubahan anggota gagal: {{message}}",
       "settingsSavedRefreshFailed": "Pengaturan tim disimpan, tapi gagal menyegarkan tampilan terakhir: {{message}}",
       "teamNameEmpty": "Nama tim tidak dapat kosong",
-      "unsupportedMixedPrimaryMutation": "Langsung edits untuk primary-dimiliki rekan tim dalam tim OpenCode campuran belum didukung. Menghentikan tim, mengedit daftar, kemudian bersantai. Terpengaruh: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Langsung edits untuk primary-dimiliki rekan tim dalam tim OpenCode campuran belum didukung. Menghentikan tim, mengedit daftar, kemudian bersantai. Terpengaruh: {{names}}",
+      "refusedProjectCopy": "Ini adalah salinan proyek dari sebuah tim. Ubah pengaturannya di tim itu sendiri.",
+      "refusedProjectUnreconciled": "Sebuah proyek tim ini masih disiapkan, atau peluncuran terakhirnya terputus. Luncurkan tim di proyek itu lagi, lalu edit.",
+      "refusedTeamUnreadable": "Pengaturan tersimpan tim ini tidak dapat dibaca, jadi tidak ada yang diubah."
     },
     "fields": {
       "colorOptional": "Warna (opsional)",
@@ -417,6 +420,11 @@
       "member_other": "anggota",
       "title": "Tim belum diluncurkan"
     },
+    "editDefinition": {
+      "loadFailed": "Pengaturan tim tidak dapat dimuat",
+      "notFound": "Pengaturan tim tidak ditemukan",
+      "memberNotFound": "Anggota ini sudah tidak ada di pengaturan tim. Buka kembali tim untuk melihat anggota saat ini."
+    },
     "stopFailed": {
       "title": "Tim tidak dapat dihentikan",
       "message": "Tim masih berjalan. Periksa statusnya lalu tekan Hentikan lagi."
@@ -458,6 +466,7 @@
       "deleteTeam": "Hapus tim",
       "editTeam": "Sunting tim",
       "editUnavailableProvisioning": "Tim Sunting tidak tersedia ketika pemberian masih dalam proses",
+      "editUnavailableRunningProject": "Hentikan tim ini di setiap proyek untuk mengeditnya",
       "openBuiltInEditor": "Buka projek di penyunting bawaan",
       "openTeamGraph": "Buka grafik tim",
       "stopTeam": "Hentikan tim",

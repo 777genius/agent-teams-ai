@@ -1,3 +1,6 @@
+import { readTeamProjectContextMode } from '@features/team-project-context/main';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+
 import { ReviewFlowService } from '../../core/application';
 import { ControllerReviewFlowDefaultsStore } from '../adapters/output/ControllerReviewFlowDefaultsStore';
 import {
@@ -14,6 +17,16 @@ export interface ReviewFlowFeatureDeps {
 export function createReviewFlowFeature(deps: ReviewFlowFeatureDeps): ReviewFlowService {
   return new ReviewFlowService({
     defaults: new ControllerReviewFlowDefaultsStore(deps.getClaudeDir),
-    teams: new TeamKanbanReviewFlowGateway(deps.teamWriter, deps.getTeamsDir),
+    teams: new TeamKanbanReviewFlowGateway(deps.teamWriter, deps.getTeamsDir, (teamName) => {
+      const metaStore = new TeamMetaStore();
+      const teamsDir = deps.getTeamsDir();
+      return readTeamProjectContextMode(
+        {
+          getMeta: (name) => metaStore.getMeta(name, teamsDir),
+          metadataFileExists: (name) => metaStore.metadataFileExists(name, teamsDir),
+        },
+        teamName
+      );
+    }),
   });
 }

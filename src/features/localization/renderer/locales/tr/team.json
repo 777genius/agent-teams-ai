@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Ekip ayarları kaydedildi, ancak üye değişiklikleri başarısız oldu: {{message}}",
       "settingsSavedRefreshFailed": "Ekip ayarları kaydedildi, ancak en son görünüm yenilenemedi: {{message}}",
       "teamNameEmpty": "Ekip adı boş olamaz",
-      "unsupportedMixedPrimaryMutation": "Karışık OpenCode ekiplerinde birincil sahipli takım arkadaşlarında canlı düzenlemeler henüz desteklenmiyor. Ekibi durdurun, kadroyu düzenleyin, ardından yeniden başlatın. Etkilenenler: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Karışık OpenCode ekiplerinde birincil sahipli takım arkadaşlarında canlı düzenlemeler henüz desteklenmiyor. Ekibi durdurun, kadroyu düzenleyin, ardından yeniden başlatın. Etkilenenler: {{names}}",
+      "refusedProjectCopy": "Bu, bir ekibin proje kopyasıdır. Ayarlarını ekibin kendisinde değiştirin.",
+      "refusedProjectUnreconciled": "Bu ekibin bir projesi hâlâ hazırlanıyor veya son başlatması yarıda kesildi. Ekibi o projede yeniden başlatın, ardından düzenleyin.",
+      "refusedTeamUnreadable": "Bu ekibin kayıtlı ayarları okunamıyor, bu yüzden hiçbir şey değiştirilmedi."
     },
     "fields": {
       "colorOptional": "Renk (isteğe bağlı)",
@@ -417,6 +420,11 @@
       "member_other": "üye",
       "title": "Ekip henüz başlatılmadı"
     },
+    "editDefinition": {
+      "loadFailed": "Ekip ayarları yüklenemedi",
+      "notFound": "Ekip ayarları bulunamadı",
+      "memberNotFound": "Bu üye artık ekip ayarlarında değil. Güncel üyeleri görmek için ekibi yeniden açın."
+    },
     "stopFailed": {
       "title": "Ekip durdurulamadı",
       "message": "Ekip hâlâ çalışıyor. Durumunu kontrol edin ve Durdur düğmesine tekrar basın."
@@ -458,6 +466,7 @@
       "deleteTeam": "Ekibi sil",
       "editTeam": "Ekibi düzenle",
       "editUnavailableProvisioning": "Sağlama hâlâ devam ederken ekibi düzenleme kullanılamaz",
+      "editUnavailableRunningProject": "Düzenlemek için bu ekibi her projede durdurun",
       "openBuiltInEditor": "Projeyi yerleşik düzenleyicide aç",
       "openTeamGraph": "Ekip grafiğini aç",
       "stopTeam": "Ekibi durdur",

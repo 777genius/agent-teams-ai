@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Tetapan pasukan disimpan, tetapi perubahan ahli gagal: {{message}}",
       "settingsSavedRefreshFailed": "Tetapan pasukan disimpan, tetapi gagal menyegarkan paparan terkini: {{message}}",
       "teamNameEmpty": "Nama pasukan tidak boleh kosong",
-      "unsupportedMixedPrimaryMutation": "Suntingan langsung kepada rakan pasukan milik primari dalam pasukan OpenCode campuran belum disokong. Hentikan pasukan, sunting senarai, kemudian lancarkan semula. Terjejas: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Suntingan langsung kepada rakan pasukan milik primari dalam pasukan OpenCode campuran belum disokong. Hentikan pasukan, sunting senarai, kemudian lancarkan semula. Terjejas: {{names}}",
+      "refusedProjectCopy": "Ini ialah salinan projek bagi sebuah pasukan. Tukar tetapannya dalam pasukan itu sendiri.",
+      "refusedProjectUnreconciled": "Satu projek pasukan ini masih disediakan, atau pelancaran terakhirnya terganggu. Lancarkan pasukan dalam projek itu sekali lagi, kemudian sunting.",
+      "refusedTeamUnreadable": "Tetapan tersimpan pasukan ini tidak dapat dibaca, jadi tiada apa-apa yang diubah."
     },
     "fields": {
       "colorOptional": "Warna (pilihan)",
@@ -417,6 +420,11 @@
       "member_other": "ahli",
       "title": "Pasukan belum dilancarkan"
     },
+    "editDefinition": {
+      "loadFailed": "Tetapan pasukan tidak dapat dimuatkan",
+      "notFound": "Tetapan pasukan tidak ditemui",
+      "memberNotFound": "Ahli ini tiada lagi dalam tetapan pasukan. Buka semula pasukan untuk melihat ahli semasa."
+    },
     "stopFailed": {
       "title": "Pasukan tidak dapat dihentikan",
       "message": "Pasukan masih berjalan. Semak statusnya dan tekan Hentikan sekali lagi."
@@ -458,6 +466,7 @@
       "deleteTeam": "Padam pasukan",
       "editTeam": "Sunting pasukan",
       "editUnavailableProvisioning": "Sunting pasukan tidak tersedia semasa peruntukan masih dijalankan",
+      "editUnavailableRunningProject": "Hentikan pasukan ini dalam setiap projek untuk menyuntingnya",
       "openBuiltInEditor": "Buka projek dalam editor terbina dalam",
       "openTeamGraph": "Buka graf pasukan",
       "stopTeam": "Hentikan pasukan",
