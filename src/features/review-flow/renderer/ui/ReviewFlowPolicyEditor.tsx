@@ -17,10 +17,12 @@ import {
   scopeToValue,
 } from '../view-model/reviewFlowViewModel';
 
+import { ReviewFlowProjectsNotice } from './ReviewFlowProjectsNotice';
 import { ReviewFlowSettingsForm } from './ReviewFlowSettingsForm';
 import { FLOW_TEXT_KEYS } from './reviewFlowText';
 
 import type { ReviewFlowPolicy, ReviewFlowSettings } from '../../contracts/types';
+import type { ProjectTeamReviewFlowStatus } from '../view-model/projectTeamReviewFlow';
 
 type Feedback = { kind: 'idle' | 'saving' | 'saved' } | { kind: 'error'; message: string };
 
@@ -36,6 +38,11 @@ interface ReviewFlowPolicyEditorProps {
    * shown values as persisted, and Save stays available even when nothing was changed.
    */
   repair?: boolean;
+  /**
+   * A team with separate history per project: one setting for all its projects. While some project
+   * boards do not carry it, Save stays available to apply it to all of them.
+   */
+  projects?: ProjectTeamReviewFlowStatus | null;
   /** Saves the settings, or `null` when a team goes back to following the default. */
   onSave: (settings: ReviewFlowSettings | null) => Promise<void>;
   onSaved?: () => void;
@@ -54,6 +61,7 @@ export const ReviewFlowPolicyEditor = ({
   defaults,
   followingTeamCount,
   repair = false,
+  projects = null,
   onSave,
   onSaved,
   onCancel,
@@ -83,6 +91,7 @@ export const ReviewFlowPolicyEditor = ({
   const isTeam = scope.kind === 'team';
   const saving = feedback.kind === 'saving';
   const dirty = isEditorDraftDirty(scope, draft, policy);
+  const unsynced = isTeam && (projects?.unsynced.length ?? 0) > 0;
   const shown = isTeam && draft.inherit ? defaults : draft.settings;
 
   const useDefaultDescription = (): string => {
@@ -95,6 +104,8 @@ export const ReviewFlowPolicyEditor = ({
 
   const sourceBadgeText = (): string => {
     if (repair) return t('reviewFlow.badges.repair');
+    // Before its first save, a team whose projects disagree has no single setting to name.
+    if (unsynced && !projects?.saved) return t('reviewFlow.badges.differ');
     return policy.source === 'team'
       ? t('reviewFlow.badges.custom')
       : t('reviewFlow.badges.default');
@@ -137,6 +148,10 @@ export const ReviewFlowPolicyEditor = ({
           </Badge>
         ) : null}
       </div>
+
+      {isTeam && projects ? (
+        <ReviewFlowProjectsNotice status={projects} testIdPrefix={testIdPrefix} />
+      ) : null}
 
       {!isTeam && followingTeamCount !== undefined ? (
         <p className="text-xs text-[var(--color-text-muted)]">
@@ -198,7 +213,7 @@ export const ReviewFlowPolicyEditor = ({
           <Button
             type="button"
             size="sm"
-            disabled={!(dirty || repair) || saving}
+            disabled={!(dirty || repair || unsynced) || saving}
             data-testid={`${testIdPrefix}-save`}
             onClick={handleSave}
           >

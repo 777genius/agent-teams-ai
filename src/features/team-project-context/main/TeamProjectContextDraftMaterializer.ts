@@ -19,6 +19,11 @@ interface SavedTeamRequestPort {
   updateDisplayMetadata(teamName: string, update: DefinitionMetadataUpdate): Promise<void>;
   /** Team-level launch settings of the logical team, projected onto its native alias. */
   launchSettings: Pick<DefinitionLaunchSettingsStore, 'save'>;
+  /**
+   * Copies the review flow saved with the logical team into the task board of the alias (nothing
+   * when the team never saved one). Never fails: the board is not part of the launch itself.
+   */
+  projectReviewFlow(logicalTeamName: string, executionTeamName: string): Promise<void>;
 }
 
 interface ContextResolverPort {
@@ -70,6 +75,7 @@ export class TeamProjectContextDraftMaterializer {
         logical,
         existing
       );
+      await this.teamStore.projectReviewFlow(address.logicalTeamName, resolved.executionTeamName);
       return resolved;
     }
     const source = await this.teamStore.getSavedRequest(address.logicalTeamName);
@@ -94,6 +100,7 @@ export class TeamProjectContextDraftMaterializer {
       }
       throw error;
     }
+    await this.teamStore.projectReviewFlow(address.logicalTeamName, resolved.executionTeamName);
     return resolved;
   }
 }

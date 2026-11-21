@@ -5,6 +5,13 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import { resolveReviewFlowPolicy } from '../../core/domain/reviewFlowPolicy';
+import {
+  foldProjectTeamBoards,
+  projectCopyNames,
+  type ProjectTeamReviewFlowStatus,
+  reviewFlowTeamOf,
+  type TeamLevelReviewFlow,
+} from '../view-model/projectTeamReviewFlow';
 import { reviewFlowBoardsOf } from '../view-model/reviewFlowViewModel';
 
 import { createReviewFlowStore } from './createReviewFlowStore';
@@ -25,10 +32,14 @@ export const useReviewFlowStore = createReviewFlowStore({
   onTeamOverrideChanged: refreshOpenTeam,
 });
 
+/** The shared data with one entry per team (see `foldProjectTeamBoards`). */
+export type TeamLevelReviewFlowState = Omit<ReviewFlowStoreState, keyof TeamLevelReviewFlow> &
+  TeamLevelReviewFlow;
+
 /** Shared review-flow data. Loads lazily on first use; `revalidate` also refreshes when already loaded. */
 export function useReviewFlowOverview(
   options: { revalidate?: boolean } = {}
-): ReviewFlowStoreState {
+): TeamLevelReviewFlowState {
   const state = useReviewFlowStore(
     useShallow((s) => ({
       status: s.status,
@@ -37,20 +48,27 @@ export function useReviewFlowOverview(
       defaultsError: s.defaultsError,
       overrides: s.overrides,
       unreadableTeams: s.unreadableTeams,
+      projectTeams: s.projectTeams,
       load: s.load,
       saveDefaults: s.saveDefaults,
       saveTeamOverride: s.saveTeamOverride,
     }))
   );
-  const { load } = state;
+  const { load, overrides, unreadableTeams, projectTeams } = state;
+  const folded = useMemo(
+    () => foldProjectTeamBoards({ overrides, unreadableTeams, projectTeams }),
+    [overrides, unreadableTeams, projectTeams]
+  );
   const revalidate = options.revalidate === true;
   useEffect(() => {
     void load({ force: revalidate });
   }, [load, revalidate]);
-  return state;
+  return { ...state, ...folded };
 }
 
 export interface TeamReviewFlow {
+  /** The team whose setting this is: a project copy edits its team's. */
+  teamName: string;
   status: ReviewFlowLoadStatus;
   error: string | null;
   defaults: ReviewFlowSettings;
@@ -60,41 +78,44 @@ export interface TeamReviewFlow {
   needsRepair: boolean;
   /** Effective settings of this team: its own override, else the default. */
   policy: ReviewFlowPolicy;
+  /** A team with separate history per project: how its project boards relate to its setting. */
+  projects: ProjectTeamReviewFlowStatus | null;
   reload: () => Promise<void>;
   save: (settings: ReviewFlowSettings | null) => Promise<void>;
 }
 
-export function useTeamReviewFlow(teamName: string): TeamReviewFlow {
-  const {
-    status,
-    error,
-    defaults,
-    defaultsError,
-    overrides,
-    unreadableTeams,
-    load,
-    saveTeamOverride,
-  } = useReviewFlowOverview();
+/**
+ * The review flow shown on a board: its team's (for a project copy, the team it belongs to). Read
+ * again when it is shown: the boards of a team's projects also change when a project is launched.
+ */
+export function useTeamReviewFlow(boardName: string): TeamReviewFlow {
+  const overview = useReviewFlowOverview({ revalidate: true });
+  const rawProjectTeams = useReviewFlowStore((state) => state.projectTeams);
+  const teamName = reviewFlowTeamOf(rawProjectTeams, boardName);
+  const { defaults, overrides, unreadableTeams, projectTeams, load, saveTeamOverride } = overview;
   const override = overrides[teamName];
   const policy = useMemo(() => resolveReviewFlowPolicy(defaults, override), [defaults, override]);
   return {
-    status,
-    error,
+    teamName,
+    status: overview.status,
+    error: overview.error,
     defaults,
-    defaultsError,
+    defaultsError: overview.defaultsError,
     needsRepair: unreadableTeams.includes(teamName),
     policy,
+    projects: projectTeams[teamName] ?? null,
     reload: () => load({ force: true }),
     save: (settings) => saveTeamOverride(teamName, settings),
   };
 }
 
-/** The boards of the teams the app already knows (loaded on demand when the list is still empty). */
+/** The teams a review flow can be set for, as the app knows them (loaded on demand when empty). */
 export function useKnownTeams(): readonly TeamIdentity[] {
   const teams = useStore((state) => state.teams);
   const fetchTeams = useStore((state) => state.fetchTeams);
+  const projectTeams = useReviewFlowStore((state) => state.projectTeams);
   useEffect(() => {
     if (teams.length === 0) void fetchTeams();
   }, [teams.length, fetchTeams]);
-  return useMemo(() => reviewFlowBoardsOf(teams), [teams]);
+  return useMemo(() => reviewFlowBoardsOf(teams, projectCopyNames(projectTeams)), [teams, projectTeams]);
 }

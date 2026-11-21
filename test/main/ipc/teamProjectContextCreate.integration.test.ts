@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createController } from 'agent-teams-controller';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -6,7 +7,9 @@ import * as path from 'node:path';
 import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
 import { createProjectScheduleTargets } from '../../../src/main/ipc/teams/projectScheduleTargets';
 import { prepareTeamContextLaunch, withPreparedContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
+import { createTeamReviewFlowService } from '../../../src/main/ipc/teams/teamReviewFlow';
 import {
+  getClaudeBasePath,
   getTasksBasePath,
   getTeamsBasePath,
   setAppDataBasePath,
@@ -15,6 +18,7 @@ import {
 import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
 
+import type { ReviewFlowSettings } from '../../../src/features/review-flow';
 import type {
   TeamLaunchRequest,
   TeamCreateConfigRequest,
@@ -77,6 +81,10 @@ async function fixture() {
     async updateConfig(): Promise<null> {
       // Display-metadata projection is covered by the projection and materializer tests.
       return null;
+    },
+    // The real board write of the controller (under its board lock), as TeamDataService does it.
+    async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings | null): Promise<void> {
+      createController({ teamName, claudeDir: getClaudeBasePath() }).taskBoard.setReviewFlowSettings(settings);
     },
   };
   const ports: Parameters<typeof createTeamWithProjectContext>[2] = {
@@ -526,6 +534,95 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       expect((await fs.readdir(getTeamsBasePath())).sort()).toEqual(teamsBefore);
       expect(await registry.inspect('builders', projectB)).toBeNull();
       expect((await registry.find('builders', f.projectPath))?.id).toBe(a.id);
+    });
+  });
+
+  describe('review flow of a per-project team (real metadata, registry and boards)', () => {
+    const human: ReviewFlowSettings = { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' };
+    const lead: ReviewFlowSettings = { reviewFlow: 'lead_then_human', reviewFlowPrompt: '' };
+    const read = async (team: string, file: string): Promise<Record<string, unknown>> =>
+      JSON.parse(
+        await fs.readFile(path.join(getTeamsBasePath(), team, file), 'utf8').catch(() => '{}')
+      ) as Record<string, unknown>;
+    const boardFlow = async (team: string) => {
+      const { reviewFlow, reviewFlowPrompt } = await read(team, 'kanban-state.json');
+      return { reviewFlow, reviewFlowPrompt };
+    };
+
+    async function readyInProjectA() {
+      const f = await fixture();
+      await createTeamWithProjectContext({
+        teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+      }, f.onProgress, f.ports);
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
+      const a = await vi.waitFor(async () => {
+        const row = await registry.find('builders', f.projectPath);
+        expect(row?.state).toBe('ready');
+        return row!.executionTeamName;
+      });
+      const project = async (name: string) => {
+        const dir = path.join(path.dirname(f.projectPath), name);
+        await fs.mkdir(dir);
+        return dir;
+      };
+      return { f, a, project, service: createTeamReviewFlowService(() => f.ports.data) };
+    }
+
+    it('saves one setting for the team and writes the board of every project, running or pending', async () => {
+      const { f, a, project, service } = await readyInProjectA();
+      // Project B: its first launch is in progress (the copy exists, its context is still reserved).
+      const b = (await prepareTeamContextLaunch({ teamName: 'builders', cwd: await project('b') }, f.ports))
+        .request.teamName;
+      // Project A runs: the review flow, like an ordinary team's, changes on a live board.
+      f.ports.runtime.getRuntimeState = async (name) =>
+        ({ teamName: name, runId: name === a ? 'live' : null, isAlive: name === a, progress: null });
+
+      await service.saveTeamOverride('builders', human);
+      expect((await read('builders', 'team.meta.json')).reviewFlowSettings).toEqual(human);
+      for (const copy of [a, b]) {
+        expect(await boardFlow(copy)).toEqual({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' });
+        expect(await read(copy, 'team.meta.json')).not.toHaveProperty('reviewFlowSettings');
+      }
+      const overview = await service.getOverview();
+      // Both copies, the pending one included, are reported as the team's projects.
+      expect(overview.projectTeams.builders).toMatchObject({ saved: true, settings: human });
+      expect(overview.projectTeams.builders.projects.map((p) => p.executionTeamName).sort()).toEqual(
+        [a, b].sort()
+      );
+      expect(overview.overrides).toMatchObject({ [a]: human, [b]: human });
+
+      await service.saveTeamOverride('builders', null);
+      expect((await read('builders', 'team.meta.json')).reviewFlowSettings).toBeNull();
+      for (const copy of [a, b]) {
+        expect(await boardFlow(copy)).toEqual({ reviewFlow: undefined, reviewFlowPrompt: undefined });
+      }
+    });
+
+    it('refuses a project copy and unreadable team metadata without writing anything', async () => {
+      const { a, service } = await readyInProjectA();
+      await expect(service.saveTeamOverride(a, human)).rejects.toThrow(/project copy/);
+      const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
+      await fs.writeFile(metaPath, '{ not json');
+      await expect(service.saveTeamOverride('builders', human)).rejects.toThrow(/unreadable/);
+      expect(await fs.readFile(metaPath, 'utf8')).toBe('{ not json');
+      expect(await boardFlow(a)).toEqual({ reviewFlow: undefined, reviewFlowPrompt: undefined });
+    });
+
+    it('keeps the boards of older projects until the team saves, then a new copy takes the team setting', async () => {
+      const { f, a, project, service } = await readyInProjectA();
+      // What project A chose for itself before the team had one setting.
+      createController({ teamName: a, claudeDir: getClaudeBasePath() }).taskBoard.setReviewFlowSettings(lead);
+      await prepareTeamContextLaunch({ teamName: 'builders', cwd: f.projectPath }, f.ports);
+      expect(await boardFlow(a)).toEqual({ reviewFlow: 'lead_then_human', reviewFlowPrompt: undefined });
+      expect(await read('builders', 'team.meta.json')).not.toHaveProperty('reviewFlowSettings');
+      expect((await service.getOverview()).projectTeams.builders).toMatchObject({ saved: false, settings: null });
+
+      await service.saveTeamOverride('builders', human);
+      const c = (await prepareTeamContextLaunch({ teamName: 'builders', cwd: await project('c') }, f.ports))
+        .request.teamName;
+      expect(c).not.toBe(a);
+      expect(await boardFlow(c)).toEqual({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' });
+      expect(await boardFlow(a)).toEqual({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' });
     });
   });
 });

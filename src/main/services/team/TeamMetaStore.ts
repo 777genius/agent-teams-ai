@@ -1,3 +1,4 @@
+import { parseReviewFlowSettings, type ReviewFlowSettings } from '@features/review-flow';
 import { parsePersistedTeamProjectContextMode } from '@features/team-project-context/core';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -41,7 +42,33 @@ export interface TeamMetaFile {
   extraCliArgs?: string;
   limitContext?: boolean;
   launchIdentity?: ProviderModelLaunchIdentity;
+  /**
+   * The review flow of a team with separate history per project, copied to the board of each of
+   * its projects. Missing: the team never saved one (each project keeps its own); `null`: the team
+   * follows the default. Writers that do not state it keep the saved value.
+   */
+  reviewFlowSettings?: ReviewFlowSettings | null;
   createdAt: number;
+}
+
+/** Fields a writer keeps from the saved file unless it states them (a missing key is not a reset). */
+function keepUnstatedFields(
+  data: Omit<TeamMetaFile, 'version'>,
+  current: TeamMetaFile | null
+): Pick<TeamMetaFile, 'projectContextMode' | 'reviewFlowSettings'> {
+  return {
+    projectContextMode: data.projectContextMode ?? current?.projectContextMode,
+    reviewFlowSettings: Object.hasOwn(data, 'reviewFlowSettings')
+      ? data.reviewFlowSettings
+      : current?.reviewFlowSettings,
+  };
+}
+
+/** A saved value that is not a complete review-flow unit is dropped, like any other invalid field. */
+function normalizeReviewFlowSettings(value: unknown): ReviewFlowSettings | null | undefined {
+  if (value === null) return null;
+  const parsed = parseReviewFlowSettings(value);
+  return parsed.ok ? parsed.settings : undefined;
 }
 
 const metaMutationLocks = new Map<string, Promise<void>>();
@@ -268,6 +295,9 @@ export class TeamMetaStore {
           typeof file.extraCliArgs === 'string' ? file.extraCliArgs.trim() || undefined : undefined,
         limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
         launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
+        ...(Object.hasOwn(file, 'reviewFlowSettings')
+          ? { reviewFlowSettings: normalizeReviewFlowSettings(file.reviewFlowSettings) }
+          : {}),
         createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
       };
       return options?.requireCompleteFields && !hasCompleteKnownMetadata(file, normalized)
@@ -293,7 +323,7 @@ export class TeamMetaStore {
         runtimeSelectionVersion:
           normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion) ??
           current?.runtimeSelectionVersion,
-        projectContextMode: data.projectContextMode ?? current?.projectContextMode,
+        ...keepUnstatedFields(data, current),
       });
     });
   }
@@ -309,10 +339,7 @@ export class TeamMetaStore {
       const current = await this.getMeta(teamName);
       await assertExistingMetadataWasReadable(metaPath, current);
       const data = await update(current);
-      await this.writeMetaUnlocked(metaPath, {
-        ...data,
-        projectContextMode: data.projectContextMode ?? current?.projectContextMode,
-      });
+      await this.writeMetaUnlocked(metaPath, { ...data, ...keepUnstatedFields(data, current) });
     });
   }
 
@@ -348,6 +375,7 @@ export class TeamMetaStore {
       extraCliArgs: data.extraCliArgs?.trim() || undefined,
       limitContext: data.limitContext,
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
+      reviewFlowSettings: normalizeReviewFlowSettings(data.reviewFlowSettings),
       createdAt: data.createdAt,
     } satisfies TeamMetaFile);
   }

@@ -14,6 +14,11 @@ import {
   scopeFromValue,
   scopeToValue,
 } from '../../../../src/features/review-flow/renderer/view-model/reviewFlowViewModel';
+import {
+  foldProjectTeamBoards,
+  projectCopyNames,
+  reviewFlowTeamOf,
+} from '../../../../src/features/review-flow/renderer/view-model/projectTeamReviewFlow';
 
 import type { ReviewFlowSettings } from '../../../../src/features/review-flow/contracts/types';
 
@@ -73,14 +78,15 @@ describe('review flow scope list', () => {
 });
 
 /**
- * The review flow is a setting of a board. A per-project team has one board per
- * project (its copy) and none of its own, so the settings page offers exactly
- * the boards that exist: the copies, named after the team and the project. Its
- * logical name is never offered (the main process refuses it), and the copies
- * never show up under their internal names.
+ * A per-project team has one review flow for the team: the settings page offers
+ * the team once, never its project copies, and the boards of the copies are
+ * folded into it. Before the team's first save it shows what its projects share;
+ * when they disagree (or a save did not reach one) it names those projects.
  */
-describe('review flow boards of per-project teams', () => {
-  const folded = [
+describe('review flow of per-project teams', () => {
+  // The team list as the app folds it: only ready copies are folded; a copy whose first launch never
+  // finished ('ptc-ccc') is still a row of its own there.
+  const teamList = [
     { teamName: 'legacy', displayName: 'Legacy', projectContextMode: 'shared' as const },
     {
       teamName: 'builders',
@@ -91,8 +97,24 @@ describe('review flow boards of per-project teams', () => {
         { executionTeamName: 'ptc-bbb', projectPath: '/work/app-two' },
       ],
     },
+    { teamName: 'ptc-ccc', displayName: 'Builders', projectContextMode: 'shared' as const },
     { teamName: 'fresh', displayName: 'Fresh', projectContextMode: 'per_project' as const },
   ];
+  // What the main process reports: every copy it proved, the pending one included.
+  const projects = [
+    { executionTeamName: 'ptc-aaa', projectPath: '/work/app-one' },
+    { executionTeamName: 'ptc-bbb', projectPath: '/work/app-two' },
+  ];
+  const team = (saved: ReviewFlowSettings | null | undefined, list = projects) => ({
+    saved: saved !== undefined,
+    settings: saved ?? null,
+    projects: list,
+  });
+  const overview = (
+    overrides: Record<string, ReviewFlowSettings>,
+    builders: ReturnType<typeof team> = team(undefined),
+    unreadableTeams: string[] = []
+  ) => ({ overrides, unreadableTeams, projectTeams: { builders, fresh: team(undefined, []) } });
 
   it('names the copies an ordinary team retained, after the team and the project', () => {
     const retained = [
@@ -103,29 +125,73 @@ describe('review flow boards of per-project teams', () => {
         projectHistoryContexts: [{ executionTeamName: 'ptc-old', projectPath: '/work/site' }],
       },
     ];
-    expect(reviewFlowBoardsOf(retained)).toEqual([
+    expect(reviewFlowBoardsOf(retained, new Set())).toEqual([
       { teamName: 'old', displayName: 'Old' },
       { teamName: 'ptc-old', displayName: 'Old · site' },
     ]);
+    // A copy that an ordinary team kept is a board of its own and is not folded.
+    const view = foldProjectTeamBoards({ overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} });
+    expect(view).toEqual({ overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} });
+    expect(reviewFlowTeamOf({}, 'ptc-old')).toBe('ptc-old');
   });
 
-  it('lists an ordinary team as is and a per-project team once per project', () => {
-    expect(reviewFlowBoardsOf(folded)).toEqual([
+  it('lists an ordinary team and a per-project team once each, never a project copy', () => {
+    const pending = { builders: team(undefined, [...projects, { executionTeamName: 'ptc-ccc', projectPath: '/work/c' }]) };
+    expect(reviewFlowBoardsOf(teamList, projectCopyNames(pending))).toEqual([
       { teamName: 'legacy', displayName: 'Legacy' },
-      { teamName: 'ptc-aaa', displayName: 'Builders · app-one' },
-      { teamName: 'ptc-bbb', displayName: 'Builders · app-two' },
+      { teamName: 'builders', displayName: 'Builders' },
+      { teamName: 'fresh', displayName: 'Fresh' },
     ]);
+    expect(reviewFlowTeamOf(pending, 'ptc-ccc')).toBe('builders');
+    expect(reviewFlowTeamOf(pending, 'legacy')).toBe('legacy');
   });
 
-  it('labels an override of one project with the team and project, and keeps the others on the default', () => {
-    const boards = reviewFlowBoardsOf(folded);
-    expect(buildOverrideRows(boards, { 'ptc-aaa': human })).toEqual([
-      { teamName: 'ptc-aaa', displayName: 'Builders · app-one', settings: human },
+  it('shows the saved team setting and folds the boards of its copies away', () => {
+    const view = foldProjectTeamBoards(
+      overview({ 'ptc-aaa': human, 'ptc-bbb': human, legacy: agent }, team(human))
+    );
+    expect(view.overrides).toEqual({ legacy: agent, builders: human });
+    expect(view.projectTeams.builders).toEqual({ saved: true, unsynced: [] });
+    const boards = reviewFlowBoardsOf(teamList, projectCopyNames({ builders: team(human) }));
+    expect(buildOverrideRows(boards, view.overrides).map((row) => row.displayName)).toEqual([
+      'Builders',
+      'Legacy',
     ]);
-    const options = buildScopeOptions(boards, { 'ptc-aaa': human }, [], 'All teams');
-    expect(options.map((option) => option.value)).not.toContain('builders');
-    expect(options.find((option) => option.value === 'ptc-bbb')?.badge).toBeNull();
-    expect(countFollowingDefault(boards, { 'ptc-aaa': human })).toBe(2);
+    // ptc-ccc is a row of the team list here because the main process did not report it.
+    expect(countFollowingDefault(boards, view.overrides)).toBe(2);
+  });
+
+  it('names the projects a saved team setting has not reached', () => {
+    const view = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(human), ['ptc-bbb']));
+    expect(view.overrides).toEqual({ builders: human });
+    expect(view.unreadableTeams).toEqual([]);
+    expect(view.projectTeams.builders).toEqual({
+      saved: true,
+      unsynced: [{ projectLabel: 'app-two', setting: 'unreadable' }],
+    });
+    // A team that follows the default: a board that still carries an override is behind.
+    const cleared = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(null)));
+    expect(cleared.overrides).toEqual({});
+    expect(cleared.projectTeams.builders.unsynced).toEqual([{ projectLabel: 'app-one', setting: human }]);
+  });
+
+  it('before the first save, shows what the projects share, or that they differ', () => {
+    const shared = foldProjectTeamBoards(overview({ 'ptc-aaa': human, 'ptc-bbb': human }));
+    expect(shared.overrides).toEqual({ builders: human });
+    expect(shared.projectTeams.builders).toEqual({ saved: false, unsynced: [] });
+
+    const differ = foldProjectTeamBoards(overview({ 'ptc-aaa': human }));
+    // No single setting: the team is not shown as custom, and every project is named.
+    expect(differ.overrides).toEqual({});
+    expect(differ.projectTeams.builders).toEqual({
+      saved: false,
+      unsynced: [
+        { projectLabel: 'app-one', setting: human },
+        { projectLabel: 'app-two', setting: null },
+      ],
+    });
+    // A team that has not run in any project yet follows the default.
+    expect(differ.projectTeams.fresh).toEqual({ saved: false, unsynced: [] });
   });
 });
 

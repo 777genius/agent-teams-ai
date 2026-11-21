@@ -23,7 +23,10 @@ function setup() {
       read: async () => ({ reviewFlow: 'agent_approval', reviewFlowPrompt: '' }),
       write: async (settings) => settings,
     },
-    teams: { writeOverride, listOverrides: async () => ({ overrides: {}, unreadable: [] }) },
+    teams: {
+      writeOverride,
+      listOverrides: async () => ({ overrides: {}, unreadable: [], projectTeams: {} }),
+    },
   });
   registerReviewFlowIpc(ipcMain, service);
   return { handlers, ipcMain, writeOverride };

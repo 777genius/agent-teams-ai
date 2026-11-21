@@ -27,7 +27,12 @@ export class ReviewFlowService {
 
   async getOverview(): Promise<ReviewFlowOverview> {
     const [defaults, scan] = await Promise.all([this.readDefaults(), this.ports.teams.listOverrides()]);
-    return { ...defaults, overrides: scan.overrides, unreadableTeams: scan.unreadable };
+    return {
+      ...defaults,
+      overrides: scan.overrides,
+      unreadableTeams: scan.unreadable,
+      projectTeams: scan.projectTeams,
+    };
   }
 
   /** An unreadable default must not lock the settings screen: it can be replaced by saving a new one. */

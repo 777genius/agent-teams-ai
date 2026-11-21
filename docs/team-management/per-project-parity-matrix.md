@@ -126,7 +126,7 @@ Impact is for a user who relies on the legacy feature. Effort: S under a day, M 
 | 8 | Agents and recipients see the internal alias name | cosmetic | low-medium | S | Pass the display name into prompts and the cross-team sender label. |
 | 9 | ~~Per-member settings dialog and settings relaunch are hidden~~ done for teammates | honest | low-medium | M | The dialog edits the definition through the router while every project is stopped; the lead goes through Change runtime; a settings relaunch is refused (see the last update). |
 | 10 | Gateway bindings are not projected | honest | none in this build | M | Unreachable: no binding can be created in this build. When the selector returns, key bindings by the logical team and resolve them for the copy at launch (see the last update). |
-| 11 | ~~Review flow and other per-team settings are per context~~ decided: per project board | semantic | low | S-M | One setting per board (project copy), consistent in the board popover, the settings page and the controller; the logical team is refused with a reason. Team-wide would need a live projection. |
+| 11 | ~~Review flow and other per-team settings are per context~~ done: one setting per team | semantic | low | S-M | Saved with the team and written into the board of every copy, running ones too, and into a copy at launch; a copy is refused (see the last update). |
 | 12 | ~~Hosted web / HTTP create and launch~~ done | honest | depends on hosted plans | L | HTTP and MCP create with a history mode and launch a per-project team in a project through the launch use case of the app. |
 
 The **silent** list, the ones that can mislead: 2, 3, 5 (and the cosmetic alias leak in 8).
@@ -300,3 +300,15 @@ Decisions and evidence:
 Verification: unit tests for the route (real editor and gate), the router refusal, the reentrant lock, the target mapper (fingerprint round trip), the review-flow gateway and settings list; real Electron `verifyMemberSettingsAndReviewFlow` (dialog save and revert from the project screen, projection into both copies, refusals for a copy, the lead, a settings relaunch and a reserved project, review flow on board A only, the settings page label).
 
 Still open: gap 6 (live edit), and the lead's model and effort cannot be saved without a launch (Change runtime launches).
+
+## Update: one review flow per team
+
+Gap 11, decided again by the owner: the review flow of a per-project team is **one setting of the team**, as for an ordinary team, not one per project board. The "Review flow per board" decision of the previous block is replaced. Details: [per-project-review-flow.md](./per-project-review-flow.md).
+
+| Row | Before | After |
+| --- | --- | --- |
+| Review flow settings | one setting per board: a choice made in project A did not apply in project B; the settings page listed the team once per project | one setting per team: saved in `team.meta.json` of the logical team (`reviewFlowSettings`, owner `board-definition`) and written into the board of every project copy, running ones included, under the logical-team lock; a new or existing copy takes it at launch; a write to a copy is refused; the settings page and the board popover show the team once |
+| Teams from before | n/a | nothing is written until the user saves: projects that agree show their common setting, projects that differ are listed with their values and one Save applies one setting to all |
+| A board that a save could not reach | n/a | the team's setting and the other boards stay saved; the error names the project; the app lists it as not carrying the setting with Save available, and its next launch copies it |
+
+Verification: unit tests for the routing, the order under the lock, partial failure, the copy refusal and fail-closed metadata, the launch copy, the metadata store (missing vs `null`, kept by every writer) and the view model; a disk integration test with the real metadata store, contexts registry and controller board writes (running and pending copies, refusals, migration, a new copy); real Electron `verifyTeamReviewFlow` and the HTTP section of `scripts/e2e/project-scoped-team-history-desktop.ts`.

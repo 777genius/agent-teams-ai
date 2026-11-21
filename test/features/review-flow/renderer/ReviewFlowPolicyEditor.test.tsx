@@ -200,6 +200,37 @@ describe('ReviewFlowPolicyEditor', () => {
     expect(onSave).toHaveBeenCalledWith(null);
   });
 
+  it('a per-project team whose projects differ: names them, and one Save applies one setting to all', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    render({
+      policy: following(agent),
+      projects: {
+        saved: false,
+        unsynced: [
+          { projectLabel: 'app-one', setting: human },
+          { projectLabel: 'app-two', setting: null },
+        ],
+      },
+      onSave,
+    });
+    expect(q('source')!.textContent).toBe('reviewFlow.badges.differ');
+    const notice = q('projects-unsynced')!.textContent;
+    expect(notice).toContain('reviewFlow.projects.differ');
+    expect(notice).toContain('"project":"app-one","flow":"reviewFlow.flows.human_approval.label"');
+    expect(notice).toContain('"project":"app-two","flow":"reviewFlow.projects.followsDefault"');
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(false);
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(onSave).toHaveBeenCalledWith(null);
+  });
+
+  it('a per-project team in step with its projects: only says the setting is for every project', () => {
+    render({ policy: own(human), projects: { saved: true, unsynced: [] } });
+    expect(host.textContent).toContain('reviewFlow.projects.scope');
+    expect(q('projects-unsynced')).toBeNull();
+    expect(q('source')!.textContent).toBe('reviewFlow.badges.custom');
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(true);
+  });
+
   it('lets the default for all teams be saved unchanged while it needs repair', async () => {
     const onSave = vi.fn(() => Promise.resolve());
     render({ scope: { kind: 'default' }, policy: following(agent), repair: true, onSave });

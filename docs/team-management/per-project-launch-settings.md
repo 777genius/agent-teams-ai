@@ -26,6 +26,7 @@ The owner of every saved field is one exhaustive table, `TEAM_META_FIELD_OWNER` 
 | `skipPermissions` | project launch setting | trust is granted per project; it never travels through the definition |
 | `extraCliArgs` | project launch setting | free-form runtime arguments (tools, directories, plugins) are trust decisions of one project; the launch dialog also keeps them per browser profile, not per team |
 | `launchIdentity` | project copy | derived by the runtime for one run, never stated by a launch request |
+| `reviewFlowSettings` | team definition, copied to the board of every copy | not a launch setting: see [per-project-review-flow.md](./per-project-review-flow.md) |
 | `projectContextMode`, `runtimeSelectionVersion`, `deletedAt`, `createdAt` | lifecycle | identity and state of the definition itself |
 
 A **project launch setting** (`skipPermissions`, `worktree`, `extraCliArgs`) is written into the launched copy only, when a launch is accepted, so it is the same whatever the runtime provider persists itself, and a schedule of that project (which reads the copy) runs with what the last launch in that project chose. A new copy is first created from the whole saved request of the definition, so values typed at team creation are its initial ones (`cwd` is the chosen project); the definition is never read for them again.

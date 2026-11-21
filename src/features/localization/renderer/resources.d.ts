@@ -6431,6 +6431,7 @@ export default interface Resources {
       "badges": {
         "custom": "Custom",
         "default": "Default",
+        "differ": "Differs by project",
         "repair": "Needs repair"
       },
       "broken": {
@@ -6479,6 +6480,14 @@ export default interface Resources {
       },
       "popover": {
         "openSettings": "Change the default for all teams…"
+      },
+      "projects": {
+        "differ": "The projects of this team use different review flows. Saving applies the settings below to all of them:",
+        "followsDefault": "the default",
+        "item": "{{project}}: {{flow}}",
+        "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
+        "scope": "One review flow for every project of this team.",
+        "unreadable": "settings that can't be read"
       },
       "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
       "promptLabel": "Instructions for agents (optional)",

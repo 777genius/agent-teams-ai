@@ -24,7 +24,10 @@ import type { ReviewFlowSettings } from '../../contracts/types';
 
 const TEST_ID_PREFIX = 'review-flow-settings';
 
-/** The "Review flow" page of the app settings: the default for all teams and per-team overrides. */
+/**
+ * The "Review flow" page of the app settings: the default for all teams and per-team overrides.
+ * A team with separate history per project is one entry with one setting for all its projects.
+ */
 export const ReviewFlowSection = (): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const overview = useReviewFlowOverview({ revalidate: true });
@@ -90,6 +93,7 @@ export const ReviewFlowSection = (): React.JSX.Element => {
             defaults={defaults}
             followingTeamCount={countFollowingDefault(teams, overrides)}
             repair={repair}
+            projects={scope.kind === 'team' ? overview.projectTeams[scope.teamName] : null}
             onSave={handleSave}
             testIdPrefix={TEST_ID_PREFIX}
           />

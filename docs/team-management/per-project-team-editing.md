@@ -30,7 +30,7 @@ Member settings (the per-member dialog of the team screen) follow the same rules
 - The lead of a per-project team has no member row in the definition: its provider, model and effort are team launch settings. Its card action opens Change runtime; a direct lead request is refused in main.
 - While the open project runs or is launching, the action is hidden on its screen. Any project that runs, launches or is unreconciled (also another one) makes the stopped gate refuse the save with the reason, which the dialog shows.
 
-The review flow of a per-project team is a setting of a project board, not of the definition: each copy has its own override in its `kanban-state.json` (the controller reads it there), set from that project's board or from the settings page, where the team is listed once per project as `<team> · <project>`. An override for the logical team (no board) is refused with the reason.
+The review flow of a per-project team is one setting of the team, saved in its `team.meta.json` and written into the board of every project copy (running ones too), so the controller reads it where it always did. It is set from the board popover of any project or from the settings page, where the team is listed once; a copy is refused. See [Review flow of a per-project team](./per-project-review-flow.md).
 
 Two more rules keep the router the only writer of the definition:
 
