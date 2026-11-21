@@ -359,6 +359,7 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     });
     const first = store.issue({ ...baseInput, templateId: 'tmpl-1' });
     store.confirmSave(first.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    store.markUnresolvedWrite(first.token);
     store.issue({ ...baseInput, templateId: 'tmpl-2' });
 
     // The store is full (1 submitted + 1 unsubmitted). Issuing a third must
@@ -368,6 +369,30 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(store.resolve(first.token).status).toBe('found');
     expect(store.resolve('token-2')).toEqual({ status: 'unknown' });
     expect(store.resolve('token-3').status).toBe('found');
+  });
+
+
+  it('evicts settled submissions before unresolved writes and refuses when all writes are unresolved', () => {
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => 0,
+      createToken: counterTokens(),
+      capacity: 2,
+    });
+    const unresolved = store.issue(baseInput);
+    store.confirmSave(unresolved.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    store.markUnresolvedWrite(unresolved.token);
+    const settled = store.issue({ ...baseInput, templateId: 'tmpl-2' });
+    store.confirmSave(settled.token, { templateId: 'tmpl-2', name: 'Template', nameKey: 'template' });
+    const third = store.issue({ ...baseInput, templateId: 'tmpl-3' });
+    expect(store.resolve(unresolved.token).status).toBe('found');
+    expect(store.resolve(settled.token).status).toBe('unknown');
+    store.confirmSave(third.token, { templateId: 'tmpl-3', name: 'Template', nameKey: 'template' });
+    store.markUnresolvedWrite(third.token);
+    expect(() => store.issue({ ...baseInput, templateId: 'tmpl-4' })).toThrow(
+      'All retained template saves are unresolved'
+    );
+    expect(store.resolve(unresolved.token).status).toBe('found');
+    expect(store.resolve(third.token).status).toBe('found');
   });
 
   it('clears every retained preview and confirmed operation on disposal', () => {

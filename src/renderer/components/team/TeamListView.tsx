@@ -227,9 +227,7 @@ function renderTeamRecentPaths(
     </div>
   );
 }
-
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
-
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;

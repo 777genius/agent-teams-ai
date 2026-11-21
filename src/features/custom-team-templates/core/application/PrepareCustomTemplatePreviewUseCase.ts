@@ -4,6 +4,8 @@ import {
   validateTemplateDescription,
 } from '../domain/templatePreviewPolicy';
 
+import { CustomTemplatePreviewCapacityError } from './InMemoryCustomTeamTemplatePreviewStore';
+
 import type { InMemoryCustomTeamTemplatePreviewStore } from './InMemoryCustomTeamTemplatePreviewStore';
 import type {
   CustomTeamTemplateHasher,
@@ -110,7 +112,9 @@ export class PrepareCustomTemplatePreviewUseCase {
     }
 
     const contentHash = this.deps.hasher.hashCanonicalContent(preview.preview.canonicalContent);
-    const state = this.deps.previewStore.issue({
+    let state;
+    try {
+      state = this.deps.previewStore.issue({
       sourceTeamName: read.snapshot.sourceTeamName,
       templateId: this.deps.hasher.deriveTemplateId({
         contentHash,
@@ -123,6 +127,10 @@ export class PrepareCustomTemplatePreviewUseCase {
       canonicalContent: preview.preview.canonicalContent,
       contentHash,
     });
+    } catch (error) {
+      if (error instanceof CustomTemplatePreviewCapacityError) return { status: 'storageUnavailable' };
+      throw error;
+    }
 
     return {
       status: 'previewReady',

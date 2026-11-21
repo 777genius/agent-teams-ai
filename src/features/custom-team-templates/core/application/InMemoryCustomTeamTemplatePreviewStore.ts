@@ -17,6 +17,10 @@ export const DEFAULT_CUSTOM_TEMPLATE_PREVIEW_CAPACITY = 32;
 /** Bounded attempts used to avoid ever reusing a live token. */
 const TOKEN_COLLISION_ATTEMPTS = 8;
 
+/** Every retained operation may still commit; new previews must not destroy its re-check token. */
+export class CustomTemplatePreviewCapacityError extends Error {}
+
+
 export interface CustomTeamTemplatePreviewStateInput {
   /** Team the projection was read from; a token can never be re-pointed at another team. */
   sourceTeamName: string;
@@ -132,6 +136,7 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   constructor(private readonly options: InMemoryCustomTeamTemplatePreviewStoreOptions) {
     this.ttlMs = options.ttlMs ?? DEFAULT_CUSTOM_TEMPLATE_PREVIEW_TTL_MS;
     this.capacity = options.capacity ?? DEFAULT_CUSTOM_TEMPLATE_PREVIEW_CAPACITY;
+    if (!Number.isInteger(this.capacity) || this.capacity < 1) throw new RangeError('Invalid preview capacity');
   }
 
   /** Retains one preview and returns the state (including its opaque token). */
@@ -139,21 +144,16 @@ export class InMemoryCustomTeamTemplatePreviewStore {
     const createdAtMs = this.options.now();
     this.dropExpired(createdAtMs);
     while (this.entries.size >= this.capacity) {
-      // Prefer evicting previews that were never submitted; a submitted
-      // operation may still need re-check, so it is evicted only when every
-      // retained entry is a submitted operation.
-      let evicted = false;
-      for (const [token, state] of this.entries) {
-        if (!state.confirmedSave) {
-          this.entries.delete(token);
-          evicted = true;
-          break;
-        }
+      // Settled submissions no longer need a re-check token. Never evict an
+      // unresolved operation, even if it has expired or is the oldest entry.
+      const entries = [...this.entries];
+      const candidate =
+        entries.find(([, state]) => state.confirmedSave && !state.hasUnresolvedWrite) ??
+        entries.find(([, state]) => !state.confirmedSave);
+      if (!candidate) {
+        throw new CustomTemplatePreviewCapacityError('All retained template saves are unresolved');
       }
-      if (evicted) continue;
-      const oldest = this.entries.keys().next();
-      if (oldest.done) break;
-      this.entries.delete(oldest.value);
+      this.entries.delete(candidate[0]);
     }
 
     const token = this.allocateToken();
