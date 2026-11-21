@@ -9,6 +9,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -179,9 +180,29 @@ async function fixture() {
   }
   const indexPath = path.join(logicalDir, 'project-contexts.json');
   await json(indexPath, { version: 1, logicalTeamName: logical, contexts });
+  // Ordinary (shared) teams for cross-team messages: one works in project A, one
+  // in a project where the per-project team never ran.
+  const partnerA = 'partner-' + token + '-a';
+  const partnerC = 'partner-' + token + '-c';
+  for (const [partner, cwd] of [[partnerA, projectA], [partnerC, projectC]]) {
+    const teamDir = path.join(rootTeams, partner);
+    const ownMembers = members(partner).map((item) => ({ ...item, cwd }));
+    await json(path.join(teamDir, 'config.json'), {
+      name: partner, createdAt: joinedAt, description: 'Disposable cross-team partner',
+      leadAgentId: 'lead@' + partner, members: ownMembers, projectPath: cwd,
+      projectPathHistory: [cwd],
+    });
+    await json(path.join(teamDir, 'team.meta.json'), {
+      version: 1, cwd, createdAt: joinedAt, projectContextMode: 'shared',
+    });
+    await json(path.join(teamDir, 'members.meta.json'), { version: 1, members: ownMembers });
+    await json(path.join(teamDir, '.agent-teams-owner.json'), owner);
+    await mkdir(path.join(teamDir, 'inboxes'), { recursive: true });
+    await mkdir(path.join(rootTasks, partner), { recursive: true });
+  }
   return {
     root, env, claudeRoot, rootTeams, indexPath, logical,
-    nativeA, nativeB, projectA, projectB, projectC,
+    nativeA, nativeB, projectA, projectB, projectC, partnerA, partnerC,
     screenshots, audit, runtimeCommand,
   };
 }
@@ -1054,6 +1075,101 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
 }
 
 /**
+ * Cross-team messages to and from a per-project team, through the real app:
+ * the picker list, delivery to the copy of the sender's project only, the
+ * refusal for a project without history, the copy as a sender, the routes the
+ * MCP tools use (through the real controller package) and the badge label.
+ */
+async function verifyCrossTeam(f: Fixture) {
+  assert(cdp);
+  const inboxText = (team: string) =>
+    readFile(path.join(f.rootTeams, team, 'inboxes', 'lead.json'), 'utf8').catch(() => '');
+  const send = (fromTeam: string, toTeam: string, text: string) =>
+    'window.electronAPI.crossTeam.send(' +
+    JSON.stringify({ fromTeam, fromMember: 'lead', toTeam, text }) + ')';
+
+  const targets = await cdp.evaluate(
+    '(async () => (await window.electronAPI.crossTeam.listTargets()).map(t => t.teamName))()'
+  ) as string[];
+  assert(targets.includes(f.logical), 'Per-project team missing from cross-team targets: ' +
+    JSON.stringify(targets));
+  assert(!targets.includes(f.nativeA) && !targets.includes(f.nativeB),
+    'Project copies leaked into cross-team targets');
+
+  const beforeIndex = await readFile(f.indexPath, 'utf8');
+  const sent = await cdp.evaluate(
+    '(async () => await ' + send(f.partnerA, f.logical, 'CROSS_TEAM_TO_PROJECT_A') + ')()'
+  ) as { toTeam?: string };
+  assert.equal(sent.toTeam, f.nativeA, 'A message from project A must go to the project A copy');
+  assert((await inboxText(f.nativeA)).includes('CROSS_TEAM_TO_PROJECT_A'));
+  assert(!(await inboxText(f.nativeB)).includes('CROSS_TEAM_TO_PROJECT_A'),
+    'A message for project A leaked into the project B history');
+  assert.equal(await inboxText(f.logical), '', 'The per-project team got an inbox of its own');
+
+  const refused = await ipcOutcome(send(f.partnerC, f.logical, 'CROSS_TEAM_NO_HISTORY'));
+  assert(!refused.ok && /has no history in project/.test(refused.error ?? ''),
+    'Expected an actionable refusal for a project without history: ' + JSON.stringify(refused));
+  assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
+    'A cross-team message created or changed a project context');
+
+  const own = await ipcOutcome(send(f.nativeA, f.logical, 'CROSS_TEAM_TO_ITSELF'));
+  assert(!own.ok && /same team/.test(own.error ?? ''), 'A copy reached its own team: ' +
+    JSON.stringify(own));
+
+  await cdp.evaluate('(async () => await ' +
+    send(f.nativeB, f.partnerA, 'CROSS_TEAM_FROM_PROJECT_B') + ')()');
+  const partnerInbox = JSON.parse(await inboxText(f.partnerA) || '[]') as
+    { from?: string; text?: string }[];
+  const fromCopy = partnerInbox.find((row) => row.text?.includes('CROSS_TEAM_FROM_PROJECT_B'));
+  // The stored sender stays the copy: a reply to it must reach that copy, not another project.
+  assert.equal(fromCopy?.from, f.nativeB + '.lead', 'Reply route lost');
+
+  // The MCP tools run in the controller package, which asks this app over HTTP. The
+  // app starts its control API on demand (a launch, the agent connection or the HTTP
+  // switch); nothing launched yet, so switch it on and wait until it is published.
+  await cdp.evaluate('(async () => { await window.electronAPI.httpServer.start(); return true; })()');
+  await waitForJson<{ baseUrl?: string }>(path.join(f.claudeRoot, 'team-control-api.json'),
+    (state) => typeof state.baseUrl === 'string' && state.baseUrl.length > 0,
+    'published team control API');
+  const { createController } = createRequire(import.meta.url)('agent-teams-controller') as {
+    createController(options: { teamName: string; claudeDir: string }): {
+      crossTeam: {
+        listCrossTeamTargets(): Promise<{ teamName: string }[]>;
+        sendCrossTeamMessage(flags: { toTeam: string; text: string }): Promise<{ toTeam?: string }>;
+      };
+    };
+  };
+  const fromA = createController({ teamName: f.partnerA, claudeDir: f.claudeRoot }).crossTeam;
+  const fromC = createController({ teamName: f.partnerC, claudeDir: f.claudeRoot }).crossTeam;
+  const mcpTargets = (await fromA.listCrossTeamTargets()).map((target) => target.teamName);
+  assert(mcpTargets.includes(f.logical) && !mcpTargets.includes(f.nativeA) &&
+    !mcpTargets.includes(f.nativeB), 'MCP targets: ' + JSON.stringify(mcpTargets));
+  const mcpSent = await fromA.sendCrossTeamMessage({
+    toTeam: f.logical, text: 'MCP_CROSS_TEAM_TO_PROJECT_A',
+  });
+  assert.equal(mcpSent.toTeam, f.nativeA, 'MCP routing from project A');
+  assert((await inboxText(f.nativeA)).includes('MCP_CROSS_TEAM_TO_PROJECT_A'));
+  assert(!(await inboxText(f.nativeB)).includes('MCP_CROSS_TEAM_TO_PROJECT_A'));
+  await assert.rejects(fromC.sendCrossTeamMessage({ toTeam: f.logical, text: 'MCP_NO_HISTORY' }),
+    (error: Error & { code?: string }) => error.code === 'NO_PROJECT_HISTORY');
+  assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex);
+
+  // The partner sees the copy as "<team> · project-b", never as its copy name.
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.partnerA) + ', ' + JSON.stringify(f.projectA) + '))()');
+  // Messages open as a list of conversations; cross-team messages live in the team feed.
+  await waitFor('(() => { const row = Array.from(document.querySelectorAll(' +
+    '"button[aria-label^=\\"Group chat\\"]")).find(el => el.getClientRects().length > 0);' +
+    ' if (!row) return false; row.click(); return true; })()', 'team feed conversation row');
+  const badge = JSON.stringify('[data-cross-team-badge="' + f.nativeB + '"]');
+  await waitFor('Array.from(document.querySelectorAll(' + badge + ')).some(el => ' +
+    'el.getClientRects().length > 0 && el.textContent.endsWith(" · project-b") && ' +
+    '!el.textContent.includes("ptc-"))', 'cross-team badge with the team and project label');
+  await cdp.screenshot(path.join(f.screenshots, 'cross-team-badge.png'));
+}
+
+/**
  * Launch settings belong to the team, not to one project copy. Requests have the shape the launch
  * dialog sends (every key, unset ones explicitly undefined). What is chosen for a launch in one
  * project is what the team shows and uses in the others; a provider change drops what belonged to
@@ -1270,6 +1386,7 @@ async function run() {
     await verifyUi(f);
     await verifyAliasRedirect(f);
     await verifyDefinitionEdit(f);
+    await verifyCrossTeam(f);
     const readAudit = async () => (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
     const auditBeforeSchedule = (await readAudit()).length;
@@ -1322,7 +1439,7 @@ async function run() {
       'Unexpected runtime calls after the HTTP launch');
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
       httpLaunch,

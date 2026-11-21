@@ -24,6 +24,7 @@ import {
 import { createLogger } from '@shared/utils/logger';
 
 import { registerConfigRoutes } from './config';
+import { registerCrossTeamRoutes } from './crossTeam';
 import { registerEventRoutes } from './events';
 import { registerNotificationRoutes } from './notifications';
 import { registerProjectRoutes } from './projects';
@@ -49,6 +50,7 @@ import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { CrossTeamHttpApi } from './crossTeam';
 import type { ProjectContextHttpHooks } from './teams/projectContextHttp';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
@@ -78,6 +80,8 @@ export interface HttpServices {
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
   teamPromptManagement?: TeamPromptManagement;
+  /** Cross-team routing for the controller's MCP tools. */
+  crossTeam?: CrossTeamHttpApi;
   /** How routes read project contexts; production leaves it unset. */
   projectContext?: ProjectContextHttpHooks;
   /** Launches a team with separate history per project; one instance per request. */
@@ -99,6 +103,7 @@ export function registerHttpRoutes(
   if (services.teamDataApi || services.teamApis) {
     registerTeamRoutes(app, services);
   }
+  if (services.crossTeam) registerCrossTeamRoutes(app, services.crossTeam);
   registerNotificationRoutes(app);
   registerConfigRoutes(app, services.externalAgentConnection?.updateRoot);
   registerValidationRoutes(app);

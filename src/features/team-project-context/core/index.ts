@@ -25,3 +25,5 @@ export function parseNewTeamProjectContextMode(value: unknown): TeamProjectConte
 
 export type { TeamKindPorts } from './classifyTeamKind';
 export { classifyTeamKind, createTeamKindPorts } from './classifyTeamKind';
+export type { ProjectCopyCatalogTeam, ProjectCopyOwner } from './projectCopyOwner';
+export { findProjectCopyOwner, formatProjectCopyLabel } from './projectCopyOwner';

@@ -39,7 +39,76 @@ import type { RuntimeDeliveryDestinationPort } from '../../opencode/delivery/Run
 import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
 import type { InboxMessage, PersistedTeamLaunchSnapshot, SendMessageRequest } from '@shared/types';
 
+// The app's cross-team rule reads real team metadata; here it keeps every name,
+// unless a test says where a per-project team receives.
+const routeInApp = vi.hoisted(() =>
+  vi.fn(async (route: { toTeam: string }) => Promise.resolve(route.toTeam))
+);
+vi.mock('../TeamProvisioningRuntimeDeliveryIdentity', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../TeamProvisioningRuntimeDeliveryIdentity')>()),
+  routeCrossTeamTargetInApp: routeInApp,
+}));
+
 describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
+  it('routes a cross-team target through the app rule before it is journaled', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'runtime-delivery-route-'));
+    const sentMessages: InboxMessage[] = [];
+    const crossTeamSender: OpenCodeRuntimeDeliveryCrossTeamSender = vi.fn(
+      async (request: Parameters<OpenCodeRuntimeDeliveryCrossTeamSender>[0]) => ({
+        deliveredToInbox: true,
+        messageId: request.messageId ?? 'cross-message-1',
+        toTeam: request.toTeam,
+        toMember: 'Captain',
+      })
+    );
+    routeInApp.mockImplementationOnce(async () => Promise.resolve('other-team'));
+    const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
+      teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
+      resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
+      readConfigForStrictDecision: async (teamName) =>
+        teamName === 'Team'
+          ? {
+              name: 'Source Team',
+              projectPath: '/work/alpha',
+              members: [{ name: 'Builder', agentType: 'team-lead' }],
+            }
+          : teamName === 'other-team'
+            ? { name: 'Other Team', members: [{ name: 'Captain', agentType: 'team-lead' }] }
+            : null,
+      readMetaMembers: async () => [],
+      createOpenCodeRuntimeDeliveryPorts: () =>
+        createOpenCodeRuntimeDeliveryPorts({
+          sentMessagesStore: {
+            appendMessage: vi.fn(async (_teamName: string, message: InboxMessage) => {
+              sentMessages.push(message);
+            }),
+            readMessages: vi.fn(async () => sentMessages),
+          },
+          inboxReader: { getMessagesFor: vi.fn(async () => []) },
+          inboxWriter: { sendMessage: vi.fn() },
+          getCrossTeamSender: () => crossTeamSender,
+        }),
+      emitTeamChange: vi.fn(),
+      logger: { warn: vi.fn() },
+    });
+    try {
+      await delivery.deliver(
+        createDeliveryEnvelope({ to: { teamName: 'builders', memberName: 'lead' } })
+      );
+      expect(routeInApp).toHaveBeenCalledWith({
+        fromTeam: 'Team',
+        toTeam: 'builders',
+        senderProjectPath: '/work/alpha',
+      });
+      expect(crossTeamSender).toHaveBeenCalledWith(
+        expect.objectContaining({ toTeam: 'other-team', toMember: 'Captain' })
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('preserves cross-run idempotency and anti-rejoin state when lane storage is cleared', async () => {
     const teamsBasePath = await mkdtemp(join(tmpdir(), 'runtime-delivery-lane-cleanup-'));
     const sentMessages: InboxMessage[] = [];

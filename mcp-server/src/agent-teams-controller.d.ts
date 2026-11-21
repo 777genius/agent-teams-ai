@@ -209,8 +209,9 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerCrossTeamApi {
-    sendCrossTeamMessage(flags: Record<string, unknown>): unknown;
-    listCrossTeamTargets(flags?: Record<string, unknown>): unknown;
+    /** Routes `toTeam` through the app, then writes the message; the result names `toTeam`. */
+    sendCrossTeamMessage(flags: Record<string, unknown>): Promise<Record<string, unknown>>;
+    listCrossTeamTargets(flags?: Record<string, unknown>): Promise<unknown>;
     getCrossTeamOutbox(): unknown;
   }
 

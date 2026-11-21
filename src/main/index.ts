@@ -968,6 +968,7 @@ let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: ReturnType<typeof createDefaultTeamProvisioningService>;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
+let crossTeamHttpApi: CrossTeamService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
 let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
@@ -2142,6 +2143,7 @@ async function initializeServices(): Promise<void> {
     bindTeamCrossTeamMessagingApi(teamProvisioningService)
   );
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
+  crossTeamHttpApi = crossTeamService;
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
@@ -2972,7 +2974,7 @@ async function startHttpServer(
 
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
-    if (!teamHttpHandlerApis) {
+    if (!teamHttpHandlerApis || !crossTeamHttpApi) {
       throw new Error('Team HTTP APIs are not initialized');
     }
     const port = await httpServer.start(
@@ -2994,6 +2996,7 @@ async function startHttpServer(
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
         projectTeamLaunch: projectTeamLaunchFactory(teamDataService, teamProvisioningService),
+        crossTeam: crossTeamHttpApi,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

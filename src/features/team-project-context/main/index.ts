@@ -1,6 +1,19 @@
 export type { TeamKind } from '../contracts';
-export type { TeamKindPorts } from '../core';
-export { classifyTeamKind, createTeamKindPorts } from '../core';
+export type { ProjectCopyOwner, TeamKindPorts } from '../core';
+export { classifyTeamKind, createTeamKindPorts, findProjectCopyOwner } from '../core';
+export type {
+  CrossTeamRecipient,
+  CrossTeamRecipientPorts,
+  CrossTeamRecipientRefusal,
+  CrossTeamRoute,
+} from './crossTeamRecipient';
+export {
+  assertCrossTeamSender,
+  createAppCrossTeamRecipientPorts,
+  createCrossTeamRecipientPorts,
+  CrossTeamRecipientError,
+  resolveCrossTeamRecipient,
+} from './crossTeamRecipient';
 export type {
   DefinitionLaunchSettingKey,
   DefinitionLaunchSettings,

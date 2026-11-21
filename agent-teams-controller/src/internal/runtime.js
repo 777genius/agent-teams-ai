@@ -539,6 +539,48 @@ async function getTeam(context, flags = {}) {
   );
 }
 
+/**
+ * Cross-team routing is decided by the app, one rule for every sender. `null`
+ * means the app cannot be reached (no published address, network error or
+ * timeout), so the caller keeps its offline behaviour. Any answer of the app is
+ * used or thrown: a refusal, a server error, and also a 404 (an app without the
+ * route must not silently get the old behaviour).
+ */
+async function requestCrossTeamRouting(context, pathname) {
+  let baseUrls;
+  try {
+    baseUrls = resolveControlBaseUrls(context);
+  } catch (error) {
+    if (error && error.code === 'APP_CONTEXT_MISMATCH') throw error;
+    return null;
+  }
+  try {
+    return await requestJsonWithFallback(baseUrls, pathname);
+  } catch (error) {
+    const unreachable =
+      isRetryableControlError(error) &&
+      (error.retryableKind === 'network' || error.retryableKind === 'timeout');
+    if (unreachable) return null;
+    throw error;
+  }
+}
+
+/** The physical team that receives a message from this team to `toTeam`. */
+function getCrossTeamRecipient(context, toTeam) {
+  return requestCrossTeamRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/recipient?toTeam=${encodeURIComponent(toTeam)}`
+  );
+}
+
+/** The teams this team can message, as the app lists them (project copies folded). */
+function getCrossTeamTargets(context) {
+  return requestCrossTeamRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/targets`
+  );
+}
+
 async function updateTeam(context, flags = {}) {
   desktopBinding.assertManagementExpectation(flags);
   return requestJson(
@@ -723,6 +765,8 @@ module.exports = {
   listTeams,
   getConnectionInfo,
   getTeam,
+  getCrossTeamRecipient,
+  getCrossTeamTargets,
   createTeam,
   updateTeam,
   trashTeam,

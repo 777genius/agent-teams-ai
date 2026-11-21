@@ -4,10 +4,11 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
+import { canonicalizeRuntimeDeliveryJournalRecordIdentities } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   canonicalizeRuntimeDeliveryCrossTeamIdentities,
-  canonicalizeRuntimeDeliveryJournalRecordIdentities,
-} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
+  type CrossTeamTargetRoute,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity';
 import {
   buildRuntimeDestinationMessageId,
   createRuntimeDeliveryJournalStore,
@@ -1942,7 +1943,8 @@ describe('RuntimeDeliveryReconciler', () => {
       const canonicalOriginal = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
         original,
         readBuilderLeadConfig,
-        readMetaMembers
+        readMetaMembers,
+        keepCrossTeamTarget
       );
       await expect(recoveryJournal.get(journalKey(original))).resolves.toMatchObject({
         status: 'committed',
@@ -1967,7 +1969,8 @@ describe('RuntimeDeliveryReconciler', () => {
             canonicalizeRuntimeDeliveryCrossTeamIdentities(
               message,
               readBuilderLeadConfig,
-              readMetaMembers
+              readMetaMembers,
+              keepCrossTeamTarget
             ),
         }
       );
@@ -2019,7 +2022,8 @@ describe('RuntimeDeliveryReconciler', () => {
       const canonical = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
         original,
         readBuilderLeadConfig,
-        () => Promise.resolve([])
+        () => Promise.resolve([]),
+        keepCrossTeamTarget
       );
       const forgedVerify = vi.fn(() =>
         Promise.resolve({
@@ -2333,6 +2337,105 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
     ...overrides,
   };
 }
+
+const keepCrossTeamTarget: CrossTeamTargetRoute = ({ toTeam }) => Promise.resolve(toTeam);
+
+describe('canonicalizeRuntimeDeliveryCrossTeamIdentities routing', () => {
+  const readConfig = (teamName: string): Promise<TeamConfig | null> =>
+    Promise.resolve(
+      teamName === 'team-a' || teamName === 'ptc-builders-alpha'
+        ? {
+            name: teamName,
+            projectPath: '/work/alpha',
+            members: [{ name: 'lead', agentType: 'team-lead' }],
+          }
+        : null
+    );
+  const toBuilders = envelope({
+    fromMemberName: 'lead',
+    to: { teamName: 'builders', memberName: 'lead' },
+  });
+
+  it('names the copy of the sender project before the message is journaled', async () => {
+    const route = vi.fn<CrossTeamTargetRoute>((request) =>
+      Promise.resolve(request.toTeam === 'builders' ? 'ptc-builders-alpha' : request.toTeam)
+    );
+    const canonical = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
+      toBuilders,
+      readConfig,
+      () => Promise.resolve([]),
+      route
+    );
+    expect(route).toHaveBeenCalledWith({
+      fromTeam: 'team-a',
+      toTeam: 'builders',
+      senderProjectPath: '/work/alpha',
+    });
+    expect(canonical.to).toEqual({ teamName: 'ptc-builders-alpha', memberName: 'lead' });
+    // The journal destination, and so the delivery proof, name the copy too.
+    expect(resolveRuntimeDeliveryDestination(canonical)).toMatchObject({
+      kind: 'cross_team_outbox',
+      toTeamName: 'ptc-builders-alpha',
+    });
+  });
+
+  describe('through the delivery service and its journal', () => {
+    beforeEach(async () => {
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-delivery-route-'));
+      now = new Date('2026-04-21T12:00:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      destination = new FakeDestinationPort('cross_team_outbox');
+      diagnostics = new FakeDiagnosticsSink();
+      emitter = new FakeTeamChangeEmitter();
+      runState = new FakeRunStateReader('run-1');
+    });
+
+    afterEach(async () => {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    });
+
+    const serviceRouting = (route: CrossTeamTargetRoute) =>
+      createService({
+        canonicalize: (message) =>
+          canonicalizeRuntimeDeliveryCrossTeamIdentities(
+            message,
+            readConfig,
+            () => Promise.resolve([]),
+            route
+          ),
+      });
+
+    it('journals, writes and proves the delivery under the copy', async () => {
+      const service = serviceRouting((request) =>
+        Promise.resolve(request.toTeam === 'builders' ? 'ptc-builders-alpha' : request.toTeam)
+      );
+      await expect(service.deliver(toBuilders)).resolves.toMatchObject({
+        ok: true,
+        delivered: true,
+      });
+      await expect(journal.get(journalKey(toBuilders))).resolves.toMatchObject({
+        status: 'committed',
+        destination: { kind: 'cross_team_outbox', toTeamName: 'ptc-builders-alpha' },
+        committedLocation: expect.objectContaining({ toTeamName: 'ptc-builders-alpha' }),
+      });
+      expect(destination.writeCalls).toBe(1);
+    });
+
+    it('refuses before anything is journaled or written when the rule refuses', async () => {
+      const service = serviceRouting(() =>
+        Promise.reject(new Error('Team "builders" has no history in project /work/alpha yet.'))
+      );
+      await expect(service.deliver(toBuilders)).rejects.toThrow(
+        'has no history in project /work/alpha'
+      );
+      await expect(journal.get(journalKey(toBuilders))).resolves.toBeNull();
+      expect(destination.writeCalls).toBe(0);
+    });
+  });
+});
 
 function journalKey(message: RuntimeDeliveryEnvelope = envelope()) {
   return {
