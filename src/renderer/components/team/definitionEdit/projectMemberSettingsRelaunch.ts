@@ -51,29 +51,34 @@ export async function executeProjectMemberSettingsRelaunch(input: {
   if (!input.alreadyCommitted)
     await validateProjectMemberSettingsRelaunch(logicalTeamName, baseline, draft);
   if (await api.teams.processAlive(logicalTeamName)) await api.teams.stop(logicalTeamName);
-  const common = {
-    commandId,
-    idempotencyKey: commandId,
-    teamName: logicalTeamName,
-    memberName: draft.memberName,
-    expectedFingerprint: draft.expectedFingerprint,
-    relaunchGuard: {
-      expectedTeamSettingsFingerprint: intent.expectedTeamSettingsFingerprint,
-      baseline: intent.baseline,
-    },
-  };
-  const result = await api.teams.updateMemberSettings(
-    draft.targetKind === 'lead'
-      ? {
-          ...common,
-          targetKind: 'lead',
-          leadRuntime: { model: intent.model, effort: intent.effort },
-        }
-      : { ...common, targetKind: 'member', settings: draft.settings }
-  );
-  if (result.outcome !== 'completed' || !['no_changes', 'persisted_only'].includes(result.effect)) {
-    throw new Error('Could not safely save member settings. Reopen the editor before retrying.');
+  if (!input.alreadyCommitted) {
+    const common = {
+      commandId,
+      idempotencyKey: commandId,
+      teamName: logicalTeamName,
+      memberName: draft.memberName,
+      expectedFingerprint: draft.expectedFingerprint,
+      relaunchGuard: {
+        expectedTeamSettingsFingerprint: intent.expectedTeamSettingsFingerprint,
+        baseline: intent.baseline,
+      },
+    };
+    const result = await api.teams.updateMemberSettings(
+      draft.targetKind === 'lead'
+        ? {
+            ...common,
+            targetKind: 'lead',
+            leadRuntime: { model: intent.model, effort: intent.effort },
+          }
+        : { ...common, targetKind: 'member', settings: draft.settings }
+    );
+    if (
+      result.outcome !== 'completed' ||
+      !['no_changes', 'persisted_only'].includes(result.effect)
+    ) {
+      throw new Error('Could not safely save member settings. Reopen the editor before retrying.');
+    }
+    input.onMembersSaved?.();
   }
-  input.onMembersSaved?.();
   await input.launch(input.request);
 }

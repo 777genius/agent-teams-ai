@@ -47,15 +47,20 @@ describe('confirmed project member settings relaunch', () => {
     }));
   });
 
-  it('replays the committed command when launch failed, without rejecting its now-changed baseline', async () => {
+  it('does not resubmit a committed command when the user changes the retry launch settings', async () => {
     const launch = vi.fn().mockRejectedValueOnce(new Error('launch failed')).mockResolvedValueOnce(undefined);
+    const leadDraft = { ...draft, targetKind: 'lead' as const };
+    const leadIntent = { ...intent, targetKind: 'lead' as const };
     const input = { logicalTeamName: 'builders', baseline: [{ name: 'alice' }] as never,
-      draft, intent, commandId: 'stable-command', request: { teamName: 'builders' } as never, launch };
+      draft: leadDraft, intent: leadIntent, commandId: 'stable-command', request: { teamName: 'builders' } as never, launch };
     await expect(executeProjectMemberSettingsRelaunch(input)).rejects.toThrow('launch failed');
+    expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ targetKind: 'lead', leadRuntime: { model: 'new', effort: null } }));
     mocks.validate.mockImplementationOnce(() => { throw new Error('stale after save'); });
-    await expect(executeProjectMemberSettingsRelaunch({ ...input, alreadyCommitted: true })).resolves.toBeUndefined();
-    expect(mocks.update).toHaveBeenCalledTimes(2);
-    expect(mocks.update.mock.calls[1][0]).toMatchObject({ commandId: 'stable-command' });
+    const changedRequest = { teamName: 'builders', model: 'changed' } as never;
+    const changedIntent = { ...leadIntent, model: 'changed' };
+    await expect(executeProjectMemberSettingsRelaunch({ ...input, alreadyCommitted: true, intent: changedIntent, request: changedRequest })).resolves.toBeUndefined();
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(launch).toHaveBeenLastCalledWith(changedRequest);
   });
 
   it('never launches when the definition changed or the guarded save is refused', async () => {
