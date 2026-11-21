@@ -1112,8 +1112,13 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         hasher,
         previewStore: preview.store,
       }).execute({ previewToken: preview.token })
-    ).resolves.toEqual({ status: 'notSaved', templateId: preview.stateTemplateId });
+    ).resolves.toEqual({ status: 'unresolved', templateId: preview.stateTemplateId });
     expect(read).toHaveBeenCalledWith({ templateId: preview.stateTemplateId });
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'unresolvedWriteOutcome',
+      templateId: preview.stateTemplateId,
+    });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
   it('allows only the identical request on an exact-identity retry after an uncertain write', async () => {

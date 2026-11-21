@@ -88,7 +88,11 @@ export class RecheckCustomTeamTemplateSaveUseCase {
         this.deps.previewStore.clearUnresolvedWrite(token);
         return { status: 'templateIdConflict', templateId: check.templateId };
       case 'absent':
-        this.deps.previewStore.clearUnresolvedWrite(token);
+        // A read that races an earlier unconfirmed writer is only a snapshot.
+        // Never present it as safe to retry until the write settles conclusively.
+        if (this.deps.previewStore.hasUnresolvedWrite(token)) {
+          return { status: 'unresolved', templateId: check.templateId };
+        }
         return { status: 'notSaved', templateId: check.templateId };
       case 'unresolved':
         return { status: 'unresolved', templateId: check.templateId };

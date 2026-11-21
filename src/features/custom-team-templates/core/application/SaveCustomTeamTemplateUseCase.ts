@@ -217,8 +217,13 @@ export class SaveCustomTeamTemplateUseCase {
     // (an earlier attempt with execution 'unknown' whose writer never
     // settled). That uncertainty must survive into this attempt: a later
     // `not_started` failure proves nothing about the earlier writer.
-    const hadPriorUnresolvedWrite = this.deps.previewStore.hasUnresolvedWrite(state.token);
-    const result = await this.createWithRecovery(gateway, request, hadPriorUnresolvedWrite);
+
+    // A previous writer may still commit after an IPC timeout. Its unconfirmed
+    // absence must never authorize a second dispatch for this token.
+    if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {
+      return { status: 'unresolvedWriteOutcome', templateId };
+    }
+    const result = await this.createWithRecovery(gateway, request);
     if (result.status === 'unresolvedWriteOutcome') {
       this.deps.previewStore.markUnresolvedWrite(state.token);
     } else if (

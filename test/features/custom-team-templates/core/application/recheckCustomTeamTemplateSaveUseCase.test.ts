@@ -154,6 +154,18 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
     });
   });
 
+  it('does not treat a read racing an unresolved writer as confirmed absence', async () => {
+    const fixture = operation({ read: { status: 'notFound' } });
+    fixture.store.markUnresolvedWrite(fixture.token);
+
+    await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'unresolved',
+      templateId: TEMPLATE_ID,
+    });
+    expect(fixture.store.hasUnresolvedWrite(fixture.token)).toBe(true);
+    expect(fixture.create).not.toHaveBeenCalled();
+  });
+
   it('never reports an unreadable existing record as confirmed absence', async () => {
     const fixture = operation({ read: { status: 'unreadable', templateId: TEMPLATE_ID } });
 
