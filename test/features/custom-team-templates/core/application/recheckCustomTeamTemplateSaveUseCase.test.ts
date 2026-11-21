@@ -143,7 +143,10 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
       templateId: TEMPLATE_ID,
     });
     expect(fixture.create).not.toHaveBeenCalled();
-    expect(fixture.store.resolve(fixture.token).state.confirmedSave).toBeDefined();
+    expect(fixture.store.resolve(fixture.token)).toMatchObject({
+      status: 'found',
+      state: { confirmedSave: { templateId: TEMPLATE_ID } },
+    });
   });
 
   it('keeps absence unresolved while the confirmed save may still be completing', async () => {
@@ -153,7 +156,10 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
       status: 'unresolved',
       templateId: TEMPLATE_ID,
     });
-    expect(fixture.store.resolve(fixture.token).state.confirmedSave).toBeDefined();
+    expect(fixture.store.resolve(fixture.token)).toMatchObject({
+      status: 'found',
+      state: { confirmedSave: { templateId: TEMPLATE_ID } },
+    });
   });
 
   it('never reports an unreadable existing record as confirmed absence', async () => {

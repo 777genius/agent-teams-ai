@@ -12,6 +12,17 @@ const recheckSave = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
 const storeState = vi.hoisted(() => {
   const noop = (): void => undefined;
+  const paneLayout = {
+    panes: [{
+      id: 'test-pane',
+      tabs: [{
+        id: 'teams-test',
+        type: 'teams',
+        teamsCreationPage: false,
+        teamsCreationSeed: null as { copyData?: unknown } | null,
+      }],
+    }],
+  };
   return {
     teams: [
       {
@@ -62,6 +73,16 @@ const storeState = vi.hoisted(() => {
     currentProvisioningRunIdByTeam: {},
     leadActivityByTeam: {},
     openSettingsTab: noop,
+    teamByName: {},
+    paneLayout,
+    openTeamsCreationPage: vi.fn((seed?: { copyData?: unknown }) => {
+      paneLayout.panes[0].tabs[0].teamsCreationPage = true;
+      paneLayout.panes[0].tabs[0].teamsCreationSeed = seed ?? null;
+    }),
+    closeTeamsCreationPage: vi.fn(() => {
+      paneLayout.panes[0].tabs[0].teamsCreationPage = false;
+      paneLayout.panes[0].tabs[0].teamsCreationSeed = null;
+    }),
   };
 });
 
@@ -173,7 +194,7 @@ function alphaCard(): Element {
 
 async function renderView(): Promise<void> {
   await act(async () => {
-    root.render(<TeamListView />);
+    root.render(<TeamListView tabId="teams-test" isActive />);
     await Promise.resolve();
   });
 }
@@ -221,6 +242,10 @@ beforeEach(() => {
   });
   listTemplates.mockResolvedValue({ status: 'empty' });
   storeState.openTeamTab = vi.fn();
+  storeState.openTeamsCreationPage.mockClear();
+  storeState.closeTeamsCreationPage.mockClear();
+  storeState.paneLayout.panes[0].tabs[0].teamsCreationPage = false;
+  storeState.paneLayout.panes[0].tabs[0].teamsCreationSeed = null;
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -267,6 +292,8 @@ describe('TeamListView custom team template actions', () => {
     });
     await flush();
     expect(getSavedRequest).toHaveBeenCalledWith('alpha');
+    // The real store notifies subscribers; this static fixture needs a rerender.
+    await renderView();
     expect(host.querySelector('[data-testid="create-team-dialog"]')).not.toBeNull();
     expect(preparePreview).toHaveBeenCalledTimes(1);
     expect(storeState.openTeamTab).not.toHaveBeenCalled();

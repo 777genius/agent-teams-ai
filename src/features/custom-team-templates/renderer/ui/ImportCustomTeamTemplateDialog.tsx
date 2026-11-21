@@ -413,7 +413,7 @@ export const ImportCustomTeamTemplateDialog = ({
         if (!next && !closeDisabled) handleClose();
       }}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" closeDisabled={closeDisabled}>
         <DialogHeader>
           <DialogTitle>{t('customTemplates.import.title')}</DialogTitle>
           <DialogDescription>{t('customTemplates.import.description')}</DialogDescription>

@@ -12,6 +12,7 @@ const draftStore = vi.hoisted(() => {
   const state = {
     value: '',
     isSaved: false,
+    isLoaded: true,
     setValueCalls: [] as string[],
     clearCalls: 0,
   };
@@ -33,6 +34,7 @@ vi.mock('@renderer/hooks/useDraftPersistence', () => ({
     value: draftStore.state.value,
     setValue: draftStore.setValue,
     isSaved: draftStore.state.isSaved,
+    isLoaded: draftStore.state.isLoaded,
     clearDraft: draftStore.clearDraft,
   }),
 }));
@@ -44,7 +46,17 @@ function mountHook(initialData: boolean) {
   const ref: { current: UseCreateTeamTemplateSelectionResult | null } = { current: null };
 
   function Harness({ initial }: { initial: boolean }): null {
-    ref.current = useCreateTeamTemplateSelection({ initialData: initial });
+    ref.current = useCreateTeamTemplateSelection({
+      initialData: initial,
+      descriptionDraft: { setValue: vi.fn() },
+      promptDraft: { setValue: vi.fn() },
+      promptChipDraft: { clearChipDraft: vi.fn() },
+      setLaunchTeam: vi.fn(),
+      setRuntimeSelection: vi.fn(),
+      setSyncModelsWithLead: vi.fn(),
+      setSoloTeam: vi.fn(),
+      setMembers: vi.fn(),
+    });
     return null;
   }
 
