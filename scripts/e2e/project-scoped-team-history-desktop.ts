@@ -748,6 +748,158 @@ async function verifyDefinitionEdit(f: Fixture) {
   }
 }
 
+interface MembersFile { members: { name: string; isolation?: string; role?: string; removedAt?: number }[] }
+
+/**
+ * Member settings of a per-project team are edited in its definition, through the real member
+ * settings dialog of the project screen and the same router as the roster: saved in the logical
+ * team, projected onto every stopped project copy, refused for a copy, for the lead (its runtime is
+ * a launch setting of the team), for a settings-originated relaunch and while a project is not
+ * stopped. The review flow is a setting of a board: each project copy has its own, the logical
+ * team (no board) is refused with a reason, and the settings page names a copy after its team and
+ * project. Nothing here reaches the runtime.
+ */
+async function verifyMemberSettingsAndReviewFlow(f: Fixture) {
+  assert(cdp);
+  const logicalDir = path.join(f.rootTeams, f.logical);
+  const membersOf = (team: string) => path.join(f.rootTeams, team, 'members.meta.json');
+  const alice = (file: MembersFile) => file.members.find((member) => member.name === 'alice' && !member.removedAt);
+  const history = async () => JSON.stringify(await Promise.all([
+    readJsonFile(path.join(f.claudeRoot, 'tasks', f.nativeA, '1.json')),
+    readJsonFile(path.join(f.claudeRoot, 'tasks', f.nativeB, '1.json')),
+    readJsonFile(path.join(f.rootTeams, f.nativeA, 'inboxes', 'user.json')),
+    readJsonFile(path.join(f.rootTeams, f.nativeB, 'inboxes', 'user.json')),
+  ]));
+  const historyBefore = await history();
+  const indexBefore = await readFile(f.indexPath, 'utf8');
+  const dialogTitle = 'Settings: alice';
+  const dialogOpen = '(() => Array.from(document.querySelectorAll("[role=dialog] h2"))' +
+    '.some((h) => h.textContent?.trim() === ' + JSON.stringify(dialogTitle) + '))()';
+  const isolationBox = '[role=dialog] button[role=checkbox][id$="-worktree-isolation"]';
+
+  const setIsolationThroughDialog = async (worktree: boolean, screenshot: string) => {
+    await selectProject(f, 'project-a');
+    await cdp!.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+      JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+    await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for member settings');
+    // The member card's settings action (hover-revealed; a click on the element is what a user does).
+    const settingsButton = '(() => Array.from(document.querySelectorAll(' +
+      JSON.stringify('[data-team-name="' + f.nativeA + '"] button[aria-label="Settings"]') + '))' +
+      '.find((b) => b.closest("[class*=\\"group/member\\"]")?.textContent?.includes("alice")))()';
+    await waitFor('Boolean(' + settingsButton + ')', 'settings action on the card of alice');
+    await cdp!.evaluate('(() => { ' + settingsButton + '.click(); return true; })()');
+    await waitFor(dialogOpen, 'member settings dialog of a per-project team');
+    await waitFor('Boolean(document.querySelector(' + JSON.stringify(isolationBox) + '))', 'worktree option');
+    const checked = await cdp!.evaluate('document.querySelector(' + JSON.stringify(isolationBox) +
+      ').getAttribute("aria-checked") === "true"');
+    assert.equal(checked, !worktree, 'The dialog must show the saved definition of alice');
+    const dialogText = await cdp!.evaluate('document.querySelector("[role=dialog]").innerText') as string;
+    assert(!dialogText.includes('ptc-'), 'The member settings dialog shows a project copy name: ' +
+      dialogText.slice(0, 200));
+    await cdp!.evaluate('(() => { document.querySelector(' + JSON.stringify(isolationBox) +
+      ').click(); return true; })()');
+    await cdp!.screenshot(path.join(f.screenshots, screenshot));
+    await clickDialogSave();
+    await waitFor('!' + dialogOpen, 'member settings dialog closed after save');
+  };
+
+  // 1. The real dialog writes the definition; both stopped project copies follow it.
+  await setIsolationThroughDialog(true, 'member-settings-dialog.png');
+  await waitForJson<MembersFile>(membersOf(f.logical), (file) => alice(file)?.isolation === 'worktree',
+    'alice isolated in the team definition');
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await waitForJson<MembersFile>(membersOf(alias), (file) => alice(file)?.isolation === 'worktree',
+      'alice isolation projected into ' + alias);
+  }
+  assert.equal(await readFile(path.join(logicalDir, 'config.json'), 'utf8').then(() => true, () => false),
+    false, 'The logical definition must stay config-less');
+  const target = await ipcOutcome('window.electronAPI.teams.getMemberSettingsTarget(' +
+    JSON.stringify({ teamName: f.logical, memberName: 'alice' }) + ')');
+  assert(target.ok && (target.value?.settings as { isolation?: string })?.isolation === 'worktree',
+    'The definition target must show the saved setting: ' + JSON.stringify(target));
+  // A second save starts from the saved definition (fresh fingerprint) and is projected the same way.
+  await setIsolationThroughDialog(false, 'member-settings-dialog-revert.png');
+  await waitForJson<MembersFile>(membersOf(f.logical), (file) => Boolean(alice(file)) && !alice(file)!.isolation,
+    'alice back to the shared checkout in the definition');
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await waitForJson<MembersFile>(membersOf(alias), (file) => Boolean(alice(file)) && !alice(file)!.isolation,
+      'alice back to the shared checkout in ' + alias);
+  }
+
+  // 2. Refusals answer with a reason and write nothing.
+  const settings = {
+    role: 'Developer', workflow: null, isolation: 'worktree', providerId: null, providerBackendId: null,
+    model: null, effort: null, fastMode: null, mcpPolicy: null,
+  };
+  const request = (teamName: string, extra: Record<string, unknown> = {}) => JSON.stringify({
+    commandId: randomUUID(), idempotencyKey: randomUUID(), teamName, memberName: 'alice',
+    expectedFingerprint: 'not-checked-before-the-refusal', targetKind: 'member', settings, ...extra,
+  });
+  const copyEdit = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.nativeA) + ')');
+  assert(!copyEdit.ok && /project copy/i.test(copyEdit.error ?? ''),
+    'Member settings of a project copy must be refused: ' + JSON.stringify(copyEdit));
+  const leadEdit = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
+    memberName: 'lead', targetKind: 'lead', leadRuntime: { model: null, effort: null }, settings: undefined,
+  }) + ')');
+  assert(!leadEdit.ok && /Change runtime/.test(leadEdit.error ?? ''),
+    'The lead of a per-project team must be refused with the way to change it: ' + JSON.stringify(leadEdit));
+  const relaunch = await ipcOutcome('window.electronAPI.teams.replaceMembers(' + JSON.stringify(f.logical) +
+    ', ' + JSON.stringify({
+      members: [{ name: 'alice', role: 'Developer' }],
+      memberSettingsRelaunch: { memberName: 'alice', targetKind: 'member' },
+    }) + ')');
+  // The exact refusal of the router: an invalid intent would also mention a relaunch.
+  assert(!relaunch.ok && /cannot change them as part of a relaunch/.test(relaunch.error ?? ''),
+    'A settings-originated relaunch of a per-project team must be refused: ' + JSON.stringify(relaunch));
+  const index = JSON.parse(indexBefore) as { contexts: unknown[] };
+  await writeFile(f.indexPath, JSON.stringify({ ...index, contexts: [...index.contexts, {
+    id: randomUUID(), projectKey: f.projectC, projectPath: f.projectC,
+    executionTeamName: f.nativeA.replace(/-a$/, '-c'), state: 'reserved',
+  }] }, null, 2));
+  try {
+    const blocked = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical) + ')');
+    assert(!blocked.ok && /prepared|running|launching/i.test(blocked.error ?? ''),
+      'Member settings while a project is not stopped must be refused: ' + JSON.stringify(blocked));
+  } finally {
+    await writeFile(f.indexPath, indexBefore);
+  }
+  for (const team of [f.logical, f.nativeA, f.nativeB]) {
+    const member = alice(await readJsonFile<MembersFile>(membersOf(team)));
+    assert(member && !member.isolation, 'A refused member settings call changed ' + team);
+  }
+
+  // 3. Review flow: one setting per board (project copy); the logical team has none.
+  const human = { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E board override' };
+  const logicalFlow = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(human) + ')');
+  assert(!logicalFlow.ok && /separate history per project/.test(logicalFlow.error ?? ''),
+    'A review flow for the logical team must be refused with the reason: ' + JSON.stringify(logicalFlow));
+  const boardFlow = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
+    JSON.stringify(f.nativeA) + ', ' + JSON.stringify(human) + ')');
+  assert(boardFlow.ok, 'The board of project A must take a review flow: ' + JSON.stringify(boardFlow));
+  try {
+    const overview = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
+    const overrides = (overview.value?.overrides ?? {}) as Record<string, unknown>;
+    assert.deepEqual(Object.keys(overrides).filter((name) => [f.logical, f.nativeA, f.nativeB].includes(name)),
+      [f.nativeA], 'Only the board of project A may carry the override: ' + JSON.stringify(overview));
+    await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openSettingsTab("reviewFlow"))()');
+    const copyLabel = 'History fixture edited · project-a';
+    await waitFor('document.body.innerText.includes(' + JSON.stringify(copyLabel) + ')',
+      'the settings page names the override of project A after its team and project');
+    const settingsText = await cdp.evaluate('document.body.innerText') as string;
+    assert(!settingsText.includes(f.nativeA) && !settingsText.includes(f.nativeB),
+      'The review flow settings page shows an internal project copy name');
+    await cdp.screenshot(path.join(f.screenshots, 'review-flow-per-project.png'));
+  } finally {
+    const reset = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
+      JSON.stringify(f.nativeA) + ', null)');
+    assert(reset.ok, 'Resetting the board override failed: ' + JSON.stringify(reset));
+  }
+
+  assert.equal(await history(), historyBefore, 'Member or review settings mutated project tasks or inboxes');
+  assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'The durable context mapping changed');
+}
+
 interface StoredSchedule {
   id: string; teamName: string; executionMode?: string; taskFirst?: boolean; cronExpression: string;
   launchConfig: { cwd: string; prompt: string };
@@ -1386,6 +1538,7 @@ async function run() {
     await verifyUi(f);
     await verifyAliasRedirect(f);
     await verifyDefinitionEdit(f);
+    await verifyMemberSettingsAndReviewFlow(f);
     await verifyCrossTeam(f);
     const readAudit = async () => (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
@@ -1439,7 +1592,7 @@ async function run() {
       'Unexpected runtime calls after the HTTP launch');
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / member settings and review flow of a per-project team / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
       httpLaunch,

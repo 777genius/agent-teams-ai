@@ -43,6 +43,24 @@ export interface EditableMemberSettings {
   mcpPolicy: MemberSettingsMcpPolicy | null;
 }
 
+/**
+ * The saved settings of one member as the settings mutation compares them
+ * (its fingerprint is taken from these fields). Read for a team whose members
+ * have no runtime snapshot, such as the definition of a per-project team.
+ */
+export interface MemberSettingsTarget {
+  name: string;
+  agentType: string | null;
+  agentId: string | null;
+  joinedAt: number | string | null;
+  settings: EditableMemberSettings;
+}
+
+export interface GetMemberSettingsTargetRequest {
+  teamName: string;
+  memberName: string;
+}
+
 export type UpdateMemberSettingsEffect =
   | 'no_changes'
   | 'persisted_only'

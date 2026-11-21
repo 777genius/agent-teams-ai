@@ -155,6 +155,11 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       const row = await TeamProjectContextRegistry.fromCurrentApp().find('builders', f.projectPath);
       expect(row?.state).toBe('ready');
     });
+    // Preserve the PR's progress-observation assertion as well as main's stronger
+    // persisted-ready check: both must complete before fixture teardown.
+    expect(f.onProgress).toHaveBeenCalledWith(expect.objectContaining({
+      teamName: 'builders', state: 'ready',
+    }));
     expect(f.started[0]?.cwd).toBe(await fs.realpath(f.projectPath));
     const meta = JSON.parse(await fs.readFile(
       path.join(getTeamsBasePath(), f.started[0]!.teamName, 'team.meta.json'),

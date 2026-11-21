@@ -10,6 +10,7 @@ import {
   draftToPayload,
   isEditorDraftDirty,
   resolveScopePolicy,
+  reviewFlowBoardsOf,
   scopeFromValue,
   scopeToValue,
 } from '../../../../src/features/review-flow/renderer/view-model/reviewFlowViewModel';
@@ -68,6 +69,63 @@ describe('review flow scope list', () => {
       kind: 'team',
       teamName: 'alpha-team',
     });
+  });
+});
+
+/**
+ * The review flow is a setting of a board. A per-project team has one board per
+ * project (its copy) and none of its own, so the settings page offers exactly
+ * the boards that exist: the copies, named after the team and the project. Its
+ * logical name is never offered (the main process refuses it), and the copies
+ * never show up under their internal names.
+ */
+describe('review flow boards of per-project teams', () => {
+  const folded = [
+    { teamName: 'legacy', displayName: 'Legacy', projectContextMode: 'shared' as const },
+    {
+      teamName: 'builders',
+      displayName: 'Builders',
+      projectContextMode: 'per_project' as const,
+      projectHistoryContexts: [
+        { executionTeamName: 'ptc-aaa', projectPath: '/work/app-one' },
+        { executionTeamName: 'ptc-bbb', projectPath: '/work/app-two' },
+      ],
+    },
+    { teamName: 'fresh', displayName: 'Fresh', projectContextMode: 'per_project' as const },
+  ];
+
+  it('names the copies an ordinary team retained, after the team and the project', () => {
+    const retained = [
+      {
+        teamName: 'old',
+        displayName: 'Old',
+        projectContextMode: 'shared' as const,
+        projectHistoryContexts: [{ executionTeamName: 'ptc-old', projectPath: '/work/site' }],
+      },
+    ];
+    expect(reviewFlowBoardsOf(retained)).toEqual([
+      { teamName: 'old', displayName: 'Old' },
+      { teamName: 'ptc-old', displayName: 'Old · site' },
+    ]);
+  });
+
+  it('lists an ordinary team as is and a per-project team once per project', () => {
+    expect(reviewFlowBoardsOf(folded)).toEqual([
+      { teamName: 'legacy', displayName: 'Legacy' },
+      { teamName: 'ptc-aaa', displayName: 'Builders · app-one' },
+      { teamName: 'ptc-bbb', displayName: 'Builders · app-two' },
+    ]);
+  });
+
+  it('labels an override of one project with the team and project, and keeps the others on the default', () => {
+    const boards = reviewFlowBoardsOf(folded);
+    expect(buildOverrideRows(boards, { 'ptc-aaa': human })).toEqual([
+      { teamName: 'ptc-aaa', displayName: 'Builders · app-one', settings: human },
+    ]);
+    const options = buildScopeOptions(boards, { 'ptc-aaa': human }, [], 'All teams');
+    expect(options.map((option) => option.value)).not.toContain('builders');
+    expect(options.find((option) => option.value === 'ptc-bbb')?.badge).toBeNull();
+    expect(countFollowingDefault(boards, { 'ptc-aaa': human })).toBe(2);
   });
 });
 

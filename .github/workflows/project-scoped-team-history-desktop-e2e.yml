@@ -23,6 +23,15 @@ on:
       - 'src/main/http/index.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity.ts'
       - 'src/renderer/components/team/activity/CrossTeamTeamBadge.tsx'
+      - 'src/main/ipc/teams/teamProjectDefinitionEdit.ts'
+      - 'src/main/composeTeamMemberSettings.ts'
+      - 'src/renderer/components/team/definitionEdit/**'
+      - 'src/features/team-provisioning/main/**'
+      - 'src/features/team-provisioning/renderer/ui/**'
+      - 'src/features/team-provisioning/core/application/use-cases/UpdateMemberSettingsUseCase.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
+      - 'src/features/review-flow/main/**'
+      - 'src/features/review-flow/renderer/view-model/**'
   push:
     branches: [main]
     paths:
@@ -45,6 +54,15 @@ on:
       - 'src/main/http/index.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity.ts'
       - 'src/renderer/components/team/activity/CrossTeamTeamBadge.tsx'
+      - 'src/main/ipc/teams/teamProjectDefinitionEdit.ts'
+      - 'src/main/composeTeamMemberSettings.ts'
+      - 'src/renderer/components/team/definitionEdit/**'
+      - 'src/features/team-provisioning/main/**'
+      - 'src/features/team-provisioning/renderer/ui/**'
+      - 'src/features/team-provisioning/core/application/use-cases/UpdateMemberSettingsUseCase.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
+      - 'src/features/review-flow/main/**'
+      - 'src/features/review-flow/renderer/view-model/**'
 
 permissions:
   contents: read

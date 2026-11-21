@@ -88,3 +88,14 @@ member resolver/editor projection, and resubmits settings with a changed lead
 default through persistence and launch setup again. It checks both effective
 runtime values and durable absence of cleared/inherited overrides alongside an
 explicit mixed-provider/backend/fast-mode sibling.
+
+The desktop app composes the member settings feature in
+`src/main/composeTeamMemberSettings.ts`, where `routeMemberSettingsWrites` applies
+the rules of the team definition router before the use case runs: an ordinary
+team is unchanged; a per-project team writes its definition (the logical team)
+only while every project is stopped, inside the logical-team lock, and its
+stopped project copies are refreshed afterwards; its lead and its project copies
+are refused. `getMemberSettingsTarget` reads the saved target through the same
+repository, so an editor of a team without runtime members (such a definition)
+shows the identity and settings the save compares. See
+`docs/team-management/per-project-team-editing.md`.

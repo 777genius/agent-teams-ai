@@ -10,6 +10,7 @@ import { UpdateMemberSettingsUseCase } from '../../core/application/use-cases/Up
 import {
   createMemberSettingsFingerprint,
   normalizeEditableMemberSettings,
+  toMemberSettingsTarget,
 } from '../../core/domain/memberSettingsPolicy';
 import { LegacyMemberSettingsLifecycleAdapter } from '../adapters/output/LegacyMemberSettingsLifecycleAdapter';
 import { LegacyMemberSettingsMutationGateAdapter } from '../adapters/output/LegacyMemberSettingsMutationGateAdapter';
@@ -17,6 +18,8 @@ import { LegacyMemberSettingsRepositoryAdapter } from '../adapters/output/Legacy
 import { createNodeLegacyMemberSettingsRepositoryDependencies } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
 
 import type {
+  GetMemberSettingsTargetRequest,
+  MemberSettingsTarget,
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../contracts/memberSettings';
@@ -47,6 +50,9 @@ const MAX_IN_PROCESS_COMMANDS = 4_096;
 
 export interface TeamMemberSettingsFeatureApi {
   updateMemberSettings(request: UpdateMemberSettingsRequest): Promise<UpdateMemberSettingsResult>;
+  getMemberSettingsTarget(
+    request: GetMemberSettingsTargetRequest
+  ): Promise<MemberSettingsTarget | null>;
 }
 
 export interface TeamMemberSettingsFeatureDependencies {
@@ -55,10 +61,17 @@ export interface TeamMemberSettingsFeatureDependencies {
   repositoryDependencies?: LegacyMemberSettingsRepositoryDependencies;
   repository?: MemberSettingsRepositoryPort;
   commandRunner?: ApplicationCommandRunner | null;
+  /**
+   * When internal storage selected its JSON fallback for this session, the
+   * durable ledger cannot start a command: the process-local idempotency is
+   * used instead, like the other ledger consumers.
+   */
+  isDurableStorageAvailable?: () => Promise<boolean>;
 }
 
 export interface NodeTeamMemberSettingsFeatureDependencies {
   commandRunner?: ApplicationCommandRunner | null;
+  isDurableStorageAvailable?: () => Promise<boolean>;
   memberLifecycle: LegacyLiveRosterMutationSource &
     Pick<LegacyMemberSettingsLifecycleSource, 'attachLiveRosterMember'>;
   runtime: NodeMemberSettingsRuntimeSource;
@@ -222,9 +235,17 @@ export function createTeamMemberSettingsFeature(
   const fallback = new InProcessMemberSettingsCommandRunner();
 
   return {
+    async getMemberSettingsTarget(request) {
+      const target = await repository.findTarget(request.teamName, request.memberName);
+      return target ? toMemberSettingsTarget(target) : null;
+    },
     async updateMemberSettings(request) {
       const execute = () => useCase.execute(request);
-      if (!dependencies.commandRunner) {
+      if (
+        !dependencies.commandRunner ||
+        (dependencies.isDurableStorageAvailable &&
+          !(await dependencies.isDurableStorageAvailable()))
+      ) {
         return fallback.run(request, execute);
       }
 
@@ -309,6 +330,7 @@ export function createNodeTeamMemberSettingsFeature(
   const isTeamAlive = (teamName: string) => dependencies.runtime.isTeamAlive(teamName);
   return createTeamMemberSettingsFeature({
     commandRunner: dependencies.commandRunner,
+    isDurableStorageAvailable: dependencies.isDurableStorageAvailable,
     mutationSource: dependencies.memberLifecycle,
     lifecycleSource: {
       attachLiveRosterMember: (teamName, memberName, options) =>

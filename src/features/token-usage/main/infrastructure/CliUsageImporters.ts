@@ -64,6 +64,7 @@ function readStdoutFromCommand(options: CliUsageImporterOptions): Promise<string
       cwd: options.cwd,
       env: options.env ? { ...process.env, ...options.env } : process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
     });
     const stdoutChunks: Buffer[] = [];
     const stderrChunks: Buffer[] = [];

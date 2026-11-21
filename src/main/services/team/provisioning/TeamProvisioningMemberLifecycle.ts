@@ -2,7 +2,6 @@ import {
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
 } from '@features/tmux-installer/main';
-import { spawnCli } from '@main/utils/childProcess';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
@@ -91,6 +90,10 @@ import {
   createNodeUpdateDirectTmuxRestartMemberConfigUseCase,
   type DirectTmuxRestartMemberConfigInput,
 } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
+import {
+  isOwnedWindowsTeamRuntimeWrapperProcess,
+  spawnWindowsTeamRuntimeCli,
+} from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
@@ -967,12 +970,14 @@ export class TeamProvisioningMemberLifecycleController {
       this.assertRunStillCurrentAndAlive(input.run, input.teamName);
       const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
       const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
-      let child: ReturnType<typeof spawnCli>;
+      let child: ReturnType<typeof spawnWindowsTeamRuntimeCli>;
       try {
         await directGatewayArgs?.beginLaunch?.();
-        child = spawnCli(claudePath, runtimeArgs, {
+        child = spawnWindowsTeamRuntimeCli(claudePath, runtimeArgs, {
           cwd,
-          detached: true,
+          // Windows DETACHED_PROCESS leaves the teammate without any console, so every
+          // shell/git child it spawns allocates a new visible console window.
+          detached: process.platform !== 'win32',
           env: {
             ...provisioningEnv.env,
             ...nativeBootstrapEnv,
@@ -992,6 +997,12 @@ export class TeamProvisioningMemberLifecycleController {
         throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
       }
       const runtimePid = child.pid;
+      // Keep original Windows process handles: PIDs can be reused and WMI is not kill authority.
+      if (process.platform === 'win32') {
+        const owned = (input.run.directMemberProcesses ??= new Set());
+        owned.add(child);
+        child.once('close', () => { owned.delete(child); });
+      }
       const processPaneId = `process:${runtimePid}`;
       const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
       child.stdout?.pipe(stdoutLog);
@@ -1085,6 +1096,7 @@ export class TeamProvisioningMemberLifecycleController {
           bootstrapExpectedAfter,
           backendType: 'process',
           runtimePid,
+          ...(isOwnedWindowsTeamRuntimeWrapperProcess(child) ? { runtimePidRole: 'wrapper' as const } : {}),
           bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
           bootstrapProofToken,
           bootstrapRunId: input.run.runId,

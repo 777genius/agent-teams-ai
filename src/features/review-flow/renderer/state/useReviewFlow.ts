@@ -5,6 +5,7 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import { resolveReviewFlowPolicy } from '../../core/domain/reviewFlowPolicy';
+import { reviewFlowBoardsOf } from '../view-model/reviewFlowViewModel';
 
 import { createReviewFlowStore } from './createReviewFlowStore';
 
@@ -88,12 +89,12 @@ export function useTeamReviewFlow(teamName: string): TeamReviewFlow {
   };
 }
 
-/** Teams the app already knows, loaded on demand when the list is still empty. */
+/** The boards of the teams the app already knows (loaded on demand when the list is still empty). */
 export function useKnownTeams(): readonly TeamIdentity[] {
   const teams = useStore((state) => state.teams);
   const fetchTeams = useStore((state) => state.fetchTeams);
   useEffect(() => {
     if (teams.length === 0) void fetchTeams();
   }, [teams.length, fetchTeams]);
-  return teams;
+  return useMemo(() => reviewFlowBoardsOf(teams), [teams]);
 }
