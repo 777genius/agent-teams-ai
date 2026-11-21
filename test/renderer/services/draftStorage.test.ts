@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const persisted = vi.hoisted(() => new Map<string, { value: string; timestamp: number }>());
 
@@ -18,6 +18,9 @@ import { draftStorage } from '@renderer/services/draftStorage';
 describe('create-team template choice retention', () => {
   beforeEach(() => {
     persisted.clear();
+  });
+
+  afterEach(() => {
     vi.useRealTimers();
   });
 

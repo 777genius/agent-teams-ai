@@ -210,9 +210,9 @@ export class SaveCustomTeamTemplateUseCase {
       ...(resolved.description === undefined ? {} : { description: resolved.description }),
     };
 
-    // The preview can expire or be evicted while the authoritative snapshot is
-    // being read, so confirmation is checked rather than assumed: a token that
-    // no longer retains its preview must never produce a database record.
+    // Expiry can occur while the authoritative snapshot is being read; a
+    // claimed save cannot be evicted for capacity. Confirmation is still
+    // checked so an unavailable token never produces a database record.
     const confirmation = this.deps.previewStore.confirmSave(state.token, identity);
     if (confirmation.status === 'unavailable') {
       return { status: 'stalePreview', sourceTeamName: state.sourceTeamName };

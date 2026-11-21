@@ -406,6 +406,7 @@ describe('validateTemplateContent', () => {
 
   it('still rejects reserved names while allowing a legitimate lone dev-2', () => {
     expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toEqual([]);
+    expect(validateTemplateContent(content([{ name: 'alice-provisioner-2' }]))).toEqual([]);
     expect(validateTemplateContent(content([{ name: 'dev' }, { name: 'dev-2' }]))).toContainEqual({
       code: 'memberNameInvalid',
       field: 'members[1].name',
@@ -413,15 +414,6 @@ describe('validateTemplateContent', () => {
     expect(validateTemplateContent(content([{ name: 'user' }]))).toContainEqual({
       code: 'memberNameInvalid',
       field: 'members[0].name',
-    });
-  });
-
-  it('accepts standalone numeric suffixes but rejects auto-suffix duplicates', () => {
-    expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toEqual([]);
-    expect(validateTemplateContent(content([{ name: 'alice-provisioner-2' }]))).toEqual([]);
-    expect(validateTemplateContent(content([{ name: 'dev' }, { name: 'dev-2' }]))).toContainEqual({
-      code: 'memberNameInvalid',
-      field: 'members[1].name',
     });
   });
 
@@ -444,7 +436,9 @@ describe('validateTemplateContent', () => {
       code: 'membersMetadataTooLarge',
       field: 'members',
     });
-    expect(validateTemplateContent(content([{ name: 'developer', workflow: 'a'.repeat(200_000) }]))).toEqual([]);
+    expect(
+      validateTemplateContent(content([{ name: 'developer', workflow: 'a'.repeat(200_000) }]))
+    ).toEqual([]);
   });
 
   it('rejects oversized content without truncating it', () => {

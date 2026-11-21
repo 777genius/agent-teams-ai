@@ -1,5 +1,8 @@
 import { CustomTeamTemplateStorageInterruptedError } from '@features/custom-team-templates/core/application/CustomTeamTemplateStorageInterruptedError';
-import { InMemoryCustomTeamTemplatePreviewStore } from '@features/custom-team-templates/core/application/InMemoryCustomTeamTemplatePreviewStore';
+import {
+  CustomTeamTemplatePreviewCapacityError,
+  InMemoryCustomTeamTemplatePreviewStore,
+} from '@features/custom-team-templates/core/application/InMemoryCustomTeamTemplatePreviewStore';
 import { PrepareCustomTemplatePreviewUseCase } from '@features/custom-team-templates/core/application/PrepareCustomTemplatePreviewUseCase';
 import { RecheckCustomTeamTemplateSaveUseCase } from '@features/custom-team-templates/core/application/RecheckCustomTeamTemplateSaveUseCase';
 import { SaveCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/SaveCustomTeamTemplateUseCase';
@@ -990,11 +993,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     expect(preview.store.resolve(preview.token).status).toBe('found');
   });
 
-  it('rejects the save when the preview is evicted before its identity is confirmed', async () => {
+  it('keeps a claimed preview safe from eviction while the source is re-read', async () => {
     const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate() }] });
-    // The preview store evicts the oldest entry when a newer preview fills the
-    // bounded capacity; the eviction happens while the snapshot is being read,
-    // i.e. after the token resolved but before confirmation.
     let issuedTokens = 0;
     const boundedStore = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 0,
@@ -1010,28 +1010,32 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     const prepared = await prepare.execute({ sourceTeamName: TEAM, name: 'Release Pipeline' });
     expect(prepared.status).toBe('previewReady');
 
-    const evictingReader: CustomTeamTemplateSnapshotReader = {
+    const competingReader: CustomTeamTemplateSnapshotReader = {
       readSnapshot: async () => {
-        boundedStore.issue({
-          sourceTeamName: TEAM,
-          templateId: 'tmpl-newer',
-          name: 'Newer',
-          nameKey: 'newer',
-          canonicalContent: '{}',
-          contentHash: 'sha256:newer',
-        });
+        // execute() has already claimed token-1 before this re-read. A second
+        // preview cannot evict the operation whose save is in flight.
+        expect(() =>
+          boundedStore.issue({
+            sourceTeamName: TEAM,
+            templateId: 'tmpl-newer',
+            name: 'Newer',
+            nameKey: 'newer',
+            canonicalContent: '{}',
+            contentHash: 'sha256:newer',
+          })
+        ).toThrow(CustomTeamTemplatePreviewCapacityError);
+        expect(boundedStore.resolve('token-1').status).toBe('found');
         return reader().readSnapshot(TEAM);
       },
     };
 
     await expect(
-      useCase({ gateway: fixture.gateway, reader: evictingReader }, boundedStore).execute({
+      useCase({ gateway: fixture.gateway, reader: competingReader }, boundedStore).execute({
         previewToken: 'token-1',
       })
-    ).resolves.toEqual({ status: 'stalePreview', sourceTeamName: TEAM });
-    // No create was issued for a preview the store no longer retains.
-    expect(fixture.create).not.toHaveBeenCalled();
-    expect(boundedStore.resolve('token-1')).toEqual({ status: 'unknown' });
+    ).resolves.toEqual({ status: 'created', template: storedTemplate() });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
+    expect(boundedStore.resolve('token-1').status).toBe('found');
   });
 
   it('rejects the save when the preview expires before its identity is confirmed', async () => {
