@@ -463,6 +463,15 @@ try {
   await screenshot('09-copy-edited-deleted');
   checks.push('Real Duplicate, Edit and Delete dialogs preserve the original template and revisions.');
 
+  // Re-launch the actual Electron application with the same isolated profile.
+  // A dialog close/reopen alone cannot prove durable SQLite persistence.
+  await closeDialog();
+  await stop();
+  await start();
+  assert.deepEqual(await library(), saved);
+  await screenshot('10-library-after-app-restart');
+  checks.push('Saved templates survive a full Electron process restart with unchanged ids and content.');
+
   // Exercise the current Create Team page, not the old dialog. The imported
   // template must fill the editable draft without launching a provider.
   await closeDialog();
