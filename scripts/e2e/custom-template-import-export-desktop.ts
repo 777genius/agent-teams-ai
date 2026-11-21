@@ -428,6 +428,41 @@ try {
     'Closing and reopening My Templates re-reads both saved rows from the real storage worker.'
   );
 
+  // Real management actions: duplicate -> edit -> delete an independent copy.
+  // The original imported template must remain byte-for-byte unchanged.
+  await click(`document.querySelector('[data-testid="duplicate-template-${original.templateId}"]')`);
+  await until("document.querySelector('#duplicate-template-name')", 'duplicate template dialog');
+  await click(button('Duplicate', topDialog));
+  await until(`window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.length === 3)`, 'duplicated row');
+  const duplicate = (await library()).find(t => !saved.some(old => old.templateId === t.templateId));
+  assert(duplicate, 'Duplicate must allocate a fresh template id');
+  await until(`document.querySelector('[data-testid="edit-template-${duplicate.templateId}"]')`, 'duplicate in library');
+  await click(`document.querySelector('[data-testid="edit-template-${duplicate.templateId}"]')`);
+  await until("document.querySelector('#edit-template-prompt')", 'edit template form');
+  await click("document.querySelector('#edit-template-prompt')");
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2,
+  });
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2,
+  });
+  const revisedPrompt = 'Edited through actual Electron UI';
+  await cdp!.send('Input.insertText', { text: revisedPrompt });
+  await click(button('Save changes', topDialog));
+  await until(
+    `window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.some(t => t.templateId === ${JSON.stringify(duplicate.templateId)} && t.teamPrompt === ${JSON.stringify('Edited through actual Electron UI')}))`,
+    'edited copy persisted'
+  );
+  await until(`document.querySelector('[data-testid="delete-template-${duplicate.templateId}"]')`, 'edited row visible');
+  await screenshot('08-edited-independent-copy');
+  await click(`document.querySelector('[data-testid="delete-template-${duplicate.templateId}"]')`);
+  await until(button('Delete this template?', topDialog), 'delete confirmation');
+  await click(button('Delete this template?', topDialog));
+  await until(`window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.length === 2)`, 'duplicate deleted');
+  assert.deepEqual(await library(), saved);
+  await screenshot('09-copy-edited-deleted');
+  checks.push('Real Duplicate, Edit and Delete dialogs preserve the original template and revisions.');
+
   // Exercise the current Create Team page, not the old dialog. The imported
   // template must fill the editable draft without launching a provider.
   await closeDialog();
