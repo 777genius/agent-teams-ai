@@ -1,0 +1,60 @@
+name: Custom team templates desktop E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/custom-team-templates-desktop-e2e.yml'
+      - 'src/features/custom-team-templates/**'
+      - 'src/features/internal-storage/**'
+      - 'src/main/startCustomTeamTemplatesFeature.ts'
+      - 'src/renderer/components/team/**'
+      - 'scripts/e2e/custom-template-import-export-desktop.ts'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    name: Real Electron template import/export/create
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare Linux display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb fonts-noto-cjk
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron is installed
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Verify real renderer, IPC, SQLite, file dialogs and creation draft
+        env:
+          CUSTOM_TEMPLATE_E2E_OUTPUT_DIR: ${{ runner.temp }}/custom-template-evidence
+        run: xvfb-run -a pnpm test:e2e:custom-template-import-export
+      - name: Upload screenshots and receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-template-e2e-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/custom-template-evidence/*.png
+            ${{ runner.temp }}/custom-template-evidence/*.json
+            ${{ runner.temp }}/custom-template-evidence/*.log

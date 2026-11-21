@@ -428,6 +428,49 @@ try {
     'Closing and reopening My Templates re-reads both saved rows from the real storage worker.'
   );
 
+  // Exercise the current Create Team page, not the old dialog. The imported
+  // template must fill the editable draft without launching a provider.
+  await closeDialog();
+  await until(button('Create Team'), 'current create-team action');
+  await click(button('Create Team'));
+  await until(
+    `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`,
+    'custom template available in creation page'
+  );
+  await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
+  await until(
+    `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
+    'reviewed custom template prompt applied to editable creation draft'
+  );
+  await screenshot('08-create-from-custom-template');
+  checks.push('Real Create Team page restores the imported template prompt without starting a runtime.');
+
+  const builtin = `document.querySelector('[data-testid^="create-template-option-builtin-"]')`;
+  await click(builtin);
+  await until(
+    `document.querySelector('#team-prompt')?.value && document.querySelector('#team-prompt')?.value !== ${JSON.stringify(portable.teamPrompt)}`,
+    'builtin template changes the same editable prompt'
+  );
+  await screenshot('09-builtin-template-same-editor');
+  await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
+  await until(
+    `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
+    'custom template reselected after builtin'
+  );
+
+  const newTeam = 'template-e2e-imported-team';
+  await click("document.querySelector('#team-name')");
+  await cdp!.send('Input.insertText', { text: newTeam });
+  await until(`document.querySelector('#team-name')?.value === ${JSON.stringify(newTeam)}`, 'new name entered');
+  await click(button('Create'));
+  await until(
+    `window.electronAPI.teams.list().then(rows => rows.some(t => t.teamName === ${JSON.stringify(newTeam)}))`,
+    'config-only team persisted from imported template',
+    60_000
+  );
+  await screenshot('10-created-team-from-template');
+  checks.push('Config-only creation from imported template persists through the real Teams API.');
+
   receipt.cdpPort = port;
   receipt.savedTemplateIds = saved.map((t) => t.templateId);
   receipt.rendererErrors = rendererErrors;
