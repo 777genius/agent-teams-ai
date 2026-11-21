@@ -3,10 +3,16 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  InboxMessage,
+  ResolvedTeamMember,
+  TeamSummary,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 const storeState = {
   pendingApprovals: [] as { toolName: string; receivedAt: string }[],
+  teams: [] as TeamSummary[],
 };
 
 vi.mock('@renderer/store', () => ({
@@ -302,6 +308,49 @@ describe('PendingRepliesBlock', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('shows a project copy that owes a reply as its team and project, not as the copy name', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teams = [
+      {
+        teamName: 'builders',
+        displayName: 'Builders',
+        description: '',
+        memberCount: 2,
+        taskCount: 0,
+        lastActivity: null,
+        projectHistoryContexts: [
+          { executionTeamName: 'ptc-0123456789abcdef01234567', projectPath: '/work/alpha' },
+        ],
+      },
+    ];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(PendingRepliesBlock, {
+            members: [],
+            nowMs: Date.now(),
+            pendingRepliesByMember: {},
+            pendingCrossTeamReplies: [
+              { teamName: 'ptc-0123456789abcdef01234567', sentAtMs: Date.now() },
+            ],
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Builders · alpha');
+      expect(host.textContent).not.toContain('ptc-0123456789abcdef01234567');
+    } finally {
+      storeState.teams = [];
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
   });
 
   it('moves an offline message from queued to delivering and awaiting reply', async () => {

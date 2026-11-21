@@ -34,6 +34,8 @@ This closes gaps 2 and 3 of the [parity matrix](./per-project-parity-matrix.md) 
 | `GET /api/teams/runtime/alive` | one added entry per logical team with a live context; a live shared team absorbs its contexts into its own entry | physical entry stays |
 | `GET /api/teams` and MCP `team_list` | one row with its contexts, copies folded away (same as the in-app list) | copies of a folded team are not listed |
 | Organization map | one candidate; tasks of all contexts, each marked with the copy that owns it | not a candidate |
+| `GET /api/teams/:team/cross-team/targets` (MCP `cross_team_list_targets`) | a per-project team is listed under its own name; the team of a copy that asks is not | copies are not listed |
+| `GET /api/teams/:team/cross-team/recipient?toTeam=` (MCP `cross_team_send`) | the ready copy for the sender's project, or 409 with the reason (`NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `SENDER_PROJECT_UNKNOWN`, `SENDER_IS_PROJECT_TEAM`, `SAME_TEAM`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) | the exact name; a copy of the sender's own team (`SAME_TEAM`), one whose launch never finished (`PROJECT_LAUNCH_PENDING`) or one whose team is being deleted or moved to trash (`UNRESOLVED`) is refused. The controller treats any answer, a 404 included, as the app's; only an unreachable app keeps the old exact-name behaviour |
 
 ## Contract for MCP and HTTP clients
 
@@ -93,5 +95,5 @@ A 200 from `team_stop` means every context read as down, which includes a dead r
 
 ## What stays out of this change
 
-- The cross-team `from` attribute (`team.member`) and every `teamName: "..."` in an agent prompt are routing identities and keep the physical name; only labels that are purely cosmetic could show the display name, and the member prompts already print both (`team "<display>" (<physical>)`).
-- Schedules, the lead prompt, MCP/HTTP update and trash, launch-settings drift, cross-team delivery, live edit and hosted web are separate gaps (see the [parity matrix](./per-project-parity-matrix.md)).
+- The cross-team `from` attribute (`team.member`) and every `teamName: "..."` in an agent prompt are routing identities and keep the physical name; only labels that are purely cosmetic could show the display name, and the member prompts already print both (`team "<display>" (<physical>)`). The app shows a copy in cross-team badges as `<team> · <project folder>` (`formatProjectCopyLabel`).
+- Schedules, the lead prompt, MCP/HTTP update and trash, launch-settings drift, live edit and hosted web are separate gaps (see the [parity matrix](./per-project-parity-matrix.md)). Cross-team delivery to a per-project team goes to its copy for the sender's project (`resolveCrossTeamRecipient`, see the update block of the parity matrix).
