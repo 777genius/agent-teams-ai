@@ -160,7 +160,8 @@ export function projectContextLaunchPorts(
   return {
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     prepare: (request) => prepareTeamContextLaunch(request, ports, { parts }),
-    hasProvisioningRun: (teamName) => ports.run.hasProvisioningRun(teamName),
+    isProvisioningLaunchActive: (teamName) =>
+      ports.run.isProvisioningLaunchActive?.(teamName) ?? ports.run.hasProvisioningRun(teamName),
     rememberRunIdentity: rememberProjectRunIdentity,
   };
 }

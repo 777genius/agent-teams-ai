@@ -85,7 +85,7 @@ describe('launches of project copies', () => {
         reports.push(report);
         return Promise.resolve({ runId: 'run-1' });
       },
-      hasProvisioningRun: () => true,
+      isProvisioningLaunchActive: () => true,
       confirmReady: () => Promise.resolve(reserved),
     });
     const created = coordinator.create(
@@ -113,7 +113,7 @@ describe('launches of project copies', () => {
           launch: trackProjectCopyLaunch(copy),
         }),
       rememberRunIdentity: () => undefined,
-      hasProvisioningRun: () => true,
+      isProvisioningLaunchActive: () => true,
     });
     await launchInProjectContext(request, portsFor('ptc-already-running'), {
       invoke: () =>
@@ -159,7 +159,7 @@ describe('launches of project copies', () => {
         mapProgress: ((next, deliver) => deliver(next)) as ProjectContextProgressMapper,
         launch: trackProjectCopyLaunch(copy),
       }),
-      hasProvisioningRun: () => active,
+      isProvisioningLaunchActive: () => active,
       rememberRunIdentity: () => undefined,
     };
     const launcher = { invoke: () => Promise.resolve({ runId: 'run' }), started: (result: TeamLaunchResponse) => result };

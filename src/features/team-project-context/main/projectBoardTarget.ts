@@ -43,7 +43,7 @@ const NEXT_STEP: Record<ProjectCopyRefusal, string> = {
     'Launch it in that project first (team_launch with this cwd, or in the app), then call again.',
   PROJECT_LAUNCH_PENDING: 'Call again when the launch has finished.',
   PROJECT_LAUNCH_INCOMPLETE:
-    'Launch it again in that project (team_launch with this cwd, or in the app), then call again.',
+    'Ensure the previous runtime has stopped and cleanup is complete, then launch it again in that project.',
   UNRESOLVED: '',
 };
 

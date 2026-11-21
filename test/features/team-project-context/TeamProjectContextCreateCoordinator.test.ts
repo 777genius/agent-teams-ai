@@ -38,7 +38,7 @@ function fixture() {
       nativeProgressRef.current = emit;
       return { runId: 'run-a' };
     }),
-    hasProvisioningRun: () => true,
+    isProvisioningLaunchActive: () => true,
     confirmReady: vi.fn(async () => ready),
   };
   return {

@@ -53,7 +53,8 @@ const NEXT_STEP: Record<ProjectCopyRefusal, string> = {
   NO_PROJECT_HISTORY:
     'Open the team in that project in the app and launch it once, then send again.',
   PROJECT_LAUNCH_PENDING: 'Send again when the launch has finished.',
-  PROJECT_LAUNCH_INCOMPLETE: 'Launch the team again in that project, then send again.',
+  PROJECT_LAUNCH_INCOMPLETE:
+    'Ensure the previous runtime has stopped and cleanup is complete, then launch the team again in that project.',
   UNRESOLVED: '',
 };
 

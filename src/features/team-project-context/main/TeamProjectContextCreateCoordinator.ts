@@ -28,7 +28,7 @@ interface TeamProjectContextCreatePorts {
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse>;
-  hasProvisioningRun(teamName: string): boolean;
+  isProvisioningLaunchActive(teamName: string): boolean;
   confirmReady(
     address: TeamWorkContextAddress,
     executionTeamName: string
@@ -117,7 +117,8 @@ export class TeamProjectContextCreateCoordinator {
           tracked(progress, onProgress)
         );
         if (!isFreshLaunch(result)) launch?.end();
-        else launch?.watchRun(() => this.ports.hasProvisioningRun(reserved.executionTeamName));
+        else
+          launch?.watchRun(() => this.ports.isProvisioningLaunchActive(reserved.executionTeamName));
         return result;
       } catch (error) {
         launch?.end();

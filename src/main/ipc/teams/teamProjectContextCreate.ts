@@ -43,7 +43,7 @@ export interface ProjectTeamRuntimePorts {
     | 'updateConfig'
   >;
   runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
-  run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
+  run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun' | 'isProvisioningLaunchActive'>;
 }
 
 export interface ProjectTeamCreatePorts extends ProjectTeamRuntimePorts {
@@ -125,7 +125,8 @@ export async function createTeamWithProjectContext(
       rememberProjectRunIdentity(result.runId, request.teamName, creation.teamName);
       return result;
     },
-    hasProvisioningRun: (name) => ports.run.hasProvisioningRun(name),
+    isProvisioningLaunchActive: (name) =>
+      ports.run.isProvisioningLaunchActive?.(name) ?? ports.run.hasProvisioningRun(name),
     confirmReady: (address, execution) => resolver.confirmProvisionedContext(address, execution),
   });
   return coordinator.create(request, onProgress);

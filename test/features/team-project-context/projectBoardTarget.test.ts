@@ -171,8 +171,8 @@ describe('resolveProjectBoardTarget', () => {
       'PROJECT_LAUNCH_INCOMPLETE',
     ]);
     // Waiting does not help after a failed launch: both say to launch again.
-    expect(failed.board.message).toMatch(/Launch it again/);
-    expect(failed.message.message).toMatch(/Launch the team again/);
+    expect(failed.board.message).toMatch(/cleanup is complete, then launch it again/);
+    expect(failed.message.message).toMatch(/cleanup is complete, then launch the team again/);
     // Without evidence of a launch, a pending copy reads as being launched (as before).
     expect((await verdicts(undefined)).board.code).toBe('PROJECT_LAUNCH_PENDING');
   });

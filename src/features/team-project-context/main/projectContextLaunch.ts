@@ -36,7 +36,7 @@ export interface ProjectContextLaunchPorts {
    * materialize the copy. Any team that is not a logical one comes back as it is.
    */
   prepare(request: TeamLaunchRequest): Promise<PreparedProjectContextLaunch>;
-  hasProvisioningRun(teamName: string): boolean;
+  isProvisioningLaunchActive(teamName: string): boolean;
   rememberRunIdentity(runId: string, logicalTeamName: string, executionTeamName: string): void;
 }
 
@@ -83,7 +83,7 @@ export async function launchInProjectContext<T>(
   const run = launcher.started(result);
   // No run of this launch to wait for: refused, or the copy was already starting or running.
   if (!run || !isFreshLaunch(run)) tracked?.end();
-  else tracked?.watchRun(() => ports.hasProvisioningRun(selected.request.teamName));
+  else tracked?.watchRun(() => ports.isProvisioningLaunchActive(selected.request.teamName));
   if (run) {
     ports.rememberRunIdentity(run.runId, request.teamName, selected.request.teamName);
     // What this launch stated becomes the team's launch settings, on every transport.

@@ -112,6 +112,10 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     return this.runtimeStateProjection.hasProvisioningRun(teamName);
   }
 
+  isProvisioningLaunchActive(teamName: string): boolean {
+    return this.runtimeStateProjection.isProvisioningLaunchActive(teamName);
+  }
+
   isTeamAlive(teamName: string): boolean {
     return this.runtimeStateProjection.isTeamAlive(teamName);
   }

@@ -237,6 +237,10 @@ export abstract class TeamProvisioningCompatibilityFacade<
     return this.compatibilityDelegation.runtimeSnapshotFacade.hasProvisioningRun(teamName);
   }
 
+  isProvisioningLaunchActive(teamName: string): boolean {
+    return this.compatibilityDelegation.runtimeSnapshotFacade.isProvisioningLaunchActive(teamName);
+  }
+
   isTeamAlive(teamName: string): boolean {
     return this.compatibilityDelegation.runtimeSnapshotFacade.isTeamAlive(teamName);
   }
