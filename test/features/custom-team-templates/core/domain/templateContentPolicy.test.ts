@@ -355,7 +355,7 @@ describe('validateTemplateContent', () => {
     expect(issues).toContainEqual({ code: 'memberNameRequired', field: 'members[2].name' });
   });
 
-  it('rejects a runtime-managed provisioner name while accepting ordinary lookalikes', () => {
+  it('rejects runtime-managed provisioners and reserved numeric suffixes', () => {
     const issues = validateTemplateContent(
       content([
         { name: 'alice', role: 'Developer', workflow: 'Design.' },
@@ -368,7 +368,7 @@ describe('validateTemplateContent', () => {
       validateTemplateContent(
         content([{ name: 'alice-provisioner-2', role: 'Developer', workflow: 'Design.' }])
       )
-    ).toEqual([]);
+    ).toContainEqual({ code: 'memberNameInvalid', field: 'members[0].name' });
   });
 
   it('rejects duplicate member names case-insensitively', () => {
@@ -404,9 +404,16 @@ describe('validateTemplateContent', () => {
     expect(issues).toContainEqual({ code: 'duplicateMemberName', field: 'members[1].name' });
   });
 
-  it('still rejects reserved names while allowing a legitimate lone dev-2', () => {
-    expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toEqual([]);
-    expect(validateTemplateContent(content([{ name: 'alice-provisioner-2' }]))).toEqual([]);
+  it('rejects reserved names and numeric suffixes even without their base members', () => {
+    expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toContainEqual({
+      code: 'memberNameInvalid',
+      field: 'members[0].name',
+    });
+    expect(validateTemplateContent(content([{ name: 'alice-provisioner-2' }]))).toContainEqual({
+      code: 'memberNameInvalid',
+      field: 'members[0].name',
+    });
+    expect(validateTemplateContent(content([{ name: 'dev-1' }]))).toEqual([]);
     expect(validateTemplateContent(content([{ name: 'dev' }, { name: 'dev-2' }]))).toContainEqual({
       code: 'memberNameInvalid',
       field: 'members[1].name',
