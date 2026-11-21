@@ -14,7 +14,7 @@ export interface SaveAsTemplateActionProps {
     teamName: string;
     /** Proposed display name; only name and description stay editable. */
     displayName: string;
-    /** Draft teams have no saved configuration to project. */
+    /** A configuration-only team has saved team.meta.json even without config.json. */
     pendingCreate?: boolean;
   };
 }
@@ -22,8 +22,9 @@ export interface SaveAsTemplateActionProps {
 /**
  * Team-row action that opens the "Save as Template" dialog.
  *
- * The action renders nothing for a draft team (there is no saved configuration
- * to prepare a preview from), stops propagation so the row does not navigate,
+ * Configuration-only teams retain authoritative saved team metadata, so they
+ * remain eligible even before runtime provisioning. The action stops propagation
+ * so the row does not navigate,
  * and lazy-loads the dialog so its code stays out of the initial bundle — the
  * same lifecycle the list uses for its other dialogs.
  */
@@ -35,8 +36,6 @@ export const SaveAsTemplateAction = ({
   // Lazy-mount on first use, but keep the flow mounted when the dialog closes.
   // An unknown save can then resume its exact preview token on reopening.
   const [hasOpened, setHasOpened] = useState(false);
-
-  if (team.pendingCreate) return null;
 
   const label = t('customTemplates.actions.saveAsTemplate');
 
