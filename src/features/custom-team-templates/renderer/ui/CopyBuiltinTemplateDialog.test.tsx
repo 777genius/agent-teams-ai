@@ -247,8 +247,14 @@ describe('CopyBuiltinTemplateDialog unresolved outcome', () => {
     expect(copyBuiltinTemplate).toHaveBeenCalledTimes(1);
     expect(host.querySelector('[data-testid="copy-builtin-storage-unavailable"]')).toBeNull();
 
-    // The selection and the name stay available for recovery.
+    // The attempted identity remains visible but cannot be changed or
+    // resubmitted while the original copy might still commit.
     expect(nameInput().value).toBe(RU_SOFTWARE);
+    expect(nameInput().disabled).toBe(true);
+    const copyButton = button('customTemplates.copyBuiltin.action');
+    expect(copyButton.disabled).toBe(true);
+    await act(async () => copyButton.click());
+    expect(copyBuiltinTemplate).toHaveBeenCalledTimes(1);
     expect(
       host
         .querySelector('[data-testid="builtin-template-software-product"]')

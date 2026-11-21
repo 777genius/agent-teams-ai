@@ -224,15 +224,6 @@ describe('useEditTemplate unresolved writes', () => {
     expect(latest?.status).toBe('unresolvedWriteOutcome');
     expect(onSaved).not.toHaveBeenCalled();
 
-    // A different record at the next revision is not proof either.
-    listTemplates.mockResolvedValue({
-      status: 'ready',
-      templates: [{ ...template, name: 'Someone else', revision: 6 }],
-    } satisfies ListCustomTeamTemplatesResult);
-    await expect(recheckNow()).resolves.toBe(false);
-    expect(latest?.status).toBe('unresolvedWriteOutcome');
-    expect(onSaved).not.toHaveBeenCalled();
-
     const stored: CustomTeamTemplateV1 = {
       ...template,
       name: 'Recovered name',
@@ -266,8 +257,19 @@ describe('useEditTemplate unresolved writes', () => {
       ],
     } satisfies ListCustomTeamTemplatesResult);
     await expect(recheckNow()).resolves.toBe(false);
-    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    // A newer revision proves the original expected-revision write cannot be
+    // replayed. It does not prove that our exact update committed.
+    expect(latest?.status).toBe('revisionConflict');
+    expect(latest?.revisionConflict?.teamPrompt).toBe('Changed prompt.');
+    expect(latest?.name).toBe('Recovered name');
+    expect(latest?.canRecheck).toBe(false);
     expect(onSaved).not.toHaveBeenCalled();
+    // Explicit overwrite preserves the draft while rebasing the revision.
+    await act(async () => latest?.overwriteRevisionConflict());
+    expect(latest?.status).toBe('idle');
+    expect(latest?.expectedRevision).toBe(6);
+    expect(latest?.name).toBe('Recovered name');
+    expect(latest?.canSave).toBe(true);
   });
 
   it('rejects a re-check when members differ at the exact next revision', async () => {
@@ -293,8 +295,15 @@ describe('useEditTemplate unresolved writes', () => {
       ],
     } satisfies ListCustomTeamTemplatesResult);
     await expect(recheckNow()).resolves.toBe(false);
-    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    expect(latest?.status).toBe('revisionConflict');
+    expect(latest?.revisionConflict?.members).toEqual([{ name: 'bob', role: 'writer' }]);
+    expect(latest?.name).toBe('Recovered name');
     expect(onSaved).not.toHaveBeenCalled();
+    // Reload is explicit: only this action discards the local draft.
+    await act(async () => latest?.acceptRevisionConflict());
+    expect(latest?.status).toBe('idle');
+    expect(latest?.members).toEqual([{ name: 'bob', role: 'writer' }]);
+    expect(latest?.expectedRevision).toBe(6);
   });
 
   it('rejects a re-check when the matching content is at a later revision', async () => {
@@ -307,13 +316,16 @@ describe('useEditTemplate unresolved writes', () => {
     expect(latest?.canRecheck).toBe(true);
 
     // Matching content at revision 7 rather than the exact next revision 6
-    // suggests another writer committed first; the outcome stays unresolved.
+    // suggests another writer committed; it cannot prove our update landed.
     listTemplates.mockResolvedValue({
       status: 'ready',
       templates: [{ ...template, name: 'Recovered name', revision: 7 }],
     } satisfies ListCustomTeamTemplatesResult);
     await expect(recheckNow()).resolves.toBe(false);
-    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    expect(latest?.status).toBe('revisionConflict');
+    expect(latest?.revisionConflict?.revision).toBe(7);
+    expect(latest?.name).toBe('Recovered name');
+    expect(latest?.canRecheck).toBe(false);
     expect(onSaved).not.toHaveBeenCalled();
   });
 
