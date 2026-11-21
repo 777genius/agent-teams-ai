@@ -52,7 +52,11 @@ export interface TeamProvisioningCompatibilityDelegation<
   cancellationBoundary: Pick<TeamProvisioningCancellationBoundary, 'cancelProvisioning'>;
   runtimeSnapshotFacade: Pick<
     TeamProvisioningRuntimeSnapshotFacade,
-    'hasProvisioningRun' | 'isTeamAlive' | 'getAliveTeams' | 'getRuntimeState'
+    | 'hasProvisioningRun'
+    | 'isProvisioningLaunchActive'
+    | 'isTeamAlive'
+    | 'getAliveTeams'
+    | 'getRuntimeState'
   >;
   runTracking: {
     getAliveRunId(teamName: string): string | null;
