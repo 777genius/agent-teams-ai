@@ -564,6 +564,40 @@ describe('ImportCustomTeamTemplateUseCase', () => {
       expect(requests[0].contentHash).toBe(requests[1].contentHash);
     });
 
+    it('does not retry an uncertain import while the retired writer may still commit', async () => {
+      vi.useFakeTimers();
+      try {
+        const create = vi.fn(() =>
+          Promise.reject(
+            new CustomTeamTemplateStorageInterruptedError(
+              'worker termination is unconfirmed',
+              'unknown',
+              new Promise<void>(() => undefined)
+            )
+          )
+        );
+        const gateway = gatewayWith(create);
+        gateway.customTeamTemplateGetById = vi.fn().mockResolvedValue({ status: 'notFound' });
+        const uc = new ImportCustomTeamTemplateUseCase({
+          gateway,
+          hasher,
+          createTemplateId: () => 'tmpl-uncertain',
+        });
+
+        const outcome = uc.execute({ portable: validPortable({ teamPrompt: 'hi' }) });
+        await vi.advanceTimersByTimeAsync(5_001);
+
+        await expect(outcome).resolves.toEqual({
+          status: 'unresolvedWriteOutcome',
+          templateId: 'tmpl-uncertain',
+        });
+        expect(create).toHaveBeenCalledTimes(1);
+        expect(gateway.customTeamTemplateGetById).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('does not rotate identity after an unknown execution', async () => {
       const ids = ['tmpl-uncertain'];
       const requests: CreateCustomTeamTemplateRecordRequest[] = [];

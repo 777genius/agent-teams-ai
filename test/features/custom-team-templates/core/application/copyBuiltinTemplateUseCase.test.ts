@@ -212,6 +212,35 @@ describe('CopyBuiltinTemplateUseCase', () => {
     ).resolves.toEqual({ status: 'unresolvedWriteOutcome', templateId: NEW_ID });
   });
 
+  it('does not retry a built-in copy while the original writer is unsettled', async () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = gatewayFixture({
+        create: [
+          new CustomTeamTemplateStorageInterruptedError(
+            'worker termination is unconfirmed',
+            'unknown',
+            new Promise<void>(() => undefined)
+          ),
+        ],
+        getById: [{ status: 'notFound' }],
+      });
+      const outcome = useCaseFor(fixture).execute({
+        builtinTemplateId: 'software-product',
+        name: 'Copy',
+      });
+      await vi.advanceTimersByTimeAsync(5_001);
+
+      await expect(outcome).resolves.toEqual({
+        status: 'unresolvedWriteOutcome',
+        templateId: NEW_ID,
+      });
+      expect(fixture.create).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('retries an interruption that provably never started', async () => {
     const fixture = gatewayFixture({
       create: [interrupted('not_started'), { status: 'created', template: copiedTemplate() }],
