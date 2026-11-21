@@ -15,14 +15,18 @@ const lastRun = {
   resolvedEffort: 'medium',
 } as unknown as NonNullable<TeamMetaFile['launchIdentity']>;
 
-function store(followLeadLaunchIdentity: boolean) {
+function store(
+  followLeadLaunchIdentity: boolean,
+  launchIdentity: TeamMetaFile['launchIdentity'] | null = lastRun
+) {
   let meta = {
     version: 1,
     createdAt: 1,
     cwd: '/work/app',
+    providerId: 'anthropic',
     model: 'model-one',
     effort: 'medium',
-    launchIdentity: lastRun,
+    ...(launchIdentity ? { launchIdentity } : {}),
   } as TeamMetaFile;
   const metaStore = {
     getMeta: async () => meta,
@@ -52,6 +56,32 @@ describe('createLaunchSettingsStore', () => {
       selectedEffort: 'high',
       resolvedEffort: 'high',
     });
+  });
+
+  it('keeps the identity of the last run when the provider changes with the model', async () => {
+    const copy = store(true);
+    await copy.launchSettings.save('ptc-a', {
+      providerId: 'codex',
+      model: 'gpt-model',
+      effort: 'high',
+    });
+    expect(copy.meta()).toMatchObject({ providerId: 'codex', model: 'gpt-model', effort: 'high' });
+    // A codex model under the anthropic identity would show "Anthropic · gpt-model" on the card.
+    expect(copy.meta().launchIdentity).toEqual(lastRun);
+
+    const sameProvider = store(true);
+    await sameProvider.launchSettings.save('ptc-a', {
+      providerId: 'anthropic',
+      model: 'model-two',
+    });
+    expect(sameProvider.meta().launchIdentity).toMatchObject({ selectedModel: 'model-two' });
+  });
+
+  it('saves the settings of a copy that never ran without inventing an identity', async () => {
+    const neverRan = store(true, null);
+    await neverRan.launchSettings.save('ptc-a', { model: 'model-two', effort: 'high' });
+    expect(neverRan.meta()).toMatchObject({ model: 'model-two', effort: 'high' });
+    expect(neverRan.meta().launchIdentity).toBeUndefined();
   });
 
   it('leaves the identity alone for other settings and in the launch path', async () => {
