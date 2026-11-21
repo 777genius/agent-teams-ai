@@ -25,9 +25,8 @@ import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
 
 import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
+import type { TeamCreateConfigRequest, TeamProviderId } from '@shared/types';
 import type { TeamTemplateV1 } from '../contracts';
-import type { TeamCreateConfigRequest } from '@shared/types';
-import type { TeamProviderId } from '@shared/types';
 
 export { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
