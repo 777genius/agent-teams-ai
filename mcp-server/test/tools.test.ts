@@ -668,6 +668,12 @@ describe('agent-teams-mcp tools', () => {
         expect(boardLookups).toEqual([
           `/api/teams/shared-team/board-target?projectPath=${encodeURIComponent(projectPath)}`,
         ]);
+        await getTool('task_list').execute({
+          claudeDir, teamName: 'shared-team', projectPath: `${projectPath} `,
+        });
+        expect(boardLookups.at(-1)).toBe(
+          `/api/teams/shared-team/board-target?projectPath=${encodeURIComponent(`${projectPath} `)}`
+        );
       } finally {
         await server.close();
       }

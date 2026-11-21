@@ -77,7 +77,7 @@ export function withProjectBoards(server: ToolServer): ToolServer {
             const teamName = await resolveBoardTeam(
               rest.teamName,
               rest.claudeDir,
-              projectPath?.trim() || undefined
+              projectPath?.trim() ? projectPath : undefined
             );
             return await execute({ ...rest, teamName } as Parameters<typeof execute>[0], context);
           } catch (error) {

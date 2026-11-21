@@ -111,12 +111,19 @@ async function exactName(
   // team that is not being deleted or moved to trash (the same read as a send by name).
   const { logicalTeamName, context } = target;
   assertReadyProjectCopy(ports, logicalTeamName, context.projectPath, context);
-  await inspectProjectCopy(
+  const inspected = await inspectProjectCopy(
     ports,
     logicalTeamName,
     context.projectPath,
     `Team "${logicalTeamName}" cannot receive messages in project ${context.projectPath}`
   );
+  if (inspected?.executionTeamName !== toTeam) {
+    throw new CrossTeamRecipientError(
+      'UNRESOLVED',
+      'The project copy changed while resolving the recipient'
+    );
+  }
+  assertReadyProjectCopy(ports, logicalTeamName, context.projectPath, inspected);
   return { teamName: toTeam };
 }
 

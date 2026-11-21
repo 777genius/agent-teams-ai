@@ -77,7 +77,14 @@ export function assertConfiguredTeam(teamName: string, claudeDir?: string): void
  */
 function readHistoryMode(metaPath: string): 'per_project' | 'unreadable' | null {
   const meta = readJsonObject(metaPath);
-  if (meta) return isPerProjectTeamMeta(meta) ? 'per_project' : null;
+  if (meta) {
+    if (meta.version !== 1 || typeof meta.cwd !== 'string' ||
+        (Object.hasOwn(meta, 'projectContextMode') &&
+          meta.projectContextMode !== 'shared' && meta.projectContextMode !== 'per_project')) {
+      return 'unreadable';
+    }
+    return isPerProjectTeamMeta(meta) ? 'per_project' : null;
+  }
   return fs.existsSync(metaPath) ? 'unreadable' : null;
 }
 

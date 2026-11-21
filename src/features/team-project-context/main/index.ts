@@ -71,10 +71,7 @@ export type {
 } from './projectContextLaunch';
 export { launchInProjectContext } from './projectContextLaunch';
 export type { TeamModeMetaReader } from './projectContextMode';
-export {
-  readTeamProjectContextMode,
-  TeamMetadataUnreadableError,
-} from './projectContextMode';
+export { readTeamProjectContextMode, TeamMetadataUnreadableError } from './projectContextMode';
 export type { ProjectCopyLaunch } from './projectCopyLaunches';
 export {
   createProjectLaunchProbe,
@@ -88,6 +85,7 @@ export {
   resolveReadyProjectCopy,
 } from './projectCopyRouting';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
+export { isAbsoluteProjectPath } from './projectPathIdentity';
 export {
   projectPublicProvisioningProgress,
   rememberProjectRunIdentity,

@@ -21,7 +21,7 @@ async function requestAppRouting(context, pathname) {
     return null;
   }
   try {
-    return await requestJsonWithFallback(baseUrls, pathname);
+    return await requestJsonWithFallback(baseUrls, pathname, { preferStatusError: true });
   } catch (error) {
     const unreachable =
       isRetryableControlError(error) &&

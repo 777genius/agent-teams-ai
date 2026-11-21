@@ -2152,12 +2152,12 @@ describe('MCP team tools over the local REST control API', () => {
     const controlUrl = 'http://per-project-board.test';
     const restoreFetch = installControlApiFetchMock(app, controlUrl);
     // Board tools take no controlUrl: the controller finds the app as an agent's controller does.
-    await writeFile(path.join(root, 'team-control-api.json'), JSON.stringify({ baseUrl: controlUrl }));
     const teamName = 'per-project-board';
     const teamsBase = path.join(root, 'teams');
     const project = (id: string) => path.join(root, `project-${id}`);
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     try {
+      await writeFile(path.join(root, 'team-control-api.json'), JSON.stringify({ baseUrl: controlUrl }));
       await teamDataService.createTeamConfig(
         {
           projectContextMode: 'per_project',
@@ -2272,7 +2272,9 @@ describe('MCP team tools over the local REST control API', () => {
       const required = getTool('task_list').execute({ claudeDir: root, teamName });
       await expect(required).rejects.toMatchObject({ code: 'PROJECT_REQUIRED' });
       await expect(required).rejects.toThrow(/^\[PROJECT_REQUIRED\] /);
-      await expect(required).rejects.toThrow(project('a'));
+      const persistedA = await registry.inspect(teamName, project('a'));
+      expect(persistedA).not.toBeNull();
+      await expect(required).rejects.toThrow(persistedA!.projectPath);
       await expect(
         call('task_create', { projectPath: project('d'), subject: 'NO_HISTORY', createdBy: 'user' })
       ).rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
@@ -2294,6 +2296,12 @@ describe('MCP team tools over the local REST control API', () => {
       await expect(
         getTool('task_list').execute({ claudeDir: root, teamName: 'broken-board' })
       ).rejects.toThrow(/^\[TEAM_METADATA_UNREADABLE\] /);
+      await writeFile(path.join(teamsBase, 'broken-board', 'team.meta.json'), JSON.stringify({
+        version: 2, projectContextMode: 'per_project', cwd: root, createdAt: 1,
+      }));
+      await expect(
+        getTool('task_list').execute({ claudeDir: root, teamName: 'broken-board' })
+      ).rejects.toThrow(/^\[TEAM_METADATA_UNREADABLE\] /);
 
       // Resolving never creates a copy, and the team itself never gets a board.
       expect(await readFile(indexPath, 'utf8')).toBe(index);
@@ -2301,12 +2309,15 @@ describe('MCP team tools over the local REST control API', () => {
         code: 'ENOENT',
       });
     } finally {
-      restoreFetch();
-      await app.close();
-      setAppDataBasePath(null);
-      setClaudeBasePathOverride(null);
-      TeamConfigReader.clearCacheForTests();
-      await rm(root, { recursive: true, force: true });
+      try {
+        restoreFetch();
+        await app.close();
+      } finally {
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        TeamConfigReader.clearCacheForTests();
+        await rm(root, { recursive: true, force: true });
+      }
     }
   });
 

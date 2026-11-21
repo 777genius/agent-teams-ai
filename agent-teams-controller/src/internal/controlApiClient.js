@@ -128,6 +128,7 @@ async function requestJson(baseUrl, pathname, options = {}) {
     try {
       payload = await response.json();
     } catch {
+      controller.signal.throwIfAborted();
       payload = null;
     }
 
@@ -187,6 +188,7 @@ async function requestJson(baseUrl, pathname, options = {}) {
 
 async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
   let lastError = null;
+  let statusError = null;
 
   for (let index = 0; index < baseUrls.length; index += 1) {
     const baseUrl = baseUrls[index];
@@ -194,12 +196,17 @@ async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
       return await requestJson(baseUrl, pathname, options);
     } catch (error) {
       lastError = error;
+      if (error?.retryableKind === 'status') statusError = error;
       // A request that timed out may still be running on that server (a stop that
       // outlasted its budget): asking another address would start a second one.
       if (options.fallbackOnTimeout === false && error?.retryableKind === 'timeout') {
         throw error;
       }
       if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
+        if (options.preferStatusError && statusError &&
+            (error?.retryableKind === 'network' || error?.retryableKind === 'timeout')) {
+          throw statusError;
+        }
         throw error;
       }
     }

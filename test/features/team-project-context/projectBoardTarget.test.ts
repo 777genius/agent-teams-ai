@@ -13,8 +13,8 @@ import {
   TeamMetadataUnreadableError,
   TeamProjectContextRegistry,
 } from '../../../src/features/team-project-context/main';
-import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
+import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -138,6 +138,16 @@ describe('resolveProjectBoardTarget', () => {
       resolveProjectBoardTarget(w.ports, { teamName: w.copies.a, projectPath: w.project('a') })
     );
     expect(byCopy.code).toBe('UNRESOLVED');
+  });
+
+  it.skipIf(process.platform === 'win32')('preserves trailing spaces in project identities', async () => {
+    const w = await world();
+    const spaced = `${w.project('a')} `;
+    await mkdir(spaced);
+    await expect(resolveProjectBoardTarget(w.ports, { teamName: 'builders', projectPath: spaced }))
+      .rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
+    await expect(resolveProjectBoardTarget(w.ports, { teamName: w.copies.a, projectPath: spaced }))
+      .rejects.toMatchObject({ code: 'PROJECT_MISMATCH' });
   });
 
   // One primitive: the board and cross-team delivery give the same verdict on a pending copy.

@@ -7,12 +7,12 @@
  */
 import {
   createProjectLaunchProbe,
+  isAbsoluteProjectPath,
   ProjectContextRefusalError,
   TeamMetadataUnreadableError,
 } from '@features/team-project-context/main';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import path from 'path';
 
 import { exactTeamName } from '../teamRouteParsers';
 
@@ -35,7 +35,7 @@ export function registerProjectBoardRoute(
       const { projectPath } = request.query;
       if (
         projectPath !== undefined &&
-        (typeof projectPath !== 'string' || !path.isAbsolute(projectPath))
+        (typeof projectPath !== 'string' || !isAbsoluteProjectPath(projectPath))
       ) {
         return reply
           .code(400)

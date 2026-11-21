@@ -95,7 +95,7 @@ async function boardTarget(
   request: ProjectBoardRequest
 ): Promise<ProjectBoardTarget> {
   const { teamName } = request;
-  const projectPath = request.projectPath?.trim() || undefined;
+  const projectPath = request.projectPath?.trim() ? request.projectPath : undefined;
   if ((await projectContextModeOf(ports, teamName)) !== 'per_project') {
     return projectPath ? exactNameInProject(ports, teamName, projectPath) : { teamName };
   }
