@@ -123,6 +123,7 @@ export interface BootstrapRuntimeMemberLike {
   bootstrapBriefingHash?: string;
   bootstrapRuntimeEventsPath?: string;
   runtimePid?: number;
+  runtimePidRole?: 'wrapper';
 }
 
 export type BootstrapTranscriptRegularFileReader = (
@@ -677,6 +678,7 @@ export function isRuntimeBootstrapTransportEventCurrent(input: {
   runtimeMember?: BootstrapRuntimeMemberLike;
   expectedPid?: number;
   expectedBootstrapRunId?: string;
+  allowWrapperChildPidWithRunId?: boolean;
   boundaryMs: number;
 }): boolean {
   const { event, teamName, memberName, runtimeMember, expectedPid, expectedBootstrapRunId } = input;
@@ -691,29 +693,28 @@ export function isRuntimeBootstrapTransportEventCurrent(input: {
   }
   const eventAgentName = typeof event.agentName === 'string' ? event.agentName.trim() : '';
   const runtimeName = runtimeMember?.name?.trim() ?? '';
-  if (
-    eventAgentName &&
-    !matchesMemberNameOrBase(eventAgentName, memberName) &&
-    !(runtimeName && matchesTeamMemberIdentity(eventAgentName, runtimeName))
-  ) {
+  const eventNameMismatch = !!eventAgentName && !matchesMemberNameOrBase(eventAgentName, memberName);
+  if (eventNameMismatch && !(runtimeName && matchesTeamMemberIdentity(eventAgentName, runtimeName))) {
     return false;
   }
-  const eventBootstrapRunId =
-    typeof event.bootstrapRunId === 'string' ? event.bootstrapRunId.trim() : '';
-  if (
-    expectedBootstrapRunId &&
-    eventBootstrapRunId &&
-    eventBootstrapRunId !== expectedBootstrapRunId
-  ) {
+  const eventBootstrapRunId = typeof event.bootstrapRunId === 'string' ? event.bootstrapRunId.trim() : '';
+  if (expectedBootstrapRunId && eventBootstrapRunId && eventBootstrapRunId !== expectedBootstrapRunId) {
     return false;
   }
   const eventPid = typeof event.pid === 'number' && Number.isFinite(event.pid) ? event.pid : NaN;
-  if (typeof expectedPid === 'number' && expectedPid > 0 && eventPid !== expectedPid) {
+  const pidMismatch = typeof expectedPid === 'number' && expectedPid > 0 && eventPid !== expectedPid;
+  // A native Job wrapper's child has a different PID; require its exact launch run ID.
+  const wrappedChildPidMatchesRun =
+    input.allowWrapperChildPidWithRunId === true &&
+    Number.isSafeInteger(eventPid) &&
+    eventPid > 0 &&
+    Boolean(expectedBootstrapRunId) &&
+    eventBootstrapRunId === expectedBootstrapRunId;
+  if (pidMismatch && !wrappedChildPidMatchesRun) {
     return false;
   }
   if (Number.isFinite(input.boundaryMs)) {
-    const timestamp = typeof event.timestamp === 'string' ? event.timestamp : '';
-    const timestampMs = Date.parse(timestamp);
+    const timestampMs = Date.parse(typeof event.timestamp === 'string' ? event.timestamp : '');
     if (!Number.isFinite(timestampMs) || timestampMs < input.boundaryMs) {
       return false;
     }
@@ -741,12 +742,9 @@ export async function readProcessBootstrapTransportSummary(input: {
   }
   const boundaryText = input.member.firstSpawnAcceptedAt ?? runtimeMember?.bootstrapExpectedAfter;
   const boundaryMs = boundaryText ? Date.parse(boundaryText) : Number.NaN;
-  const expectedPid =
-    typeof input.member.runtimePid === 'number' && input.member.runtimePid > 0
-      ? input.member.runtimePid
-      : typeof runtimeMember?.runtimePid === 'number' && runtimeMember.runtimePid > 0
-        ? runtimeMember.runtimePid
-        : undefined;
+  const expectedPid = [input.member.runtimePid, runtimeMember?.runtimePid].find(
+    (pid) => typeof pid === 'number' && pid > 0
+  );
   const expectedBootstrapRunId =
     runtimeMember?.bootstrapRunId?.trim() ||
     (typeof input.member.runtimeRunId === 'string' ? input.member.runtimeRunId.trim() : '') ||
@@ -773,6 +771,8 @@ export async function readProcessBootstrapTransportSummary(input: {
       runtimeMember,
       expectedPid,
       expectedBootstrapRunId,
+      allowWrapperChildPidWithRunId:
+        runtimeMember?.runtimePidRole === 'wrapper' || memberRecord.runtimePidRole === 'wrapper',
       boundaryMs,
     })
   );
