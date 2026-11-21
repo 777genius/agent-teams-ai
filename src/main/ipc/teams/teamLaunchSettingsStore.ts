@@ -21,8 +21,10 @@ export function createLaunchSettingsStore(
      * For a stopped team only (the projection of a definition edit): a saved
      * lead model or effort also goes into the launch identity of its last run,
      * as a stopped ordinary team saves its lead (`applyLeadRuntimeSettingsToTeamMeta`),
-     * so the team shows the lead it will start with. A launch replaces the
-     * identity anyway, so the launch path leaves it to the runtime.
+     * so the team shows the lead it will start with. Not when the provider
+     * changes: the identity keeps its own provider and model until the next
+     * launch. A launch replaces the identity anyway, so the launch path leaves
+     * it to the runtime.
      */
     followLeadLaunchIdentity?: boolean;
   } = {}
@@ -40,7 +42,12 @@ export function createLaunchSettingsStore(
         if (!current) throw new Error(`Saved settings of team ${teamName} are missing`);
         const next = { ...current, ...settings };
         const leadChanged = Object.hasOwn(settings, 'model') || Object.hasOwn(settings, 'effort');
-        if (!options.followLeadLaunchIdentity || !leadChanged) return next;
+        // The identity names the provider of the last run: a model of another provider
+        // must not be written into it (the next launch records the new identity).
+        const providerChanged =
+          Object.hasOwn(settings, 'providerId') &&
+          settings.providerId !== current.launchIdentity?.providerId;
+        if (!options.followLeadLaunchIdentity || !leadChanged || providerChanged) return next;
         const launchIdentity = applyLeadRuntimeSettingsToLaunchIdentity(current.launchIdentity, {
           model: next.model ?? null,
           effort: isTeamEffortLevel(next.effort) ? next.effort : null,
