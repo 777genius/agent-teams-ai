@@ -150,6 +150,7 @@ function createDeps(
         child.killed = true;
       }
     }),
+    stopOriginalWindowsDirectMembers: vi.fn(async () => undefined),
     updateProgress: vi.fn((run, state, message) =>
       makeProgress(run.runId, run.teamName, { state, message })
     ),
@@ -309,6 +310,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
     expect(deps.persistentRuntimeCleanup.stopPersistentTeamMembers).toHaveBeenCalledWith(teamName);
     expect(deps.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(teamName);
     expect(deps.killTeamProcessAndWait).toHaveBeenCalledWith(run.child);
+    expect(deps.stopOriginalWindowsDirectMembers).toHaveBeenCalledWith(undefined);
     expect(run.processKilled).toBe(true);
     expect(run.cancelRequested).toBe(true);
     expect(run.onProgress).toHaveBeenCalledWith(
