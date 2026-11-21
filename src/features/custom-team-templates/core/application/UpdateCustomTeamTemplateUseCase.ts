@@ -143,8 +143,7 @@ export class UpdateCustomTeamTemplateUseCase {
     if (typeof request.teamPrompt !== 'string') {
       return validationFailed([{ code: 'teamPromptInvalidType', field: 'teamPrompt' }]);
     }
-    const rawTeamPrompt = request.teamPrompt;
-    const teamPrompt = rawTeamPrompt === null ? null : rawTeamPrompt.trim();
+    const teamPrompt = request.teamPrompt.trim();
     const members = toAllowlistedMembers(request.members);
 
     if (!nameValidation.valid || descriptionIssues.length > 0) {
@@ -153,7 +152,7 @@ export class UpdateCustomTeamTemplateUseCase {
         ...descriptionIssues,
       ]);
     }
-    if (teamPrompt === null || members === null) {
+    if (members === null) {
       return validationFailed([{ code: 'memberNameRequired', field: 'members' }]);
     }
 

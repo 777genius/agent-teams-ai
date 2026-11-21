@@ -73,6 +73,7 @@ const storeState = vi.hoisted(() => {
     currentProvisioningRunIdByTeam: {},
     leadActivityByTeam: {},
     openSettingsTab: noop,
+    getAllPaneTabs: () => paneLayout.panes.flatMap((pane) => pane.tabs),
     teamByName: {},
     paneLayout,
     openTeamsCreationPage: vi.fn((seed?: { copyData?: unknown }) => {
@@ -94,9 +95,11 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 vi.mock('@renderer/store', () => ({
-  useStore: (selector?: (state: typeof storeState) => unknown) =>
-    typeof selector === 'function' ? selector(storeState) : storeState,
-  getState: () => storeState,
+  useStore: Object.assign(
+    (selector?: (state: typeof storeState) => unknown) =>
+      typeof selector === 'function' ? selector(storeState) : storeState,
+    { getState: () => storeState }
+  ),
 }));
 vi.mock('zustand/react/shallow', () => ({ useShallow: (selector: unknown) => selector }));
 vi.mock('@features/localization/renderer', () => ({
@@ -107,6 +110,13 @@ vi.mock('@features/localization/renderer', () => ({
 }));
 vi.mock('@renderer/hooks/useTheme', () => ({ useTheme: () => ({ isLight: false }) }));
 vi.mock('@renderer/hooks/useBranchSync', () => ({ useBranchSync: () => undefined }));
+vi.mock('@renderer/hooks/useCreateTeamDraftAvailability', () => ({
+  hasUnfinishedCreateTeamDraft: vi.fn().mockResolvedValue(false),
+  useCreateTeamDraftAvailability: () => false,
+}));
+vi.mock('@renderer/services/resetCreateTeamDraft', () => ({
+  resetCreateTeamDraft: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@renderer/analytics/productAnalytics', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, classifyAnalyticsError: () => 'unknown', recordTeamStop: vi.fn() };
@@ -292,6 +302,7 @@ describe('TeamListView custom team template actions', () => {
     });
     await flush();
     expect(getSavedRequest).toHaveBeenCalledWith('alpha');
+    await vi.waitFor(() => expect(storeState.openTeamsCreationPage).toHaveBeenCalledTimes(1));
     // The real store notifies subscribers; this static fixture needs a rerender.
     await renderView();
     expect(host.querySelector('[data-testid="create-team-dialog"]')).not.toBeNull();
