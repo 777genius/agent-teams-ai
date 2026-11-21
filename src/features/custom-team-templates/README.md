@@ -52,6 +52,14 @@ Focused coverage lives in `test/features/custom-team-templates/` and beside the 
 
 On Linux with a test display, run `pnpm test:e2e:custom-template-import-export` for the visual `dev:mcp` flow. The harness uses disposable app data and fixtures only for native file-dialog selections; the renderer, IPC, SQLite storage and file operations are real. Set `CUSTOM_TEMPLATE_E2E_OUTPUT_DIR` to retain the receipt, screenshots and app log in a chosen directory.
 
+## Recovery after SQLite corruption
+
+The storage worker preserves the corrupted SQLite files under a `.corrupt-*` suffix, recreates the database for existing journal recovery and writes a durable `<databasePath>.custom-template-recovery-pending` marker. **Custom-template reads and writes remain unavailable while this marker exists**; an empty library must not be interpreted as proof that saved templates were deleted or never existed. The marker is intentionally not cleared automatically.
+
+To recover, first **stop every Electron/standalone process using this database**. Back up the current database, any `-wal`/`-shm` files, every `.corrupt-*` archive and the marker before making changes. Restore a *verified, consistent* SQLite backup containing the templates (including matching WAL state if applicable), or explicitly accept loss of the previous library and plan to reimport previously exported portable JSON templates. Verify the restored database with `PRAGMA integrity_check` (it must return `ok`). Never copy a corrupt archive blindly over a healthy database or remove the archived originals just to unblock the UI.
+
+**Only after restoration is verified or template loss is consciously accepted**, remove exactly `<databasePath>.custom-template-recovery-pending` using your OS file manager or shell, then restart the application/standalone server. Reopen My Templates to check the library; if you chose an empty replacement, reimport your saved JSON templates. Do not delete the marker while the storage worker is running: the worker's recovered state also blocks operations until restart. This is an operator-controlled recovery step, not an automatic data-loss fallback; the existing journal JSON recovery policy is unchanged.
+
 ## Localization
 
 Strings live in the `customTemplates` group of `team.json`. Import/export messages are present in all 29 locale catalogs; missing messages use the existing English fallback (`fallbackLng`). Regenerate `resources.d.ts` with `pnpm i18n:types`.

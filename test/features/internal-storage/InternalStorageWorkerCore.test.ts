@@ -306,6 +306,13 @@ describe('InternalStorageWorkerCore', () => {
     expect((restarted.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('ok');
     expect(() => restarted.handle('customTemplate.list', {})).toThrow(/Custom templates unavailable/);
     expect(restarted.handle('stallJournal.load', { teamName: 'demo' })).toHaveLength(1);
+
+    // An operator may explicitly acknowledge data loss or restore a verified
+    // backup while the app is stopped. Only that offline step removes the marker.
+    restarted.close();
+    await fs.unlink(marker);
+    const acknowledged = track(makeCore(dbPath));
+    expect(acknowledged.handle('customTemplate.list', {})).toEqual([]);
   });
 
   it('records store imports idempotently (upsert by store + team)', async () => {
