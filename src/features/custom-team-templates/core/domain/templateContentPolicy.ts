@@ -9,6 +9,7 @@ import {
 
 import {
   TEMPLATE_MAX_MEMBERS,
+  TEMPLATE_MAX_CREATE_DRAFT_BYTES,
   TEMPLATE_MEMBER_ROLE_MAX_LENGTH,
   TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH,
   TEMPLATE_TEAM_PROMPT_MAX_LENGTH,
@@ -143,6 +144,20 @@ export function validateTemplateContent(
   }
   if (content.members.length > TEMPLATE_MAX_MEMBERS) {
     issues.push({ code: 'tooManyMembers', field: 'members' });
+  }
+  // Creation serializes the *whole* request, not each workflow independently.
+  // UTF-8 JSON length matches the backend's Buffer.byteLength(JSON.stringify(request)).
+  // Reserve 20 KiB for ordinary form fields that a portable template omits.
+  const estimatedCreateDraft = JSON.stringify({
+    teamName: 'template-team',
+    projectContextMode: 'shared',
+    runtimeSelectionVersion: 1,
+    prompt: content.teamPrompt,
+    members: content.members,
+    syncModelsWithLead: true,
+  });
+  if (new TextEncoder().encode(estimatedCreateDraft).byteLength > TEMPLATE_MAX_CREATE_DRAFT_BYTES) {
+    issues.push({ code: 'invalidContent', field: 'members' });
   }
 
   const rosterNames = content.members.map((member) => member.name);

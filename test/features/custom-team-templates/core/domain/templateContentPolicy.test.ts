@@ -365,7 +365,7 @@ describe('validateTemplateContent', () => {
     expect(issues).toContainEqual({ code: 'memberNameRequired', field: 'members[2].name' });
   });
 
-  it('rejects a runtime-managed provisioner name while accepting ordinary lookalikes', () => {
+  it('rejects a runtime-managed provisioner name while accepting an unsuffixed lookalike', () => {
     const issues = validateTemplateContent(
       content([
         { name: 'alice', role: 'Developer', workflow: 'Design.' },
@@ -376,7 +376,7 @@ describe('validateTemplateContent', () => {
 
     expect(
       validateTemplateContent(
-        content([{ name: 'alice-provisioner-2', role: 'Developer', workflow: 'Design.' }])
+        content([{ name: 'provisioning-notes', role: 'Developer', workflow: 'Design.' }])
       )
     ).toEqual([]);
   });
@@ -414,8 +414,10 @@ describe('validateTemplateContent', () => {
     expect(issues).toContainEqual({ code: 'duplicateMemberName', field: 'members[1].name' });
   });
 
-  it('still rejects reserved names while allowing a legitimate lone dev-2', () => {
-    expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toEqual([]);
+  it('rejects reserved names, including lone runtime suffixes', () => {
+    expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toContainEqual({
+      code: 'memberNameInvalid', field: 'members[0].name',
+    });
     expect(validateTemplateContent(content([{ name: 'dev' }, { name: 'dev-2' }]))).toContainEqual({
       code: 'memberNameInvalid',
       field: 'members[1].name',
@@ -424,6 +426,24 @@ describe('validateTemplateContent', () => {
       code: 'memberNameInvalid',
       field: 'members[0].name',
     });
+  });
+
+  it('rejects aggregate UTF-8 request sizes that team creation cannot persist', () => {
+    const hugeWorkflows = content([
+      { name: 'dev', workflow: 'x'.repeat(130_000) },
+      { name: 'reviewer', workflow: 'y'.repeat(130_000) },
+    ]);
+    expect(validateTemplateContent(hugeWorkflows)).toContainEqual({
+      code: 'invalidContent', field: 'members',
+    });
+    // A single Unicode workflow fits the character bound but exceeds the
+    // byte budget. Counting JavaScript string.length would miss this case.
+    expect(validateTemplateContent(content([
+      { name: 'dev', workflow: '界'.repeat(100_000) },
+    ]))).toContainEqual({ code: 'invalidContent', field: 'members' });
+    expect(validateTemplateContent(content([
+      { name: 'dev', workflow: 'x'.repeat(180_000) },
+    ]))).toEqual([]);
   });
 
   it('rejects oversized content without truncating it', () => {
