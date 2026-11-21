@@ -1,16 +1,20 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createController } from 'agent-teams-controller';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
+import { createController } from 'agent-teams-controller';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
 import { createProjectScheduleTargets } from '../../../src/main/ipc/teams/projectScheduleTargets';
+import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
 import { prepareTeamContextLaunch, withPreparedContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
 import {
+  createLaunchReviewFlowProjection,
   createTeamReviewFlowService,
   ReviewFlowNotAppliedLaunchError,
 } from '../../../src/main/ipc/teams/teamReviewFlow';
+import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import {
   getClaudeBasePath,
   getTasksBasePath,
@@ -18,14 +22,12 @@ import {
   setAppDataBasePath,
   setClaudeBasePathOverride,
 } from '../../../src/main/utils/pathDecoder';
-import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
-import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
 
 import type { ReviewFlowSettings } from '../../../src/features/review-flow';
 import type {
-  TeamLaunchRequest,
   TeamCreateConfigRequest,
   TeamCreateRequest,
+  TeamLaunchRequest,
   TeamProvisioningProgress,
   TeamRuntimeState,
 } from '../../../src/shared/types/team';
@@ -642,6 +644,26 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       }));
       await service.saveTeamOverride('builders', human);
       await expect(fs.access(path.join(getTeamsBasePath(), bare))).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+
+    it('refuses a save when a reserved copy exists but its ownership cannot be proved', async () => {
+      const { f, project, service } = await readyInProjectA();
+      const b = (await prepareTeamContextLaunch({ teamName: 'builders', cwd: await project('b') }, f.ports))
+        .request.teamName;
+      // A present directory with an unreadable or absent owner is not a bare reservation.
+      const ownerCandidates = await fs.readdir(path.join(getTeamsBasePath(), b));
+      const marker = ownerCandidates.find((name) => name.includes('owner'));
+      expect(marker).toBeDefined();
+      await fs.writeFile(path.join(getTeamsBasePath(), b, marker!), '{broken');
+      await expect(service.saveTeamOverride('builders', human)).rejects.toThrow();
+      expect((await read('builders', 'team.meta.json')).reviewFlowSettings).toBeUndefined();
+    });
+
+    it('refuses a launch projection when the saved team metadata is unreadable', async () => {
+      const { f, a } = await readyInProjectA();
+      await fs.writeFile(path.join(getTeamsBasePath(), 'builders', 'team.meta.json'), '{broken');
+      await expect(createLaunchReviewFlowProjection(f.ports.data)('builders', a))
+        .rejects.toBeInstanceOf(ReviewFlowNotAppliedLaunchError);
     });
 
     it('keeps a copy that an ordinary team kept from an earlier period a board of its own', async () => {

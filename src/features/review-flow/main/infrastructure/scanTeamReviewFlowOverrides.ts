@@ -71,6 +71,7 @@ export async function scanTeamReviewFlowOverrides(
     return scan;
   }
   const teamNames = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  const unavailable = new Set<string>();
   let next = 0;
   const worker = async (): Promise<void> => {
     while (next < teamNames.length) {
@@ -87,10 +88,17 @@ export async function scanTeamReviewFlowOverrides(
       ]);
       if (result.kind === 'override') scan.overrides[teamName] = result.settings;
       else if (result.kind === 'invalid') scan.unreadable.push(teamName);
+      else if (result.kind === 'unavailable') unavailable.add(teamName);
       if (projectTeam) scan.projectTeams[teamName] = projectTeam;
     }
   };
   await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, teamNames.length) }, worker));
+  // Unavailable copies must not be mistaken for boards following the default.
+  for (const team of Object.values(scan.projectTeams)) {
+    for (const project of team.projects) {
+      if (unavailable.has(project.executionTeamName)) scan.unreadable.push(project.executionTeamName);
+    }
+  }
   scan.unreadable.sort();
   return scan;
 }

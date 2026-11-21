@@ -93,6 +93,20 @@ describe('review flow store', () => {
     expect(onTeamOverrideChanged.mock.calls).toEqual([['beta'], ['alpha']]);
   });
 
+  it('keeps a successful project-team save visible when the refresh fails', async () => {
+    const projects = [{ executionTeamName: 'ptc-a', projectPath: '/a' }];
+    const getOverview = vi.fn<ReviewFlowElectronApi['getOverview']>()
+      .mockResolvedValueOnce({ defaults: agent, overrides: {}, unreadableTeams: ['ptc-a'],
+        projectTeams: { builders: { saved: true, settings: null, projects } } })
+      .mockRejectedValue(new Error('unavailable'));
+    const api = createApi({ getOverview, setTeamOverride: vi.fn(async () => human) });
+    const store = createReviewFlowStore({ getApi: () => api });
+    await store.getState().load();
+    await store.getState().saveTeamOverride('builders', human);
+    expect(store.getState()).toMatchObject({ overrides: { builders: human, 'ptc-a': human },
+      unreadableTeams: [], projectTeams: { builders: { saved: true, settings: human, projects } } });
+  });
+
   it('re-reads main and rethrows when a save is rejected', async () => {
     const api = createApi({
       setTeamOverride: vi.fn(() => Promise.reject(new Error('write failed'))),

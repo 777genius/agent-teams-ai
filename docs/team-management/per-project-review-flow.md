@@ -25,7 +25,7 @@ It fails closed: when the metadata of the team cannot be read, nothing is writte
 
 Lock order is logical-team lock, then the board lock of each copy inside the controller call. The board lock is a synchronous file lock (`withTeamBoardLock`); nothing that holds it can wait for the logical-team lock, and the controller processes of agents never take the logical-team lock, so the order cannot invert.
 
-**Partial failure.** When some boards cannot be written (a board lock timeout, a broken `kanban-state.json`), the team's setting and the other boards stay written and the save answers with `ProjectBoardsNotUpdatedError` (logged in main with each project and reason). The IPC answer carries its code (`REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED`), so the app says it in its own language; the settings page and the board popover then list those projects by folder as not carrying the setting, with Save available; saving again writes them. A launch of such a project copies it, or is refused (below).
+**Partial failure.** When some boards cannot be written (a board lock timeout, a broken `kanban-state.json`), the team's setting and the other boards stay written and the save answers with `ProjectBoardsNotUpdatedError` (logged in main with each project and reason). The IPC answer carries its code (`REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED`), so the app says it in its own language; the settings page and the board popover then list those projects by folder as not carrying the setting, with Save available; resolve the underlying board error first (for example, repair invalid JSON), then saving again writes them. A launch of such a project copies it, or is refused (below).
 
 ## Launches
 

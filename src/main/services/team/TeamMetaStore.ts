@@ -85,11 +85,15 @@ function readReviewFlowSettings(value: unknown): NonNullable<TeamMetaFile['revie
   return parsed.ok ? parsed.settings : { unreadable: value };
 }
 
-/** The record as it was read, for the fidelity check: an unreadable review flow is kept, not lost. */
-function asRead(meta: TeamMetaFile): unknown {
-  return isUnreadableReviewFlowSettings(meta.reviewFlowSettings)
-    ? { ...meta, reviewFlowSettings: meta.reviewFlowSettings.unreadable }
-    : meta;
+/** Strict reads preserve an unreadable review flow verbatim; check every other field. */
+function hasCompleteMetadata(raw: unknown, meta: TeamMetaFile): boolean {
+  if (!isUnreadableReviewFlowSettings(meta.reviewFlowSettings)) {
+    return hasCompleteKnownMetadata(raw, meta);
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+  const { reviewFlowSettings: _rawReviewFlow, ...otherRaw } = raw as Record<string, unknown>;
+  const { reviewFlowSettings: _normalizedReviewFlow, ...otherMeta } = meta;
+  return hasCompleteKnownMetadata(otherRaw, otherMeta);
 }
 
 /** What is written: a valid unit normalized, an unreadable value exactly as it was read. */
@@ -327,7 +331,7 @@ export class TeamMetaStore {
           : {}),
         createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
       };
-      return options?.requireCompleteFields && !hasCompleteKnownMetadata(file, asRead(normalized))
+      return options?.requireCompleteFields && !hasCompleteMetadata(file, normalized)
         ? null
         : normalized;
     } catch (error) {

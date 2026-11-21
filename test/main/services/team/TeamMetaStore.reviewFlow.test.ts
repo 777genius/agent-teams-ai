@@ -97,4 +97,16 @@ describe('TeamMetaStore review flow of a per-project team', () => {
     await store.updateMeta('builders', (current) => ({ ...current!, reviewFlowSettings: human }));
     expect((await raw()).reviewFlowSettings).toEqual(human);
   });
+  it.each([[], { reviewFlow: 'future', nested: [1, [2]] }])(
+    'preserves unreadable arrays during strict metadata reads',
+    async (broken) => {
+      await seed({ reviewFlowSettings: broken });
+      const store = new TeamMetaStore();
+      const meta = await store.getMeta('builders', undefined, { requireCompleteFields: true });
+      expect(meta?.reviewFlowSettings).toEqual({ unreadable: broken });
+      await store.writeMeta('builders', { cwd: '/p', createdAt: 1 });
+      expect((await raw()).reviewFlowSettings).toEqual(broken);
+    }
+  );
+
 });

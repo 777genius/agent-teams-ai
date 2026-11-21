@@ -123,7 +123,23 @@ export function createReviewFlowStore(
       try {
         const saved = await deps.getApi().setTeamOverride(teamName, settings);
         revision += 1;
-        set((state) => withTeamOverride(state, teamName, saved));
+        set((state) => {
+          const team = state.projectTeams[teamName];
+          const updated = withTeamOverride(state, teamName, saved);
+          if (!team) return updated;
+          const overrides = { ...updated.overrides };
+          const names = new Set(team.projects.map((project) => project.executionTeamName));
+          for (const name of names) {
+            if (saved) overrides[name] = saved;
+            else delete overrides[name];
+          }
+          const { unreadable: _unreadable, ...rest } = team;
+          return {
+            overrides,
+            unreadableTeams: updated.unreadableTeams.filter((name) => !names.has(name)),
+            projectTeams: { ...state.projectTeams, [teamName]: { ...rest, saved: true, settings: saved } },
+          };
+        });
         deps.onTeamOverrideChanged?.(teamName);
       } finally {
         // Main may have changed more than this entry: a team with separate history per project

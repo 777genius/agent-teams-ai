@@ -947,7 +947,7 @@ async function verifyTeamReviewFlow(f: Fixture) {
   const metaPath = path.join(f.rootTeams, f.logical, 'team.meta.json');
   const boardPath = (team: string) => path.join(f.rootTeams, team, 'kanban-state.json');
   const boardFlow = async (team: string) => {
-    const board = await readJsonFile(boardPath(team)).catch(() => ({} as Record<string, unknown>));
+    const board = await readJsonFile(boardPath(team));
     return { reviewFlow: board.reviewFlow, reviewFlowPrompt: board.reviewFlowPrompt };
   };
   const setFlow = (team: string, settings: unknown) => ipcOutcome(

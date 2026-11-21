@@ -77,6 +77,19 @@ describe('scanTeamReviewFlowOverrides', () => {
     });
   });
 
+  it('marks an unavailable project board unreadable while a missing board follows the default', async () => {
+    fs.mkdirSync(path.join(root, 'builders'));
+    writeState('ptc-broken', '{not json');
+    fs.mkdirSync(path.join(root, 'ptc-missing'));
+    const scan = await scanTeamReviewFlowOverrides(root, async (name) => name === 'builders'
+      ? { saved: null, projects: [
+          { executionTeamName: 'ptc-broken', projectPath: '/broken' },
+          { executionTeamName: 'ptc-missing', projectPath: '/missing' },
+        ] }
+      : undefined);
+    expect(scan.unreadable).toEqual(['ptc-broken']);
+  });
+
   it('returns nothing when the teams directory does not exist', async () => {
     expect(await scanTeamReviewFlowOverrides(path.join(root, 'missing'), noTeamSettings)).toEqual({
       overrides: {},

@@ -1,3 +1,6 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
 import { reviewFlowTeamKindOf } from '@features/review-flow';
 import {
   createProjectBoardReviewFlowSync,
@@ -62,20 +65,25 @@ function createProjectTeamReviewFlowPorts(
     withTeamLock: (teamName, operation) => data().runConfigurationOperation(teamName, operation),
     async readProjectTeam(teamName) {
       const meta = await metaStore.getMeta(teamName);
+      if (meta === null && (await metaStore.metadataFileExists(teamName))) {
+        throw new Error(UNREADABLE_TEAM_MESSAGE);
+      }
       if (meta?.projectContextMode !== 'per_project') return undefined;
       const registry = TeamProjectContextRegistry.fromCurrentApp();
       const projects: ProjectBoard[] = [];
       for (const context of await registry.list(teamName)) {
         // A copy whose first launch has not finished has a board once its owned draft exists; a
         // bare reservation gets the setting when the launch creates the copy.
-        if (
-          context.state === 'reserved' &&
-          !(await registry.assertReservedStopOwnership(teamName, context.executionTeamName).then(
-            () => true,
-            () => false
-          ))
-        ) {
-          continue;
+        if (context.state === 'reserved') {
+          // A reservation without a directory has no board yet. Once a directory exists,
+          // any failure to prove its owner must stop the save, not silently skip it.
+          try {
+            await fs.lstat(path.join(getTeamsBasePath(), context.executionTeamName));
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+            throw error;
+          }
+          await registry.assertReservedStopOwnership(teamName, context.executionTeamName);
         }
         projects.push({
           executionTeamName: context.executionTeamName,
@@ -87,6 +95,9 @@ function createProjectTeamReviewFlowPorts(
     },
     async readTeamSetting(teamName) {
       const meta = await metaStore.getMeta(teamName);
+      if (meta === null && (await metaStore.metadataFileExists(teamName))) {
+        throw new Error(UNREADABLE_TEAM_MESSAGE);
+      }
       if (meta?.projectContextMode !== 'per_project') return undefined;
       if (isUnreadableReviewFlowSettings(meta.reviewFlowSettings)) {
         throw new Error(
