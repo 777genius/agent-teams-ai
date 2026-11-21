@@ -151,6 +151,35 @@ describe('VersionedJsonStore', () => {
     await expect(createStore().read()).resolves.toMatchObject({ data: ['first', 'second'] });
   });
 
+  it('rejects reentrant same-path updates without deadlocking later writers', async () => {
+    const createStore = (name: string) =>
+      new VersionedJsonStore<string[]>({
+        filePath: path.join(tempDir, name),
+        schemaVersion: 1,
+        defaultData: () => [],
+        validate: validateStringArray,
+      });
+    const outer = createStore('same.json');
+    const inner = createStore('same.json');
+    const different = createStore('different.json');
+
+    await expect(
+      outer.updateLocked(async (current) => {
+        await inner.updateLocked((value) => [...value, 'must not commit']);
+        return current;
+      })
+    ).rejects.toThrow('Reentrant VersionedJsonStore update');
+
+    await expect(
+      outer.updateLocked(async (current) => {
+        await different.updateLocked(() => ['independent']);
+        return [...current, 'after nested rejection'];
+      })
+    ).resolves.toMatchObject({ data: ['after nested rejection'] });
+    await expect(inner.read()).resolves.toMatchObject({ data: ['after nested rejection'] });
+    await expect(different.read()).resolves.toMatchObject({ data: ['independent'] });
+  });
+
   it('continues after a rejected writer and lets unrelated files progress independently', async () => {
     const createStore = (name: string) =>
       new VersionedJsonStore<string[]>({
