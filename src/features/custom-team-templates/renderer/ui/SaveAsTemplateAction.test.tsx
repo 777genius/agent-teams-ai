@@ -125,12 +125,18 @@ describe('SaveAsTemplateAction', () => {
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
-  it('does not render for a draft team without a saved configuration', async () => {
+  it('allows saving a config-only team before runtime provisioning', async () => {
     await renderAction({ teamName: 'draft', displayName: 'Draft', pendingCreate: true });
-    expect(
-      host.querySelector('button[aria-label="customTemplates.actions.saveAsTemplate"]')
-    ).toBeNull();
-    expect(preparePreview).not.toHaveBeenCalled();
+    await act(async () => {
+      actionButton().click();
+    });
+    await flush();
+    expect(preparePreview).toHaveBeenCalledWith({
+      sourceTeamName: 'draft',
+      name: 'Draft',
+      description: '',
+    });
+    expect(host.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
   it('does not prepare again on a parent re-render', async () => {

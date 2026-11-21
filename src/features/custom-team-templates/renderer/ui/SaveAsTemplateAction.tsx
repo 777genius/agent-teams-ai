@@ -15,7 +15,7 @@ export interface SaveAsTemplateActionProps {
     teamName: string;
     /** Proposed display name; only name and description stay editable. */
     displayName: string;
-    /** Draft teams have no saved configuration to project. */
+    /** Config-only teams have a saved configuration even before runtime launch. */
     pendingCreate?: boolean;
   };
 }
@@ -23,18 +23,16 @@ export interface SaveAsTemplateActionProps {
 /**
  * Team-row action that opens the "Save as Template" dialog.
  *
- * The action renders nothing for a draft team (there is no saved configuration
- * to prepare a preview from), stops propagation so the row does not navigate,
+ * Configuration-only teams can provide a saved team.meta.json before runtime
+ * launch. The action stops propagation so the row does not navigate,
  * and lazy-loads the dialog so its code stays out of the initial bundle — the
  * same lifecycle the list uses for its other dialogs.
  */
 export const SaveAsTemplateAction = ({
   team,
-}: SaveAsTemplateActionProps): React.JSX.Element | null => {
+}: SaveAsTemplateActionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [open, setOpen] = useState(false);
-
-  if (team.pendingCreate) return null;
 
   const label = t('customTemplates.actions.saveAsTemplate');
 

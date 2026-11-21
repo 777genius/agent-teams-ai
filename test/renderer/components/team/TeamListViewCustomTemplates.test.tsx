@@ -174,7 +174,7 @@ function buttonByText(label: string, scope: ParentNode = host): HTMLButtonElemen
   return found;
 }
 
-/** The alpha row card (the draft card has no copy/save actions). */
+/** The alpha row card (a config-only card has no Copy action). */
 function alphaCard(): Element {
   const cards = Array.from(host.querySelectorAll('[role="button"]'));
   const card = cards.find((candidate) => candidate.textContent?.includes('Alpha'));
@@ -283,7 +283,7 @@ describe('TeamListView custom team template actions', () => {
     expect(storeState.openTeamTab).not.toHaveBeenCalled();
   });
 
-  it('hides Save as Template for a draft team that has no saved configuration', async () => {
+  it('keeps Save as Template available for config-only teams without offering Copy', async () => {
     await renderView();
     const draftCard = Array.from(host.querySelectorAll('[role="button"]')).find((candidate) =>
       candidate.textContent?.includes('Draft')
@@ -292,8 +292,19 @@ describe('TeamListView custom team template actions', () => {
     const labels = Array.from(draftCard.querySelectorAll('button')).map((button) =>
       button.getAttribute('aria-label')
     );
-    expect(labels).not.toContain('customTemplates.actions.saveAsTemplate');
-    expect(preparePreview).not.toHaveBeenCalled();
+    expect(labels).not.toContain('list.actions.copyTeam');
+    expect(labels).toContain('customTemplates.actions.saveAsTemplate');
+    await act(async () => {
+      buttonByLabel('customTemplates.actions.saveAsTemplate', draftCard).click();
+      await Promise.resolve();
+    });
+    await flush();
+    expect(preparePreview).toHaveBeenCalledWith({
+      sourceTeamName: 'draft',
+      name: 'Draft',
+      description: '',
+    });
+    expect(storeState.openTeamTab).not.toHaveBeenCalled();
   });
 
   it('keeps row navigation out of the save dialog it opened', async () => {
