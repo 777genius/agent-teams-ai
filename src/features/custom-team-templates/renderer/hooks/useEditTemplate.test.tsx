@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setPendingTemplateMutation } from './pendingTemplateMutation';
+import { getPendingTemplateMutations, setPendingTemplateMutation } from './pendingTemplateMutation';
 
 const updateTemplate = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
@@ -249,6 +249,7 @@ describe('useEditTemplate unresolved writes', () => {
     expect(latest?.status).toBe('saved');
     expect(latest?.expectedRevision).toBe(6);
     expect(onSaved).toHaveBeenCalledWith(stored);
+    expect(getPendingTemplateMutations()).toHaveLength(0);
   });
 
   it('rejects a re-check when content differs at the exact next revision', async () => {
@@ -354,6 +355,7 @@ describe('useEditTemplate unresolved writes', () => {
     expect(latest?.status).toBe('saved');
     expect(latest?.expectedRevision).toBe(6);
     expect(onSaved).toHaveBeenCalledWith(stored);
+    expect(getPendingTemplateMutations()).toHaveLength(0);
   });
 
   it('drops a stale save result after the dialog closes and reopens', async () => {

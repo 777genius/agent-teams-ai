@@ -11,7 +11,7 @@ vi.mock('@renderer/api', () => ({
   api: { customTeamTemplates: { preparePreview, saveTemplate, recheckSave } },
 }));
 
-import { setPendingTemplateMutation } from './pendingTemplateMutation';
+import { getPendingTemplateMutations, setPendingTemplateMutation } from './pendingTemplateMutation';
 import { useSaveAsTemplate, type UseSaveAsTemplateResult } from './useSaveAsTemplate';
 
 import type {
@@ -113,6 +113,14 @@ describe('useSaveAsTemplate name-conflict recovery', () => {
     expect(latest?.preview?.previewToken).toBe('token-1');
     expect(latest?.canRecheck).toBe(true);
     expect(latest?.canSave).toBe(false);
+    expect(getPendingTemplateMutations()).toHaveLength(1);
+
+    await act(async () => {
+      await latest?.recheck();
+    });
+    expect(recheckSave).toHaveBeenCalledWith({ previewToken: 'token-1' });
+    expect(latest?.attempt).toEqual({ status: 'saved', template, alreadyPresent: true });
+    expect(getPendingTemplateMutations()).toHaveLength(0);
   });
 
   it('refreshes the preview on rename after a name conflict and saves without a false expiry', async () => {

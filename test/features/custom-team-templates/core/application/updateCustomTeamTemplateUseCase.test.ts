@@ -304,7 +304,10 @@ describe('UpdateCustomTeamTemplateUseCase', () => {
 
     const result = await useCase.execute(updateRequest({ teamPrompt: 42 as unknown as string }));
 
-    expect(result).toMatchObject({ status: 'validationFailed' });
+    expect(result).toMatchObject({
+      status: 'validationFailed',
+      issues: [{ code: 'teamPromptInvalidType', field: 'teamPrompt' }],
+    });
     expect(fixture.update).not.toHaveBeenCalled();
   });
 

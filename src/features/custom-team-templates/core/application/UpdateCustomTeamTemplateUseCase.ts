@@ -140,7 +140,10 @@ export class UpdateCustomTeamTemplateUseCase {
     // hashing and the write payload. A valid string keeps its internal
     // whitespace, only leading/trailing whitespace is removed, and empty or
     // whitespace-only strings remain valid (empty prompt is allowed).
-    const rawTeamPrompt = typeof request.teamPrompt === 'string' ? request.teamPrompt : null;
+    if (typeof request.teamPrompt !== 'string') {
+      return validationFailed([{ code: 'teamPromptInvalidType', field: 'teamPrompt' }]);
+    }
+    const rawTeamPrompt = request.teamPrompt;
     const teamPrompt = rawTeamPrompt === null ? null : rawTeamPrompt.trim();
     const members = toAllowlistedMembers(request.members);
 

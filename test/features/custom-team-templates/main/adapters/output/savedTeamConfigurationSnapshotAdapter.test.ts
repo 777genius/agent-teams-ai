@@ -330,6 +330,65 @@ describe('SavedTeamConfigurationSnapshotAdapter', () => {
     });
   });
 
+  it('projects the probed metadata even if it changes and reverts during parsing', async () => {
+    const directory = await createTeamDir('flapping-team');
+    await writeTeamMeta('flapping-team', 'Captured prompt.');
+    const metaPath = path.join(directory, 'team.meta.json');
+    const originalBytes = await fs.readFile(metaPath, 'utf8');
+    const originalGetMeta = TeamMetaStore.prototype.getMeta;
+    vi.spyOn(TeamMetaStore.prototype, 'getMeta').mockImplementation(async function (
+      this: TeamMetaStore,
+      ...args: Parameters<typeof originalGetMeta>
+    ) {
+      await fs.writeFile(metaPath, metaStore.serializeMeta({
+        cwd: '/projects/example',
+        prompt: 'Transient prompt.',
+        createdAt: Date.now(),
+      }));
+      try {
+        return await originalGetMeta.apply(this, args);
+      } finally {
+        await fs.writeFile(metaPath, originalBytes);
+      }
+    });
+
+    const outcome = await adapter.readSnapshot('flapping-team');
+    expect(outcome.status).toBe('available');
+    if (outcome.status !== 'available') return;
+    expect(outcome.snapshot.teamPrompt).toBe('Captured prompt.');
+  });
+
+  it('projects probed roster bytes even when a different roster is read transiently', async () => {
+    const directory = await createTeamDir('flapping-roster');
+    await writeTeamMeta('flapping-roster', 'Prompt.');
+    await writeRoster('flapping-roster', [{ name: 'alice', role: 'reviewer' }]);
+    const rosterPath = path.join(directory, 'members.meta.json');
+    const originalBytes = await fs.readFile(rosterPath, 'utf8');
+    const originalGetMeta = TeamMembersMetaStore.prototype.getMeta;
+    vi.spyOn(TeamMembersMetaStore.prototype, 'getMeta').mockImplementation(async function (
+      this: TeamMembersMetaStore,
+      ...args: Parameters<typeof originalGetMeta>
+    ) {
+      await fs.writeFile(rosterPath, JSON.stringify({
+        version: 1,
+        members: [{ name: 'bob', role: 'writer' }],
+      }));
+      try {
+        return await originalGetMeta.apply(this, args);
+      } finally {
+        await fs.writeFile(rosterPath, originalBytes);
+      }
+    });
+
+    const outcome = await adapter.readSnapshot('flapping-roster');
+    expect(outcome.status).toBe('available');
+    if (outcome.status !== 'available') return;
+    expect(outcome.snapshot.roster).toEqual({
+      status: 'readable',
+      members: [{ name: 'alice', role: 'reviewer' }],
+    });
+  });
+
   it('reports a stable revision for an unchanged team and ignores unrelated artifacts', async () => {
     const directory = await createTeamDir('stable-team');
     await writeTeamMeta('stable-team', 'Prompt.');
