@@ -113,6 +113,8 @@ describe('useSaveAsTemplate name-conflict recovery', () => {
     await saveNow();
 
     expect(latest?.nameConflict).toBe(true);
+    // The previous preview must not re-enable Save while a name conflict is unresolved.
+    expect(latest?.canSave).toBe(false);
     // The reviewed preview is preserved for the retry; the typed fields stay.
     expect(latest?.preview?.previewToken).toBe('token-1');
     expect(latest?.name).toBe('Alpha');

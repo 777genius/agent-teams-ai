@@ -380,6 +380,7 @@ export function useSaveAsTemplate({
   const canSave =
     preview !== null &&
     blockedReason === null &&
+    !nameConflict &&
     !preparing &&
     // A confirmed absence and a store that refused the write are both safe to
     // retry with the same content; a conflicting id is not (it needs a new
