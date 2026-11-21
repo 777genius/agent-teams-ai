@@ -30,9 +30,9 @@ on:
       - 'src/features/team-provisioning/renderer/ui/**'
       - 'src/features/team-provisioning/core/application/use-cases/UpdateMemberSettingsUseCase.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
-      - 'src/features/review-flow/main/**'
-      - 'src/features/review-flow/renderer/**'
+      - 'src/features/review-flow/**'
       - 'src/main/ipc/teams/teamReviewFlow.ts'
+      - 'src/main/services/team/TeamMetaStore.ts'
   push:
     branches: [main]
     paths:
@@ -62,9 +62,9 @@ on:
       - 'src/features/team-provisioning/renderer/ui/**'
       - 'src/features/team-provisioning/core/application/use-cases/UpdateMemberSettingsUseCase.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
-      - 'src/features/review-flow/main/**'
-      - 'src/features/review-flow/renderer/**'
+      - 'src/features/review-flow/**'
       - 'src/main/ipc/teams/teamReviewFlow.ts'
+      - 'src/main/services/team/TeamMetaStore.ts'
 
 permissions:
   contents: read

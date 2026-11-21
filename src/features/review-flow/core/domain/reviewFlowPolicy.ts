@@ -88,3 +88,12 @@ export function isLeadSignoffFlow(policy: { reviewFlow?: string } | null | undef
 export function areReviewFlowSettingsEqual(a: ReviewFlowSettings, b: ReviewFlowSettings): boolean {
   return a.reviewFlow === b.reviewFlow && a.reviewFlowPrompt.trim() === b.reviewFlowPrompt.trim();
 }
+
+/** The same rule for an override that may be absent (`null`: the team follows the default). */
+export function areReviewFlowOverridesEqual(
+  a: ReviewFlowSettings | null,
+  b: ReviewFlowSettings | null
+): boolean {
+  if (a === null || b === null) return a === b;
+  return areReviewFlowSettingsEqual(a, b);
+}

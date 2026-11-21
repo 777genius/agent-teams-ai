@@ -45,6 +45,7 @@ function createGateway(kind: ReviewFlowTeamKind | Error = 'board') {
         ],
       };
     }),
+    readTeamSetting: vi.fn(async () => undefined),
     saveTeamSetting: vi.fn(async (teamName: string) => {
       events.push(`team ${teamName}`);
     }),

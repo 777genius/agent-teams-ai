@@ -200,7 +200,7 @@ describe('ReviewFlowPolicyEditor', () => {
     expect(onSave).toHaveBeenCalledWith(null);
   });
 
-  it('a per-project team whose projects differ: names them, and one Save applies one setting to all', async () => {
+  it('a per-project team whose projects differ: shows what each has, instructions included, and keeps a chosen one', async () => {
     const onSave = vi.fn(() => Promise.resolve());
     render({
       policy: following(agent),
@@ -210,6 +210,7 @@ describe('ReviewFlowPolicyEditor', () => {
           { projectLabel: 'app-one', setting: human },
           { projectLabel: 'app-two', setting: null },
         ],
+        saveSuggested: false,
       },
       onSave,
     });
@@ -217,14 +218,31 @@ describe('ReviewFlowPolicyEditor', () => {
     const notice = q('projects-unsynced')!.textContent;
     expect(notice).toContain('reviewFlow.projects.differ');
     expect(notice).toContain('"project":"app-one","flow":"reviewFlow.flows.human_approval.label"');
+    // The instructions of a project are shown, so a save never replaces them unseen.
+    expect(notice).toContain('reviewFlow.projects.prompt{"prompt":"Run e2e."}');
     expect(notice).toContain('"project":"app-two","flow":"reviewFlow.projects.followsDefault"');
     expect(q<HTMLButtonElement>('save')!.disabled).toBe(false);
+
+    // Taking over the settings of app-one saves them, instructions included, for the whole team.
+    const [useAppOne] = host.querySelectorAll<HTMLButtonElement>(`[data-testid="${P}-use-project"]`);
+    act(() => useAppOne.click());
+    expect(q('use-default')!.getAttribute('aria-checked')).toBe('false');
     await act(async () => q<HTMLButtonElement>('save')!.click());
-    expect(onSave).toHaveBeenCalledWith(null);
+    expect(onSave).toHaveBeenCalledWith(human);
+  });
+
+  it('a per-project team whose projects agree on settings never saved for the team: offers the save', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    render({ policy: own(human), projects: { saved: false, unsynced: [], saveSuggested: true }, onSave });
+    expect(q('projects-unsynced')!.textContent).toContain('reviewFlow.projects.notSaved');
+    expect(q('source')!.textContent).toBe('reviewFlow.badges.custom');
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(false);
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(onSave).toHaveBeenCalledWith(human);
   });
 
   it('a per-project team in step with its projects: only says the setting is for every project', () => {
-    render({ policy: own(human), projects: { saved: true, unsynced: [] } });
+    render({ policy: own(human), projects: { saved: true, unsynced: [], saveSuggested: false } });
     expect(host.textContent).toContain('reviewFlow.projects.scope');
     expect(q('projects-unsynced')).toBeNull();
     expect(q('source')!.textContent).toBe('reviewFlow.badges.custom');

@@ -24,7 +24,7 @@ function sync(saved: ReviewFlowSettings | null | undefined) {
   const run = createProjectBoardReviewFlowSync({
     teamWriter: writer,
     getTeamsDir: () => teamsDir,
-    projectTeams: { readProjectTeam: vi.fn(async () => ({ saved, projects: [] })) },
+    projectTeams: { readTeamSetting: vi.fn(async () => saved) },
   });
   return { writer, run: () => run('builders', 'ptc-a') };
 }

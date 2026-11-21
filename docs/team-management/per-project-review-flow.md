@@ -13,11 +13,13 @@ The field is `board-definition` in `TEAM_META_FIELD_OWNER`: it belongs to the te
 
 ## Writes
 
-One path: `TeamKanbanReviewFlowGateway.writeOverride` asks what the name is (`kindOf`, fail closed: unreadable metadata refuses the write) and then
+One path: `TeamKanbanReviewFlowGateway.writeOverride` asks what the name is (`kindOf`: `classifyTeamKind` with one scan for the owner of a copy) and then
 
 - **an ordinary team** (or a copy that an ordinary team kept from an earlier period): its board, exactly as before;
 - **a per-project team**: `saveProjectTeamReviewFlow` under the logical-team lock (the one launch admission and definition edits take): list the project boards first (a damaged or deleting contexts index refuses before anything is written), save the team's setting, then write the board of every copy. Running copies are written too: an ordinary team's board is written while it runs, and there is no "all contexts stopped" gate here. A copy whose first launch is still in progress is written when its owned draft exists; a bare reservation is not (the launch copies the setting when it creates the copy);
 - **a project copy of a per-project team**: refused ("set it for the team").
+
+It fails closed: when the metadata of the team cannot be read, nothing is written, with a message that says why (it is unknown whether the team keeps a separate history per project). This also applies to an ordinary team, whose board was written without that check before. A copy is proven by one scan of the contexts indexes; when that scan fails (a damaged index of some team), a save for a copy that an ordinary team kept is refused too.
 
 Lock order is logical-team lock, then the board lock of each copy inside the controller call. The board lock is a synchronous file lock (`withTeamBoardLock`); nothing that holds it can wait for the logical-team lock, and the controller processes of agents never take the logical-team lock, so the order cannot invert.
 
@@ -25,14 +27,15 @@ Lock order is logical-team lock, then the board lock of each copy inside the con
 
 ## Launches
 
-`TeamProjectContextDraftMaterializer` calls `projectReviewFlow(logical, copy)` for the copy it prepares, new or existing. When the team saved a setting and the board of the copy does not carry it, the board is written; otherwise nothing happens. It never fails a launch (an ordinary team's launch never depends on its board either): a failure is logged as an error and the settings page shows the project as not carrying the setting.
+`TeamProjectContextDraftMaterializer` calls `projectReviewFlow(logical, copy)` for the copy it prepares, new or existing. It reads only the setting of the team (`readTeamSetting`), not its projects. When the team saved a setting and the board of the copy does not carry it, the board is written; otherwise nothing happens. It never fails a launch (an ordinary team's launch never depends on its board either): a failure is logged as an error and the settings page shows the project as not carrying the setting.
 
 ## Teams that existed before
 
 A per-project team that never saved a setting has no field. Nothing writes the boards of its projects until the user saves: each project keeps what it had, and a launch leaves the board alone. The app shows the team as one entry:
 
-- when its projects agree, it shows that setting;
-- when they differ, the editor says so ("Differs by project") and lists each project with what it has; Save is available without an edit and applies the settings in the editor (by default: follow the default) to every project. That is the explicit choice; no value is picked silently.
+- when its projects agree on the default, it follows the default and nothing needs saving;
+- when they agree on settings of their own, it shows them, says they are not saved for the team yet (a project launched for the first time would start on the default) and offers Save;
+- when they differ, the editor says so ("Differs by project") and lists each project with everything it has, its instructions included. "Use these settings" puts what one project has into the editor; Save applies the settings in the editor to every project. That is the explicit choice: nothing a project had is replaced without being shown, and no value is picked silently.
 
 ## The app
 
@@ -42,9 +45,11 @@ The overview (`ReviewFlowOverview.projectTeams`) reports every per-project team 
 
 - Unit: `TeamKanbanReviewFlowGateway.test.ts` (routing, order under the lock, partial failure, nothing written when listing fails, copy refused, fail closed), `projectBoardReviewFlowSync.test.ts` (launch copy: migration no-op, write only when different, repair), `TeamMetaStore.reviewFlow.test.ts` (missing vs `null`, kept by writers that do not state it), `reviewFlowViewModel.test.ts` (fold, differ, not applied), `ReviewFlowPolicyEditor.test.tsx`, `createReviewFlowStore.test.ts`, `TeamProjectContextDraftMaterializer.test.ts`.
 - Disk integration: `teamProjectContextCreate.integration.test.ts` with the real metadata store, contexts registry and controller board writes: a running copy and a pending copy are written, a copy and unreadable metadata are refused with nothing written, older boards are kept until the first save, a new copy takes the team's setting at launch.
-- Real Electron: `scripts/e2e/project-scoped-team-history-desktop.ts`, section `verifyTeamReviewFlow` (projects that differ shown in the board popover of project A, one Save applies the default to both boards, a team setting written to both boards, a copy refused, the settings page lists the team once) and the HTTP section (a setting saved before the first launch reaches the board of the new copy, which the overview reports as a project of the team while its first run is not ready).
+- Real Electron: `scripts/e2e/project-scoped-team-history-desktop.ts`, section `verifyTeamReviewFlow` (projects that differ shown in the board popover of project A with the instructions of A, the settings of A taken over and saved for the team and both boards, a team setting written to both boards, a copy refused, the settings page lists the team once) and the HTTP section (a setting saved before the first launch reaches the board of the new copy, which the overview reports as a project of the team while its first run is not ready).
 
 ## Not covered
 
 - A board of a running copy is written while its agents work, as for an ordinary team; a review that is being decided at that moment uses whichever value the controller read.
 - The fixture runtime of the E2E denies agents, so no review was decided by a real agent after a change.
+- Each board write waits for the board lock of its copy synchronously, up to 5 s (as a save of an ordinary team does for its one board), so a save of a team whose agents hold several boards can block the app for that long per board.
+- A `kanban-state.json` that is not JSON at all reads as following the default (as before this change); a save to it fails and names the project.

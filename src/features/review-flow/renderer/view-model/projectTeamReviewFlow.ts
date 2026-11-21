@@ -1,4 +1,4 @@
-import { areReviewFlowSettingsEqual } from '../../core/domain/reviewFlowPolicy';
+import { areReviewFlowOverridesEqual } from '../../core/domain/reviewFlowPolicy';
 
 import type {
   ReviewFlowOverview,
@@ -23,6 +23,11 @@ export interface ProjectTeamReviewFlowStatus {
    * the projects when they disagree: there is no single setting of the team to show yet.
    */
   unsynced: ProjectBoardReviewFlow[];
+  /**
+   * Not saved yet, but its projects share settings of their own: they are shown as the team's, and
+   * a project launched for the first time would still start on the default until the team saves.
+   */
+  saveSuggested: boolean;
 }
 
 /** The review flow as a person edits it: one entry per team, never one per project copy. */
@@ -35,9 +40,7 @@ export interface TeamLevelReviewFlow {
 type ProjectTeams = ReviewFlowOverview['projectTeams'];
 
 function sameSetting(a: BoardSetting, b: ReviewFlowSettings | null): boolean {
-  if (a === 'unreadable') return false;
-  if (a === null || b === null) return a === b;
-  return areReviewFlowSettingsEqual(a, b);
+  return a !== 'unreadable' && areReviewFlowOverridesEqual(a, b);
 }
 
 /** The setting every board shares, `null` for none, or `undefined` when they disagree. */
@@ -87,6 +90,7 @@ export function foldProjectTeamBoards(
         setting === undefined
           ? boards
           : boards.filter((board) => !sameSetting(board.setting, setting)),
+      saveSuggested: !team.saved && Boolean(setting),
     };
   }
   return { overrides, unreadableTeams: [...unreadable], projectTeams };

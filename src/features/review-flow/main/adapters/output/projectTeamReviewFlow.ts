@@ -1,4 +1,4 @@
-import { areReviewFlowSettingsEqual } from '../../../core/domain';
+import { areReviewFlowOverridesEqual } from '../../../core/domain';
 
 import type { ReviewFlowSettings } from '../../../contracts/types';
 
@@ -34,6 +34,11 @@ export interface ProjectTeamReviewFlowPorts {
   withTeamLock(teamName: string, operation: () => Promise<void>): Promise<void>;
   /** `undefined` for a team that does not keep separate history per project. */
   readProjectTeam(teamName: string): Promise<ProjectTeamState | undefined>;
+  /**
+   * Only the setting saved with a team that keeps separate history per project (what a launch
+   * needs; it does not list the projects). `undefined` when there is none.
+   */
+  readTeamSetting(teamName: string): Promise<ReviewFlowSettings | null | undefined>;
   saveTeamSetting(teamName: string, settings: ReviewFlowSettings | null): Promise<void>;
 }
 
@@ -92,29 +97,21 @@ export async function saveProjectTeamReviewFlow(
   });
 }
 
-function carries(
-  current: ReviewFlowSettings | null | 'unknown',
-  wanted: ReviewFlowSettings | null
-): boolean {
-  if (current === 'unknown') return false;
-  if (current === null || wanted === null) return current === wanted;
-  return areReviewFlowSettingsEqual(current, wanted);
-}
-
 /**
  * Brings the board of one project copy to the setting of its team, when the team saved one. A team
  * that never did leaves the board as it is: it keeps what this project had before. Returns whether
  * the board was written.
  */
 export async function syncProjectBoardReviewFlow(
-  ports: Pick<ProjectTeamReviewFlowPorts, 'readProjectTeam'>,
+  ports: Pick<ProjectTeamReviewFlowPorts, 'readTeamSetting'>,
   board: { read: ReadBoardReviewFlow; write: WriteBoardReviewFlow },
   teamName: string,
   executionTeamName: string
 ): Promise<boolean> {
-  const wanted = (await ports.readProjectTeam(teamName))?.saved;
+  const wanted = await ports.readTeamSetting(teamName);
   if (wanted === undefined) return false;
-  if (carries(await board.read(executionTeamName), wanted)) return false;
+  const current = await board.read(executionTeamName);
+  if (current !== 'unknown' && areReviewFlowOverridesEqual(current, wanted)) return false;
   await board.write(executionTeamName, wanted);
   return true;
 }

@@ -8,8 +8,9 @@ import {
 import {
   classifyTeamKind,
   createTeamKindPorts,
+  type OwnedExecutionAlias,
+  readTeamProjectContextMode,
   TeamProjectContextRegistry,
-  TeamProjectContextRuntimeResolver,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -21,6 +22,10 @@ const logger = createLogger('IPC:teams:reviewFlow');
 
 type ReviewFlowData = Pick<TeamDataService, 'runConfigurationOperation' | 'setReviewFlowSettings'>;
 
+/** Fail closed, in words that also make sense for an ordinary team. */
+const UNREADABLE_TEAM_MESSAGE =
+  'The saved settings of this team cannot be read, so its review flow is not changed (it is unknown whether the team keeps a separate history per project). Repair or restore its team.meta.json.';
+
 /**
  * The project-context side of the review flow: what a team name is, the boards of its projects,
  * the setting saved with the team, and the logical-team lock (the one launch admission and
@@ -31,19 +36,27 @@ function createProjectTeamReviewFlowPorts(
   data: () => Pick<ReviewFlowData, 'runConfigurationOperation'>
 ): ProjectTeamReviewFlowPorts {
   const metaStore = new TeamMetaStore();
-  const contextParts = () => {
-    const registry = TeamProjectContextRegistry.fromCurrentApp();
-    return { registry, resolver: new TeamProjectContextRuntimeResolver(metaStore, registry) };
-  };
+  const getMode = (teamName: string) =>
+    readTeamProjectContextMode(metaStore, teamName, UNREADABLE_TEAM_MESSAGE);
   return {
     async kindOf(teamName) {
-      const { registry, resolver } = contextParts();
-      const kind = await classifyTeamKind(createTeamKindPorts(resolver, registry), teamName);
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
+      // The one classification; the owner it proves is kept, so the teams are scanned once.
+      const proven: { owner: OwnedExecutionAlias | null } = { owner: null };
+      const kind = await classifyTeamKind(
+        createTeamKindPorts(
+          { getMode },
+          {
+            isOwnedExecutionAlias: async (name) =>
+              (proven.owner = await registry.resolveOwnedExecutionAlias(name)) !== null,
+          }
+        ),
+        teamName
+      );
       if (kind === 'logical') return 'project-team';
-      if (kind === 'native') return 'board';
+      const { owner } = proven;
       // A copy that an ordinary team kept from an earlier period is still a board of its own.
-      const owner = await registry.resolveOwnedExecutionAlias(teamName);
-      return owner && (await resolver.getMode(owner.logicalTeamName)) === 'per_project'
+      return kind === 'alias' && owner && (await getMode(owner.logicalTeamName)) === 'per_project'
         ? 'project-copy'
         : 'board';
     },
@@ -51,7 +64,7 @@ function createProjectTeamReviewFlowPorts(
     async readProjectTeam(teamName) {
       const meta = await metaStore.getMeta(teamName);
       if (meta?.projectContextMode !== 'per_project') return undefined;
-      const { registry } = contextParts();
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
       const projects: ProjectBoard[] = [];
       for (const context of await registry.list(teamName)) {
         // A copy whose first launch has not finished has a board once its owned draft exists; a
@@ -71,6 +84,10 @@ function createProjectTeamReviewFlowPorts(
         });
       }
       return { saved: meta.reviewFlowSettings, projects };
+    },
+    async readTeamSetting(teamName) {
+      const meta = await metaStore.getMeta(teamName);
+      return meta?.projectContextMode === 'per_project' ? meta.reviewFlowSettings : undefined;
     },
     saveTeamSetting: (teamName, settings) =>
       metaStore.updateMeta(teamName, (current) => {

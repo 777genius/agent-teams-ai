@@ -2834,7 +2834,10 @@
       "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
       "item": "{{project}}: {{flow}}",
       "followsDefault": "the default",
-      "unreadable": "settings that can't be read"
+      "unreadable": "settings that can't be read",
+      "prompt": "Instructions: \"{{prompt}}\"",
+      "use": "Use these settings",
+      "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project."
     }
   },
   "worktreeGitReadiness": {

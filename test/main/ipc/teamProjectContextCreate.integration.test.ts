@@ -603,7 +603,7 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       await expect(service.saveTeamOverride(a, human)).rejects.toThrow(/project copy/);
       const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
       await fs.writeFile(metaPath, '{ not json');
-      await expect(service.saveTeamOverride('builders', human)).rejects.toThrow(/unreadable/);
+      await expect(service.saveTeamOverride('builders', human)).rejects.toThrow(/cannot be read/);
       expect(await fs.readFile(metaPath, 'utf8')).toBe('{ not json');
       expect(await boardFlow(a)).toEqual({ reviewFlow: undefined, reviewFlowPrompt: undefined });
     });

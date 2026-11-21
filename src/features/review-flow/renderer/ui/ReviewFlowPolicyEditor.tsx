@@ -92,6 +92,8 @@ export const ReviewFlowPolicyEditor = ({
   const saving = feedback.kind === 'saving';
   const dirty = isEditorDraftDirty(scope, draft, policy);
   const unsynced = isTeam && (projects?.unsynced.length ?? 0) > 0;
+  // Saving is the explicit choice that puts one setting on every project of the team.
+  const projectsNeedSave = unsynced || (isTeam && projects?.saveSuggested === true);
   const shown = isTeam && draft.inherit ? defaults : draft.settings;
 
   const useDefaultDescription = (): string => {
@@ -150,7 +152,14 @@ export const ReviewFlowPolicyEditor = ({
       </div>
 
       {isTeam && projects ? (
-        <ReviewFlowProjectsNotice status={projects} testIdPrefix={testIdPrefix} />
+        <ReviewFlowProjectsNotice
+          status={projects}
+          disabled={saving}
+          onUse={(setting) =>
+            edit(setting ? { inherit: false, settings: setting } : { ...draft, inherit: true })
+          }
+          testIdPrefix={testIdPrefix}
+        />
       ) : null}
 
       {!isTeam && followingTeamCount !== undefined ? (
@@ -213,7 +222,7 @@ export const ReviewFlowPolicyEditor = ({
           <Button
             type="button"
             size="sm"
-            disabled={!(dirty || repair || unsynced) || saving}
+            disabled={!(dirty || repair || projectsNeedSave) || saving}
             data-testid={`${testIdPrefix}-save`}
             onClick={handleSave}
           >

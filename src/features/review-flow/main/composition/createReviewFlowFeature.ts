@@ -32,7 +32,7 @@ export function createReviewFlowFeature(deps: ReviewFlowFeatureDeps): ReviewFlow
 export function createProjectBoardReviewFlowSync(deps: {
   teamWriter: TeamReviewFlowWriter;
   getTeamsDir: () => string;
-  projectTeams: Pick<ProjectTeamReviewFlowPorts, 'readProjectTeam'>;
+  projectTeams: Pick<ProjectTeamReviewFlowPorts, 'readTeamSetting'>;
 }): (teamName: string, executionTeamName: string) => Promise<boolean> {
   const board = {
     read: async (teamName: string) => {

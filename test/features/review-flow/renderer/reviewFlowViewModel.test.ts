@@ -178,7 +178,7 @@ describe('review flow of per-project teams', () => {
       folderOf
     );
     expect(view.overrides).toEqual({ legacy: agent, builders: human });
-    expect(view.projectTeams.builders).toEqual({ saved: true, unsynced: [] });
+    expect(view.projectTeams.builders).toEqual({ saved: true, unsynced: [], saveSuggested: false });
     const boards = reviewFlowBoardsOf(
       teamList,
       labelIn(teamList),
@@ -202,6 +202,7 @@ describe('review flow of per-project teams', () => {
     expect(view.projectTeams.builders).toEqual({
       saved: true,
       unsynced: [{ projectLabel: 'app-two', setting: 'unreadable' }],
+      saveSuggested: false,
     });
     // A team that follows the default: a board that still carries an override is behind.
     const cleared = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(null)), folderOf);
@@ -217,7 +218,12 @@ describe('review flow of per-project teams', () => {
       folderOf
     );
     expect(shared.overrides).toEqual({ builders: human });
-    expect(shared.projectTeams.builders).toEqual({ saved: false, unsynced: [] });
+    // Shown as the team's, but not saved for it yet: a new project would start on the default.
+    expect(shared.projectTeams.builders).toEqual({
+      saved: false,
+      unsynced: [],
+      saveSuggested: true,
+    });
 
     const differ = foldProjectTeamBoards(overview({ 'ptc-aaa': human }), folderOf);
     // No single setting: the team is not shown as custom, and every project is named.
@@ -228,9 +234,10 @@ describe('review flow of per-project teams', () => {
         { projectLabel: 'app-one', setting: human },
         { projectLabel: 'app-two', setting: null },
       ],
+      saveSuggested: false,
     });
     // A team that has not run in any project yet follows the default.
-    expect(differ.projectTeams.fresh).toEqual({ saved: false, unsynced: [] });
+    expect(differ.projectTeams.fresh).toEqual({ saved: false, unsynced: [], saveSuggested: false });
   });
 });
 

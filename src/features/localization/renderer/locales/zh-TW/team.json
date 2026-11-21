@@ -2831,7 +2831,10 @@
       "notApplied": "尚未套用到這些專案。請儲存以套用；專案啟動時也會取得此設定：",
       "item": "{{project}}：{{flow}}",
       "followsDefault": "預設",
-      "unreadable": "無法讀取的設定"
+      "unreadable": "無法讀取的設定",
+      "prompt": "指示：「{{prompt}}」",
+      "use": "使用這些設定",
+      "notSaved": "這些設定來自各專案，尚未儲存為團隊設定：首次啟動的專案會從預設值開始。請儲存，讓所有專案都使用這些設定。"
     }
   },
   "worktreeGitReadiness": {

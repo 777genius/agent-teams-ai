@@ -987,7 +987,8 @@ async function verifyTeamReviewFlow(f: Fixture) {
   await waitFor('Boolean(document.querySelector(' + JSON.stringify(unsynced) + '))', 'the popover says the projects differ');
   const panelText = await cdp.evaluate(
     'document.querySelector("[data-testid=kanban-review-flow-panel]").innerText') as string;
-  for (const line of ['project-a: I give final approval', 'project-b: the default']) {
+  // Everything a project has is shown, its instructions included, so a save never replaces them unseen.
+  for (const line of ['project-a: I give final approval', 'Instructions: "E2E project A"', 'project-b: the default']) {
     assert(panelText.includes(line), 'The popover must name what each project has (' + line + '): ' + panelText);
   }
   assert(!panelText.includes('ptc-'), 'The popover shows a project copy name: ' + panelText);
@@ -996,12 +997,18 @@ async function verifyTeamReviewFlow(f: Fixture) {
     'Showing the team must not change a project board');
   assert(!('reviewFlowSettings' in await readJsonFile(metaPath)), 'Showing the team must not save a team setting');
 
-  // 2. One save in that popover (unchanged: the default) is the explicit choice for every project.
+  // 2. Taking over what project A has and one save make it the team's: it reaches project B and
+  // nothing project A had is lost.
+  const projectA = { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E project A' };
+  await cdp.evaluate('(() => { const item = Array.from(document.querySelectorAll(' +
+    '"[data-testid=kanban-review-flow-panel] li")).find((li) => li.textContent.includes("project-a:"));' +
+    ' item.querySelector("[data-testid=kanban-review-flow-use-project]").click(); return true; })()');
   await cdp.evaluate('(() => { document.querySelector("[data-testid=kanban-review-flow-save]").click(); return true; })()');
-  await waitForJson(metaPath, (meta) => meta.reviewFlowSettings === null, 'the team follows the default');
+  await waitForJson(metaPath, (meta) => JSON.stringify(meta.reviewFlowSettings) === JSON.stringify(projectA),
+    'the settings of project A are saved for the team');
   for (const alias of [f.nativeA, f.nativeB]) {
-    await waitForJson(boardPath(alias), (board) => !('reviewFlow' in board) && !('reviewFlowPrompt' in board),
-      'the board of ' + alias + ' follows the default');
+    await waitForJson(boardPath(alias), (board) => board.reviewFlow === projectA.reviewFlow &&
+      board.reviewFlowPrompt === projectA.reviewFlowPrompt, 'the board of ' + alias + ' carries them');
   }
 
   // 3. A setting of the team is saved once and written into the board of every project.
@@ -1024,9 +1031,11 @@ async function verifyTeamReviewFlow(f: Fixture) {
 
   // 5. The settings page lists the team once, by its name, and never a project copy.
   await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openSettingsTab("reviewFlow"))()');
-  await waitFor('document.body.innerText.includes("History fixture edited")',
+  // Read the settings page itself: the team name is also on the team screen behind it.
+  const settingsPage = 'document.querySelector("[data-testid=review-flow-settings-page]")';
+  await waitFor('(' + settingsPage + '?.innerText ?? "").includes("History fixture edited")',
     'the settings page lists the per-project team with its setting');
-  const settingsText = await cdp.evaluate('document.body.innerText') as string;
+  const settingsText = await cdp.evaluate(settingsPage + '.innerText') as string;
   assert(!settingsText.includes(f.nativeA) && !settingsText.includes(f.nativeB) &&
     !settingsText.includes('· project-'), 'The settings page lists a project copy');
   await cdp.screenshot(path.join(f.screenshots, 'review-flow-team-setting.png'));
@@ -1034,6 +1043,10 @@ async function verifyTeamReviewFlow(f: Fixture) {
   // Back to the default for the sections after this one.
   const reset = await setFlow(f.logical, null);
   assert(reset.ok, 'Resetting the team review flow failed: ' + JSON.stringify(reset));
+  for (const alias of [f.nativeA, f.nativeB]) {
+    assert.deepEqual(await boardFlow(alias), { reviewFlow: undefined, reviewFlowPrompt: undefined },
+      'The board of ' + alias + ' follows the default again');
+  }
   assert.equal(await tasks(), tasksBefore, 'The review flow mutated project tasks');
   assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'The durable context mapping changed');
 }

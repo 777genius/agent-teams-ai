@@ -6490,8 +6490,11 @@ export default interface Resources {
         "followsDefault": "the default",
         "item": "{{project}}: {{flow}}",
         "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
+        "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project.",
+        "prompt": "Instructions: \"{{prompt}}\"",
         "scope": "One review flow for every project of this team.",
-        "unreadable": "settings that can't be read"
+        "unreadable": "settings that can't be read",
+        "use": "Use these settings"
       },
       "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
       "promptLabel": "Instructions for agents (optional)",
