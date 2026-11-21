@@ -21,6 +21,8 @@ export type ProjectContextProgressMapper = (
 export interface PreparedProjectContextLaunch {
   request: TeamLaunchRequest;
   mapProgress?: ProjectContextProgressMapper;
+  /** Saves the launch settings of `request` for the team and its copy; a no-op unless the run is fresh. */
+  recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
 }
 
 export interface ProjectContextLaunchPorts {
@@ -64,7 +66,11 @@ export async function launchInProjectContext<T>(
   if (selected.request.teamName === request.teamName) return null;
   const result = await launcher.invoke(selected.request, selected.mapProgress);
   const run = launcher.started(result);
-  if (run) ports.rememberRunIdentity(run.runId, request.teamName, selected.request.teamName);
+  if (run) {
+    ports.rememberRunIdentity(run.runId, request.teamName, selected.request.teamName);
+    // What this launch stated becomes the team's launch settings, on every transport.
+    await selected.recordLaunch?.(run);
+  }
   return result;
 }
 

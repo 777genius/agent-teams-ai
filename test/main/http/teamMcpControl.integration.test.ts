@@ -2081,6 +2081,32 @@ describe('MCP team tools over the local REST control API', () => {
       ]);
       expect(sameProject.map((response) => response.statusCode)).toEqual([200, 200]);
       expect(await registry.list(twice)).toHaveLength(1);
+
+      // What an HTTP launch states becomes the launch settings of the team and of its copy, like a
+      // launch from the app; a launch that found the copy already running records nothing.
+      const settled = 'per-project-settings';
+      expect((await createOver(settled)).statusCode).toBe(201);
+      const metaOf = async (name: string) =>
+        JSON.parse(await readFile(path.join(root, 'teams', name, 'team.meta.json'), 'utf8')) as Record<
+          string,
+          unknown
+        >;
+      const first = await launchTeam(settled, { cwd: projectA, model: 'gpt-5.4', effort: 'high' });
+      expect(first.statusCode).toBe(200);
+      const settledCopy = (await registry.inspect(settled, projectA))?.executionTeamName ?? '';
+      expect(await metaOf(settled)).toMatchObject({ model: 'gpt-5.4', effort: 'high' });
+      expect(await metaOf(settledCopy)).toMatchObject({ model: 'gpt-5.4', effort: 'high' });
+      const realLaunch = start.launchTeam;
+      start.launchTeam = () =>
+        Promise.resolve({ runId: 'run-running', launchStatus: 'already_running', alreadyRunning: true });
+      try {
+        const running = await launchTeam(settled, { cwd: projectA, model: 'gpt-9' });
+        expect(running.statusCode).toBe(200);
+      } finally {
+        start.launchTeam = realLaunch;
+      }
+      expect(await metaOf(settled)).toMatchObject({ model: 'gpt-5.4' });
+      expect(await metaOf(settledCopy)).toMatchObject({ model: 'gpt-5.4' });
     } finally {
       restoreFetch();
       await app.close();

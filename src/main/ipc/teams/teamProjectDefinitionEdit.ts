@@ -47,7 +47,11 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
   const data = ports.data();
   const runtime = ports.runtime();
   const run = ports.run();
-  const { registry, resolver, gate } = createProjectContextRuntimeParts({ data, runtime, run });
+  const { registry, resolver, gate, launchSettings } = createProjectContextRuntimeParts({
+    data,
+    runtime,
+    run,
+  });
   return new TeamProjectDefinitionEditor(
     registry,
     gate,
@@ -58,6 +62,7 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
       updateDisplayMetadata: async (teamName, update) => {
         await data.updateConfig(teamName, update);
       },
+      launchSettings,
     },
     async (executionTeamName) => {
       if (

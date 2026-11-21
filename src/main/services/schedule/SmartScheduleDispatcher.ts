@@ -4,6 +4,7 @@
  *
  * Legacy schedules never reach this class.
  */
+import { isLaunchAlreadyRunning, isLaunchAlreadyUnderway } from '@shared/utils/teamLaunchResponse';
 import { isTeamTaskDeleted, isTeamTaskFinishedForDependency } from '@shared/utils/teamTaskState';
 
 import type { ExecutionRequest, ScheduledTaskResult } from './ScheduledTaskExecutor';
@@ -218,10 +219,10 @@ export class SmartScheduleDispatcher {
           teamLaunchRequest(saved, schedule.launchConfig.prompt.trim())
         );
         if (isRefusal(result)) return skipped(result.refused);
-        if (result.launchStatus === 'already_running' || result.alreadyRunning) {
+        if (isLaunchAlreadyRunning(result)) {
           return await this.dispatchToLiveTeam(schedule, runId, isCancelled, exec);
         }
-        if (result.launchStatus === 'already_launching' || result.alreadyLaunching) {
+        if (isLaunchAlreadyUnderway(result)) {
           return skipped('Another team launch is already underway');
         }
         return {
@@ -364,7 +365,7 @@ export class SmartScheduleDispatcher {
       return skipped('Task saved; team launch failed. Inspect the team before retrying', task.id);
     }
     if (isRefusal(launched)) return skipped(`Task saved; ${launched.refused}`, task.id);
-    if (launched.launchStatus === 'already_launching' || launched.alreadyLaunching) {
+    if (isLaunchAlreadyUnderway(launched)) {
       return skipped('Task saved; another launch is already underway', task.id);
     }
     const ready = await this.waitForMember(team, owner, launched.runId, isCancelled, true);

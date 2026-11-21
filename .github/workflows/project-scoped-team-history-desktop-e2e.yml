@@ -11,6 +11,7 @@ on:
       - 'src/main/ipc/teams/teamProjectContext*.ts'
       - 'src/main/http/teams.ts'
       - 'src/main/http/teams/teamLaunchRoute.ts'
+      - 'src/main/teamProjectContextLaunchPort.ts'
       - 'src/renderer/components/team/ProjectScopedTeamDetailView.tsx'
       - 'src/renderer/components/team/TeamDetailView.tsx'
       - 'src/main/services/team/TeamTaskReader.ts'
@@ -25,6 +26,7 @@ on:
       - 'src/main/ipc/teams/teamProjectContext*.ts'
       - 'src/main/http/teams.ts'
       - 'src/main/http/teams/teamLaunchRoute.ts'
+      - 'src/main/teamProjectContextLaunchPort.ts'
       - 'src/renderer/components/team/ProjectScopedTeamDetailView.tsx'
       - 'src/renderer/components/team/TeamDetailView.tsx'
       - 'src/main/services/team/TeamTaskReader.ts'
@@ -41,7 +43,7 @@ jobs:
   desktop-history:
     name: Team history A-B-A (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
