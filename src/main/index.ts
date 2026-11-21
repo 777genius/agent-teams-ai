@@ -1930,8 +1930,7 @@ async function initializeServices(): Promise<void> {
     applicationCommandRunner = applicationCommandLedgerFeature.runner;
     teamDataService.setTaskBoardCommandFacade(
       new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
-        isDurableStorageAvailable: () =>
-          applicationCommandLedgerBackend.selector.select(true, false),
+        isDurableStorageAvailable: applicationCommandLedgerBackend.isDurable,
         hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
       })
     );

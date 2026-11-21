@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Team-Einstellungen wurden gespeichert, aber Mitglieder-Änderungen fehlgeschlagen: {{message}}",
       "settingsSavedRefreshFailed": "Team-Einstellungen wurden gespeichert, aber die neueste Ansicht nicht aktualisieren: {{message}}",
       "teamNameEmpty": "Teamname kann nicht leer sein",
-      "unsupportedMixedPrimaryMutation": "Live-Editionen zu primären Teamkollegen in gemischten OpenCode-Teams werden noch nicht unterstützt. Stoppen Sie das Team, bearbeiten Sie den Rouster, dann relaunch. Betroffen: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Live-Editionen zu primären Teamkollegen in gemischten OpenCode-Teams werden noch nicht unterstützt. Stoppen Sie das Team, bearbeiten Sie den Rouster, dann relaunch. Betroffen: {{names}}",
+      "refusedProjectCopy": "Dies ist eine Projektkopie eines Teams. Ändere die Einstellungen im Team selbst.",
+      "refusedProjectUnreconciled": "Ein Projekt dieses Teams wird noch vorbereitet oder sein letzter Start wurde unterbrochen. Starte das Team in diesem Projekt erneut und bearbeite es danach.",
+      "refusedTeamUnreadable": "Die gespeicherten Einstellungen dieses Teams können nicht gelesen werden, daher wurde nichts geändert."
     },
     "fields": {
       "colorOptional": "Farbe (optional)",

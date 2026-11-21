@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Ustawienia zespołu zostały zapisane, ale zmiany członków nie powiodły się: {{message}}",
       "settingsSavedRefreshFailed": "Ustawienia zespołu zostały zapisane, ale nie udało się odświeżyć najnowszego widoku: {{message}}",
       "teamNameEmpty": "Nazwa zespołu nie może być pusta",
-      "unsupportedMixedPrimaryMutation": "Edycje na żywo członków zespołu należących do głównego procesu w mieszanych zespołach OpenCode nie są jeszcze obsługiwane. Zatrzymaj zespół, edytuj skład, a następnie uruchom ponownie. Dotyczy: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Edycje na żywo członków zespołu należących do głównego procesu w mieszanych zespołach OpenCode nie są jeszcze obsługiwane. Zatrzymaj zespół, edytuj skład, a następnie uruchom ponownie. Dotyczy: {{names}}",
+      "refusedProjectCopy": "To jest kopia zespołu dla jednego projektu. Zmieniaj ustawienia w samym zespole.",
+      "refusedProjectUnreconciled": "Projekt tego zespołu jest jeszcze przygotowywany lub jego ostatnie uruchomienie zostało przerwane. Uruchom zespół w tym projekcie ponownie, a potem go edytuj.",
+      "refusedTeamUnreadable": "Nie można odczytać zapisanych ustawień tego zespołu, więc nic nie zostało zmienione."
     },
     "fields": {
       "colorOptional": "Kolor (opcjonalnie)",

@@ -99,3 +99,10 @@ are refused. `getMemberSettingsTarget` reads the saved target through the same
 repository, so an editor of a team without runtime members (such a definition)
 shows the identity and settings the save compares. See
 `docs/team-management/per-project-team-editing.md`.
+
+For a per-project team the lead is edited too: its model and effort are team
+launch settings, so the route saves them with the definition's launch settings
+store inside the same definition write (no member row, nothing restarted). A
+refusal of those rules is answered as `refused` with a
+`MemberSettingsRefusalReason` code; the dialog shows its localized text
+(`MEMBER_SETTINGS_REFUSAL_KEYS`).

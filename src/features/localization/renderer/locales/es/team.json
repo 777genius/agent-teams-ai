@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Los ajustes del equipo se guardaron, pero los cambios del miembro fallaron: {{message}}",
       "settingsSavedRefreshFailed": "Los ajustes del equipo se guardaron, pero no refrescaron la última vista: {{message}}",
       "teamNameEmpty": "El nombre del equipo no puede estar vacío",
-      "unsupportedMixedPrimaryMutation": "Todavía no se admiten ediciones en vivo para compañeros de equipo de propiedad primaria en equipos mixtos OpenCode. Para el equipo, edita la lista, luego relanza. Afectado: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Todavía no se admiten ediciones en vivo para compañeros de equipo de propiedad primaria en equipos mixtos OpenCode. Para el equipo, edita la lista, luego relanza. Afectado: {{names}}",
+      "refusedProjectCopy": "Esta es una copia de proyecto de un equipo. Cambia su configuración en el propio equipo.",
+      "refusedProjectUnreconciled": "Un proyecto de este equipo aún se está preparando o su último inicio se interrumpió. Vuelve a iniciar el equipo en ese proyecto y luego edítalo.",
+      "refusedTeamUnreadable": "No se puede leer la configuración guardada de este equipo, así que no se cambió nada."
     },
     "fields": {
       "colorOptional": "Color (opcional)",

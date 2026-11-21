@@ -88,6 +88,22 @@ export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
       }
   );
 
+/**
+ * Why the main process refused a member settings change before anything was
+ * written. A stable code, so the app can explain it in the user's language.
+ * - `project_copy`: the team is the project copy of another team;
+ * - `project_running`, `project_launching`, `project_unreconciled`: a team
+ *   with separate history per project is edited only while every project is
+ *   stopped, and one is running, starting or stopping, or was interrupted;
+ * - `team_metadata_unreadable`: the team's saved settings cannot be read.
+ */
+export type MemberSettingsRefusalReason =
+  | 'project_copy'
+  | 'project_running'
+  | 'project_launching'
+  | 'project_unreconciled'
+  | 'team_metadata_unreadable';
+
 export type UpdateMemberSettingsResult =
   | {
       outcome: 'completed';
@@ -114,5 +130,13 @@ export type UpdateMemberSettingsResult =
       outcome: 'busy';
       teamName: string;
       memberName: string;
+      replayed: boolean;
+    }
+  | {
+      outcome: 'refused';
+      reason: MemberSettingsRefusalReason;
+      memberName: string;
+      /** English diagnostics for logs; the app shows the localized text of `reason`. */
+      message: string;
       replayed: boolean;
     };

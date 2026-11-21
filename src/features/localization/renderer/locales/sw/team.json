@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Mipangilio ya timu ilihifadhiwa, lakini mabadiliko ya mwanachama yameshindwa: {{message}}",
       "settingsSavedRefreshFailed": "Mipangilio ya timu ilihifadhiwa, lakini imeshindwa kuonyesha upya mwonekano wa hivi karibuni: {{message}}",
       "teamNameEmpty": "Jina la timu haliwezi kuwa tupu",
-      "unsupportedMixedPrimaryMutation": "Uhariri wa moja kwa moja kwa wenzako wa timu wanaomilikiwa na msingi katika timu mchanganyiko za OpenCode bado hauungwi mkono. Simamisha timu, hariri orodha, kisha uzindue tena. Walioathiriwa: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Uhariri wa moja kwa moja kwa wenzako wa timu wanaomilikiwa na msingi katika timu mchanganyiko za OpenCode bado hauungwi mkono. Simamisha timu, hariri orodha, kisha uzindue tena. Walioathiriwa: {{names}}",
+      "refusedProjectCopy": "Hii ni nakala ya mradi ya timu. Badilisha mipangilio yake kwenye timu yenyewe.",
+      "refusedProjectUnreconciled": "Mradi mmoja wa timu hii bado unaandaliwa, au uzinduzi wake wa mwisho ulikatizwa. Zindua timu tena katika mradi huo, kisha uihariri.",
+      "refusedTeamUnreadable": "Mipangilio iliyohifadhiwa ya timu hii haiwezi kusomwa, kwa hivyo hakuna kilichobadilishwa."
     },
     "fields": {
       "colorOptional": "Rangi (hiari)",

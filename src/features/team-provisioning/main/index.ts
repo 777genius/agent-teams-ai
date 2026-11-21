@@ -1,4 +1,9 @@
 export {
+  fingerprintMemberSettingsTarget,
+  isLeadMemberSettingsTarget,
+  normalizeEditableMemberSettings,
+} from '../core/domain/memberSettingsPolicy';
+export {
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,
 } from './adapters/input/registerTeamMemberSettingsIpc';
