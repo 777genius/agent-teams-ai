@@ -29,6 +29,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     assertOwnedAlias: vi.fn(async () => undefined),
     replaceMembers: vi.fn(async () => undefined),
     updateDisplayMetadata: vi.fn(async () => undefined),
+    launchSettings: { save: vi.fn(async () => undefined) },
     assertStoppedForRosterSync: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
@@ -139,6 +140,41 @@ describe('TeamProjectContextDraftMaterializer', () => {
       prompt: 'Edited rules',
     });
     expect(f.store.replaceMembers).not.toHaveBeenCalled();
+  });
+
+  it('repairs older project copies with the launch settings of the definition, but not their runtime arguments or trust', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{ name: 'alice' }],
+      ...(name === 'builders'
+        ? { providerId: 'codex' as const, model: 'gpt-x', effort: 'high' as const, skipPermissions: true, extraCliArgs: '--add-dir /a' }
+        : { providerId: 'codex' as const, model: 'gpt-old', effort: 'high' as const, skipPermissions: false, extraCliArgs: '--b' }),
+    }));
+    await f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    });
+    expect(f.store.launchSettings.save).toHaveBeenCalledOnce();
+    expect(f.store.launchSettings.save).toHaveBeenCalledWith('ptc-sandbox', { model: 'gpt-x' });
+    expect(f.store.assertStoppedForRosterSync).toHaveBeenCalledWith('ptc-sandbox');
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
+  });
+
+  it('leaves the launch settings of a copy that is not confirmed stopped, without failing the launch', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{ name: 'alice' }],
+      providerId: 'codex' as const,
+      model: name === 'builders' ? 'gpt-x' : 'gpt-old',
+    }));
+    f.store.assertStoppedForRosterSync.mockRejectedValue(new Error('running'));
+    await expect(
+      f.materializer.ensureProjectDraft({ logicalTeamName: 'builders', projectPath: '/sandbox/b' })
+    ).resolves.toMatchObject({ state: 'ready' });
+    expect(f.store.launchSettings.save).not.toHaveBeenCalled();
   });
 
   it('refuses to mutate the project roster while its runtime is still live', async () => {
