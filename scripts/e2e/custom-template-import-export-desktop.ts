@@ -486,8 +486,12 @@ try {
     `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
     'reviewed custom template prompt applied to editable creation draft'
   );
+  await until(
+    `Array.from(document.querySelectorAll('[data-testid="create-team-page"] input')).some(input => input.value === 'reviewer')`,
+    'custom template roster applied to editable team fields'
+  );
   await screenshot('11-create-from-custom-template');
-  checks.push('Real Create Team page restores the imported template prompt without starting a runtime.');
+  checks.push('Real Create Team page restores the imported prompt and member roster without starting a runtime.');
 
   const builtin = `document.querySelector('[data-testid^="create-template-option-builtin-"]')`;
   await click(builtin);
@@ -540,9 +544,14 @@ try {
     `document.querySelector('[data-testid="custom-template-saved"]')`,
     'confirmed Save as Template'
   );
-  assert.equal((await library()).length, 3);
+  const roundTrip = (await library()).filter(
+    template => !saved.some(before => before.templateId === template.templateId)
+  );
+  assert.equal(roundTrip.length, 1, 'Exactly one new template saved from the created team');
+  assert.equal(roundTrip[0]!.teamPrompt, portable.teamPrompt);
+  assert.deepEqual(roundTrip[0]!.members, portable.members, 'Template round-trip must retain member role and workflow');
   await screenshot('16-save-team-as-template-confirmed');
-  checks.push('Save as Template previews a real created team and persists the confirmed SQLite record.');
+  checks.push('Save as Template persists the same prompt, member name, role and workflow after real team creation.');
 
   receipt.cdpPort = port;
   receipt.savedTemplateIds = saved.map((t) => t.templateId);
