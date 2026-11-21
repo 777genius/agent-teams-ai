@@ -54,6 +54,7 @@ import type { CrossTeamHttpApi } from './crossTeam';
 import type { ProjectContextHttpHooks } from './teams/projectContextHttp';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { ProjectTeamLaunch } from '@features/team-project-context/main';
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
 import type { FastifyInstance } from 'fastify';
 
@@ -83,6 +84,8 @@ export interface HttpServices {
   crossTeam?: CrossTeamHttpApi;
   /** How routes read project contexts; production leaves it unset. */
   projectContext?: ProjectContextHttpHooks;
+  /** Launches a team with separate history per project; one instance per request. */
+  projectTeamLaunch?: () => ProjectTeamLaunch;
 }
 
 export function registerHttpRoutes(

@@ -33,7 +33,9 @@ const runtimeDeliveryTargetSchema = z.union([
 export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'team_launch',
-    description: 'Launch a provisioned team via the desktop runtime',
+    description:
+      'Launch a provisioned team via the desktop runtime. For a team with separate history per project, cwd selects the project: ' +
+      'its history there is reused, and the first launch in a project starts a new one. The team runs in one project at a time.',
     parameters: z.object({
       ...toolContextSchema,
       cwd: z.string().min(1),

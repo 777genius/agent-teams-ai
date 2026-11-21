@@ -1,4 +1,5 @@
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
+import { TeamProjectContextLaunchRefusedError } from './TeamProjectContextLaunchGate';
 
 import type { DefinitionLaunchSettingsStore } from './definitionLaunchSettings';
 import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
@@ -48,13 +49,15 @@ export class TeamProjectContextDraftMaterializer {
       // The caller has already verified all project runtimes are stopped.
       await this.teamStore.assertOwnedAlias(resolved.executionTeamName);
       if (!existing) {
-        throw new Error('Project runtime settings are missing; refusing to overwrite history');
+        throw new TeamProjectContextLaunchRefusedError(
+          'Project runtime settings are missing; refusing to overwrite history'
+        );
       }
       if (existing.projectContextMode === 'per_project') {
-        throw new Error('Nested project contexts are not allowed');
+        throw new TeamProjectContextLaunchRefusedError('Nested project contexts are not allowed');
       }
       const logical = await this.teamStore.getSavedRequest(address.logicalTeamName);
-      if (!logical) throw new Error('Logical team settings are unavailable');
+      if (!logical) throw new TeamProjectContextLaunchRefusedError('Logical team settings are unavailable');
       // Preserve physical run identities and old tasks/chats: only the authored
       // roster, display metadata and launch settings are synced.
       await projectDefinitionToAlias(
@@ -70,7 +73,7 @@ export class TeamProjectContextDraftMaterializer {
       return resolved;
     }
     const source = await this.teamStore.getSavedRequest(address.logicalTeamName);
-    if (!source) throw new Error('The team configuration is unavailable');
+    if (!source) throw new TeamProjectContextLaunchRefusedError('The team configuration is unavailable');
     if (!resolved.projectPath?.trim()) throw new Error('Choose a project for this team');
 
     try {

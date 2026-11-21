@@ -4,7 +4,7 @@ import {
   projectPublicProvisioningProgress,
   rememberProjectRunIdentity,
   resolveProjectRunDiagnosticsTeam,
-} from '../../../src/main/ipc/teams/teamProjectContextProgressIdentity';
+} from '../../../src/features/team-project-context/main/projectRunIdentity';
 
 describe('project provisioning diagnostics identity', () => {
   afterEach(() => { vi.useRealTimers(); });

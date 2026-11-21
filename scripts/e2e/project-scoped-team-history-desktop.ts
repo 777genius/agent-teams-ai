@@ -6,7 +6,9 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
@@ -125,8 +127,14 @@ async function fixture() {
   const rootTeams = path.join(claudeRoot, 'teams');
   const rootTasks = path.join(claudeRoot, 'tasks');
   const logicalDir = path.join(rootTeams, logical);
+  // The HTTP control API is started by the HTTP section only, on a port of its own.
+  const probe = createServer().listen(0, '127.0.0.1');
+  await once(probe, 'listening');
+  const controlPort = (probe.address() as { port: number }).port;
+  await new Promise((resolve) => probe.close(resolve));
   await json(path.join(claudeRoot, 'agent-teams-config.json'), {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },
+    httpServer: { enabled: false, port: controlPort },
   });
   await json(path.join(logicalDir, 'team.meta.json'), {
     version: 1, createdAt: joinedAt, cwd: projectA, displayName: 'History fixture',
@@ -931,6 +939,142 @@ async function verifySchedules(f: Fixture) {
 }
 
 /**
+ * Hosted web and MCP use the HTTP control API of the app: create a per-project team there (the
+ * history mode is required), launch it in a project it never ran in, retry after the denied run,
+ * and check that the copy is made by the launch of the app (index, copy files, progress named
+ * after the team) and that refusals change nothing.
+ */
+async function verifyHttpCreateAndLaunch(f: Fixture) {
+  assert(cdp);
+  const status = await cdp.evaluate('(async () => window.electronAPI.httpServer.start())()') as {
+    running: boolean; port: number;
+  };
+  assert(status.running, 'The HTTP control API must start: ' + JSON.stringify(status));
+  const base = 'http://127.0.0.1:' + status.port;
+  const call = async (method: 'GET' | 'POST', url: string, body?: unknown) => {
+    const response = await fetch(base + url, {
+      method,
+      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    });
+    return {
+      status: response.status,
+      body: await response.json().catch(() => null) as Record<string, unknown> | null,
+    };
+  };
+  const team = 'http-' + f.logical.slice('history-'.length);
+  const teamDir = path.join(f.rootTeams, team);
+  // The contexts index keys a Windows project folder in lower case.
+  const projectKey = (value: string) =>
+    process.platform === 'win32' ? path.normalize(value).toLowerCase() : value;
+
+  // 1. The history mode is required over HTTP; a per-project team is the same draft as in the app.
+  const withoutMode = await call('POST', '/api/teams', { teamName: team, cwd: f.projectA, members: [] });
+  assert.equal(withoutMode.status, 400, 'HTTP create without a mode: ' + JSON.stringify(withoutMode));
+  assert.equal(withoutMode.body?.code, 'PROJECT_CONTEXT_MODE_REQUIRED');
+  // Anthropic, like the launch settings section: the denying runtime accepts the launch and then
+  // refuses it on every platform (an OpenCode lead meets the startup cleanup gate on Windows).
+  const created = await call('POST', '/api/teams', {
+    teamName: team, projectContextMode: 'per_project', displayName: 'HTTP per-project team', cwd: f.projectA,
+    providerId: 'anthropic',
+    members: [{ name: 'alice', role: 'Developer' }],
+  });
+  assert.equal(created.status, 201, 'HTTP create: ' + JSON.stringify(created));
+  assert.equal(created.body?.projectContextMode, 'per_project');
+  assert.equal((await readJsonFile(path.join(teamDir, 'team.meta.json'))).projectContextMode, 'per_project');
+  await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' });
+
+  // 2. Launch it in a project it never ran in: one copy, made from the definition, in that folder.
+  const launched = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectC });
+  const index = await waitForJson<{ contexts: { projectPath: string; executionTeamName: string }[] }>(
+    path.join(teamDir, 'project-contexts.json'),
+    (value) => value.contexts?.length === 1,
+    'the project copy of the HTTP launch is registered'
+  );
+  const copy = index.contexts[0];
+  assert.equal(projectKey(copy.projectPath), projectKey(f.projectC),
+    'The copy must belong to the project of the launch');
+  assert.match(copy.executionTeamName, /^ptc-[a-f0-9]{24}$/);
+  const copyMeta = await readJsonFile(path.join(f.rootTeams, copy.executionTeamName, 'team.meta.json'));
+  assert.equal(copyMeta.projectContextMode, 'shared', 'A copy is an ordinary team');
+  assert.equal(projectKey(String(copyMeta.cwd)), projectKey(f.projectC));
+  await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' },
+    'The team itself must never become a runnable team');
+  // The fixture runtime denies every agent: the run is accepted, then fails.
+  assert.equal(launched.status, 200, 'HTTP launch: ' + JSON.stringify(launched));
+  const settle = async (runId: string) => {
+    const deadline = Date.now() + 90_000;
+    for (;;) {
+      const progress = await call('GET', '/api/teams/provisioning/' + encodeURIComponent(runId));
+      assert.equal(progress.status, 200, 'Provisioning status: ' + JSON.stringify(progress));
+      assert.equal(progress.body?.teamName, team, 'The progress must name the team, not its copy');
+      const state = progress.body?.state;
+      if (['ready', 'failed', 'cancelled', 'disconnected'].includes(String(state))) return state;
+      assert(Date.now() < deadline, 'The HTTP launch did not settle: ' + JSON.stringify(progress.body));
+      await pause(500);
+    }
+  };
+  let finalState = await settle(String(launched.body?.runId));
+  if (finalState !== 'ready') {
+    // A failed first run leaves the copy reserved; a retry in the same project reuses it.
+    const retry = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectC });
+    assert.equal(retry.status, 200, 'Retry in the same project: ' + JSON.stringify(retry));
+    finalState = await settle(String(retry.body?.runId));
+    const retried = await readJsonFile<{ contexts: { executionTeamName: string }[] }>(
+      path.join(teamDir, 'project-contexts.json')
+    );
+    assert.deepEqual(retried.contexts.map((row) => row.executionTeamName), [copy.executionTeamName],
+      'The retry must reuse the copy of the project');
+  }
+  await cdp.screenshot(path.join(f.screenshots, 'http-launch.png'));
+
+  // 3. The app and HTTP list the same rows. A copy is folded into its team once it was ready;
+  // a copy whose first run never got ready stays visible (the list hides only proven copies).
+  const listTeams = async () => await cdp!.evaluate(
+    '(async () => (await window.electronAPI.teams.list()).map((t) => t.teamName))()'
+  ) as string[];
+  if (finalState === 'ready') {
+    // Readiness of the copy is confirmed in the background after the run reports ready.
+    await waitFor('(async () => !(await window.electronAPI.teams.list()).some((t) => t.teamName === ' +
+      JSON.stringify(copy.executionTeamName) + '))()', 'the ready copy is folded into its team');
+  }
+  const listed = await listTeams();
+  const httpList = await call('GET', '/api/teams');
+  const httpNames = (httpList.body as unknown as { teamName: string }[]).map((t) => t.teamName);
+  const ours = (names: string[]) =>
+    names.filter((name) => name === team || name === copy.executionTeamName).sort();
+  assert(listed.includes(team), 'The app must list the team created over HTTP');
+  assert.deepEqual(ours(httpNames), ours(listed), 'HTTP and the app must list the same rows');
+
+  // 4. Refusals change nothing: a copy by its own name, a folder that does not exist, and a
+  // second project while the first copy is not reconciled (the failed run above).
+  const byCopyName = await call('POST', '/api/teams/' + f.nativeA + '/launch', { cwd: f.projectA });
+  assert.equal(byCopyName.status, 409, 'Copy by name: ' + JSON.stringify(byCopyName));
+  assert.equal(byCopyName.body?.code, 'PROJECT_COPY_NOT_LAUNCHABLE');
+  const fixtureIndex = await readFile(f.indexPath, 'utf8');
+  const missing = await call('POST', '/api/teams/' + f.logical + '/launch', {
+    cwd: path.join(f.root, 'no-such-project'),
+  });
+  assert.equal(missing.status, 400, 'Missing folder: ' + JSON.stringify(missing));
+  assert.equal(await readFile(f.indexPath, 'utf8'), fixtureIndex,
+    'A refused launch must not touch the contexts index');
+  if (finalState !== 'ready') {
+    const elsewhere = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectA });
+    assert.equal(elsewhere.status, 409, 'Second project: ' + JSON.stringify(elsewhere));
+    assert.equal(elsewhere.body?.code, 'TEAM_PROJECT_CONTEXT_RUNNING');
+    const after = await readJsonFile<{ contexts: unknown[] }>(path.join(teamDir, 'project-contexts.json'));
+    assert.equal(after.contexts.length, 1, 'A refused launch must release its reservation');
+  }
+  const shared = await call('POST', '/api/teams', {
+    teamName: team + '-shared', cwd: f.projectA, projectContextMode: 'shared', members: [],
+  });
+  assert.equal(shared.status, 201, 'Explicit shared create: ' + JSON.stringify(shared));
+  assert.equal(shared.body?.projectContextMode, 'shared');
+  return { launchStatus: launched.status, finalState, copy: copy.executionTeamName };
+}
+
+/**
  * Cross-team messages to and from a per-project team, through the real app:
  * the picker list, delivery to the copy of the sender's project only, the
  * refusal for a project without history, the copy as a sender, the routes the
@@ -1276,13 +1420,29 @@ async function run() {
     );
     assert.equal(unexpected.length, 0,
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
-    // After the strict audit above: the launches of this section reach the denying runtime on purpose.
+    // After the strict audit above: the launches of these sections reach the denying runtime on purpose.
     await verifyLaunchSettings(f);
+    // The runtime child writes its audit line a moment after a launch: wait until the audit of the
+    // previous section stops growing, so a late line of it is not counted for the HTTP section.
+    let auditBeforeHttp = (await readAudit()).length;
+    for (let stableSince = Date.now(), giveUpAt = Date.now() + 60_000; Date.now() - stableSince < 5_000;) {
+      assert(Date.now() < giveUpAt, 'The runtime audit kept growing after the launch settings section');
+      await pause(500);
+      const length = (await readAudit()).length;
+      if (length !== auditBeforeHttp) [auditBeforeHttp, stableSince] = [length, Date.now()];
+    }
+    const httpLaunch = await verifyHttpCreateAndLaunch(f);
+    const afterHttp = (await readAudit()).slice(auditBeforeHttp);
+    assert(afterHttp.filter(isLaunch).length <= 2,
+      'The HTTP launch and its retry may reach the runtime only for their one project copy');
+    assert.equal(afterHttp.filter((args) => !isLaunch(args) && !isReadOnly(args)).length, 0,
+      'Unexpected runtime calls after the HTTP launch');
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
+      httpLaunch,
     }, null, 2));
   } catch (error) {
     await cdp?.screenshot(path.join(f.screenshots, 'failure.png')).catch(() => undefined);

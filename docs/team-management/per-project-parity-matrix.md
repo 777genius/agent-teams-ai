@@ -11,7 +11,7 @@ Related pages: [Editing a per-project team](./per-project-team-editing.md), the 
 The cells below were written before #1247 and are kept as they were; where they disagree with this block, this block is newer.
 
 - Lead instructions (the `prompt` row of section 2): editable in the Edit Team dialog of a per-project team and over MCP `team_update` (`leadInstructions`) / HTTP update. The text lives in the logical `team.meta.json`, is projected onto stopped project copies and repaired at launch. A prompt typed in the launch dialog applies to that start only; the next projection resets the copy.
-- MCP team tools (the `team_update` part of the table in section 2): update works for a per-project team when every project is stopped, through the same stopped gate, logical-team lock and projection as the app. A running, launching or unreconciled project answers `TEAM_ACTIVE`, `TEAM_PROVISIONING` or `TEAM_PROJECT_CONTEXT_UNRECONCILED`; a project copy answers `PROJECT_COPY_NOT_EDITABLE`. `team_trash` of a per-project team (and of a copy) and `team_launch` still refuse.
+- MCP team tools (the `team_update` part of the table in section 2): update works for a per-project team when every project is stopped, through the same stopped gate, logical-team lock and projection as the app. A running, launching or unreconciled project answers `TEAM_ACTIVE`, `TEAM_PROVISIONING` or `TEAM_PROJECT_CONTEXT_UNRECONCILED`; a project copy answers `PROJECT_COPY_NOT_EDITABLE`. `team_trash` of a per-project team (and of a copy) still refuses; `team_launch` works since the HTTP / MCP create and launch change (see the last update).
 - Gap 4 (ranked list): closed, except trashing a per-project team over HTTP/MCP, which stays in the app (`PROJECT_TEAM_DESKTOP_ONLY`).
 - Gap 5: `prompt` is no longer among the drifting fields (it is part of the definition now); provider, model, effort, fast mode, auto-approve, context limit and worktree still drift.
 - Step 2 of the recommended order ("External edit and lead instructions"): done, with the same exception for trash.
@@ -46,7 +46,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 | Feature | Legacy | Logical | Copy | Evidence |
 | --- | --- | --- | --- | --- |
 | Create in the app | works | works (mode picked in the form) | n/a | #1237, E2E |
-| Create through HTTP / MCP `team_create` | works | not possible, always creates `shared` | n/a | `http/teams.ts:284` (read) |
+| Create through HTTP / MCP `team_create` | works | works: `projectContextMode` is required (no silent default while the board tools below do not support a per-project team) | n/a | `http/teams.ts` create route, `teamMcpControl.integration.test.ts`, E2E `verifyHttpCreateAndLaunch` |
 | Import a team folder | works | creates a draft with the default mode (per project), no mode choice (untested) | n/a | `createDraftTeamConfig.ts` default mode, import dialog has no mode field (read) |
 | Copy a team | works | works, but the copy form uses the default mode, not the source mode | n/a | `TeamListView.tsx:855` (read) |
 | Edit name, description, color | works | works | refuses (by design) | #1244, E2E |
@@ -62,7 +62,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 | Feature | Legacy | Logical | Copy | Evidence |
 | --- | --- | --- | --- | --- |
 | Launch from the app | works | works, resolves or creates the copy for the selected project | refuses direct launch ("open its logical team") | `teamProjectContextLaunch.ts:26-48`, `teams.ts:2167` (read, E2E for materialization) |
-| Launch through HTTP / MCP `team_launch` | works | refuses (409, "requires the desktop project-context API") | refuses | `teamProjectContextLaunchGuard.ts`, `http/teams.ts:370` (read) |
+| Launch through HTTP / MCP `team_launch` | works | works: `cwd` is the project; the copy is resolved or created by the same use case as the app (`launchInProjectContext`), refusals answer 409 with a code | refuses (409 `PROJECT_COPY_NOT_LAUNCHABLE`) | `http/teams/teamLaunchRoute.ts`, `teamMcpControl.integration.test.ts`, E2E `verifyHttpCreateAndLaunch` |
 | Stop from the app | works | works: stops every owned context, then the logical name | works | `teamContextLifecycle.ts` `stopLogicalTeam`, `teams.ts:745` (read) |
 | Stop through HTTP / MCP `team_stop` | works | **silently wrong**: stops the exact name; a team with no process is a documented no-op, so the call succeeds while the project copy keeps running | works | `teamLifecycleRoutes.ts:64-` calls `stopTeam(name)`; `TeamProvisioningStopCleanupCompatibilityFacade.ts:199` "No-op if team is not running" (read) |
 | Runtime state / alive list through HTTP / MCP | works | **silently wrong**: physical names only, the logical team is never alive | works | `teamLifecycleRoutes.ts:207, 230` (read) |
@@ -106,8 +106,9 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 
 | Feature | Legacy | Logical | Copy |
 | --- | --- | --- | --- |
-| Hosted web / HTTP create and launch | works | not available (create is forced to `shared`, launch is refused) | refused |
-| MCP team tools `team_get`, `team_update`, `team_trash`, `team_launch`, `team_stop`, `team_list` | work | read works, update/trash/launch refuse, stop and list are silently wrong (see B, E) | stop works |
+| Hosted web / HTTP create and launch | works | works (create with a mode, launch in a project) | refused |
+| MCP team tools `team_get`, `team_update`, `team_trash`, `team_launch`, `team_stop`, `team_list` | work | read, update, launch, stop and list work; trash refuses (see B) | stop works |
+| MCP board tools (`task_*`, `message_send`, `review_*`, `kanban_*`) | work | **not supported**: they require the `config.json` of a configured team, and the logical team has none (`team_get` answers `pendingCreate: true`). Next step: resolve team + `cwd` to the project copy, as the launch does | work on the copy by its name |
 
 ## 3. Ranked gaps
 
@@ -126,7 +127,7 @@ Impact is for a user who relies on the legacy feature. Effort: S under a day, M 
 | 9 | Per-member settings dialog and settings relaunch are hidden | honest | low-medium | M | Mostly UI wiring once the definition editor owns member settings. |
 | 10 | Gateway bindings are not projected | honest | low-medium | M | Bindings are keyed by team name; project them like the roster or key them by definition. |
 | 11 | Review flow and other per-team settings are per context | semantic | low | S-M | Product decision: team-wide or per project. |
-| 12 | Hosted web / HTTP create and launch | honest | depends on hosted plans | L | Needs the same resolution layer on the HTTP side. |
+| 12 | ~~Hosted web / HTTP create and launch~~ done | honest | depends on hosted plans | L | HTTP and MCP create with a history mode and launch a per-project team in a project through the launch use case of the app. |
 
 The **silent** list, the ones that can mislead: 2, 3, 5 (and the cosmetic alias leak in 8).
 
@@ -200,6 +201,15 @@ Decisions worth knowing:
 - **Gap 8 (alias names visible) stays deferred**: the names are routing identities in agent prompts, and `TeamProvisioningPromptBuilders.ts` is a frozen size-capped file.
 
 Still open after #1247 and #1248: gaps 5 (all fields but the prompt), 6, 7, 9, 10, 11, 12, and gap 1 (schedules, which #1246 addresses). Gap 4 was closed by #1247 (except trash over HTTP/MCP), gaps 2 and 3 by this change, gap 8 stays deferred. The organization map does not count a reserved copy that is still provisioning as online, and the inspector does not load a copy's kanban state.
+
+## Update after HTTP / MCP create and launch
+
+The rows "Create through HTTP / MCP `team_create`", "Launch through HTTP / MCP `team_launch`" and section F were updated in place; gap 12 is closed. Details and the client contract: [per-project-team-targets.md](./per-project-team-targets.md#create-and-launch-over-http-and-mcp).
+
+- **Not additive:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (400 `PROJECT_CONTEXT_MODE_REQUIRED` without it). A client that relied on the old forced `shared` sends `projectContextMode: "shared"`. There is no silent default while the MCP board tools and trash do not support a per-project team (see section F).
+- One launch use case for every transport: the desktop IPC, HTTP and MCP call `launchInProjectContext` (`src/features/team-project-context/main/projectContextLaunch.ts`); the HTTP launch guard that refused per-project teams is removed.
+- Launches over HTTP and MCP record launch settings into the definition and the copy like a launch from the app (`recordLaunch` is called by `launchInProjectContext`); a launch that found the copy already running records nothing.
+- Real agent execution after an HTTP/MCP launch was not exercised: the Electron E2E runs against a runtime that denies agents.
 
 ## Update: cross-team messaging
 
