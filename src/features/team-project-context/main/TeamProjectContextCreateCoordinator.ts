@@ -1,3 +1,5 @@
+import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
+
 import { trackProjectCopyLaunch } from './projectCopyLaunches';
 
 import type { ProjectContextProgressMapper } from './projectContextLaunch';
@@ -16,15 +18,20 @@ interface TeamProjectContextCreatePorts {
   withLogicalTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   reserve(address: TeamWorkContextAddress): Promise<ResolvedTeamWorkContext>;
   releaseUnusedReservation(
-    teamName: string, executionTeamName: string, workContextId: string
+    teamName: string,
+    executionTeamName: string,
+    workContextId: string
   ): Promise<boolean>;
   assertOtherContextsStopped(teamName: string, executionTeamName: string): Promise<void>;
   ensurePhysicalDraft(address: TeamWorkContextAddress): Promise<ResolvedTeamWorkContext>;
   createNativeTeam(
-    request: TeamCreateRequest, onProgress: (progress: TeamProvisioningProgress) => void
+    request: TeamCreateRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse>;
+  hasProvisioningRun(teamName: string): boolean;
   confirmReady(
-    address: TeamWorkContextAddress, executionTeamName: string
+    address: TeamWorkContextAddress,
+    executionTeamName: string
   ): Promise<ResolvedTeamWorkContext>;
 }
 
@@ -68,12 +75,12 @@ export class TeamProjectContextCreateCoordinator {
       };
       // A pending copy counts as being launched from here until its run settled and was confirmed.
       const launch =
-        reserved.state === 'reserved' ? trackProjectCopyLaunch(reserved.executionTeamName) : undefined;
+        reserved.state === 'reserved'
+          ? trackProjectCopyLaunch(reserved.executionTeamName)
+          : undefined;
       let begun = false;
       try {
-        await this.ports.assertOtherContextsStopped(
-          request.teamName, reserved.executionTeamName
-        );
+        await this.ports.assertOtherContextsStopped(request.teamName, reserved.executionTeamName);
         const materialized = await this.ports.ensurePhysicalDraft(canonicalAddress);
         if (materialized.executionTeamName !== reserved.executionTeamName) {
           throw new Error('Project context changed during team creation');
@@ -89,7 +96,8 @@ export class TeamProjectContextCreateCoordinator {
           if (progress.state === 'ready') {
             // A spawn ACK does not authorize history access; check native config,
             // task directory and profile ownership before publishing ready.
-            void this.ports.confirmReady(canonicalAddress, reserved.executionTeamName)
+            void this.ports
+              .confirmReady(canonicalAddress, reserved.executionTeamName)
               .then(() => deliver(logicalProgress))
               .catch((error: unknown) => {
                 deliver({
@@ -105,17 +113,24 @@ export class TeamProjectContextCreateCoordinator {
         };
         const tracked = launch ? launch.settleOn(mapProgress) : mapProgress;
         begun = true;
-        return await this.ports.createNativeTeam(physicalRequest, (progress) =>
+        const result = await this.ports.createNativeTeam(physicalRequest, (progress) =>
           tracked(progress, onProgress)
         );
+        if (!isFreshLaunch(result)) launch?.end();
+        else launch?.watchRun(() => this.ports.hasProvisioningRun(reserved.executionTeamName));
+        return result;
       } catch (error) {
         launch?.end();
         // Only a never-materialized, provably empty reservation can be freed.
         // Native runs or directories must be reconciled, never hidden/deleted.
         if (!begun) {
-          await this.ports.releaseUnusedReservation(
-            request.teamName, reserved.executionTeamName, reserved.workContextId
-          ).catch(() => false);
+          await this.ports
+            .releaseUnusedReservation(
+              request.teamName,
+              reserved.executionTeamName,
+              reserved.workContextId
+            )
+            .catch(() => false);
         }
         throw error;
       }

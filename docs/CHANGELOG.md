@@ -20,7 +20,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Fixed
 
-- A cross-team message to a project whose first launch failed is refused with `PROJECT_LAUNCH_INCOMPLETE` (launch the team again there) instead of `PROJECT_LAUNCH_PENDING`, which asked to wait for a launch that no longer runs. A copy whose launch is still in flight (from its reservation until it was confirmed) or whose team runs is still reported as pending.
+- A cross-team message to a project whose first launch failed is refused with `PROJECT_LAUNCH_INCOMPLETE` (launch the team again there) instead of `PROJECT_LAUNCH_PENDING`, which asked to wait for a launch that no longer runs. A copy whose launch is still in flight (from its reservation until it was confirmed) or whose team runs is still reported as pending. OpenCode runtime delivery can only observe the launch tracker, not a separately running team.
 - Windows: direct-process teammates now spawn non-detached with the app's hidden console, reducing terminal-window flashes during Bash, git, and PowerShell tool calls. Native GUI validation and process-tree cleanup of tool subprocesses after app termination remain to be verified.
 - Windows: ccusage/tokscale token-usage importer child processes now request `windowsHide: true`; physical GUI verification of zero flashes remains pending.
 

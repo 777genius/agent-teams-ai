@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createProjectLaunchProbe,
@@ -7,6 +7,7 @@ import {
   TeamProjectContextCreateCoordinator,
   trackProjectCopyLaunch,
 } from '../../../src/features/team-project-context/main';
+import { assertReadyProjectCopy } from '../../../src/features/team-project-context/main/projectCopyRouting';
 
 import type { ProjectContextProgressMapper } from '../../../src/features/team-project-context/main';
 import type {
@@ -47,6 +48,7 @@ describe('launches of project copies', () => {
     report(progress('validating'), (next) => delivered.push(next.state));
     expect(isProjectCopyLaunching('ptc-end-window')).toBe(true);
     report(progress('ready'), (next) => delivered.push(next.state));
+    launch.watchRun(() => false);
     expect(isProjectCopyLaunching('ptc-end-window')).toBe(true);
     confirmation.open();
     await confirmation.opened;
@@ -83,6 +85,7 @@ describe('launches of project copies', () => {
         reports.push(report);
         return Promise.resolve({ runId: 'run-1' });
       },
+      hasProvisioningRun: () => true,
       confirmReady: () => Promise.resolve(reserved),
     });
     const created = coordinator.create(
@@ -110,6 +113,7 @@ describe('launches of project copies', () => {
           launch: trackProjectCopyLaunch(copy),
         }),
       rememberRunIdentity: () => undefined,
+      hasProvisioningRun: () => true,
     });
     await launchInProjectContext(request, portsFor('ptc-already-running'), {
       invoke: () =>
@@ -142,5 +146,63 @@ describe('launches of project copies', () => {
     launch.end();
     launch.end();
     expect(probe('ptc-tracked')).toBe(false);
+  });
+
+  it('clears a launch with no terminal progress once its provisioning run disappears', async () => {
+    let active = true;
+    const copy = 'ptc-silent-cancellation';
+    const request = { teamName: 'team', cwd: '/sandbox/a' } as TeamLaunchRequest;
+    const ports = {
+      getSavedRequest: () => Promise.resolve(null),
+      prepare: () => Promise.resolve({
+        request: { ...request, teamName: copy },
+        mapProgress: ((next, deliver) => deliver(next)) as ProjectContextProgressMapper,
+        launch: trackProjectCopyLaunch(copy),
+      }),
+      hasProvisioningRun: () => active,
+      rememberRunIdentity: () => undefined,
+    };
+    const launcher = { invoke: () => Promise.resolve({ runId: 'run' }), started: (result: TeamLaunchResponse) => result };
+    const context = { id: 'context', projectKey: '/sandbox/a', executionTeamName: copy, state: 'reserved' as const, projectPath: '/sandbox/a' };
+    const board = () => assertReadyProjectCopy({ isLaunching: createProjectLaunchProbe() }, 'team', '/sandbox/a', context);
+    await launchInProjectContext(request, ports, launcher);
+    expect(isProjectCopyLaunching(copy)).toBe(true);
+    expect(board).toThrow(expect.objectContaining({ code: 'PROJECT_LAUNCH_PENDING' }));
+    active = false;
+    expect(isProjectCopyLaunching(copy)).toBe(false);
+    expect(board).toThrow(expect.objectContaining({ code: 'PROJECT_LAUNCH_INCOMPLETE' }));
+    active = true;
+    await launchInProjectContext(request, ports, launcher);
+    expect(isProjectCopyLaunching(copy)).toBe(true);
+    active = false;
+    expect(isProjectCopyLaunching(copy)).toBe(false);
+  });
+
+  it('keeps independent overlapping launches and ends one when delivery throws', () => {
+    const first = trackProjectCopyLaunch('ptc-overlap');
+    const second = trackProjectCopyLaunch('ptc-overlap');
+    const report = first.settleOn((next, deliver) => deliver(next));
+    expect(() => report(progress('failed'), () => { throw new Error('delivery failed'); }))
+      .toThrow('delivery failed');
+    expect(isProjectCopyLaunching('ptc-overlap')).toBe(true);
+    second.end();
+    expect(isProjectCopyLaunching('ptc-overlap')).toBe(false);
+  });
+
+  it('reclaims a stopped launch even when no caller checks its board', () => {
+    vi.useFakeTimers();
+    try {
+      let active = true;
+      const launch = trackProjectCopyLaunch('ptc-no-readers');
+      launch.watchRun(() => active);
+      vi.advanceTimersByTime(30_000);
+      expect(vi.getTimerCount()).toBe(1);
+      active = false;
+      vi.advanceTimersByTime(30_000);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(isProjectCopyLaunching('ptc-no-readers')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
