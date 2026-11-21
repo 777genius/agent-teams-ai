@@ -75,6 +75,25 @@ describe('project live edit journal', () => {
     expect(await fs.stat(marker)).toBeDefined();
   });
 
+  it('reports committed after unlink if only the final directory sync fails', async () => {
+    const active = path.join(getTeamsBasePath(), 'ptc-a');
+    await fs.mkdir(active);
+    let directoryCalls = 0;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const journal = new TeamProjectLiveEditJournal(async () => {}, async () => {
+        directoryCalls += 1;
+        if (directoryCalls === 3) throw new Error('post-unlink sync failed');
+      });
+      await journal.begin('builders');
+      await expect(journal.clear('builders', 'ptc-a')).resolves.toBeUndefined();
+      expect(directoryCalls).toBe(3);
+      expect(await journal.hasPending('builders')).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('does not remove a corrupt or foreign marker and refuses unsafe team names', async () => {
     const journal = new TeamProjectLiveEditJournal();
     await fs.writeFile(marker, 'unexpected data');

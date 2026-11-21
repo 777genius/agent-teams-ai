@@ -5,6 +5,9 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { syncDirectoryDurably } from '@main/utils/atomicWrite';
 import { syncFile } from '@main/utils/durableFileSync';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
+
+const logger = createLogger('TeamProjectLiveEditJournal');
 
 /**
  * Presence means an edit may have reached only one of the definition and runtime.
@@ -76,6 +79,12 @@ export class TeamProjectLiveEditJournal {
       await this.synchronizeDirectory(dir);
     }
     await fs.unlink(marker);
-    await this.synchronizeDirectory(path.dirname(marker));
+    try {
+      await this.synchronizeDirectory(path.dirname(marker));
+    } catch (error) {
+      // Both writes are already durable. A crash may restore the removed marker, which
+      // only causes conservative recovery; do not report a partial write after unlink.
+      logger.warn('Could not synchronize removal of the completed live-edit marker', error);
+    }
   }
 }
