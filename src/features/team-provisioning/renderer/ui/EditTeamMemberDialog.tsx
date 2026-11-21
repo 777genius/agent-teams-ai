@@ -26,6 +26,7 @@ import {
   fingerprintResolvedMember,
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
+import { MEMBER_SETTINGS_REFUSAL_KEYS } from '../utils/memberSettingsRefusal';
 
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
@@ -199,17 +200,13 @@ export const EditTeamMemberDialog = ({
           ? { targetKind: 'lead', leadRuntime: { model: settings.model, effort: settings.effort } }
           : { targetKind: 'member', settings }),
       });
-    } catch (saveError) {
+    } catch {
       try {
         await onRefresh();
       } catch {
         // Preserve the mutation failure while still attempting current-truth refresh.
       }
-      // A refusal of the main process (for example a project of the team is running) says why.
-      const reason = saveError instanceof Error ? saveError.message.trim() : '';
-      setError(
-        reason ? t('editor.saveFailed', { error: reason }) : t('editTeam.errors.saveFailed')
-      );
+      setError(t('editTeam.errors.saveFailed'));
       return;
     }
     const committedLeadRuntime =
@@ -238,6 +235,12 @@ export const EditTeamMemberDialog = ({
     if (result.outcome === 'busy') {
       resetIdentity();
       setError(t('editTeam.errors.saveFailed'));
+      return;
+    }
+    if (result.outcome === 'refused') {
+      // Nothing was written; the main process said why with a code.
+      resetIdentity();
+      setError(t(MEMBER_SETTINGS_REFUSAL_KEYS[result.reason]));
       return;
     }
     if (result.outcome === 'target_conflict') {

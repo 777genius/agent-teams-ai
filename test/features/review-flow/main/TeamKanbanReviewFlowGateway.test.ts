@@ -15,7 +15,14 @@ afterEach(() => fs.rmSync(teamsDir, { recursive: true, force: true }));
 
 function createGateway() {
   const writer = { setReviewFlowSettings: vi.fn(async () => undefined) };
-  return { writer, gateway: new TeamKanbanReviewFlowGateway(writer, () => teamsDir) };
+  const gateway = new TeamKanbanReviewFlowGateway(writer, () => teamsDir, async (teamName) =>
+    fs.existsSync(path.join(teamsDir, teamName, 'team.meta.json')) &&
+    JSON.parse(fs.readFileSync(path.join(teamsDir, teamName, 'team.meta.json'), 'utf8'))
+      .projectContextMode === 'per_project'
+      ? 'per_project'
+      : 'shared'
+  );
+  return { writer, gateway };
 }
 
 describe('TeamKanbanReviewFlowGateway', () => {

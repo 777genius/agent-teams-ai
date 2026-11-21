@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
+import { projectCopyLabel } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -96,5 +97,5 @@ export function useKnownTeams(): readonly TeamIdentity[] {
   useEffect(() => {
     if (teams.length === 0) void fetchTeams();
   }, [teams.length, fetchTeams]);
-  return useMemo(() => reviewFlowBoardsOf(teams), [teams]);
+  return useMemo(() => reviewFlowBoardsOf(teams, (name) => projectCopyLabel(teams, name)), [teams]);
 }

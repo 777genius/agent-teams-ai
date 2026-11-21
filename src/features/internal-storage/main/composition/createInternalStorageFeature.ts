@@ -52,6 +52,11 @@ export interface InternalStorageMemberWorkSyncBackend {
 export interface InternalStorageApplicationCommandLedgerBackend {
   gateway: ApplicationCommandLedgerStorageGateway;
   selector: InternalStorageBackendSelector;
+  /**
+   * Whether the durable (SQLite) ledger was selected for this session. With the
+   * JSON fallback a ledger consumer keeps its non-durable path instead.
+   */
+  isDurable: () => Promise<boolean>;
 }
 
 export interface InternalStorageFeature {
@@ -157,7 +162,9 @@ export function createInternalStorageFeature(
       { fallbackRequiresReplica, logger }
     ),
     memberWorkSyncBackend: { gateway: client, selector, fallbackRequiresReplica },
-    applicationCommandLedgerBackend: workerAvailable ? { gateway: client, selector } : null,
+    applicationCommandLedgerBackend: workerAvailable
+      ? { gateway: client, selector, isDurable: () => selector.select(true, false) }
+      : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),

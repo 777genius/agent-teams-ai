@@ -74,3 +74,12 @@ export function findProjectCopyOwner(
 export function formatProjectCopyLabel(owner: ProjectCopyOwner): string {
   return `${owner.displayName} · ${owner.projectLabel}`;
 }
+
+/** "Team · project" for a project copy in the folded team list; null for any other name. */
+export function projectCopyLabel(
+  teams: readonly ProjectCopyCatalogTeam[],
+  teamName: string
+): string | null {
+  const owner = findProjectCopyOwner(teams, teamName);
+  return owner ? formatProjectCopyLabel(owner) : null;
+}

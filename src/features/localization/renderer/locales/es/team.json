@@ -254,13 +254,16 @@
       "provisioning": "La configuración del equipo no puede ser editada mientras el suministro sigue en curso. Espera a que el lanzamiento termine, luego vuelve a intentarlo.",
       "restartFailedMany": "Equipo ahorrado, pero no reiniciar a estos compañeros de equipo: {{failures}}",
       "restartFailedOne": "Equipo ahorrado, pero no reiniciar a este compañero de equipo: {{failures}}",
-      "saveFailed": "Failed to save",
+      "saveFailed": "No se pudo guardar",
       "settingsChanged": "Los ajustes del equipo cambiaron mientras este diálogo estaba abierto. Reabrirlo y revisar el último estado antes de ahorrar.",
       "settingsSavedMembersAndRefreshFailed": "Los ajustes del equipo se guardaron, pero los cambios del miembro fallaron: {{message}}. Refresh también falló: {{refreshError}}",
       "settingsSavedMembersFailed": "Los ajustes del equipo se guardaron, pero los cambios del miembro fallaron: {{message}}",
       "settingsSavedRefreshFailed": "Los ajustes del equipo se guardaron, pero no refrescaron la última vista: {{message}}",
       "teamNameEmpty": "El nombre del equipo no puede estar vacío",
-      "unsupportedMixedPrimaryMutation": "Todavía no se admiten ediciones en vivo para compañeros de equipo de propiedad primaria en equipos mixtos OpenCode. Para el equipo, edita la lista, luego relanza. Afectado: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Todavía no se admiten ediciones en vivo para compañeros de equipo de propiedad primaria en equipos mixtos OpenCode. Para el equipo, edita la lista, luego relanza. Afectado: {{names}}",
+      "refusedProjectCopy": "Esta es una copia de proyecto de un equipo. Cambia su configuración en el propio equipo.",
+      "refusedProjectUnreconciled": "Un proyecto de este equipo aún se está preparando o su último inicio se interrumpió. Vuelve a iniciar el equipo en ese proyecto y luego edítalo.",
+      "refusedTeamUnreadable": "No se puede leer la configuración guardada de este equipo, así que no se cambió nada."
     },
     "fields": {
       "colorOptional": "Color (opcional)",
@@ -417,6 +420,11 @@
       "member_other": "miembros",
       "title": "Equipo aún no lanzado"
     },
+    "editDefinition": {
+      "loadFailed": "No se pudo cargar la configuración del equipo",
+      "notFound": "No se encontró la configuración del equipo",
+      "memberNotFound": "Este miembro ya no está en la configuración del equipo. Vuelve a abrir el equipo para ver sus miembros actuales."
+    },
     "stopFailed": {
       "title": "No se pudo detener el equipo",
       "message": "El equipo sigue en ejecución. Comprueba su estado y pulsa Detener de nuevo."
@@ -458,6 +466,7 @@
       "deleteTeam": "Eliminar el equipo",
       "editTeam": "Equipo de edición",
       "editUnavailableProvisioning": "El equipo de edición no está disponible mientras que el suministro sigue en curso",
+      "editUnavailableRunningProject": "Detén este equipo en todos los proyectos para editarlo",
       "openBuiltInEditor": "Proyecto abierto en editor incorporado",
       "openTeamGraph": "Gráfico de equipo abierto",
       "stopTeam": "Para el equipo",

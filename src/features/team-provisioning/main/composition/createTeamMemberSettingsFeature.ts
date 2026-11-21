@@ -12,6 +12,10 @@ import {
   normalizeEditableMemberSettings,
   toMemberSettingsTarget,
 } from '../../core/domain/memberSettingsPolicy';
+import {
+  DefinitionLeadMemberSettingsRepositoryAdapter,
+  definitionMemberSettingsLifecycle,
+} from '../adapters/output/DefinitionLeadMemberSettingsAdapters';
 import { LegacyMemberSettingsLifecycleAdapter } from '../adapters/output/LegacyMemberSettingsLifecycleAdapter';
 import { LegacyMemberSettingsMutationGateAdapter } from '../adapters/output/LegacyMemberSettingsMutationGateAdapter';
 import { LegacyMemberSettingsRepositoryAdapter } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
@@ -23,7 +27,11 @@ import type {
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../contracts/memberSettings';
-import type { MemberSettingsRepositoryPort } from '../../core/application/ports/UpdateMemberSettingsPorts';
+import type {
+  MemberSettingsLifecyclePort,
+  MemberSettingsRepositoryPort,
+} from '../../core/application/ports/UpdateMemberSettingsPorts';
+import type { DefinitionLaunchSettingsPort } from '../adapters/output/DefinitionLeadMemberSettingsAdapters';
 import type { LegacyMemberSettingsLifecycleSource } from '../adapters/output/LegacyMemberSettingsLifecycleAdapter';
 import type { LegacyLiveRosterMutationSource } from '../adapters/output/LegacyMemberSettingsMutationGateAdapter';
 import type { LegacyMemberSettingsRepositoryDependencies } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
@@ -57,7 +65,9 @@ export interface TeamMemberSettingsFeatureApi {
 
 export interface TeamMemberSettingsFeatureDependencies {
   mutationSource: LegacyLiveRosterMutationSource;
-  lifecycleSource: LegacyMemberSettingsLifecycleSource;
+  /** The legacy runtime lifecycle; `lifecycle` replaces it for targets without a runtime. */
+  lifecycleSource?: LegacyMemberSettingsLifecycleSource;
+  lifecycle?: MemberSettingsLifecyclePort;
   repositoryDependencies?: LegacyMemberSettingsRepositoryDependencies;
   repository?: MemberSettingsRepositoryPort;
   commandRunner?: ApplicationCommandRunner | null;
@@ -214,6 +224,16 @@ class InProcessMemberSettingsCommandRunner {
   }
 }
 
+function requireLifecycle(
+  dependencies: TeamMemberSettingsFeatureDependencies
+): MemberSettingsLifecyclePort {
+  if (dependencies.lifecycle) return dependencies.lifecycle;
+  if (dependencies.lifecycleSource) {
+    return new LegacyMemberSettingsLifecycleAdapter(dependencies.lifecycleSource);
+  }
+  throw new Error('Team member settings feature requires a lifecycle');
+}
+
 /** Wires the focused ports and adds durable (or process-local) command idempotency. */
 export function createTeamMemberSettingsFeature(
   dependencies: TeamMemberSettingsFeatureDependencies
@@ -230,7 +250,7 @@ export function createTeamMemberSettingsFeature(
   const useCase = new UpdateMemberSettingsUseCase({
     mutationGate: new LegacyMemberSettingsMutationGateAdapter(dependencies.mutationSource),
     repository,
-    lifecycle: new LegacyMemberSettingsLifecycleAdapter(dependencies.lifecycleSource),
+    lifecycle: requireLifecycle(dependencies),
   });
   const fallback = new InProcessMemberSettingsCommandRunner();
 
@@ -349,13 +369,54 @@ export function createNodeTeamMemberSettingsFeature(
       persistLeadRuntimeSettings: (input) => dependencies.runtime.persistLeadRuntimeSettings(input),
       isTeamAlive,
     },
-    repositoryDependencies: createNodeLegacyMemberSettingsRepositoryDependencies({
-      isTeamAlive,
-      invalidateWorkerCache: (teamName) => {
-        const cache = dependencies.getWorkerCache();
-        cache.invalidateTeamConfig(teamName);
-        cache.invalidateMemberRuntimeAdvisory(teamName);
-      },
-    }),
+    repositoryDependencies: nodeRepositoryDependencies(isTeamAlive, dependencies.getWorkerCache),
+  });
+}
+
+function nodeRepositoryDependencies(
+  isTeamAlive: (teamName: string) => boolean,
+  getWorkerCache: () => NodeMemberSettingsCacheSource
+): LegacyMemberSettingsRepositoryDependencies {
+  return createNodeLegacyMemberSettingsRepositoryDependencies({
+    isTeamAlive,
+    invalidateWorkerCache: (teamName) => {
+      const cache = getWorkerCache();
+      cache.invalidateTeamConfig(teamName);
+      cache.invalidateMemberRuntimeAdvisory(teamName);
+    },
+  });
+}
+
+export interface NodeDefinitionLeadSettingsFeatureDependencies {
+  commandRunner?: ApplicationCommandRunner | null;
+  isDurableStorageAvailable?: () => Promise<boolean>;
+  memberLifecycle: LegacyLiveRosterMutationSource;
+  launchSettings: DefinitionLaunchSettingsPort;
+  isTeamAlive(teamName: string): boolean;
+  getWorkerCache(): NodeMemberSettingsCacheSource;
+}
+
+/**
+ * The lead of a team definition (a team with separate history per project):
+ * the same use case, roster lock and command ledger as every member settings
+ * change, with the definition's launch settings as the lead's settings and no
+ * runtime to restart. The caller decides that a target is a definition lead and
+ * holds the definition write around it.
+ */
+export function createNodeDefinitionLeadSettingsFeature(
+  dependencies: NodeDefinitionLeadSettingsFeatureDependencies
+): TeamMemberSettingsFeatureApi {
+  const isTeamAlive = (teamName: string) => dependencies.isTeamAlive(teamName);
+  return createTeamMemberSettingsFeature({
+    commandRunner: dependencies.commandRunner,
+    isDurableStorageAvailable: dependencies.isDurableStorageAvailable,
+    mutationSource: dependencies.memberLifecycle,
+    lifecycle: definitionMemberSettingsLifecycle,
+    repository: new DefinitionLeadMemberSettingsRepositoryAdapter(
+      new LegacyMemberSettingsRepositoryAdapter(
+        nodeRepositoryDependencies(isTeamAlive, dependencies.getWorkerCache)
+      ),
+      dependencies.launchSettings
+    ),
   });
 }

@@ -15,7 +15,18 @@ import {
   scopeToValue,
 } from '../../../../src/features/review-flow/renderer/view-model/reviewFlowViewModel';
 
+import {
+  projectCopyLabel,
+  type ProjectCopyCatalogTeam,
+} from '../../../../src/features/team-project-context/core';
+
 import type { ReviewFlowSettings } from '../../../../src/features/review-flow/contracts/types';
+
+/** The app's own copy label over the folded list, as the hook passes it in. */
+const labelIn =
+  (teams: readonly ProjectCopyCatalogTeam[]) =>
+  (name: string): string | null =>
+    projectCopyLabel(teams, name);
 
 const agent: ReviewFlowSettings = { reviewFlow: 'agent_approval', reviewFlowPrompt: '' };
 const human: ReviewFlowSettings = { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e.' };
@@ -103,14 +114,14 @@ describe('review flow boards of per-project teams', () => {
         projectHistoryContexts: [{ executionTeamName: 'ptc-old', projectPath: '/work/site' }],
       },
     ];
-    expect(reviewFlowBoardsOf(retained)).toEqual([
+    expect(reviewFlowBoardsOf(retained, labelIn(retained))).toEqual([
       { teamName: 'old', displayName: 'Old' },
       { teamName: 'ptc-old', displayName: 'Old · site' },
     ]);
   });
 
   it('lists an ordinary team as is and a per-project team once per project', () => {
-    expect(reviewFlowBoardsOf(folded)).toEqual([
+    expect(reviewFlowBoardsOf(folded, labelIn(folded))).toEqual([
       { teamName: 'legacy', displayName: 'Legacy' },
       { teamName: 'ptc-aaa', displayName: 'Builders · app-one' },
       { teamName: 'ptc-bbb', displayName: 'Builders · app-two' },
@@ -118,7 +129,7 @@ describe('review flow boards of per-project teams', () => {
   });
 
   it('labels an override of one project with the team and project, and keeps the others on the default', () => {
-    const boards = reviewFlowBoardsOf(folded);
+    const boards = reviewFlowBoardsOf(folded, labelIn(folded));
     expect(buildOverrideRows(boards, { 'ptc-aaa': human })).toEqual([
       { teamName: 'ptc-aaa', displayName: 'Builders · app-one', settings: human },
     ]);

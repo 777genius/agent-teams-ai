@@ -6,6 +6,7 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
 
+import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
@@ -19,8 +20,21 @@ import type { IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('IPC:teams:definitionEdit');
 
+/**
+ * True for both kinds of copies: the copy of a team with separate history per
+ * project (refreshed from its team) and a copy an ordinary team retained from
+ * an earlier period (history only).
+ */
 export const PROJECT_COPY_EDIT_MESSAGE =
-  'This is a project copy of a team. Edit the team itself; the copy is refreshed from it.';
+  'This is a project copy of a team (its history in one project). Edit that team instead; a project copy is never edited on its own.';
+
+/** A definition write named a project copy. */
+export class ProjectCopyEditError extends Error {
+  constructor() {
+    super(PROJECT_COPY_EDIT_MESSAGE);
+    this.name = 'ProjectCopyEditError';
+  }
+}
 
 /**
  * Saved lead instructions are part of the definition of a team with separate
@@ -47,7 +61,7 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
   const data = ports.data();
   const runtime = ports.runtime();
   const run = ports.run();
-  const { registry, resolver, gate, launchSettings } = createProjectContextRuntimeParts({
+  const { registry, resolver, gate } = createProjectContextRuntimeParts({
     data,
     runtime,
     run,
@@ -62,7 +76,8 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
       updateDisplayMetadata: async (teamName, update) => {
         await data.updateConfig(teamName, update);
       },
-      launchSettings,
+      // The copies refreshed here are confirmed stopped: their lead identity follows too.
+      launchSettings: createLaunchSettingsStore(undefined, { followLeadLaunchIdentity: true }),
     },
     async (executionTeamName) => {
       if (
@@ -85,7 +100,7 @@ export async function classifyDefinitionWrite(
   teamName: string
 ): Promise<'native' | 'logical'> {
   const target = await editor.classify(teamName);
-  if (target === 'alias') throw new Error(PROJECT_COPY_EDIT_MESSAGE);
+  if (target === 'alias') throw new ProjectCopyEditError();
   return target;
 }
 
@@ -229,14 +244,6 @@ export function refuseLeadPromptOfNativeTeam(updates: unknown): string | null {
     ? NATIVE_LEAD_PROMPT_MESSAGE
     : null;
 }
-
-/**
- * The lead of a per-project team has no member row in the definition: its
- * provider, model and effort are the team's launch settings, chosen in the
- * launch dialog and saved for every project when a launch is accepted.
- */
-export const PROJECT_TEAM_LEAD_SETTINGS_MESSAGE =
-  'The lead of a team with separate history per project takes its model and effort from the team launch settings. Change them with Change runtime; they are saved for every project.';
 
 /**
  * A settings-originated relaunch persists settings into the team it relaunches.

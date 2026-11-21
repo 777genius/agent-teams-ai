@@ -392,8 +392,25 @@ describe('EditTeamMemberDialog', () => {
     await act(async () => saveButton().click());
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
-    // The refusal of the main process is shown with its reason, not as a bare failure.
-    expect(host.textContent).toContain('editor.saveFailed');
+    expect(host.textContent).toContain('editTeam.errors.saveFailed');
+  });
+
+  it('explains a refusal of the main process in the app language, from its code', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'refused',
+      reason: 'project_running',
+      memberName: 'alice',
+      message:
+        'This team is running in a project; stop it in every project before editing the team',
+      replayed: false,
+    });
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('detail.tooltips.editUnavailableRunningProject');
+    // The English diagnostics of main are not shown.
+    expect(host.textContent).not.toContain('stop it in every project');
   });
 
   it('stays open and does not repeat refresh when refresh fails after a successful save', async () => {
