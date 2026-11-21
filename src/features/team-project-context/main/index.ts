@@ -75,6 +75,12 @@ export {
   readTeamProjectContextMode,
   TeamMetadataUnreadableError,
 } from './projectContextMode';
+export type { ProjectCopyLaunch } from './projectCopyLaunches';
+export {
+  createProjectLaunchProbe,
+  isProjectCopyLaunching,
+  trackProjectCopyLaunch,
+} from './projectCopyLaunches';
 export type { ProjectCopyPorts, ProjectCopyRefusal } from './projectCopyRouting';
 export {
   ProjectContextRefusalError,

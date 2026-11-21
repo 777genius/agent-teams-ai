@@ -23,7 +23,6 @@ export function createProjectTeamLaunch(ports: ProjectTeamRuntimePorts): Project
       parts.registry.inspect(logicalTeamName, projectPath),
     withTeamLock: (teamName, operation) =>
       ports.data.runConfigurationOperation(teamName, operation),
-    isLaunching: (teamName) => ports.run.hasProvisioningRun(teamName),
     launch: (request, launcher) => launchInProjectContext(request, launchPorts, launcher),
   };
 }

@@ -6,6 +6,7 @@
  * `resolveProjectBoardTarget`.
  */
 import {
+  createProjectLaunchProbe,
   ProjectContextRefusalError,
   TeamMetadataUnreadableError,
 } from '@features/team-project-context/main';
@@ -24,7 +25,7 @@ const logger = createLogger('HTTP:projectBoard');
 
 export function registerProjectBoardRoute(
   app: FastifyInstance,
-  services: Pick<HttpServices, 'projectContext' | 'projectTeamLaunch'>
+  services: Pick<HttpServices, 'projectContext' | 'teamApis'>
 ): void {
   app.get<{ Params: { teamName: string }; Querystring: { projectPath?: unknown } }>(
     '/api/teams/:teamName/board-target',
@@ -42,12 +43,11 @@ export function registerProjectBoardRoute(
       }
       try {
         const projectContext = createProjectContextHttp(services.projectContext);
-        // A pending copy with a launch in flight is told from one whose launch failed; the port
-        // is only built when a pending copy is met.
-        const launchPort = services.projectTeamLaunch;
-        const isLaunching = launchPort
-          ? (name: string) => launchPort().isLaunching(name)
-          : undefined;
+        // A pending copy is being launched while a launch of it is in flight or its team runs.
+        const runtime = services.teamApis?.runtime;
+        const isLaunching = createProjectLaunchProbe(
+          runtime ? (name) => runtime.getAliveTeams().includes(name) : undefined
+        );
         return reply.send(await projectContext.boardTarget(teamName, projectPath, isLaunching));
       } catch (error) {
         if (

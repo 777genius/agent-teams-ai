@@ -2,8 +2,10 @@ import {
   assertOptionalEffort,
   assertOptionalFastMode,
 } from '@main/services/team/TeamRequestValidation';
+import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
 
 import type { TeamKind } from '../contracts';
+import type { ProjectCopyLaunch } from './projectCopyLaunches';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type {
   TeamCreateRequest,
@@ -23,6 +25,8 @@ export interface PreparedProjectContextLaunch {
   mapProgress?: ProjectContextProgressMapper;
   /** Saves the launch settings of `request` for the team and its copy; a no-op unless the run is fresh. */
   recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
+  /** The launch of a pending copy, tracked from its reservation (`trackProjectCopyLaunch`). */
+  launch?: ProjectCopyLaunch;
 }
 
 export interface ProjectContextLaunchPorts {
@@ -64,8 +68,20 @@ export async function launchInProjectContext<T>(
   assertOptionalFastMode(request.fastMode);
   const selected = await ports.prepare(request);
   if (selected.request.teamName === request.teamName) return null;
-  const result = await launcher.invoke(selected.request, selected.mapProgress);
+  // A pending copy counts as being launched until its run settled and the copy was confirmed.
+  const tracked = selected.launch;
+  const mapProgress =
+    tracked && selected.mapProgress ? tracked.settleOn(selected.mapProgress) : selected.mapProgress;
+  let result: T;
+  try {
+    result = await launcher.invoke(selected.request, mapProgress);
+  } catch (error) {
+    tracked?.end();
+    throw error;
+  }
   const run = launcher.started(result);
+  // No run of this launch to wait for: refused, or the copy was already starting or running.
+  if (!run || !isFreshLaunch(run)) tracked?.end();
   if (run) {
     ports.rememberRunIdentity(run.runId, request.teamName, selected.request.teamName);
     // What this launch stated becomes the team's launch settings, on every transport.
@@ -89,7 +105,5 @@ export interface ProjectTeamLaunch {
   ): Promise<PersistedTeamWorkContext | null>;
   /** The configuration lock of a team, the one the app holds while it launches. */
   withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
-  /** Whether a launch (provisioning run) of a physical team is in flight in this app. */
-  isLaunching(teamName: string): boolean;
   launch<T>(request: TeamLaunchRequest, launcher: ProjectCopyLauncher<T>): Promise<T | null>;
 }

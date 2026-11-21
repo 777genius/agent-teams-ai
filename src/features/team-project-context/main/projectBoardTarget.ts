@@ -1,18 +1,16 @@
-import { getErrorMessage } from '@shared/utils/errorHandling';
-
 import {
+  assertReadyProjectCopy,
   createProjectCopyPorts,
   findProjectCopyOwners,
+  inspectProjectCopy,
   projectContextModeOf,
   ProjectContextRefusalError,
-  ProjectCopyUnavailableError,
   resolveReadyProjectCopy,
   withProjectCopyRefusal,
 } from './projectCopyRouting';
 
 import type { TeamModeMetaReader } from './projectContextMode';
 import type { ProjectCopyPorts, ProjectCopyRefusal } from './projectCopyRouting';
-import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 
 const UNREADABLE_MESSAGE = 'Team metadata is unreadable; refusing to choose the board of a project';
 
@@ -78,15 +76,8 @@ async function exactNameInProject(
   // An ordinary team keeps one history for every project.
   if (!copy) return { teamName };
   const logicalTeamName = copy.logicalTeamName;
-  let named: PersistedTeamWorkContext | null;
-  try {
-    named = await ports.inspectContext(logicalTeamName, projectPath);
-  } catch (error) {
-    throw new ProjectCopyUnavailableError(
-      'UNRESOLVED',
-      `Cannot find the history of team "${logicalTeamName}" in project ${projectPath}: ${getErrorMessage(error)}`
-    );
-  }
+  // One read of the project: which copy holds it, then the same readiness check as by name.
+  const named = await inspectProjectCopy(ports, logicalTeamName, projectPath);
   if (named?.executionTeamName !== teamName) {
     throw new ProjectBoardTargetError(
       'PROJECT_MISMATCH',
@@ -95,7 +86,7 @@ async function exactNameInProject(
         'and this projectPath, or without projectPath.'
     );
   }
-  const context = await resolveReadyProjectCopy(ports, logicalTeamName, projectPath);
+  const context = assertReadyProjectCopy(ports, logicalTeamName, projectPath, named);
   return { teamName, logicalTeamName, projectPath: context.projectPath };
 }
 

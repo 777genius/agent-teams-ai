@@ -1,7 +1,11 @@
 // @vitest-environment node
 
 import { BoundControlContext } from '@features/external-agent-connection/main';
-import { TeamProjectContextRegistry } from '@features/team-project-context/main';
+import {
+  isProjectCopyLaunching,
+  TeamProjectContextRegistry,
+  trackProjectCopyLaunch,
+} from '@features/team-project-context/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { registerTeamRoutes } from '@main/http/teams';
 import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
@@ -2143,7 +2147,7 @@ describe('MCP team tools over the local REST control API', () => {
     setClaudeBasePathOverride(root);
     setAppDataBasePath(path.join(root, 'app-state'));
     const app = Fastify();
-    const { services, teamDataService, launching } = createServices(root);
+    const { services, teamDataService } = createServices(root);
     registerTeamRoutes(app, services);
     const controlUrl = 'http://per-project-board.test';
     const restoreFetch = installControlApiFetchMock(app, controlUrl);
@@ -2159,10 +2163,34 @@ describe('MCP team tools over the local REST control API', () => {
           projectContextMode: 'per_project',
           teamName,
           cwd: root,
+          providerId: 'codex',
           members: [{ name: 'builder', role: 'Engineer' }],
         },
         { claimOwnerOnCreate: true }
       );
+      // A real launch in project E: its copy counts as being launched from the reservation, before
+      // its provisioning run starts, until the run was ready and the copy confirmed.
+      await mkdir(project('e'));
+      const start = services.teamApis!.provisioningStart;
+      const createCopy = start.createTeam;
+      const launchedAtStart: Array<[string, boolean]> = [];
+      start.createTeam = (request, onProgress) => {
+        launchedAtStart.push([request.teamName, isProjectCopyLaunching(request.teamName)]);
+        return createCopy(request, onProgress);
+      };
+      const launchE = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/launch`,
+        payload: { cwd: project('e') },
+      });
+      expect(launchE.statusCode, launchE.body).toBe(200);
+      expect(launchedAtStart).toEqual([[expect.stringMatching(/^ptc-/), true]]);
+      const copyE = launchedAtStart[0][0];
+      await vi.waitFor(async () => {
+        expect(await registry.find(teamName, project('e'))).toMatchObject({ state: 'ready' });
+        expect(isProjectCopyLaunching(copyE)).toBe(false);
+      });
+      start.createTeam = createCopy;
       const copyIn = async (id: string) => {
         await mkdir(project(id));
         const { executionTeamName } = await registry.reserve(teamName, project(id));
@@ -2236,7 +2264,7 @@ describe('MCP team tools over the local REST control API', () => {
         'ONLY_IN_PROJECT_A'
       );
       const mismatch = call('task_list', { teamName: copyB, projectPath: project('a') });
-      await expect(mismatch).rejects.toMatchObject({ code: 'PROJECT_MISMATCH' });
+      await expect(mismatch).rejects.toMatchObject({ code: 'PROJECT_MISMATCH', name: 'UserError' });
       await expect(mismatch).rejects.toThrow(/^\[PROJECT_MISMATCH\] /);
 
       // No project, a project without history, a relative path: refused, never guessed. The code
@@ -2250,15 +2278,15 @@ describe('MCP team tools over the local REST control API', () => {
       ).rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
       await expect(call('task_list', { projectPath: 'project-a' })).rejects.toThrow(/absolute/);
 
-      // A pending copy: waiting helps only while its launch runs (the app's provisioning run).
+      // A pending copy: waiting helps only while a launch of it runs in the app.
       await expect(call('task_list', { projectPath: project('c') })).rejects.toMatchObject({
         code: 'PROJECT_LAUNCH_INCOMPLETE',
       });
-      launching.add(pendingCopy);
+      const pendingLaunch = trackProjectCopyLaunch(pendingCopy);
       await expect(call('task_list', { projectPath: project('c') })).rejects.toMatchObject({
         code: 'PROJECT_LAUNCH_PENDING',
       });
-      launching.delete(pendingCopy);
+      pendingLaunch.end();
 
       // Unreadable metadata of a team without config.json reaches the app, which refuses it.
       await mkdir(path.join(teamsBase, 'broken-board'));

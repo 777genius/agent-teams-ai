@@ -301,8 +301,6 @@ export interface TeamCrossTeamMessagingApi {
     conversationId: string
   ): void;
   isTeamAlive(teamName: string): boolean;
-  /** Whether a launch (provisioning run) of the team is in flight; absent: cannot be told. */
-  hasProvisioningRun?(teamName: string): boolean;
   relayInboxFileToLiveRecipient(
     teamName: string,
     inboxName: string,
@@ -645,7 +643,6 @@ export function bindTeamCrossTeamMessagingApi(
     clearPendingCrossTeamReplyExpectation:
       source.clearPendingCrossTeamReplyExpectation.bind(source),
     isTeamAlive: source.isTeamAlive.bind(source),
-    hasProvisioningRun: source.hasProvisioningRun?.bind(source),
     relayInboxFileToLiveRecipient: source.relayInboxFileToLiveRecipient.bind(source),
     relayLeadInboxMessages: source.relayLeadInboxMessages.bind(source),
   };

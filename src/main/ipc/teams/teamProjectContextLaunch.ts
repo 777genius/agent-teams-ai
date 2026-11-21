@@ -4,6 +4,7 @@ import {
   recordLaunchSettings,
   rememberProjectRunIdentity,
   TeamProjectContextLaunchConflictError,
+  trackProjectCopyLaunch,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
@@ -16,6 +17,7 @@ import type {
   DefinitionLaunchSettingsStore,
   ProjectContextLaunchPorts,
   ProjectContextProgressMapper,
+  ProjectCopyLaunch,
 } from '@features/team-project-context/main';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
@@ -33,6 +35,8 @@ export interface PreparedTeamContextLaunch {
    * what the definition says and never records).
    */
   recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
+  /** The launch of a pending copy, tracked from its reservation; the launch use case ends it. */
+  launch?: ProjectCopyLaunch;
 }
 
 /**
@@ -61,6 +65,9 @@ export async function prepareTeamContextLaunch(
   const address = { logicalTeamName: request.teamName, projectPath: request.cwd };
   const reserved = await parts.resolver.reserveForProvisioning(address);
   if (!reserved.workContextId || !reserved.projectPath) throw new Error('Missing project context identity');
+  // A pending copy counts as being launched from here, before its run exists.
+  const launch =
+    reserved.state === 'reserved' ? trackProjectCopyLaunch(reserved.executionTeamName) : undefined;
   const canonicalAddress = {
     logicalTeamName: address.logicalTeamName,
     projectPath: reserved.projectPath,
@@ -86,6 +93,7 @@ export async function prepareTeamContextLaunch(
     }
     return {
       request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },
+      launch,
       recordLaunch: (response) =>
         recordAcceptedLaunch(parts.launchSettings, request, physical.executionTeamName, response),
       mapProgress: (progress, deliver) => {
@@ -107,6 +115,7 @@ export async function prepareTeamContextLaunch(
       },
     };
   } catch (error) {
+    launch?.end();
     // Only an empty, unmaterialized reservation may be forgotten. Retain any
     // physical state for explicit reconciliation after crash or partial launch.
     await parts.registry.releaseUnusedReservation(

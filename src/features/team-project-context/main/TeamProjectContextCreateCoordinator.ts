@@ -1,3 +1,6 @@
+import { trackProjectCopyLaunch } from './projectCopyLaunches';
+
+import type { ProjectContextProgressMapper } from './projectContextLaunch';
 import type {
   ResolvedTeamWorkContext,
   TeamWorkContextAddress,
@@ -63,6 +66,9 @@ export class TeamProjectContextCreateCoordinator {
         logicalTeamName: request.teamName,
         projectPath: reserved.projectPath,
       };
+      // A pending copy counts as being launched from here until its run settled and was confirmed.
+      const launch =
+        reserved.state === 'reserved' ? trackProjectCopyLaunch(reserved.executionTeamName) : undefined;
       let begun = false;
       try {
         await this.ports.assertOtherContextsStopped(
@@ -78,15 +84,15 @@ export class TeamProjectContextCreateCoordinator {
           cwd: reserved.projectPath,
           projectContextMode: 'shared',
         };
-        const reportProgress = (progress: TeamProvisioningProgress): void => {
+        const mapProgress: ProjectContextProgressMapper = (progress, deliver) => {
           const logicalProgress = { ...progress, teamName: request.teamName };
           if (progress.state === 'ready') {
             // A spawn ACK does not authorize history access; check native config,
             // task directory and profile ownership before publishing ready.
             void this.ports.confirmReady(canonicalAddress, reserved.executionTeamName)
-              .then(() => onProgress(logicalProgress))
+              .then(() => deliver(logicalProgress))
               .catch((error: unknown) => {
-                onProgress({
+                deliver({
                   ...logicalProgress,
                   state: 'failed',
                   message: 'Could not verify the new project context',
@@ -95,11 +101,15 @@ export class TeamProjectContextCreateCoordinator {
               });
             return;
           }
-          onProgress(logicalProgress);
+          deliver(logicalProgress);
         };
+        const tracked = launch ? launch.settleOn(mapProgress) : mapProgress;
         begun = true;
-        return await this.ports.createNativeTeam(physicalRequest, reportProgress);
+        return await this.ports.createNativeTeam(physicalRequest, (progress) =>
+          tracked(progress, onProgress)
+        );
       } catch (error) {
+        launch?.end();
         // Only a never-materialized, provably empty reservation can be freed.
         // Native runs or directories must be reconciled, never hidden/deleted.
         if (!begun) {

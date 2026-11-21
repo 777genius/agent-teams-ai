@@ -28,8 +28,8 @@ export interface ProjectCopyPorts {
   /** Every context a per-project team owns. */
   listContexts(logicalTeamName: string): Promise<readonly PersistedTeamWorkContext[]>;
   /**
-   * Whether a launch of the copy is in flight (a provisioning run of the app). Without it a
-   * pending copy cannot be told from one whose launch failed, and reads as being launched.
+   * Whether a pending copy is being launched (`createProjectLaunchProbe`). Without it a pending
+   * copy cannot be told from one whose launch failed, and reads as being launched.
    */
   isLaunching?(executionTeamName: string): boolean;
 }
@@ -107,29 +107,37 @@ export async function findProjectCopyOwners(
 }
 
 /**
- * The one rule for the copy that holds the history of a per-project team in a project: only a
- * ready copy, never another project's and never a new one.
+ * The context of a team for one project, read-only (a pending one included). An index that cannot
+ * be used (damaged, being deleted, the team in the trash) is `UNRESOLVED`; `unresolved` lets a
+ * consumer say what it could not do, the reason is appended.
+ */
+export async function inspectProjectCopy(
+  ports: Pick<ProjectCopyPorts, 'inspectContext'>,
+  logicalTeamName: string,
+  projectPath: string,
+  unresolved = `Cannot find the history of team "${logicalTeamName}" in project ${projectPath}`
+): Promise<PersistedTeamWorkContext | null> {
+  try {
+    return await ports.inspectContext(logicalTeamName, projectPath);
+  } catch (error) {
+    throw new ProjectCopyUnavailableError('UNRESOLVED', `${unresolved}: ${getErrorMessage(error)}`);
+  }
+}
+
+/**
+ * Whether the context read by `inspectProjectCopy` can be used now: only a ready copy.
  *
  * - No context for the project: `NO_PROJECT_HISTORY`.
- * - A `reserved` context: `PROJECT_LAUNCH_PENDING` while its launch is in flight (or when that
- *   cannot be told), else `PROJECT_LAUNCH_INCOMPLETE` (a launch failed or was interrupted: waiting
- *   does not help, launching again in that project does).
- * - An index that cannot be used (damaged, being deleted, the team in the trash): `UNRESOLVED`.
+ * - A `reserved` context: `PROJECT_LAUNCH_PENDING` while a launch of it runs (`isLaunching`, or
+ *   when that cannot be told), else `PROJECT_LAUNCH_INCOMPLETE` (a launch failed or was
+ *   interrupted: waiting does not help, launching again in that project does).
  */
-export async function resolveReadyProjectCopy(
-  ports: Pick<ProjectCopyPorts, 'inspectContext' | 'isLaunching'>,
+export function assertReadyProjectCopy(
+  ports: Pick<ProjectCopyPorts, 'isLaunching'>,
   logicalTeamName: string,
-  projectPath: string
-): Promise<PersistedTeamWorkContext> {
-  let context: PersistedTeamWorkContext | null;
-  try {
-    context = await ports.inspectContext(logicalTeamName, projectPath);
-  } catch (error) {
-    throw new ProjectCopyUnavailableError(
-      'UNRESOLVED',
-      `Cannot find the history of team "${logicalTeamName}" in project ${projectPath}: ${getErrorMessage(error)}`
-    );
-  }
+  projectPath: string,
+  context: PersistedTeamWorkContext | null
+): PersistedTeamWorkContext {
   if (!context) {
     throw new ProjectCopyUnavailableError(
       'NO_PROJECT_HISTORY',
@@ -147,6 +155,20 @@ export async function resolveReadyProjectCopy(
     'PROJECT_LAUNCH_INCOMPLETE',
     `The launch of team "${logicalTeamName}" in project ${projectPath} did not finish.`
   );
+}
+
+/**
+ * The one rule for the copy that holds the history of a per-project team in a project: only a
+ * ready copy, never another project's and never a new one (`inspectProjectCopy`, then
+ * `assertReadyProjectCopy`).
+ */
+export async function resolveReadyProjectCopy(
+  ports: Pick<ProjectCopyPorts, 'inspectContext' | 'isLaunching'>,
+  logicalTeamName: string,
+  projectPath: string
+): Promise<PersistedTeamWorkContext> {
+  const context = await inspectProjectCopy(ports, logicalTeamName, projectPath);
+  return assertReadyProjectCopy(ports, logicalTeamName, projectPath, context);
 }
 
 /**

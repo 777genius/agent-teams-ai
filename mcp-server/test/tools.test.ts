@@ -7,7 +7,8 @@ import agentTeamsControllerModule from 'agent-teams-controller';
 
 import { AGENT_TEAMS_REGISTERED_TOOL_NAMES, registerTools } from '../src/tools';
 
-const { AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES } = agentTeamsControllerModule;
+const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES } =
+  agentTeamsControllerModule;
 
 type RegisteredTool = {
   description?: string;
@@ -572,6 +573,47 @@ describe('agent-teams-mcp tools', () => {
         JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'per_project' })
       );
     };
+
+    it('makes every catalog group say whether its tools work on a board', () => {
+      // A new group must decide: a missing flag would silently leave its tools without projectPath.
+      for (const group of AGENT_TEAMS_MCP_TOOL_GROUPS) {
+        expect(typeof group.projectBoard, group.id).toBe('boolean');
+      }
+    });
+
+    // MCP clients only see the text of a tool error: a refusal of the app leads it with its code,
+    // also when it comes from the tool itself (cross-team routing), not only from the board lookup.
+    it('shows a refusal of the app to the client with its code first', async () => {
+      const claudeDir = makeClaudeDir();
+      writeTeamConfig(claudeDir, 'sender-team', { members: [{ name: 'lead', role: 'team-lead' }] });
+      const server = await startControlServer(({ url }) =>
+        String(url).startsWith('/api/teams/sender-team/cross-team/recipient')
+          ? {
+              statusCode: 409,
+              body: { code: 'NO_PROJECT_HISTORY', error: 'Team "builders" has no history here yet.' },
+            }
+          : { statusCode: 500, body: { error: `Unexpected ${String(url)}` } }
+      );
+      fs.writeFileSync(
+        path.join(claudeDir, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: server.baseUrl })
+      );
+      try {
+        const refused = getTool('cross_team_send').execute({
+          claudeDir,
+          teamName: 'sender-team',
+          toTeam: 'builders',
+          text: 'Must not be delivered',
+        });
+        await expect(refused).rejects.toMatchObject({
+          name: 'UserError',
+          code: 'NO_PROJECT_HISTORY',
+          message: '[NO_PROJECT_HISTORY] Team "builders" has no history here yet.',
+        });
+      } finally {
+        await server.close();
+      }
+    });
 
     it('takes projectPath on the board tools of the catalog and on no other tool', () => {
       // The team as a whole, launch and stop, and the runtime bridge (called by a physical name).

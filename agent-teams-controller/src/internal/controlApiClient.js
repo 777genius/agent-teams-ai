@@ -146,7 +146,11 @@ async function requestJson(baseUrl, pathname, options = {}) {
       const failure = new Error(detail || 'Team control API request failed');
       // A structured refusal (for example an incomplete stop) keeps its machine-readable
       // parts for programmatic callers; the message already names what went wrong.
-      if (payload && typeof payload.code === 'string') failure.code = payload.code;
+      // `appRefusal` tells it from any other error with a code (an MCP server shows it to the client).
+      if (payload && typeof payload.code === 'string') {
+        failure.code = payload.code;
+        Object.defineProperty(failure, 'appRefusal', { value: true });
+      }
       if (payload && payload.outcome && typeof payload.outcome === 'object') {
         failure.outcome = payload.outcome;
       }

@@ -1,8 +1,10 @@
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import {
+  assertReadyProjectCopy,
   createProjectCopyPorts,
   findProjectCopyOwners,
+  inspectProjectCopy,
   projectContextModeOf,
   ProjectContextRefusalError,
   resolveReadyProjectCopy,
@@ -104,9 +106,16 @@ async function exactName(
       'Cannot send cross-team message to the same team'
     );
   }
-  // The same rule as a send by the team's name: a ready copy of a team that is not being
-  // deleted or moved to trash.
-  await resolveReadyProjectCopy(ports, target.logicalTeamName, target.context.projectPath);
+  // The same rule as a send by the team's name: a ready copy (its row from the owner lookup) of a
+  // team that is not being deleted or moved to trash (the same read as a send by name).
+  const { logicalTeamName, context } = target;
+  assertReadyProjectCopy(ports, logicalTeamName, context.projectPath, context);
+  await inspectProjectCopy(
+    ports,
+    logicalTeamName,
+    context.projectPath,
+    `Team "${logicalTeamName}" cannot receive messages in project ${context.projectPath}`
+  );
   return { teamName: toTeam };
 }
 

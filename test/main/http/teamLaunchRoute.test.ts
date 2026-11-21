@@ -123,7 +123,6 @@ describe('POST /api/teams/:team/launch of a team with separate history per proje
         order.push(`lock:${teamName}`);
         return operation();
       }),
-      isLaunching: vi.fn(() => false),
       launch: vi.fn((request, launcher) => {
         order.push('launch');
         useCaseRequest = request;

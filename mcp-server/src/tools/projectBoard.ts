@@ -1,4 +1,4 @@
-import type { FastMCP } from 'fastmcp';
+import { type FastMCP, UserError } from 'fastmcp';
 import { z } from 'zod';
 
 import agentTeamsControllerModule from 'agent-teams-controller';
@@ -23,12 +23,28 @@ interface BoardToolArgs {
 }
 
 /**
+ * A refusal of the app (an error the controller marks `appRefusal`, with its `code`) as the MCP
+ * client sees it: a client only gets the text of a tool error, and FastMCP shows a `UserError` as
+ * it is instead of `Tool '…' execution failed: …`. So the text starts with the code,
+ * `[PROJECT_REQUIRED] …`, and the code is also in the structured content and on the error.
+ */
+function asClientRefusal(error: unknown): unknown {
+  const refusal = error as { appRefusal?: unknown; code?: unknown } | null;
+  if (!(error instanceof Error) || refusal?.appRefusal !== true || typeof refusal.code !== 'string') {
+    return error;
+  }
+  const { code } = refusal;
+  return Object.assign(new UserError(`[${code}] ${error.message}`, { code }), { code });
+}
+
+/**
  * Registers the board tools of `server` so that each works on the board the caller means. A board
  * tool gets an optional `projectPath`, and its team is resolved once, before the tool runs, by the
  * one rule in `resolveBoardTeam`: the tool then receives the physical team (an ordinary team, or
- * the project copy of a per-project team) as its `teamName`, and never sees `projectPath`.
- * The other tools (the team as a whole, launch and stop, the runtime bridge) are registered
- * unchanged.
+ * the project copy of a per-project team) as its `teamName`, and never sees `projectPath`. A
+ * refusal of the app, from the resolution or from the tool itself (`cross_team_send`), reaches the
+ * client with its code. The other tools (the team as a whole, launch and stop, the runtime bridge)
+ * are registered unchanged.
  */
 export function withProjectBoards(server: ToolServer): ToolServer {
   return {
@@ -53,12 +69,16 @@ export function withProjectBoards(server: ToolServer): ToolServer {
         parameters: parameters.extend({ projectPath: projectPathParameter }),
         execute: async (args, context) => {
           const { projectPath, ...rest } = args as BoardToolArgs;
-          const teamName = await resolveBoardTeam(
-            rest.teamName,
-            rest.claudeDir,
-            projectPath?.trim() || undefined
-          );
-          return execute({ ...rest, teamName } as Parameters<typeof execute>[0], context);
+          try {
+            const teamName = await resolveBoardTeam(
+              rest.teamName,
+              rest.claudeDir,
+              projectPath?.trim() || undefined
+            );
+            return await execute({ ...rest, teamName } as Parameters<typeof execute>[0], context);
+          } catch (error) {
+            throw asClientRefusal(error);
+          }
         },
       });
     },
