@@ -14,7 +14,10 @@ import { withTeamLaunchStatePublicationLock } from '@main/services/team/TeamLaun
 import { rosterSettings } from '../../adapters/rosterValues';
 import { captureConfiguredHostTeamDraft } from '../../application/createConfiguredHostTeam';
 
-import { rememberLegacyStoppedSourceBoundary } from './legacyStoppedSourceDiagnostic';
+import {
+  rememberLegacyStoppedOwnerFacts,
+  rememberLegacyStoppedSourceBoundary,
+} from './legacyStoppedSourceDiagnostic';
 
 import type { LegacyStoppedSourceDiagnosticBoundary } from './retainedLegacyOpenDiagnosticContract';
 import type {
@@ -265,8 +268,11 @@ export function createLegacyStoppedTeamSource(
           Object.values(facts).some((group) =>
             Object.values(group).some((count) => !Number.isSafeInteger(count) || count !== 0)
           )
-        )
-          return hold('owner-active');
+        ) {
+          const error = new LegacyStoppedImportHold('owner-active');
+          rememberLegacyStoppedOwnerFacts(error, facts);
+          throw error;
+        }
         boundary = 'notification-facts';
         const notifications = await owners.data.readStoppedTeamImportNotificationFacts(
           binding.teamName

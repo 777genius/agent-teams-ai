@@ -5,7 +5,6 @@ import { lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js';
 import { readScheduledRunCapture } from '../../packages/legacy-agent-host/dist/composition/scheduledRunCapture.js';
@@ -33,7 +32,7 @@ import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
 import { nativeEmulatedSourceCold } from './nativeEmulatedSourceCold';
 import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness,
-  joinEmulatedSourceRefusalObservations, captureEmulatedSourceReadinessObservation,
+  joinEmulatedSourceRefusalObservations, captureEmulatedSourceReadinessObservation, pollEmulatedSource as poll,
   readEmulatedCodexReadinessObservation, readEmulatedSourceJournal as journal,
   validateEmulatedSourceRefusal, unwrapEmulatedSourceResult as unwrap,
   type EmulatedSourceCustodyTiming as CustodyTiming } from './nativeEmulatedSourceReadiness';
@@ -51,16 +50,6 @@ const object = (raw: unknown): Record<string, unknown> => {
 const json = (raw: unknown): JsonValue => JSON.parse(JSON.stringify(raw)) as JsonValue;
 const text = (raw: unknown): string => { assert.equal(typeof raw, 'string'); return raw as string; };
 const rows = (raw: unknown): Record<string, unknown>[] => { assert.ok(Array.isArray(raw)); return raw.map(object); };
-async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {
-  const deadline = absoluteDeadline ?? performance.now() + budget;
-  for (;;) {
-    assert.ok(performance.now() < deadline, message);
-    const ready = await check();
-    assert.ok(performance.now() < deadline, message);
-    if (ready) return;
-    await delay(25);
-  }
-}
 function validateSourceRefusal(value: Record<string, unknown>, persisted: boolean) {
   validateEmulatedSourceRefusal(value, persisted);
 }
@@ -255,7 +244,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       json({ commandId, binding: { schemaVersion: 1, handleId: descriptor.handles[team]!.handleId,
         owner: fixture.profile.owner, scope: fixture.profile.teams[team]!.scope }, payload }),
       { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read'),
-        ...(provider === 'opencode' && deadline !== undefined ? { remainingMs: () => deadline - performance.now() } : {}) }));
+        ...((provider === 'opencode' || provider === 'codex' && method === 'runtime.read') && deadline !== undefined
+          ? { remainingMs: () => deadline - performance.now() } : {}) }));
     const management = (source: RuntimeSourceSummary) => captureProviderManagement({
       targetId: capturedRuntimeSourceGrant(descriptor, { ...selected, profileId: source.profileId,
         configRevision: source.configRevision }).targetId,
@@ -430,6 +420,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         const timeoutMs = member.timeoutMs;
         assert.ok(typeof timeoutMs === 'number' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0);
       }
+      let startedLaunch: Record<string, unknown> | undefined;
       if (provider === 'opencode') {
         // Reuse the original Main aggregate phases with this fixture's private native inputs.
         const budget = captureRequestReadinessBudget(fixture.host.requestTimeoutMs);
@@ -469,9 +460,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         });
         unwrap(await router.request(handle, { commandId, method: 'team.launch.start', payload,
           guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));
-      } else await epoch.rpc(team, 'team.launch.start', commandId, payload);
+      } else startedLaunch = await epoch.rpc(team, 'team.launch.start', commandId, payload);
       // Original readiness observation starts once after the Start acknowledgement.
-      const observation = captureEmulatedSourceReadinessObservation(provider, fixture.host.requestTimeoutMs);
+      const observation = captureEmulatedSourceReadinessObservation(provider, fixture.host.requestTimeoutMs,
+        { definition: capturedDefinition, selected: selectedLaunch, started: startedLaunch, commandId });
       const memberReadinessDeadline = provider === 'claude' ? undefined : observation?.deadlineMs ?? performance.now() + 15000;
       let view: Record<string, unknown> = {};
       const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0, ...(observation ? { observation } : {}),
@@ -486,8 +478,9 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,
               ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });
           return view.nativeReady === true; }, 'Original source Team readiness',
-          undefined, memberReadinessDeadline);
+          undefined, memberReadinessDeadline, observation && 'attemptDeadlineMs' in observation ? observation.attemptDeadlineMs : undefined);
       } finally {
+        if (provider === 'codex') readiness.elapsedMs = performance.now() - readinessStarted;
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));
       }
       const jobs = epoch.jobs.slice(before);

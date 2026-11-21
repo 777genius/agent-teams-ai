@@ -209,10 +209,10 @@ const probeCloseFailure = { probeDigest: 'a'.repeat(64), runState: 'threw', outc
   errorClass: 'held', stage: 'owner-client', reason: 'threw', runErrorCode: null, runCauseCode: 'ECONNRESET' };
 const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'] as const;
+  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit'] as const;
 const startupFailurePhases = ['startup-timer-aborted', 'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed'] as const;
 
-test('probe phase observations retain captured hashes, a lazy clock and at most seventeen transitions', () => {
+test('probe phase observations retain captured hashes, a lazy clock and at most eighteen transitions', () => {
   const secret = 'TEST-private-command-path-key';
   const selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
   const original = { ...selected }, lines: string[] = [];
@@ -221,10 +221,12 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
     () => { clockReads++; return clock; });
   selected.profileId = secret; selected.configRevision = secret; clock = 500;
   assert.equal(clockReads, 0); assert.deepEqual(lines, [], 'construction does not observe or start a probe');
+  observe('attestation-returned-extra' as typeof probePhases[number]);
+  assert.equal(clockReads, 0, 'unknown phases cannot consume a sequence slot or read the clock');
   for (const phase of probePhases) { observe(phase); clock += 7; }
   for (const phase of startupFailurePhases) observe(phase);
   for (let repeat = 0; repeat < 20; repeat++) for (const phase of probePhases) observe(phase);
-  assert.equal(lines.length, probePhases.length); assert.equal(lines.length, 17);
+  assert.equal(lines.length, probePhases.length); assert.equal(lines.length, 18);
   assert.equal(clockReads, probePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
@@ -336,15 +338,17 @@ test('probe decoder rejects raw, nonfinite, extra and custody-like fields and re
     { ...valid, extra: 'TEST-secret' }, { ...valid, pid: 42 }, { ...valid, ready: true },
     { ...valid, profileHash: 'TEST-path' }, { ...valid, commandHash: '/private/path' },
     { ...valid, probeDigest: null }, { ...valid, phase: 'released' }, { ...valid, phase: 'failure' },
-    { ...valid, sequence: 0 }, { ...valid, sequence: 18 }, { ...valid, sequence: 1.5 },
+    { ...valid, phase: 'attestation-returned-extra' },
+    { ...valid, sequence: 0 }, { ...valid, sequence: 19 }, { ...valid, sequence: 1.5 },
     { ...valid, elapsedMs: -1 }, { ...valid, elapsedMs: 3_600_001 },
     { ...valid, elapsedMs: null }, { ...valid, elapsedMs: undefined },
   ]) decode(Buffer.from(frame(unsafe)));
   assert.deepEqual(values, []);
   decode(Buffer.concat([Buffer.from(probePrefix), Buffer.from([0xff]), Buffer.from('\n')]));
   decode(Buffer.from(probePrefix + 'x'.repeat(8193)));
-  decode(Buffer.from('\n' + frame(valid) + frame({ ...valid, sequence: 17, elapsedMs: 3_600_000 })));
-  assert.deepEqual(values, [valid, { ...valid, sequence: 17, elapsedMs: 3_600_000 }]);
+  const final = { ...valid, phase: 'attestation-returned', sequence: 18, elapsedMs: 3_600_000 };
+  decode(Buffer.from('\n' + frame(valid) + frame(final)));
+  assert.deepEqual(values, [valid, final]);
 });
 
 test('captured Host logs retain the new phase separately from original metadata custody records', () => {

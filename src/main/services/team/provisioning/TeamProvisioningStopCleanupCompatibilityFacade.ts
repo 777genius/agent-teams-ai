@@ -249,6 +249,8 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
               persisted !== null && nativeReleaseDigest(persisted) === nativeReleaseDigest(proof)
             );
           },
+          onRefusal: (value) => logger.warn('Native Stop release refused ' +
+            JSON.stringify({ ...value, attempt: generation })),
           unavailable: () => logger.warn('Native Stop release publication remains unconfirmed'),
         });
         if (publication?.drain) {

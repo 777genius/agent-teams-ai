@@ -1,6 +1,7 @@
 /** TEST readback of an original aggregate action; never writes or synthesizes readiness. */
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
 import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js';
@@ -12,9 +13,67 @@ import { readinessOriginDigest } from '../../src/features/agent-backend/main/inf
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { TeamLaunchRecord } from '../../packages/legacy-agent-host/dist/team-launch/contracts.js';
 
+export async function pollEmulatedSource(
+  check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number, wallDeadline?: number
+): Promise<void> {
+  const deadline = absoluteDeadline ?? performance.now() + budget;
+  for (;;) {
+    assert.ok(performance.now() < deadline && (wallDeadline === undefined || Date.now() < wallDeadline), message);
+    const ready = await check();
+    assert.ok(performance.now() < deadline && (wallDeadline === undefined || Date.now() < wallDeadline), message);
+    if (ready) return;
+    await delay(25);
+  }
+}
+
 // Match the existing desktop V1 TEST workflow profile, not a product latency SLO.
 export const emulatedSourceOpenCodeRequestTimeoutMs = 60_000;
-export function captureEmulatedSourceReadinessObservation(provider: string, requestTimeoutMs: number) {
+export function captureEmulatedSourceReadinessObservation(provider: string, requestTimeoutMs: number, original?: {
+  definition: unknown; selected: unknown; started: unknown; commandId: string;
+}) {
+  if (provider === 'codex') {
+    // Observe the already admitted original attempt. Neither the ACK nor a read renews its cutoff.
+    const message = 'Original source Codex readiness attempt';
+    const record = (raw: unknown): Record<string, unknown> => {
+      assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw), message);
+      return raw as Record<string, unknown>;
+    };
+    const member = (value: Record<string, unknown>) => {
+      assert.ok(Array.isArray(value.members), message);
+      const selected = value.members.map(record).filter(row => row.memberId === 'alice-id');
+      assert.equal(selected.length, 1, message); return selected[0]!;
+    };
+    assert.ok(original, message);
+    const definition = record(original.definition), selected = record(original.selected), started = record(original.started);
+    for (const key of ['launchId', 'rosterRevision']) {
+      assert.ok(typeof definition[key] === 'string' && definition[key].length > 0, message);
+      assert.equal(selected[key], definition[key], message); assert.equal(started[key], definition[key], message);
+    }
+    const admission = record(started.admission);
+    assert.equal(admission.commandId, original.commandId, message);
+    assert.equal(admission.sourceRosterRevision, definition.rosterRevision, message);
+    const expected = member(definition), before = member(selected), current = member(started);
+    const binding = record(expected.binding);
+    assert.equal(binding.runId, definition.launchId, message); assert.equal(binding.memberId, 'alice-id', message);
+    assert.deepEqual(before.binding, binding, message); assert.deepEqual(current.binding, binding, message);
+    const previous = record(before.attempt), attempt = record(current.attempt), ceilingMs = expected.timeoutMs;
+    assert.equal(previous.claimed, false, message); assert.equal(attempt.claimed, true, message);
+    for (const key of ['attemptId', 'hostIncarnation']) {
+      assert.ok(typeof previous[key] === 'string' && previous[key].length > 0, message);
+      assert.equal(attempt[key], previous[key], message);
+    }
+    const attemptStartedAtMs = attempt.startedAtMs, attemptDeadlineMs = attempt.deadlineMs;
+    assert.ok(typeof ceilingMs === 'number' && Number.isSafeInteger(ceilingMs) && ceilingMs > 0 && ceilingMs <= 300000, message);
+    assert.ok(typeof attemptStartedAtMs === 'number' && Number.isSafeInteger(attemptStartedAtMs) && attemptStartedAtMs > 0, message);
+    assert.ok(typeof attemptDeadlineMs === 'number' && Number.isSafeInteger(attemptDeadlineMs) &&
+      attemptDeadlineMs - attemptStartedAtMs === ceilingMs, message);
+    const startedAtMs = performance.now(), observedAtWallMs = Date.now();
+    assert.ok(Number.isSafeInteger(observedAtWallMs) && observedAtWallMs >= attemptStartedAtMs, message);
+    const remainingMs = Math.min(ceilingMs, attemptDeadlineMs - observedAtWallMs);
+    return Object.freeze({ policy: 'captured-launch-attempt-remaining-v1', anchor: 'original-start-attempt',
+      ceilingMs, remainingMs, startedAtMs, deadlineMs: startedAtMs + remainingMs, observedAtWallMs,
+      attemptId: attempt.attemptId, attemptStartedAtMs, attemptDeadlineMs });
+  }
   if (provider !== 'opencode') return undefined;
   assert.ok(Number.isSafeInteger(requestTimeoutMs) && requestTimeoutMs > 0);
   const ceilingMs = Math.min(emulatedSourceOpenCodeRequestTimeoutMs, requestTimeoutMs);

@@ -5,9 +5,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createRetainedLegacyOpenDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic';
 import {
+  readLegacyStoppedOwnerFacts,
+  rememberLegacyStoppedOwnerFacts,
+} from '../../../src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic';
+import {
+  LEGACY_STOPPED_OWNER_FACT_NAMES,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES,
   type RetainedLegacyOpenDiagnostic,
 } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract';
+import { formatPersistentLogMessage } from '../../../src/main/utils/persistentAppLog';
 
 const request = { action: 'open', teamName: 'TEST-private-team', intentId: 'TEST-private-intent' };
 const failure = { ok: false, reason: 'unavailable', outcome: 'not-dispatched' };
@@ -16,6 +22,81 @@ const expectedHash = createHash('sha256')
   .digest('hex');
 
 describe('private retained original open diagnostic', () => {
+  it('bounds owner counts by the closed names and freezes the first original vector', () => {
+    const vector: Record<string, Record<string, number>> = {};
+    for (const name of LEGACY_STOPPED_OWNER_FACT_NAMES) {
+      const [group, key] = name.split('.');
+      (vector[group!] ??= {})[key!] = Number.MAX_SAFE_INTEGER;
+    }
+    const error = { reason: 'owner-active' };
+    rememberLegacyStoppedOwnerFacts(error, vector);
+    const facts = readLegacyStoppedOwnerFacts(error);
+    expect(facts).toEqual(LEGACY_STOPPED_OWNER_FACT_NAMES.map(name => ({
+      name, count: Number.MAX_SAFE_INTEGER,
+    })));
+    expect(Object.isFrozen(facts)).toBe(true);
+    expect(facts?.every(Object.isFrozen)).toBe(true);
+    vector.runtime!.provisioning = 0;
+    const sink = vi.fn<(observation: RetainedLegacyOpenDiagnostic) => unknown>();
+    const observe = createRetainedLegacyOpenDiagnostic(request, 1234, sink);
+    observe.remember('coordinator-admission', error);
+    observe.finish('coordinator', failure);
+    expect(sink.mock.calls[0]?.[0]).toMatchObject({ category: 'owner-active', ownerFacts: facts });
+    expect(JSON.parse(formatPersistentLogMessage([sink.mock.calls[0]?.[0]])))
+      .toEqual(sink.mock.calls[0]?.[0]);
+    expect(Buffer.byteLength(JSON.stringify(sink.mock.calls[0]?.[0]))).toBeLessThan(4096);
+  });
+
+  it('does not invoke owner accessors, coerce values or include unknown private field names', () => {
+    const access = vi.fn(() => 'PRIVATE-value');
+    const runtime = Object.defineProperty({ alive: 0, 'PRIVATE-team-run': 9 }, 'provisioning', {
+      enumerable: true, get: access,
+    });
+    const error = { reason: 'owner-active' };
+    rememberLegacyStoppedOwnerFacts(error, {
+      runtime, lifecycle: { pendingTimers: { valueOf: access, toJSON: access } },
+    });
+    expect(readLegacyStoppedOwnerFacts(error)).toEqual([
+      { name: 'runtime.provisioning', count: 'invalid' },
+      { name: 'lifecycle.pendingTimers', count: 'invalid' },
+    ]);
+    expect(access).not.toHaveBeenCalled();
+    expect(JSON.stringify(readLegacyStoppedOwnerFacts(error))).not.toContain('PRIVATE');
+  });
+
+  it('contains projection faults and leaves reused errors ambiguous without mutating them', () => {
+    const original = Object.freeze({ reason: 'owner-active' });
+    expect(() => rememberLegacyStoppedOwnerFacts(original, new Proxy({}, {
+      getOwnPropertyDescriptor() { throw new Error('PRIVATE'); },
+    }))).not.toThrow();
+    expect(readLegacyStoppedOwnerFacts(original)).toBeUndefined();
+    rememberLegacyStoppedOwnerFacts(original, { runtime: { provisioning: 1 } });
+    expect(readLegacyStoppedOwnerFacts(original)).toBeUndefined();
+    const reused = { reason: 'owner-active' };
+    rememberLegacyStoppedOwnerFacts(reused, { runtime: { provisioning: 1 } });
+    rememberLegacyStoppedOwnerFacts(reused, { runtime: { provisioning: 2 } });
+    expect(readLegacyStoppedOwnerFacts(reused)).toBeUndefined();
+    expect(original).toEqual({ reason: 'owner-active' });
+  });
+
+  it('keeps owner evidence off other phases and categories and ignores forged public fields', () => {
+    for (const [phase, reason] of [
+      ['runtime-capture', 'owner-active'], ['coordinator-admission', 'source-unreadable'],
+    ] as const) {
+      const error = { reason }, sink = vi.fn();
+      rememberLegacyStoppedOwnerFacts(error, { runtime: { provisioning: 1 } });
+      const observe = createRetainedLegacyOpenDiagnostic(request, 1234, sink);
+      observe.remember(phase, error); observe.finish('coordinator', failure);
+      expect(sink.mock.calls[0]?.[0]).not.toHaveProperty('ownerFacts');
+    }
+    const sink = vi.fn(), observe = createRetainedLegacyOpenDiagnostic(request, 1234, sink);
+    observe.remember('coordinator-admission', {
+      reason: 'owner-active', ownerFacts: [{ name: 'runtime.provisioning', count: 1 }],
+    });
+    observe.finish('coordinator', failure);
+    expect(sink.mock.calls[0]?.[0]).not.toHaveProperty('ownerFacts');
+  });
+
   it.each(RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES)(
     'binds one closed %s observation to the original Main and request strings',
     (phase) => {

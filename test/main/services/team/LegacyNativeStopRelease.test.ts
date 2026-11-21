@@ -146,6 +146,133 @@ function materializeCurrentSoloConfig(f: ReturnType<typeof fixture>): Record<str
   return config;
 }
 
+describe('native Stop first-refusal observation', () => {
+  const options = (f: ReturnType<typeof fixture>) => ({
+    teamsBasePath: f.root, run: f.run, current: () => true,
+    beginStop: async (): Promise<TeamLaunchStopAuthority> => ({ teamName: f.teamName,
+      stopIntent: 1, freshness: { version: 1, teamName: f.teamName, kind: 'launch', runId: f.run.runId } }),
+    publishStopped: vi.fn(async () => true),
+  });
+  const diagnostic = (f: ReturnType<typeof fixture>, stage: string, reason = 'rejected') => ({
+    schemaVersion: 1, targetDigest: nativeReleaseDigest({ teamName: f.teamName, runId: f.run.runId }),
+    stage, reason,
+  });
+
+  it('records the actual missing process proof once without extra authority or census reads', async () => {
+    const f = fixture(), order: string[] = [], base = options(f);
+    const current = vi.fn(() => { order.push('owner'); return true; });
+    const isCurrentAttempt = vi.fn(() => { order.push('attempt'); return true; });
+    const onRefusal = vi.fn(() => { order.push('observer'); });
+    const census = vi.spyOn(nativeCensus, 'readLegacyNativeCensus');
+    try {
+      const attempt = captureLegacyNativeStopPublication({ ...base, current, isCurrentAttempt, onRefusal })!;
+      current.mockClear(); isCurrentAttempt.mockClear(); census.mockClear(); order.length = 0;
+      const completed = attempt.complete();
+      expect(attempt.complete()).toBe(completed);
+      await expect(completed).resolves.toBe(false);
+      expect(order).toEqual(['owner', 'attempt', 'owner', 'observer']);
+      expect(current).toHaveBeenCalledTimes(2); expect(isCurrentAttempt).toHaveBeenCalledTimes(1);
+      expect(census).not.toHaveBeenCalled(); expect(base.publishStopped).not.toHaveBeenCalled();
+      expect(onRefusal).toHaveBeenCalledExactlyOnceWith(diagnostic(f, 'proof-process-release'));
+    } finally { census.mockRestore(); }
+  });
+
+  it.each([
+    { fault: 'admission-error', stage: 'admission', reason: 'exception' },
+    { fault: 'owner', stage: 'completion-owner', reason: 'rejected' },
+    { fault: 'freshness', stage: 'completion-freshness', reason: 'rejected' },
+    { fault: 'marker', stage: 'proof-census', reason: 'backup-identity' },
+    { fault: 'drained', stage: 'completion-work-sync', reason: 'exception' },
+    { fault: 'pending', stage: 'completion-work-sync', reason: 'work-sync-pending' },
+    { fault: 'readback', stage: 'publication', reason: 'rejected' },
+    { fault: 'late-owner', stage: 'publication-owner', reason: 'rejected' },
+    { fault: 'publish-error', stage: 'publication', reason: 'exception' },
+  ])('reports the observed $fault boundary without disclosing private values', async ({ fault, stage, reason }) => {
+    const f = fixture(), base = options(f);
+    let current = true;
+    const onRefusal = vi.fn(() => { if (fault === 'publish-error') throw new Error('TEST observer failed'); });
+    const attempt = captureLegacyNativeStopPublication({ ...base, current: () => current, onRefusal,
+      ...(fault === 'admission-error' ? { beginStop: async () => { throw new Error('TEST-private-admission'); } } : {}),
+      ...(fault === 'freshness' ? { beginStop: async () => ({ ...(await base.beginStop()),
+        freshness: { version: 1 as const, teamName: f.teamName, kind: 'launch' as const, runId: 'TEST-private-successor' } }) } : {}),
+      ...(['drained', 'pending'].includes(fault) ? { captureSourceFence: () => ({ drain: async () => {}, release: () => {},
+        assertDrained: () => { throw new Error(fault === 'pending' ? 'Legacy source has pending WorkSync maintenance' :
+          '/TEST/private/token=not-for-diagnostics'); } }) } : {}),
+      publishStopped: async () => {
+        if (fault === 'publish-error') throw new Error('/TEST/private/token=not-for-diagnostics');
+        if (fault === 'late-owner') current = false;
+        return fault !== 'readback';
+      },
+    })!;
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    if (fault === 'owner') current = false;
+    if (fault === 'marker') {
+      const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8'));
+      f.write('config.json', { ...config, _backupIdentityId: 'TEST-private-marker' });
+    }
+    await expect(attempt.complete()).resolves.toBe(false);
+    await expect(attempt.complete()).resolves.toBe(false);
+    expect(onRefusal).toHaveBeenCalledExactlyOnceWith(diagnostic(f, stage, reason));
+    const wire = JSON.stringify(onRefusal.mock.calls);
+    for (const secret of [f.teamName, f.run.runId, 'TEST-session', f.root, 'not-for-diagnostics',
+      'TEST-private-marker', 'TEST-private-successor']) expect(wire).not.toContain(secret);
+  });
+
+  it.each(['code', 'message'])('does not invoke an error %s accessor at the diagnostic boundary', async (property) => {
+    const f = fixture(), onRefusal = vi.fn();
+    let accesses = 0;
+    const failure = new Error('TEST-private-error-text');
+    Object.defineProperty(failure, property, { get() {
+      accesses++; throw new Error('TEST-private-getter-text');
+    } });
+    const attempt = captureLegacyNativeStopPublication({ ...options(f), onRefusal,
+      publishStopped: async () => { throw failure; } })!;
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    await expect(attempt.complete()).resolves.toBe(false);
+    expect(accesses).toBe(0);
+    expect(onRefusal).toHaveBeenCalledExactlyOnceWith(diagnostic(f, 'publication', 'exception'));
+  });
+
+  it('keeps the original successful predicate order and emits no refusal', async () => {
+    const f = fixture(), order: string[] = [], base = options(f), onRefusal = vi.fn();
+    const readCensus = nativeCensus.readLegacyNativeCensus;
+    const census = vi.spyOn(nativeCensus, 'readLegacyNativeCensus').mockImplementation((...args) => {
+      order.push('census'); return readCensus(...args);
+    });
+    const current = vi.fn(() => { order.push('owner'); return true; });
+    const isCurrentAttempt = vi.fn(() => { order.push('attempt'); return true; });
+    const publishStopped = vi.fn(async () => { order.push('publish'); return true; });
+    try {
+      const attempt = captureLegacyNativeStopPublication({ ...base, current, isCurrentAttempt, publishStopped, onRefusal })!;
+      recordVerifiedCliProcessRelease(f.child, [f.identity]);
+      current.mockClear(); isCurrentAttempt.mockClear(); census.mockClear(); order.length = 0;
+      await expect(attempt.complete()).resolves.toBe(true);
+      expect(order).toEqual(['owner', 'attempt', 'owner', 'census', 'owner', 'publish', 'owner', 'attempt']);
+      expect(current).toHaveBeenCalledTimes(4); expect(isCurrentAttempt).toHaveBeenCalledTimes(2);
+      expect(census).toHaveBeenCalledTimes(1); expect(publishStopped).toHaveBeenCalledTimes(1);
+      expect(onRefusal).not.toHaveBeenCalled();
+    } finally { census.mockRestore(); }
+  });
+
+  it('binds observations to each explicit attempt while reusing the original pending capture', async () => {
+    const f = fixture(), base = options(f), firstObserver = vi.fn(), retryObserver = vi.fn();
+    const first = captureLegacyNativeStopPublication({ ...base, onRefusal: firstObserver })!;
+    await expect(first.complete()).resolves.toBe(false);
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    rmSync(join(f.teamDir, 'launch-state.json'));
+    const retry = captureLegacyNativeStopPublication({ ...base, onRefusal: retryObserver,
+      publishStopped: async () => false })!;
+    await expect(retry.complete()).resolves.toBe(false);
+    expect(firstObserver).toHaveBeenCalledExactlyOnceWith(diagnostic(f, 'proof-process-release'));
+    expect(retryObserver).toHaveBeenCalledExactlyOnceWith(diagnostic(f, 'publication'));
+    const successObserver = vi.fn();
+    const finalAttempt = captureLegacyNativeStopPublication({ ...base, onRefusal: successObserver })!;
+    await expect(finalAttempt.complete()).resolves.toBe(true);
+    expect(successObserver).not.toHaveBeenCalled();
+    expect(captureLegacyNativeStopPublication({ ...base, run: { ...f.run } })).toBeNull();
+  });
+});
+
 describe('bounded old Desktop native release proof (no native process execution)', () => {
   const changeMarker = (f: ReturnType<typeof fixture>, marker: unknown) => {
     const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8'));

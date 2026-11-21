@@ -7,7 +7,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TestContext } from 'node:test';
-import { LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES } from '../../src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts';
+import {
+  LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES,
+  LEGACY_STOPPED_OWNER_FACT_NAMES,
+} from '../../src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts';
 import {
   projectRetainedOpenDiagnostics,
   readRetainedOpenDiagnostic,
@@ -48,6 +51,44 @@ test('retained open projection preserves the two distinct original call identiti
   assert.deepEqual(projectRetainedOpenDiagnostics({ main: line({ operationHash: operationHash(second) }) }, second), observed);
   assert.deepEqual(projectRetainedOpenDiagnostics({ main: line() }, second),
     { status: 'diagnostic-unknown', reason: 'foreign-record' });
+});
+
+test('retained owner evidence survives the closed log projection with finite counts only', () => {
+  const original = { phase: 'coordinator-admission', category: 'owner-active' };
+  for (const count of [1, Number.MAX_SAFE_INTEGER, 'invalid']) {
+    const ownerFacts = LEGACY_STOPPED_OWNER_FACT_NAMES.map(name => ({ name, count }));
+    assert.deepEqual(projectRetainedOpenDiagnostics({ main: line({ ...original, ownerFacts }) }, binding),
+      { status: 'observed', ...original, outcome: 'not-dispatched', ownerFacts });
+  }
+  assert.deepEqual(projectRetainedOpenDiagnostics({ main: line(original) }, binding),
+    { status: 'observed', ...original, outcome: 'not-dispatched' });
+});
+
+test('retained owner evidence rejects malformed counters names duplicates and unrelated phases', () => {
+  const original = { phase: 'coordinator-admission', category: 'owner-active' };
+  const valid = { name: 'runtime.provisioning', count: 1 };
+  const owners: unknown[] = [
+    null, {}, [], [valid, valid], Array.from({ length: 35 }, () => valid),
+    [{ ...valid, name: 'PRIVATE-team' }], [{ ...valid, extra: 'PRIVATE-token' }],
+    ...[0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, '1', 'PRIVATE-count', null, true]
+      .map(count => [{ ...valid, count }]),
+  ];
+  for (const ownerFacts of owners)
+    assert.deepEqual(projectRetainedOpenDiagnostics({ main: line({ ...original, ownerFacts }) }, binding),
+      { status: 'diagnostic-unknown', reason: 'invalid-log' });
+  for (const invalid of [{ phase: 'runtime-capture' }, { category: 'source-unreadable' }])
+    assert.deepEqual(projectRetainedOpenDiagnostics({
+      main: line({ ...original, ...invalid, ownerFacts: [valid] }),
+    }, binding), { status: 'diagnostic-unknown', reason: 'invalid-log' });
+});
+
+test('retained owner evidence is read from the original durable log after cleanup', async (t) => {
+  const ownerFacts = [{ name: 'lifecycle.pendingTimers', count: 2 },
+    { name: 'background.initialization', count: 1 }];
+  const original = { phase: 'coordinator-admission', category: 'owner-active', ownerFacts };
+  const logs = await privateLogs(t, line(original));
+  assert.deepEqual(await readRetainedOpenDiagnostic({ root: logs.root, binding }),
+    { status: 'observed', ...original, outcome: 'not-dispatched' });
 });
 
 test('retained source boundary is finite and restricted to the original unreadable admission', () => {

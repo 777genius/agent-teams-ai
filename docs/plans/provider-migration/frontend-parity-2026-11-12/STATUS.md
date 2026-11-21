@@ -1,10 +1,123 @@
 # Завершение Host / frontend parity
 
-Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
+Обновлено: **21 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий план: проверенный срез поверх original `661c320`
+## Текущий план: изменения поверх `fab40811`, нужна original qualification
 
-Опубликованный source:
+Работа продолжается по явному поручению пользователя. Следующий code batch
+содержит проверенные исправления Windows TEST observer и management kind dispatch,
+а также диагностику оставшихся retained/OpenCode отказов. Его original E2E ещё
+не выполнен. Прежние FAIL не закрываются локальными PASS.
+
+База текущего code batch:
+[`fab40811a8ca5f5349c3e39c579bb4d9f599841b`](https://github.com/777genius/agent-teams-ai/commit/fab40811a8ca5f5349c3e39c579bb4d9f599841b).
+Предыдущая публикация подтверждена обратным Git fetch: parent `661c320b`,
+tree `340be184`, все 29 файлов совпали. Текущий batch зафиксирован после локальных
+проверок и независимых ревью; его original E2E qualification ещё предстоит.
+Root владеет Git, workflow, source manifests, общими проверками и публикацией.
+
+### Все original runs на `fab40811` завершены
+
+Terminal snapshot: **21 ноября, 01:55 по Киеву (20 ноября, 23:55 UTC)**.
+Все шесть runs имеют attempt 1 и exact source head. Единственный CI observer
+завершил наблюдение; rerun, cancel и dispatch не выполнялись. Причина отмены
+Host aggregate не установлена; отменённая задача не считается успешной.
+
+| Original gate | Результат | Оставшаяся работа |
+| --- | --- | --- |
+| [Host / frontend](https://github.com/777genius/agent-teams-ai/actions/runs/44821724950) | Все 29 primary jobs завершены: **25 PASS / 4 FAIL**. Aggregate CANCELLED, run CANCELLED | Darwin Review/Resume, Linux V2 management live Add и retained-original |
+| [Source CI / retained](https://github.com/777genius/agent-teams-ai/actions/runs/44821724764) | Plan и Fast feedback PASS, включая workspace types. Retained coexistence FAIL, Full qualification downstream FAIL, 11 nonselected SKIP | Установить уже наблюдавшийся owner-active counter и устранить причину |
+| [Packaged](https://github.com/777genius/agent-teams-ai/actions/runs/44821725114) | **7/7 PASS**, включая classifier, все 5 платформ и aggregate; run SUCCESS | Повторная original qualification нового source |
+| [Process](https://github.com/777genius/agent-teams-ai/actions/runs/44821725134) | **4/5 PASS**, Windows ARM64 FAIL; run FAILURE | Проверенный TEST observer требует original Windows PASS |
+| [Teams](https://github.com/777genius/agent-teams-ai/actions/runs/44821725201) | **3/3 PASS**, run SUCCESS | Повторная original qualification нового source |
+| [Native V2](https://github.com/777genius/agent-teams-ai/actions/runs/44821725139) | **9/9 PASS**, run SUCCESS | Повторная original qualification нового source |
+
+Все четыре frontend shards, Team, Taskboard, Codex, Claude lifecycle и Codex login
+прошли. Terminal receipt сохраняет полную страницу jobs каждого run; результаты
+предыдущего SHA не переносятся на следующий.
+
+### First refusal и подготовленные изменения
+
+| Original failure | Подтверждено исходным артефактом | Работа / состояние |
+| --- | --- | --- |
+| Windows ARM64 Process, job 136583990185 / ZIP 14673602456 | 112-й runtime.read вернул nativeReady/attached true на 15201.0956 ms, после отдельного TEST 15 s cutoff. Native refusal отсутствует; original cleanup подтверждён. Старый artifact не записывал wall deadline Start ACK | Frozen 3-file TEST fix использует только остаток уже возвращённой original attempt. Actual TeamLaunchOwner/executeTeamLaunch producer: RED → **37/37 PASS**, scoped canonical TS7, lint и R1/R2 PASS. Каждое RPC ≤15 s; нового Start/retry нет |
+| Darwin Review, job 136583990629 / ZIP 14673792737 | Identity завершён; attestation начат на 42002 ms, session-create не достигнут. Graph 12.995 s, первая custody 5.249 s; UI Launch readiness истекла | 24 original files и 1933 before/after source pins проверены. Kind dispatch уменьшает измеренную стоимость guard; новая bounded phase отделяет завершение attestation от readiness observer. Точная original CPU attribution пока неизвестна |
+| Darwin Resume, job 136583990696 / ZIP 14675140379 | Attestation → session-create **44.470 s**, driver-open 81885 ms; first-submit отсутствует, исходный cutoff истёк | Source audit завершён. Kind-dispatch finite measurement даёт −9.69% guard median; это не original recovery. Attestation-returned: 42/42 focused checks, TS7, Host build и R1/R2 PASS. Исходные deadlines и все currentness/native checks сохранены |
+| CI retained coexistence, job 136594225744 / ZIP 14673529459 | coordinator-admission / owner-active / not-dispatched. Отказ до product records/native census; 9 original files и 18 записанных source pins подтверждены | Original artifact не сохранил 34 owner counters. Bounded private diagnostic: actual Main → persistent log → closed reader, **77/77 PASS**, scoped canonical TS7 и R1/R2 PASS. Следующий original artifact должен назвать занятый counter; runtime fix пока не заявляется |
+| Linux V2 management live Add, job 136583990974 / ZIP 14675137567 | Settings UI PASS. Следующий Add admitted один раз; journal held; credential начат на 23222 ms, attestation не достигнут. Close held через 11 ms после original cutoff 22:23:41.966 UTC | Проверены 75 original files и 1933 live / 1945 Settings source pins. Probe model requests 0. Kind dispatch не меняет source reads, locks, graph, native custody или captured roster/request cutoff |
+| Linux retained-original, job 136583991561 / ZIP 14677660649 | Original open/bootstrap/reply и один Stop click выполнены; Main убил original peer 7350, но publication.complete вернул false. Final sentinel refusedInvocations=[]; поздний cleanup/app exit 0 не подтверждают Stop release | В original ZIP отсутствуют Main team namespace и первая отказавшая predicate. Новый Main first-refusal diagnostic **60/60 PASS**, TS7/lint и R1/R2 PASS. TEST bounded snapshot до cleanup **14/14 PASS**, TS7/lint и R1/R2 PASS; исходный E2E FAIL остаётся открытым |
+
+### Проверка следующего code batch
+
+| Изменение | Проверено | Граница вывода |
+| --- | --- | --- |
+| Windows source Codex observer: 3 files | Original Start ACK bindings, один wall/monotonic cutoff, actual producer RED/GREEN, 37/37 PASS, TS7 и независимые R1/R2 | Требуется original Windows ARM64 PASS |
+| Retained owner-active diagnostic: 5 production + 3 existing tests | Только уже прочитанные 34 allowlisted counters; private WeakMap и closed log; 46 Vitest + 31 Node PASS, TS7 и R1/R2 | Не добавляет authority reads и не допускает owner-active; причина ожидается из нового original artifact |
+| Management kind dispatch: 1 production line + existing test | Те же 6 strict/refined schemas и 8 kinds. Actual store: 52 malformed/refinement variants + 9 invalid discriminators с правильным digest; baseline 15/15, final store/OAuth/saved-team **64/64 PASS**, Host build, TS7 и R1/R2 | Меняет выбор схемы, без cache/FS/lock/authority/deadline изменений |
+| Main Stop first-refusal: 3 production + existing test | Первая closed stage/reason одной attempt; original predicates/order/counts и memoized completion сохранены. Замечание R1 о getters закрыто через own data descriptors: RED 2 FAIL → final **60/60 PASS**, TS7/lint, R1/R2 | Ранний capture null и внешний drain вне observer; отсутствие строки не доказывает причину. Original FAIL остаётся FAIL |
+| Retained-original TEST snapshot: 2 новых files + UI/CI/source wiring | Fixed TEST namespace, bounded file reads/payload и WorkSync projection, exact raw hashes только полных bytes. Actual UI wrapper: capture один раз, await до cleanup, исходная ошибка сохраняется; **14/14 PASS**, canonical TS7 и R1/R2 | Снимок не атомарный и не даёт release/currentness authority. UI action body побайтно прежний; capture только после исходного отказа |
+| OpenCode attestation-returned | Одна метка после существующего await, до readiness observer; закрытые emitter/decoder имена и bound 18. **42/42 PASS**, canonical scoped TS7 (1819 imported files), Host build, lint 0/0 и R1/R2 PASS | Нет дополнительных reads/guards/retry. Один timestamp/write имеет ненулевую стоимость; ускорение не заявляется |
+
+Populated performance fixture создаёт две настоящие global/project publications
+через RuntimeSourceIndex writer на конечных TEST bytes; native/CLI/socket execution 0.
+Весь credential callback median 80.821 → 72.989 ms (−9.69%). Во всех 35 категориях
+counts прежние: 6 saved-current, 108 namespace, 54 Team lock pairs, 48 source reads,
+138 journal reads. Linux finite timing не выдаётся за Darwin CI timing. Сырой
+ZodError для malformed direct write может изменить issues/message; Host использует
+класс → invalid, persisted read/list остаются held. В отдельном сравнении
+kind-dispatch из 631 declarations изменился только private commandRecords.d.ts;
+public record shape прежний. Новый diagnostic phase отдельно добавлен в прежний
+закрытый внутренний union producer/decoder.
+
+Не выбраны варианты с неподтверждённым выигрышем или изменением semantics:
+realpath.native иначе разрешает symlink/.. и длинные цепочки; lease/index-only
+snapshot не охватывает изменяемые command receipts; широкий Team fence переносит
+Runtime reads через lock boundary. Narrow join и parsed-byte cache не имеют
+достаточного измеренного выигрыша после kind dispatch.
+
+Original Windows V2 x64 отдельно подтверждён по ZIP 14672364472: manual 162.073 s
+и auto 142.373 s PASS, по два terminal succeeded, resolved permissions, native media,
+cold restore без replay, оба Host exit 0; 631 source files, compiled Host и provider
+archive совпали. Оба input этого sample уложились и в 90 s, поэтому sample не
+доказывает причинную необходимость большего окна.
+
+Прежний packaged Darwin x64 failure path также original PASS: ZIP 14677115072,
+9 files и 1935 before/after pins проверены. Native 2.1.4 с TEST model прошёл tools,
+MCP, permissions, media, Stop/cold restore; finite Claude peer прошёл UI launch/Stop,
+released custody и app.relaunch. Первый peer observer завершился на 9988 ms внутри
+original 180 s deadline. Original app exit 0, старый Host отсутствует, writer token
+изменился. Successor exit code unavailable и naturalExitQualified=false:
+observational absence не выдаётся за native custody. Genuine vendor executions 0;
+vendor auth/release qualification не заявляется.
+
+Общая финальная проверка всех **26 changed code/test files** после source freeze:
+fast lint 0 errors / 1 прежний UNKNOWN_REASONS warning, source-size (5173 production
+files), Team architecture и diff check PASS. Source-manifest audit подтвердил все
+11 новых Main Stop/TEST/OpenCode paths. Provider archive и lockfile неизменны.
+В workflow добавлен только finite TEST snapshot check в существующий retained-original
+job; новый raw directory upload отсутствует.
+
+[Evidence index](evidence/continuation-fab408-20261120.json) и
+[архив доказательств](evidence/continuation-fab408-20261120.tar.gz) содержат exact source
+pins, original artifacts, RED/GREEN и независимые review receipts. Сборщик сверяет
+каждый hash и побайтно читает весь созданный архив обратно. Index явно сохраняет
+`newHeadE2EQualified: false`: локальные проверки не подменяют original CI.
+
+GitHub reread #1192: **43/43 threads resolved**, 0 unresolved, новых submitted
+reviews на fab нет. Это не подменяет независимые технические R1/R2 и current-source CI.
+
+Следующие действия:
+
+1. Завершено: все шесть code slices, source-manifest audit, scoped checks и
+   независимые ревью; открытых замечаний нет.
+2. Опубликовать frozen batch и проверенный evidence bundle одним CAS commit
+   поверх fab40811, подтвердить tree/parent/files обратным Git fetch.
+3. Дождаться original runs нового SHA штатным observer; каждый FAIL разобрать по
+   первому исходному отказу, исправить доказанную причину и повторить review.
+4. Доставить #1192 → #1186 → #982 после разрешённой current-source qualification,
+   соблюдая ранее установленную границу genuine Claude/Codex execution и route.
+
+Предыдущий source:
 [`661c320b4c09709542f6f231a47ab1814be41dfb`](https://github.com/777genius/agent-teams-ai/commit/661c320b4c09709542f6f231a47ab1814be41dfb).
 Обратный Git fetch подтвердил parent a57, tree b5882b48 и все14 файлов.
 Все шесть original runs завершились; terminal snapshot **20 ноября, 23:04 по Киеву
@@ -26,7 +139,7 @@ Original CI observer завершил наблюдение; ни rerun, ни can
 Следующая квалификация относится к этому новому source; docs-only push для
 перезапуска очереди не делается.
 
-### Проверенные slices следующего batch
+### Проверенные slices опубликованного `fab40811`
 
 | Срез | Проверка и границы | Владелец / состояние |
 | --- | --- | --- |
@@ -62,8 +175,8 @@ TS7.0.2 запускался напрямую корректным Node. Root о
 
 Ближайшие шаги:
 
-1. Опубликовать проверенный commit поверх661 с compare-and-swap branch lease
-   и подтвердить его tree/parent/files обратным Git fetch.
+1. Завершено: опубликован проверенный fab40811 поверх661 с compare-and-swap
+   branch lease; tree/parent/files подтверждены обратным Git fetch.
 2. Один observer отслеживает только новые original runs. Разобрать first refusal
    по исходным artifacts, особенно Darwin identity и retained Stop; исправления
    проходят отдельные regressions/review перед следующей публикацией.

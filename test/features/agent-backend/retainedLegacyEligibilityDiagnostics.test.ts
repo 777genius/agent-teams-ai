@@ -6,12 +6,15 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { readRetainedOpenDiagnostic } from '../../../scripts/legacy-agent-host/desktop-retained-open-diagnostics';
 import { RetainedLegacyLaunchRefusal } from '../../../src/features/agent-backend/core/application/RetainedLegacyLaunchCoordinator';
 import { createRetainedLegacyLaunchScope } from '../../../src/features/agent-backend/main/application/createRetainedLegacyLaunchScope';
 import { captureLegacyStoppedSource } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/captureLegacyStoppedSource';
 import { LegacyStoppedImportHold } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource';
+import { readLegacyStoppedOwnerFacts } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic';
 import { createDesktopStoppedTeamOperations } from '../../../src/main/composition/createDesktopStoppedTeamOperations';
 import { configureOriginalRuntimeLaunchAdmission } from '../../../src/main/services/runtime/OriginalRuntimeScope';
+import { installPersistentAppLog } from '../../../src/main/utils/persistentAppLog';
 import { addLogSink } from '../../../src/shared/utils/logger';
 
 import type { CapturedRetainedLegacyRuntime } from '../../../src/features/agent-backend/main/application/createRetainedLegacyLaunchScope';
@@ -42,10 +45,9 @@ function deferred() {
 }
 
 /** Actual stopped-source parser and physical identity, with finite owner read ports only. */
-function fixture() {
+function fixture(teamName = 'test-eligibility') {
   paths.root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-retained-eligibility-')));
   roots.push(paths.root);
-  const teamName = 'test-eligibility';
   const team = join(paths.root, 'claude/teams', teamName);
   mkdirSync(team, { recursive: true });
   const config = { name: teamName, members: [{ name: 'team-lead', agentType: 'team-lead' }] };
@@ -83,23 +85,23 @@ function fixture() {
     },
     provisioning: {
       withStoppedTeamImportFence: async (_name, read) => read(),
-      readStoppedTeamImportRuntimeFacts: () => ({ active }),
-      readStoppedTeamImportLifecycleFacts: () => ({}),
-      readStoppedTeamImportStopFacts: () => ({}),
-      readStoppedTeamImportDeliveryFacts: () => ({}),
+      readStoppedTeamImportRuntimeFacts: vi.fn(() => ({ provisioning: active })),
+      readStoppedTeamImportLifecycleFacts: vi.fn(() => ({})),
+      readStoppedTeamImportStopFacts: vi.fn(() => ({})),
+      readStoppedTeamImportDeliveryFacts: vi.fn(() => ({})),
     },
     data: {
-      readStoppedTeamImportBackgroundFacts: () => ({}),
-      readStoppedTeamImportCommandFacts: async () => ({
+      readStoppedTeamImportBackgroundFacts: vi.fn(() => ({})),
+      readStoppedTeamImportCommandFacts: vi.fn(async () => ({
         known: true,
         pending: 0,
         revision: 'TEST-command',
-      }),
-      readStoppedTeamImportNotificationFacts: async () => ({
+      })),
+      readStoppedTeamImportNotificationFacts: vi.fn(async () => ({
         known: true,
         pending: 0,
         revision: 'TEST-notification',
-      }),
+      })),
     },
     launch: { readResult: async () => ({ status: 'absent' }) },
   };
@@ -164,9 +166,61 @@ describe('actual retained eligibility refusal observation', () => {
     expect(observe).toHaveBeenCalledTimes(1);
     expect(observe.mock.calls[0]?.[0]).toBeInstanceOf(LegacyStoppedImportHold);
     expect(observe.mock.calls[0]?.[0]).toMatchObject({ reason: 'owner-active' });
+    expect(readLegacyStoppedOwnerFacts(observe.mock.calls[0]?.[0])).toEqual([
+      { name: 'runtime.provisioning', count: 1 },
+    ]);
     expect(f.run).not.toHaveBeenCalled();
     expect(f.close).not.toHaveBeenCalled();
   });
+
+  it('observes the already-read vector once without another owner or downstream authority read', async () => {
+    const f = fixture(), observe = vi.fn();
+    const vectors: Record<string, number>[] = [
+      { provisioning: 2, alive: 0, 'PRIVATE-team-token': 9 },
+      { pendingTimers: 3, unattributedCredentialCleanup: 1 },
+      { rosterMutation: 1 },
+      { relay: 4 },
+      { initialization: 1, context: 2 },
+    ];
+    const readers = [
+      f.owners.provisioning.readStoppedTeamImportRuntimeFacts,
+      f.owners.provisioning.readStoppedTeamImportLifecycleFacts,
+      f.owners.provisioning.readStoppedTeamImportStopFacts,
+      f.owners.provisioning.readStoppedTeamImportDeliveryFacts,
+      f.owners.data.readStoppedTeamImportBackgroundFacts,
+    ];
+    readers.forEach((reader, index) => vi.mocked(reader).mockReturnValue(vectors[index]!));
+    expect(await f.scope(observe).readEligibility()).toBe('other');
+    for (const reader of readers) expect(reader).toHaveBeenCalledExactlyOnceWith(f.teamName);
+    expect(readLegacyStoppedOwnerFacts(observe.mock.calls[0]?.[0])).toEqual([
+      { name: 'runtime.provisioning', count: 2 },
+      { name: 'lifecycle.pendingTimers', count: 3 },
+      { name: 'lifecycle.unattributedCredentialCleanup', count: 1 },
+      { name: 'stop.rosterMutation', count: 1 },
+      { name: 'delivery.relay', count: 4 },
+      { name: 'background.initialization', count: 1 },
+      { name: 'background.context', count: 2 },
+    ]);
+    expect(f.owners.data.readStoppedTeamImportNotificationFacts).not.toHaveBeenCalled();
+    expect(f.owners.data.readStoppedTeamImportCommandFacts).not.toHaveBeenCalled();
+    expect(f.run).not.toHaveBeenCalled();
+  });
+
+  it.each([NaN, Infinity, -Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, 'PRIVATE-count', null, undefined])(
+    'preserves original owner-active and sanitizes the invalid counter %s', async (count) => {
+      const f = fixture(), observe = vi.fn();
+      vi.mocked(f.owners.provisioning.readStoppedTeamImportRuntimeFacts)
+        .mockReturnValue({ provisioning: count } as never);
+      expect(await f.scope(observe).readEligibility()).toBe('other');
+      const error = observe.mock.calls[0]?.[0];
+      expect(error).toMatchObject({ reason: 'owner-active' });
+      expect(readLegacyStoppedOwnerFacts(error)).toEqual([
+        { name: 'runtime.provisioning', count: 'invalid' },
+      ]);
+      expect(f.owners.provisioning.readStoppedTeamImportRuntimeFacts).toHaveBeenCalledTimes(1);
+      expect(f.run).not.toHaveBeenCalled();
+    }
+  );
 
   it('hands the same generic fence error to the observer without changing eligibility', async () => {
     const f = fixture(),
@@ -230,7 +284,7 @@ describe('actual Main coordinator forwards only the bounded category after candi
   it.each(['owner-active', 'generic-fence', 'cleanup-unknown'] as const)(
     'keeps the original %s outcome and emits one private observation',
     async (kind) => {
-      const f = fixture(),
+      const f = fixture('test-retained-opencode-v1'),
         entered = deferred(),
         release = deferred();
       if (kind === 'generic-fence') f.failFence(new Error('PRIVATE-fence-path-token'));
@@ -255,7 +309,10 @@ describe('actual Main coordinator forwards only the bounded category after candi
         () => f.current(),
         async () => f.runtime
       );
-      const intentId = 'TEST-eligibility-observer-once';
+      const intentId = 'TEST-coexist-retained-original-once';
+      const persistent = installPersistentAppLog({
+        directory: join(paths.root, 'userData/logs'), appVersion: 'TEST-owner-diagnostic', platform: 'linux',
+      });
       try {
         const opening = main.retained(
           shell,
@@ -285,13 +342,28 @@ describe('actual Main coordinator forwards only the bounded category after candi
             phase: 'coordinator-admission',
             category: kind === 'generic-fence' ? 'unknown' : 'owner-active',
             outcome,
+            ...(kind === 'generic-fence' ? {} : {
+              ownerFacts: [{ name: 'runtime.provisioning', count: 1 }],
+            }),
           },
         ]);
-        expect(JSON.stringify(observations)).not.toMatch(/PRIVATE|test-eligibility|TEST-project/);
+        expect(JSON.stringify(observations)).not.toMatch(/PRIVATE|test-retained-opencode-v1|TEST-project/);
+        await persistent.flush();
+        expect(await readRetainedOpenDiagnostic({
+          root: paths.root, binding: { mainPid: process.pid, teamName: f.teamName, intentId },
+        })).toEqual(process.getuid ? {
+          status: 'observed', phase: 'coordinator-admission',
+          category: kind === 'generic-fence' ? 'unknown' : 'owner-active', outcome,
+          ...(kind === 'generic-fence' ? {} : {
+            ownerFacts: [{ name: 'runtime.provisioning', count: 1 }],
+          }),
+        } : { status: 'diagnostic-unknown', reason: 'unsafe-log' });
       } finally {
         release.resolve();
         removeSink();
         await main.shutdown();
+        await persistent.flush();
+        persistent.dispose();
       }
     }
   );

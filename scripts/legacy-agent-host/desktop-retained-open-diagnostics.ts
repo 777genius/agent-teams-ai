@@ -6,10 +6,12 @@ import { isAbsolute, join } from 'node:path';
 import { TextDecoder } from 'node:util';
 import {
   LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES,
+  LEGACY_STOPPED_OWNER_FACT_NAMES,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_CATEGORIES,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_OUTCOMES,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES,
+  type LegacyStoppedOwnerFact,
 } from '../../src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts';
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -35,6 +37,7 @@ interface ObservedProjection {
   readonly category: Category;
   readonly outcome: Outcome;
   readonly sourceBoundary?: (typeof LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES)[number];
+  readonly ownerFacts?: readonly LegacyStoppedOwnerFact[];
 }
 interface UnknownProjection {
   readonly status: 'diagnostic-unknown';
@@ -116,6 +119,21 @@ function exactObject(value: unknown, keys: readonly string[]): Record<string, un
   return value as Record<string, unknown>;
 }
 
+function projectOwnerFacts(value: unknown): readonly LegacyStoppedOwnerFact[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > LEGACY_STOPPED_OWNER_FACT_NAMES.length)
+    return refuse('invalid-log');
+  const seen = new Set<string>();
+  return Object.freeze(value.map(item => {
+    const entry = exactObject(item, ['name', 'count']);
+    if (!oneOf(entry.name, LEGACY_STOPPED_OWNER_FACT_NAMES) || seen.has(entry.name) ||
+        (entry.count !== 'invalid' &&
+         (typeof entry.count !== 'number' || !Number.isSafeInteger(entry.count) || entry.count <= 0)))
+      return refuse('invalid-log');
+    seen.add(entry.name);
+    return Object.freeze({ name: entry.name, count: entry.count });
+  }));
+}
+
 function project(input: LogInput, binding: ExpectedBinding): RetainedOpenDiagnosticProjection {
   const main = own(input, 'main'), rotated = own(input, 'rotated');
   if (typeof main !== 'string' || (rotated !== undefined && typeof rotated !== 'string')) refuse('invalid-log');
@@ -145,9 +163,11 @@ function project(input: LogInput, binding: ExpectedBinding): RetainedOpenDiagnos
         refuse('foreign-record');
       const parsed = parse(record.message);
       const sourceBoundary = own(parsed, 'sourceBoundary');
+      const ownerFacts = own(parsed, 'ownerFacts');
       const payload = exactObject(parsed, [
         'v', 'mainPid', 'operationHash', 'phase', 'category', 'outcome',
         ...(sourceBoundary === undefined ? [] : ['sourceBoundary']),
+        ...(ownerFacts === undefined ? [] : ['ownerFacts']),
       ]);
       if (JSON.stringify(payload) !== record.message || payload.v !== 1 ||
           !Number.isSafeInteger(payload.mainPid) || Number(payload.mainPid) <= 0 ||
@@ -158,12 +178,17 @@ function project(input: LogInput, binding: ExpectedBinding): RetainedOpenDiagnos
       if (sourceBoundary !== undefined &&
           (payload.phase !== 'coordinator-admission' || payload.category !== 'source-unreadable' ||
            !oneOf(sourceBoundary, LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES))) refuse('invalid-log');
+      if (ownerFacts !== undefined &&
+          (payload.phase !== 'coordinator-admission' || payload.category !== 'owner-active'))
+        refuse('invalid-log');
+      const projectedFacts = ownerFacts === undefined ? undefined : projectOwnerFacts(ownerFacts);
       if (payload.mainPid !== binding.mainPid || payload.operationHash !== binding.operationHash)
         refuse('foreign-record');
       if (selected) refuse('duplicate-record');
       selected = Object.freeze({ status: 'observed', phase: payload.phase,
         category: payload.category, outcome: payload.outcome,
-        ...(sourceBoundary === undefined ? {} : { sourceBoundary }) });
+        ...(sourceBoundary === undefined ? {} : { sourceBoundary }),
+        ...(projectedFacts === undefined ? {} : { ownerFacts: projectedFacts }) });
     }
   }
   return selected ?? unknown('record-absent');

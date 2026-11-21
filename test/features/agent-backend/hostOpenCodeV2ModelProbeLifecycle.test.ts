@@ -510,7 +510,7 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
 const probePrefix = 'legacy-agent-host: opencode-probe ';
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'];
+  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit'];
 
 test('phase sink failure preserves the original probe HTTP, single run and physical cleanup', async () => {
   const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
@@ -550,7 +550,7 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
   }
 });
 
-test.each(['native-ready', 'session-create', 'first-submit'] as const)(
+test.each(['native-ready', 'attestation-returned', 'session-create', 'first-submit'] as const)(
   'the original guard after %s still refuses ownership lost during observation', async boundary => {
     const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
     const observed: string[] = [];
@@ -567,8 +567,9 @@ test.each(['native-ready', 'session-create', 'first-submit'] as const)(
     let f: Awaited<ReturnType<typeof fixture>> | undefined;
     try {
       f = await fixture('http', undefined, () => current);
-      await expect(f.start()).rejects.toMatchObject({ code: 'held' });
-      expect(observed.at(-1)).toBe(boundary);
+      const running = f.start();
+      await expect(boundary === 'attestation-returned' ? f.barrier() : running).rejects.toMatchObject({ code: 'held' });
+      expect(observed.at(-1)).toBe(boundary === 'attestation-returned' ? 'session-create' : boundary);
       expect(f.counts()).toMatchObject({ nativeCreations: 1, logReads: 0, promptPosts: 0,
         sessionCreates: boundary === 'first-submit' ? 1 : 0 });
       if (boundary === 'native-ready') expect(f.counts().requests).toBe(0);

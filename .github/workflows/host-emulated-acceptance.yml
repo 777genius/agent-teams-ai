@@ -132,7 +132,7 @@ jobs:
         run: node --test scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts
       - name: Verify finite retained archive ownership and refusal boundaries
         if: matrix.lane == 'retained-original'
-        run: node --test scripts/legacy-agent-host/desktop-retained-original.test.ts
+        run: node --test scripts/legacy-agent-host/desktop-retained-original.test.ts scripts/legacy-agent-host/desktop-retained-original-failure-diagnostics.test.ts
       - name: Verify original Runtime and Team conversation contracts
         if: matrix.lane == 'team'
         run: |

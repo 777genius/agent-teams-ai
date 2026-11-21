@@ -3,7 +3,10 @@ import { createHash } from 'node:crypto';
 import { validateRetainedLegacyLaunchRequest } from '../../application/validateRetainedLegacyLaunchRequest';
 
 import { createStoppedImportDiagnostic } from './createStoppedImportDiagnostic';
-import { readLegacyStoppedSourceBoundary } from './legacyStoppedSourceDiagnostic';
+import {
+  readLegacyStoppedOwnerFacts,
+  readLegacyStoppedSourceBoundary,
+} from './legacyStoppedSourceDiagnostic';
 import { RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES } from './retainedLegacyOpenDiagnosticContract';
 
 import type {
@@ -14,6 +17,10 @@ import type {
 const phases: ReadonlySet<RetainedLegacyOpenDiagnosticPhase> = new Set(
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES
 );
+type RefusalObservation = Pick<
+  RetainedLegacyOpenDiagnostic,
+  'phase' | 'category' | 'sourceBoundary' | 'ownerFacts'
+>;
 
 function ownData(value: unknown, key: string): unknown {
   if (!value || typeof value !== 'object') return undefined;
@@ -54,7 +61,7 @@ function operationHash(request: unknown, mainPid: number): string | undefined {
 function normalized(
   phase: RetainedLegacyOpenDiagnosticPhase,
   error: unknown
-): Pick<RetainedLegacyOpenDiagnostic, 'phase' | 'category' | 'sourceBoundary'> {
+): RefusalObservation {
   const classification: Pick<RetainedLegacyOpenDiagnostic, 'category'> = { category: 'unknown' };
   createStoppedImportDiagnostic('desktop', (observation) => {
     classification.category = observation.category;
@@ -63,10 +70,15 @@ function normalized(
     phase === 'coordinator-admission' && classification.category === 'source-unreadable'
       ? readLegacyStoppedSourceBoundary(error)
       : undefined;
+  const ownerFacts =
+    phase === 'coordinator-admission' && classification.category === 'owner-active'
+      ? readLegacyStoppedOwnerFacts(error)
+      : undefined;
   return {
     phase,
     category: classification.category,
     ...(sourceBoundary === undefined ? {} : { sourceBoundary }),
+    ...(ownerFacts === undefined ? {} : { ownerFacts }),
   };
 }
 
@@ -80,7 +92,7 @@ export function createRetainedLegacyOpenDiagnostic(
   finish(phase: RetainedLegacyOpenDiagnosticPhase, result: unknown): void;
 } {
   const hash = operationHash(request, mainPid);
-  let first: Pick<RetainedLegacyOpenDiagnostic, 'phase' | 'category' | 'sourceBoundary'> | undefined;
+  let first: RefusalObservation | undefined;
   let finished = false;
   return {
     remember(phase, error) {
@@ -106,6 +118,7 @@ export function createRetainedLegacyOpenDiagnostic(
           category: refusal.category,
           outcome,
           ...(refusal.sourceBoundary === undefined ? {} : { sourceBoundary: refusal.sourceBoundary }),
+          ...(refusal.ownerFacts === undefined ? {} : { ownerFacts: refusal.ownerFacts }),
         });
         void Promise.resolve(sink(observation)).catch(() => {
           // A rejected observer is not an open or cleanup failure.

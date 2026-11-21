@@ -294,6 +294,7 @@ export function createOpenCodeV2ModelProbe(
       observePhase?.('attestation');
       await attestOpenCodeV2ModelSelection(client, selection.model,
         { signal, deadline, isCurrent: current });
+      observePhase?.('attestation-returned');
       options.readiness?.observeProvider?.({
         ...observedProvider,
         ...(nativeCredential ? { credentialScopeDigest: nativeCredential.scopeDigest } : {}),

@@ -9,6 +9,7 @@ import { finiteImportRecords } from './desktop-finite-stopped-import-ui.ts';
 import { finiteImportJson as json, finiteImportRow as row } from './desktop-finite-stopped-import-fixture.ts';
 import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal, type UiCdpPort } from './desktop-ui-controls.ts';
+import { captureRetainedOriginalFailureDiagnostics } from './desktop-retained-original-failure-diagnostics.ts';
 import { RETAINED_ORIGINAL_KIND, RETAINED_ORIGINAL_MODE, RETAINED_ORIGINAL_TEAM,
   RETAINED_ORIGINAL_PROMPT, RETAINED_ORIGINAL_REPLY, readRetainedOriginalEffects,
   type RetainedOriginalFixture } from './desktop-retained-original-fixture.ts';
@@ -48,10 +49,27 @@ function originalAbsent(fixture: RetainedOriginalFixture, proof: Row): boolean {
     !table().some(value => value.command.startsWith(prefix));
 }
 
-/** Existing visible choice, captured private status/catalog, one original Launch and one original Stop. */
-export async function runDesktopRetainedOriginalUi(cdp: UiCdpPort, options: {
+type RetainedOriginalUiOptions = {
   fixture: RetainedOriginalFixture; evidence: Row; group: number; electron: string; assertOwnedRenderer(): void;
-}) {
+};
+
+/** Keep the original failure and capture its TEST files before the harness begins cleanup. */
+export async function runDesktopRetainedOriginalUi(cdp: UiCdpPort, options: RetainedOriginalUiOptions) {
+  try {
+    await runRetainedOriginalUiAttempt(cdp, options);
+  } catch (error) {
+    try {
+      options.evidence.retainedOriginalFailureDiagnostics =
+        await captureRetainedOriginalFailureDiagnostics(options.fixture.root);
+    } catch {
+      // Optional evidence must never replace the original failure or repeat its action.
+    }
+    throw error;
+  }
+}
+
+/** Existing visible choice, captured private status/catalog, one original Launch and one original Stop. */
+async function runRetainedOriginalUiAttempt(cdp: UiCdpPort, options: RetainedOriginalUiOptions) {
   const { fixture } = options, { seed, catalog, executable } = fixture.retainedOriginal;
   assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, RETAINED_ORIGINAL_MODE);
   const steps: Row[] = [], proof: Row = { status: 'INCOMPLETE', sourceKind: RETAINED_ORIGINAL_KIND,

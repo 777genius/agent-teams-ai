@@ -1,8 +1,11 @@
-import { captureLegacyNativeStop } from './LegacyNativeStopRelease';
+import { nativeReleaseDigest } from './LegacyNativeStopCensus';
+import { captureLegacyNativeStop, observeLegacyNativeStopRefusal } from './LegacyNativeStopRelease';
 
 import type { TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
 import type {
   CapturedLegacyNativeStop,
+  LegacyNativeStopRefusal,
+  LegacyNativeStopRefusalObserver,
   LegacyNativeStopRelease,
   LegacyNativeStopRun,
 } from './LegacyNativeStopRelease';
@@ -43,6 +46,7 @@ export function captureLegacyNativeStopPublication(options: {
     proof: LegacyNativeStopRelease
   ): Promise<boolean>;
   unavailable?(): void;
+  onRefusal?(value: Readonly<LegacyNativeStopRefusal & { schemaVersion: 1; targetDigest: string }>): void;
 }): LegacyNativeStopPublication | null {
   const {
     teamsBasePath,
@@ -57,6 +61,19 @@ export function captureLegacyNativeStopPublication(options: {
   if (!currentAttempt()) return null;
   const teamName = run.teamName,
     runId = run.runId;
+  let observed = false;
+  const observer: LegacyNativeStopRefusalObserver | undefined = options.onRefusal ? (value) => {
+    if (observed) return;
+    observed = true;
+    try {
+      options.onRefusal?.(Object.freeze({ schemaVersion: 1,
+        targetDigest: nativeReleaseDigest({ teamName, runId }), ...value }));
+    } catch { /* Observability cannot replace the original Stop result. */ }
+  } : undefined;
+  const refuse = (stage: LegacyNativeStopRefusal['stage'], failure?: { error: unknown }): false => {
+    observeLegacyNativeStopRefusal(observer, stage, failure);
+    return false;
+  };
   const previous = pendingCaptures.get(run);
   const workSync = captureSourceFence !== undefined;
   if (previous && previous.workSync !== workSync) return null;
@@ -92,7 +109,8 @@ export function captureLegacyNativeStopPublication(options: {
   // A synchronous admission call may throw before returning its promise. The
   // bundle keeps that capture distinct from the existing async rejection handler.
   const admit = (): { promise: Promise<TeamLaunchStopAuthority | null> } => ({
-    promise: beginStop(teamName).catch(() => {
+    promise: beginStop(teamName).catch((error: unknown) => {
+      refuse('admission', { error });
       report();
       return null;
     }),
@@ -100,7 +118,8 @@ export function captureLegacyNativeStopPublication(options: {
   let admission: Promise<TeamLaunchStopAuthority | null>;
   try {
     admission = admit().promise;
-  } catch {
+  } catch (error) {
+    refuse('admission', { error });
     report();
     release();
     return null;
@@ -120,30 +139,44 @@ export function captureLegacyNativeStopPublication(options: {
       : {}),
     complete() {
       if (completion === undefined) {
+        let stage: LegacyNativeStopRefusal['stage'] = 'completion-admission';
         completion = (async () => {
           const authority = await admission;
-          if (
-            !authority ||
-            !currentAttempt() ||
-            released ||
-            authority.teamName !== teamName ||
-            (authority.freshness?.kind === 'launch'
+          if (!authority) return refuse(stage);
+          stage = 'completion-owner';
+          if (!currentAttempt()) return refuse(stage);
+          stage = 'completion-fence';
+          if (released) return refuse(stage);
+          stage = 'completion-team';
+          if (authority.teamName !== teamName) return refuse(stage);
+          stage = 'completion-freshness';
+          if (authority.freshness?.kind === 'launch'
               ? authority.freshness.runId !== runId
               : authority.freshness?.kind !== 'stop' || authority.freshness.stoppedRunId !== runId)
-          )
-            return false;
+            return refuse(stage);
+          stage = 'completion-work-sync';
           if (sourceFence) assertSourceDrained();
-          const proof = captured.complete(sourceFence ? assertSourceDrained : undefined);
-          if (!proof) return false;
+          stage = 'completion-proof';
+          const proof = captured.complete(sourceFence ? assertSourceDrained : undefined, observer);
+          if (!proof) return refuse(stage);
+          stage = 'publication';
           try {
             const published = await publishStopped(teamName, authority, proof);
+            stage = 'publication-work-sync';
             if (sourceFence) assertSourceDrained();
-            return published && currentAttempt() && !released;
-          } catch {
+            if (!published) return refuse('publication');
+            stage = 'publication-owner';
+            if (!currentAttempt()) return refuse(stage);
+            stage = 'publication-fence';
+            if (released) return refuse(stage);
+            return true;
+          } catch (error) {
+            refuse(stage, { error });
             report();
             return false;
           }
-        })().catch(() => {
+        })().catch((error: unknown) => {
+          refuse(stage, { error });
           report();
           return false;
         });
@@ -158,7 +191,7 @@ export function captureTrackedLegacyNativeStopPublication(
   teamName: string,
   owners: Pick<
     Parameters<typeof captureLegacyNativeStopPublication>[0],
-    'beginStop' | 'publishStopped' | 'unavailable' | 'captureSourceFence' | 'isCurrentAttempt'
+    'beginStop' | 'publishStopped' | 'unavailable' | 'captureSourceFence' | 'isCurrentAttempt' | 'onRefusal'
   > & {
     getTeamsBasePath(): string;
     getTrackedRunId(teamName: string): string | null;

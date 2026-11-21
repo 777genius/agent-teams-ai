@@ -19,6 +19,8 @@ export const desktopProofManagementSources = [
   'scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts',
   'scripts/legacy-agent-host/desktop-retained-original-fixture.ts',
   'scripts/legacy-agent-host/desktop-retained-original-ui.ts',
+  'scripts/legacy-agent-host/desktop-retained-original-failure-diagnostics.ts',
+  'scripts/legacy-agent-host/desktop-retained-original-failure-diagnostics.test.ts',
   'scripts/legacy-agent-host/desktop-retained-original-validation.ts',
   'scripts/legacy-agent-host/desktop-retained-original.test.ts',
   'scripts/legacy-agent-host/desktop-retained-original-test-fixture.ts',
