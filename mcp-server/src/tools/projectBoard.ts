@@ -55,7 +55,9 @@ export function withProjectBoards(server: ToolServer): ToolServer {
         !Object.hasOwn(parameters.shape, 'teamName') ||
         Object.hasOwn(parameters.shape, 'projectPath')
       ) {
-        throw new Error(`Board tool ${tool.name} needs an object schema with teamName and no projectPath`);
+        throw new Error(
+          `Board tool ${tool.name} needs an object schema with teamName and no projectPath`
+        );
       }
       const { execute } = tool;
       server.addTool({

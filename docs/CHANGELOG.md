@@ -8,12 +8,13 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Changed
 
-- **Breaking for HTTP and MCP clients:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (`shared` or `per_project`) and answer 400 with code `PROJECT_CONTEXT_MODE_REQUIRED` without it. Before, they always created a `shared` team. Migration: send `projectContextMode: "shared"` to keep the old behavior; `per_project` creates a team with separate history per project folder, which `team_launch` can launch (the task, message and review tools do not support it over MCP yet).
+- **Breaking for HTTP and MCP clients:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (`shared` or `per_project`) and answer 400 with code `PROJECT_CONTEXT_MODE_REQUIRED` without it. Before, they always created a `shared` team. Migration: send `projectContextMode: "shared"` to keep the old behavior; `per_project` creates a team with separate history per project folder, which `team_launch` can launch and the MCP board tools can use with `projectPath`.
 - HTTP create and launch accept an empty `effort` or `fastMode` as "not set", like the app (they were refused with 400).
 
 ### Added
 
 - HTTP `POST /api/teams/:team/launch` and MCP `team_launch` launch a team with separate history per project in the project given by `cwd`, with the project-context launch of the app (reservation, launch gate, copy, launch settings). Like every HTTP launch, it does not mark the team as watched for the open app and does not take the backup identity fence the app takes for a draft.
+- MCP board tools (`task_*`, `message_send`, `review_*`, `kanban_*`, process, group chat, cross-team and work-sync tools) work with a team that keeps a separate history per project: they take an optional `projectPath` and work on that project's history only. Without a project, in a project where the team never ran, or while a launch is pending there, they refuse with a `code` (`PROJECT_REQUIRED`, `NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) and write nothing. Other teams are unchanged (`projectPath` is ignored). The app answers which project copy holds the board at `GET /api/teams/:team/board-target?projectPath=`.
 - GPT-5.6 Sol, Terra, and Luna fallback selection for Codex teams, dynamic future-model efforts, and in-app Codex CLI updates.
 - Traditional Chinese (Taiwan, `zh-TW`) app language with Taiwan terminology. Traditional Chinese system locales (zh-TW, zh-HK, zh-MO, zh-Hant) select it automatically, missing keys fall back to English instead of Simplified Chinese, and cron schedule descriptions use cronstrue's `zh_TW`.
 

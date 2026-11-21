@@ -32,6 +32,11 @@ on:
       - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
       - 'src/features/review-flow/main/**'
       - 'src/features/review-flow/renderer/view-model/**'
+      - 'src/main/http/teams/projectBoardRoute.ts'
+      - 'src/main/http/teams/projectContextHttp.ts'
+      - 'mcp-server/src/tools/index.ts'
+      - 'mcp-server/src/tools/projectBoard.ts'
+      - 'mcp-server/src/utils/teamConfig.ts'
   push:
     branches: [main]
     paths:
@@ -63,6 +68,11 @@ on:
       - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
       - 'src/features/review-flow/main/**'
       - 'src/features/review-flow/renderer/view-model/**'
+      - 'src/main/http/teams/projectBoardRoute.ts'
+      - 'src/main/http/teams/projectContextHttp.ts'
+      - 'mcp-server/src/tools/index.ts'
+      - 'mcp-server/src/tools/projectBoard.ts'
+      - 'mcp-server/src/utils/teamConfig.ts'
 
 permissions:
   contents: read

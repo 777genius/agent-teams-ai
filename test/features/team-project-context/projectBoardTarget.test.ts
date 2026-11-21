@@ -80,7 +80,8 @@ async function refusal(run: Promise<unknown>): Promise<{ code: string; message: 
   try {
     await run;
   } catch (error) {
-    if (error instanceof ProjectBoardTargetError) return { code: error.code, message: error.message };
+    if (error instanceof ProjectBoardTargetError)
+      return { code: error.code, message: error.message };
     throw error;
   }
   throw new Error('Expected a refusal');

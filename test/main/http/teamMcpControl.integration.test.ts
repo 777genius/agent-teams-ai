@@ -2167,6 +2167,7 @@ describe('MCP team tools over the local REST control API', () => {
         await mkdir(project(id));
         const { executionTeamName } = await registry.reserve(teamName, project(id));
         await mkdir(path.join(teamsBase, executionTeamName), { recursive: true });
+        await mkdir(path.join(root, 'tasks', executionTeamName), { recursive: true });
         await writeFile(
           path.join(teamsBase, executionTeamName, 'config.json'),
           JSON.stringify({
