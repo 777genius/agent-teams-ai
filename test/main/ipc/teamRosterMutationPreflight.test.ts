@@ -79,6 +79,26 @@ describe('read-only roster mutation preflight', () => {
     expect(data.assertRosterMutationAllowed).not.toHaveBeenCalled();
   });
 
+  it('rejects sparse IPC rosters before capability admission', async () => {
+    const data = ports([{ name: 'team-lead', providerId: 'codex' }]);
+    await expect(
+      preflightRosterMutation(data, 'ptc-a', 'replace', { members: Array(1) })
+    ).rejects.toThrow('member must be object');
+    expect(data.assertRosterMutationAllowed).not.toHaveBeenCalled();
+  });
+
+  it('normalizes blank authored fields like native persistence', async () => {
+    const data = ports([{ name: 'team-lead', providerId: 'codex' }]);
+    await preflightRosterMutation(data, 'ptc-a', 'replace', {
+      members: [{ name: 'alice', role: ' ', workflow: '' }],
+    });
+    expect(data.assertRosterMutationAllowed).toHaveBeenCalledWith(
+      'ptc-a',
+      [expect.objectContaining({ name: 'alice', role: undefined, workflow: undefined })],
+      true
+    );
+  });
+
   it('rejects case-folded duplicates and runtime-managed names in the shared parser', () => {
     expect(() => parseRosterMutationMembers([{ name: 'alice' }, { name: 'ALICE' }])).toThrow();
     expect(() => parseRosterMutationMembers([{ name: 'alice-2' }])).toThrow(/runtime-managed/);

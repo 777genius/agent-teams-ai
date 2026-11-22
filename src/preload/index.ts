@@ -484,7 +484,7 @@ interface IpcFileChangePayload {
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
   if (!result.success) {
-    throw new Error(result.error ?? 'Unknown error');
+    throw Object.assign(new Error(result.error ?? 'Unknown error'), { failure: result.failure });
   }
   return result.data as T;
 }

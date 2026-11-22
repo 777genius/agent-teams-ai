@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { preflightRosterMutation } from '../../../../src/main/ipc/teams/teamRosterMutationPreflight';
+
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
-function mixedTeam() {
+function mixedTeam(
+  members: { name: string; providerId?: 'codex' | 'opencode' }[] = [
+    { name: 'alice', providerId: 'opencode' },
+  ]
+) {
   const listProcesses = vi.fn(async () => []);
   const writeMembers = vi.fn();
   const service = new TeamDataService(
@@ -14,7 +20,7 @@ function mixedTeam() {
     {} as never,
     {} as never,
     {} as never,
-    { getMembers: async () => [{ name: 'alice', providerId: 'opencode' }], writeMembers } as never,
+    { getMembers: async () => members, writeMembers } as never,
     {} as never,
     (() => ({ processes: { listProcesses } })) as never,
     {} as never,
@@ -24,6 +30,36 @@ function mixedTeam() {
 }
 
 describe('live preflight uses confirmed runtime liveness', () => {
+  it('admits adding a side lane when unchanged primary members inherit their runtime settings', async () => {
+    const w = mixedTeam([{ name: 'primary' }, { name: 'alice', providerId: 'opencode' }]);
+    vi.spyOn(w.service, 'getTeamData').mockResolvedValue({
+      members: [
+        { name: 'team-lead', providerId: 'codex' },
+        {
+          name: 'primary',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'runtime-model',
+          effort: 'high',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {},
+        },
+        {
+          name: 'alice',
+          providerId: 'opencode',
+          configuredRuntimeSettings: { providerId: 'opencode' },
+        },
+      ],
+    } as never);
+    await expect(
+      preflightRosterMutation(w.service, 'preflight-test', 'add', {
+        name: 'bob',
+        providerId: 'opencode',
+      })
+    ).resolves.toBeUndefined();
+    expect(w.writeMembers).not.toHaveBeenCalled();
+  });
+
   it('rejects a mixed primary add even when the process catalog is empty', async () => {
     const w = mixedTeam();
     await expect(

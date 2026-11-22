@@ -160,6 +160,7 @@ import {
   getCurrentProvisioningProgressForTeam,
   projectProvisioningProgressOwners,
   projectProvisioningRuntimeAdoption,
+  pruneProvisioningRuns,
 } from '../team/teamProvisioningRunIdentity';
 import {
   isActiveProvisioningState,
@@ -4762,11 +4763,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
 
       nextRuns[progress.runId] = progress;
-      for (const [runId, run] of Object.entries(nextRuns)) {
-        if (runId !== progress.runId && run.teamName === progress.teamName) {
-          delete nextRuns[runId];
-        }
-      }
 
       const progressOwners = projectProvisioningProgressOwners({ ...state, currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam }, progress);
       // Clean up provisioning snapshot on terminal failure states
@@ -4779,7 +4775,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             })()
           : state.provisioningSnapshotByTeam;
       return {
-        provisioningRuns: nextRuns,
+        provisioningRuns: pruneProvisioningRuns(nextRuns, progressOwners.currentProvisioningRunIdByTeam, progress),
         ...progressOwners,
         currentRuntimeRunIdByTeam: {
           ...state.currentRuntimeRunIdByTeam,

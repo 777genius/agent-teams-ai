@@ -2,6 +2,7 @@ import {
   validateMemberName,
   validateTeammateName,
 } from '@main/services/team/TeamIdentifierValidation';
+import { getConfiguredTeamMember } from '@shared/utils/teamMemberConfiguredSettings';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 
@@ -25,7 +26,7 @@ import type { ReplaceMembersRequest } from '@shared/types';
 export function parseRosterMutationMembers(value: unknown): ReplaceMembersRequest['members'] {
   if (!Array.isArray(value)) throw new Error('members must be an array');
   const seenNames = new Set<string>();
-  return value.map((item: unknown) => {
+  return Array.from(value, (item: unknown) => {
     if (!item || typeof item !== 'object') throw new Error('member must be object');
     const member = item as Record<string, unknown>;
     const name = validateTeammateName(member.name);
@@ -56,8 +57,9 @@ export function parseRosterMutationMembers(value: unknown): ReplaceMembersReques
     if (!fastMode.valid) throw new Error(fastMode.error);
     return {
       name: name.value,
-      role: typeof member.role === 'string' ? member.role.trim() : undefined,
-      workflow: typeof member.workflow === 'string' ? member.workflow.trim() : undefined,
+      role: typeof member.role === 'string' ? member.role.trim() || undefined : undefined,
+      workflow:
+        typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined,
       isolation: member.isolation === 'worktree' ? 'worktree' : undefined,
       providerId: provider.value,
       providerBackendId: backend.value,
@@ -120,8 +122,11 @@ export async function preflightRosterMutation(
   operation: RosterMutationKind,
   ...args: unknown[]
 ): Promise<void> {
-  const previous = (await data.getTeamData(teamName)).members as RuntimeRosterMutationMember[];
-  const next = nextRoster(previous, operation, args).filter((member) => !member.removedAt);
+  const previous = (await data.getTeamData(teamName)).members;
+  const authored = previous.map((member) =>
+    isLeadRosterMutationMember(member) ? member : getConfiguredTeamMember(member)
+  );
+  const next = nextRoster(authored, operation, args).filter((member) => !member.removedAt);
   if (
     operation === 'remove' &&
     next.length === previous.filter((member) => !member.removedAt).length

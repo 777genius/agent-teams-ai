@@ -2335,7 +2335,7 @@
       "failed": {
         "memberFailedToStart": "{{name}} شروع میں ناکام ہوا",
         "teammatesFailedToStart": "{{count}} ٹیمیں شروع کرنے میں ناکام رہی",
-        "teammatesFailedRatio": "{{count}}/{{total}} ٹیمیں شروع کرنے میں ناکام رہی",
+        "teammatesFailedRatio": "{{count}}/{{total}} ساتھی شروع ہونے میں ناکام رہے",
         "manualPermissionUnsupported": "آغاز کا یہ طریقہ ٹولز کی دستی منظوری کی حمایت نہیں کرتا۔ منظوری کی حمایت کرنے والا طریقہ منتخب کریں اور دوبارہ کوشش کریں۔"
       },
       "skipped": {
@@ -2360,7 +2360,7 @@
         "teamProvisionedLeadOnline": "ٹیم فراہم کی گئی آن لائن",
         "teamProvisionedAllJoined": "ٹیم فراہم کی گئی تمام {{count}} گروہیوں نے ساتھ لیا",
         "teamProvisionedStillJoining": "ٹیموں کی فراہم‌کردہ ٹیم ابھی بھی شامل ہو رہی ہے",
-        "launchFinishedWithErrors": "لانچ ختم ضلع - {{count}}/{{total}} ٹیمیں شروع کرنے میں ناکام رہی",
+        "launchFinishedWithErrors": "لانچ ختم ضلع - {{count}}/{{total}} ساتھی شروع ہونے میں ناکام رہے",
         "launchContinuedSkipped": "لانچ جاری - {{count}}/{{total}} ٹیموں کے کچھ حصے",
         "teamLaunchedLeadOnline": "ٹیم کا آغاز آن لائن",
         "teamLaunchedAllJoined": "ٹیم شروع کی گئی تمام {{count}} گروہیوں نے ساتھ لیا"

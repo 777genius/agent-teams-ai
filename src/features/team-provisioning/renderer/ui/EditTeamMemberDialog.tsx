@@ -108,6 +108,7 @@ export const EditTeamMemberDialog = ({
   const teamSettingsFingerprint = savedLaunchSettings.fingerprint;
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
+  const [projectContextRefused, setProjectContextRefused] = useState(false);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
   const { saving, save, resetIdentity } = useUpdateMemberSettings();
   const incomingFingerprint = useMemo(() => fingerprintResolvedMember(member), [member]);
@@ -167,10 +168,12 @@ export const EditTeamMemberDialog = ({
     if (saving) return;
     resetIdentity();
     setError(null);
+    setProjectContextRefused(false);
     onClose();
   };
 
   const handleSave = async (): Promise<void> => {
+    setProjectContextRefused(false);
     if (!targetAvailable) return;
     if (incomingFingerprint !== fingerprint) {
       setError(t('editTeam.errors.settingsChanged'));
@@ -212,6 +215,12 @@ export const EditTeamMemberDialog = ({
       setError(t('editTeam.errors.saveFailed'));
       return;
     }
+    setProjectContextRefused(
+      (result.outcome === 'refused' && result.reason === 'project_unreconciled') ||
+        (projectDefinition &&
+          result.outcome === 'completed' &&
+          result.effect === 'recovery_required')
+    );
     const committedLeadRuntime =
       isLead &&
       result.outcome === 'completed' &&
@@ -366,7 +375,7 @@ export const EditTeamMemberDialog = ({
             {error ?? t('editTeam.errors.settingsChanged')}
           </p>
         ) : null}
-        {error && projectDefinition && (
+        {projectContextRefused && projectDefinition && (
           <ProjectContextRecoveryNotice teamName={teamName} onNavigate={onClose} />
         )}
         <DialogFooter>

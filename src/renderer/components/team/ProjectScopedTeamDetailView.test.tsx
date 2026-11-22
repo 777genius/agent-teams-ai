@@ -168,6 +168,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+    vi.useRealTimers();
   });
 
   it('keeps the mounted native project visible for live inbox/task refresh and unregisters it', async () => {
@@ -425,6 +426,34 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
   });
 
+  it('does not let an older incomplete response replace newer unknown ownership', async () => {
+    vi.useFakeTimers();
+    const unknown = { mode: 'per_project', state: 'pending', reason: 'unknown', projectPath: '/TEST/a', runId: null };
+    getView.mockResolvedValue(unknown);
+    await act(async () => root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })));
+    await settle();
+    let resolveOlder!: (value: unknown) => void;
+    getView.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
+    await act(async () => { vi.advanceTimersByTime(2500); });
+    const refresh = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'actions.refresh');
+    await act(async () => refresh?.click());
+    await settle();
+    await act(async () => resolveOlder({ ...unknown, reason: 'incomplete' }));
+    await settle();
+    expect(host.textContent).toContain('projectContextView.unknown');
+    expect(host.textContent).not.toContain('projectContextView.retryLaunch');
+  });
+
+  it('keeps another project active run out of a launching project banner', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'pending', reason: 'launching', projectPath: '/TEST/a', runId: 'run-a' });
+    state.currentProvisioningRunIdByTeam.builders = 'run-b';
+    state.provisioningRuns['run-b'] = { runId: 'run-b', teamName: 'builders', state: 'spawning' };
+    await act(async () => root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })));
+    await settle();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
+    expect(host.textContent).toContain('projectContextView.pending');
+  });
+
   it('does not enable launch when process ownership is unknown', async () => {
     getView.mockResolvedValue({
       mode: 'per_project',
@@ -528,7 +557,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
       root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
     );
     await settle();
-    expect(host.querySelector('[data-testid="provisioning-banner"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
     expect(host.textContent).toContain('projectContextView.pending');
     expect(host.querySelector('button')).toBeNull();
   });

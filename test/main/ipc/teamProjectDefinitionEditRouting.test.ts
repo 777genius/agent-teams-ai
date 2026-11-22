@@ -152,6 +152,7 @@ describe('definition edit routing with the real editor and gate', () => {
     await expect(stuck.wrapped(event, 'builders', {})).resolves.toMatchObject({
       success: false,
       error: expect.stringMatching(/project ptc-a.*interrupted.*retry the launch/i),
+      failure: { code: 'TEAM_PROJECT_CONTEXT_UNRECONCILED' },
     });
     for (const w of [running, launching, stuck]) expect(w.writes).toEqual([]);
   });

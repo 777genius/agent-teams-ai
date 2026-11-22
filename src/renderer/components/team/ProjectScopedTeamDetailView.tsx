@@ -105,11 +105,17 @@ export const ProjectScopedTeamDetailView = ({
   const launchRef = useRef<{ key: string; runId: string | null } | null>(null);
   const launching = launchingKey === key;
 
+  const latestViewRequest = useRef(0);
   const refresh = useCallback(
     async (isCurrent: () => boolean): Promise<void> => {
+      const requestId = ++latestViewRequest.current;
       try {
         const context = await api.teams.getProjectContextView(teamName, selectedProjectPath);
-        if (isCurrent() && activeKeyRef.current === key) {
+        if (
+          isCurrent() &&
+          activeKeyRef.current === key &&
+          requestId === latestViewRequest.current
+        ) {
           setResult({ key, context });
           if (
             context.state === 'ready' ||
@@ -119,7 +125,11 @@ export const ProjectScopedTeamDetailView = ({
           }
         }
       } catch (error) {
-        if (isCurrent() && activeKeyRef.current === key) {
+        if (
+          isCurrent() &&
+          activeKeyRef.current === key &&
+          requestId === latestViewRequest.current
+        ) {
           setResult({ key, error: error instanceof Error ? error.message : String(error) });
         }
       }
@@ -319,9 +329,7 @@ export const ProjectScopedTeamDetailView = ({
   }
 
   const showPendingBanner =
-    context?.state === 'pending' &&
-    ((context.runId !== null && context.runId === provisioningRunId) ||
-      (context.reason === 'launching' && provisioningActive));
+    context?.state === 'pending' && context.runId !== null && context.runId === provisioningRunId;
   const incomplete = context?.state === 'pending' && context.reason === 'incomplete';
   const unresolved = context?.state === 'pending' && context.reason === 'unknown';
   const canStart =

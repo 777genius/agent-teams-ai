@@ -404,8 +404,10 @@ export class TeamPromptManagement {
     operation: () => Promise<void>,
     verify: (readback: ConfigurationSnapshot) => boolean
   ): Promise<ConfigurationSnapshot> {
+    let operationCompleted = false;
     try {
       await operation();
+      operationCompleted = true;
       const readback = await this.read(teamName);
       if (!verify(readback))
         throw new Error('Committed configuration does not match the requested edit');
@@ -415,7 +417,7 @@ export class TeamPromptManagement {
         throw new TeamManagementError(error.code, error.message, error.statusCode);
       // A live mutation can save the definition before its runtime effect fails.
       // Matching saved settings alone must never turn that partial result into success.
-      if (error instanceof TeamManagementError) {
+      if (!operationCompleted && error instanceof TeamManagementError) {
         if (error.outcome) {
           try {
             error.outcome.configurationRevision = (await this.read(teamName)).configurationRevision;

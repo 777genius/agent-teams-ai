@@ -1,5 +1,6 @@
 import {
   isConfirmedStoppedTeamRuntime,
+  TeamProjectContextLaunchConflictError,
   TeamProjectDefinitionEditor,
   TeamProjectLiveEditJournal,
 } from '@features/team-project-context/main';
@@ -106,6 +107,9 @@ function failure(error: unknown): IpcResult<never> {
   return {
     success: false,
     error: message,
+    ...(error instanceof TeamProjectContextLaunchConflictError && error.reason === 'unreconciled'
+      ? { failure: { code: 'TEAM_PROJECT_CONTEXT_UNRECONCILED', message } }
+      : {}),
     ...(error instanceof TeamLiveRosterMutationError ||
     error instanceof TeamProjectRuntimeChangedError
       ? { failure: { code: error.code, message } }

@@ -82,6 +82,17 @@ export function projectProvisioningProgressOwners(
   const floors = { ...state.provisioningStartedAtFloorByTeam };
   const error = getProvisioningProgressError(progress);
   for (const teamName of owners) {
+    const previousId = current[teamName];
+    const previous = previousId ? state.provisioningRuns[previousId] : undefined;
+    if (
+      teamName !== progress.teamName &&
+      previousId &&
+      previousId !== progress.runId &&
+      (!previous ||
+        !isTerminalProvisioningState(previous.state) ||
+        previous.retainedSecondaryRuntime)
+    )
+      continue;
     current[teamName] = progress.runId;
     if (error) errors[teamName] = error;
     else delete errors[teamName];
@@ -95,4 +106,19 @@ export function projectProvisioningProgressOwners(
     provisioningErrorByTeam: errors,
     provisioningStartedAtFloorByTeam: floors,
   };
+}
+
+/** Keep an old attempt until every alias that still presents it can reconcile its terminal state. */
+export function pruneProvisioningRuns(
+  runs: Record<string, TeamProvisioningProgress>,
+  owners: Record<string, string | null>,
+  progress: TeamProvisioningProgress
+): Record<string, TeamProvisioningProgress> {
+  const referenced = new Set(Object.values(owners));
+  return Object.fromEntries(
+    Object.entries(runs).filter(
+      ([runId, run]) =>
+        runId === progress.runId || run.teamName !== progress.teamName || referenced.has(runId)
+    )
+  );
 }

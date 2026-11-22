@@ -9087,12 +9087,12 @@ describe('teamSlice actions', () => {
     });
 
     it.each(['ready', 'failed'] as const)(
-      'binds a project alias banner to its verified successor while logical progress is %s',
+      'binds a project alias banner after logical successor progress has arrived as %s',
       async (nextState) => {
         const store = createSliceStore();
         const old = {
           runId: 'project-r1',
-          teamName: 'ptc-a',
+          teamName: 'builders',
           state: 'failed' as const,
           message: 'Old A failure',
           error: 'Old A failure',
@@ -9141,6 +9141,8 @@ describe('teamSlice actions', () => {
           updatedAt: '2026-03-12T10:01:01.000Z',
         };
         hoisted.getProvisioningStatus.mockResolvedValue(successor);
+        store.setState({ currentRuntimeRunIdByTeam: { ...store.getState().currentRuntimeRunIdByTeam, builders: successor.runId } });
+        store.getState().onProvisioningProgress(successor);
 
         await store.getState().fetchMemberSpawnStatuses('ptc-a');
         await flushMicrotasks();
@@ -9167,6 +9169,20 @@ describe('teamSlice actions', () => {
         expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe('project-r2');
       }
     );
+
+    it.each(['assembling', 'unknown'] as const)('preserves an alias current %s attempt when unrelated canonical progress matches its old runtime', (previousState) => {
+      const store = createSliceStore();
+      const progress = { runId: 'runtime-r2', teamName: 'builders', state: 'ready' as const, message: 'Ready', startedAt: '2026-03-12T10:01:00.000Z', updatedAt: '2026-03-12T10:01:01.000Z' };
+      store.setState({
+        currentProvisioningRunIdByTeam: { builders: progress.runId, 'ptc-a': 'attempt-r3' },
+        currentRuntimeRunIdByTeam: { builders: progress.runId, 'ptc-a': progress.runId },
+        provisioningRuns: previousState === 'unknown' ? {} : { 'attempt-r3': { ...progress, runId: 'attempt-r3', teamName: 'ptc-a', state: previousState } },
+        provisioningErrorByTeam: { 'ptc-a': 'Keep this attempt' },
+      });
+      store.getState().onProvisioningProgress(progress);
+      expect(store.getState().currentProvisioningRunIdByTeam['ptc-a']).toBe('attempt-r3');
+      expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe('Keep this attempt');
+    });
 
     it('does not use a stopped earlier project pointer to resurrect same-timestamp failure', () => {
       const store = createSliceStore();
