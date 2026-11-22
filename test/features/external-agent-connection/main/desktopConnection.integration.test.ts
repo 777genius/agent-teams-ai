@@ -2,7 +2,10 @@
 import { request as httpRequest } from 'node:http';
 
 import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
-import { getDesktopMcpChildEnvironment, isDesktopMcpControlAvailable } from '@features/external-agent-connection/main/desktopMcpEnvironment';
+import {
+  getDesktopMcpChildEnvironment,
+  isDesktopMcpControlAvailable,
+} from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -197,7 +200,9 @@ describe('desktop connection bound HTTP lifecycle', () => {
       const firstChild = getDesktopMcpChildEnvironment();
       const secondChild = getDesktopMcpChildEnvironment();
       expect(JSON.parse(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON)).toEqual(resumed.context);
-      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON);
+      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(
+        firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON
+      );
       expect((await connection.getConnectionInfo()).context).toEqual(resumed.context);
       expect(isDesktopMcpControlAvailable()).toBe(true);
       const rootOrderOffset = order.length;
@@ -316,4 +321,137 @@ describe('desktop connection bound HTTP lifecycle', () => {
       await app.close();
     }
   });
+});
+
+it('reports an intentionally disabled HTTP bridge with a distinct recovery code', async () => {
+  const connection = createDesktopExternalAgentConnection({
+    appInstanceId: 'sandbox-disabled',
+    userDataPath: '/sandbox/profile',
+    getRoot: () => '/sandbox/root',
+    getMainContents: () => null,
+    getCdpEnabled: () => false,
+    getAppVersion: () => 'test',
+    isLocalContext: () => true,
+    getControlUrl: () => null,
+    startControl: vi.fn(),
+    reconfigureRoot: vi.fn(),
+    cdp: {
+      read: async () => ({
+        cdp: {
+          status: 'disabled',
+          httpOrigin: null,
+          browserWsUrl: null,
+          rendererTargetId: null,
+          rendererWsUrl: null,
+          targetGeneration: 0,
+        },
+        reason: null,
+      }),
+    } as unknown as NativeRendererCdp,
+    mcp: {
+      getCurrentHandle: () => null,
+      ensureStarted: vi.fn(),
+      stop: vi.fn(async () => undefined),
+      appContext: { bind: () => () => undefined },
+    },
+    httpEnabled: false,
+  });
+  try {
+    const info = await connection.retryConnection();
+    expect(info.mcp.status).toBe('error');
+    expect(info.errorCode).toBe('MCP_HTTP_DISABLED');
+    expect(info.mcp.url).toBeNull();
+  } finally {
+    await connection.shutdown();
+  }
+});
+
+it('delivers a confirmation only for the current app context and keeps it until dismissed', async () => {
+  const send = vi.fn();
+  let windowReady = true;
+  let cdpAccessReady = false;
+  const connection = createDesktopExternalAgentConnection({
+    appInstanceId: 'confirmation-sandbox',
+    userDataPath: '/sandbox/confirmation-profile',
+    getRoot: () => '/sandbox/confirmation-root',
+    getMainContents: () =>
+      ({ isDestroyed: () => false, isLoadingMainFrame: () => !windowReady, send }) as never,
+    getCdpEnabled: () => false,
+    getAppVersion: () => 'test',
+    isLocalContext: () => true,
+    getControlUrl: () => null,
+    startControl: vi.fn(),
+    reconfigureRoot: vi.fn(),
+    cdp: {
+      read: async () => ({
+        cdp: {
+          status: cdpAccessReady ? 'ready' : 'disabled',
+          httpOrigin: cdpAccessReady ? 'http://127.0.0.1:43002' : null,
+          browserWsUrl: cdpAccessReady ? 'ws://127.0.0.1:43002/devtools/browser/sandbox' : null,
+          rendererTargetId: cdpAccessReady ? 'sandbox-renderer' : null,
+          rendererWsUrl: cdpAccessReady
+            ? 'ws://127.0.0.1:43002/devtools/page/sandbox-renderer'
+            : null,
+          targetGeneration: 0,
+        },
+        reason: null,
+      }),
+    } as unknown as NativeRendererCdp,
+    mcp: {
+      getCurrentHandle: () => null,
+      ensureStarted: vi.fn(),
+      stop: vi.fn(async () => undefined),
+      appContext: { bind: () => () => undefined },
+    },
+    httpEnabled: true,
+  });
+  const app = Fastify();
+  connection.registerHttp(app);
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const post = (body: unknown) =>
+    fetch(`${address}/api/app/connection/confirmation`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  try {
+    const expectedContext = (await connection.getConnectionInfo()).context;
+    expect(
+      (
+        await post({
+          agentName: 'Codex',
+          expectedContext: { ...expectedContext, appInstanceId: 'other' },
+        })
+      ).status
+    ).toBe(409);
+    expect((await post({ agentName: 'bad\nname', expectedContext })).status).toBe(400);
+    expect((await post({ agentName: 'Codex', expectedContext, cdpVerified: true })).status).toBe(
+      409
+    );
+    expect((await post({ agentName: 'Codex', expectedContext, cdpVerified: 'yes' })).status).toBe(
+      400
+    );
+    windowReady = false;
+    expect((await post({ agentName: 'Codex', expectedContext })).status).toBe(503);
+    expect(send).not.toHaveBeenCalled();
+    windowReady = true;
+    cdpAccessReady = true;
+    expect(
+      await (await post({ agentName: 'Codex', expectedContext, cdpVerified: true })).json()
+    ).toEqual({
+      accepted: true,
+    });
+    const pending = await connection.getPendingConfirmation!();
+    expect(pending).toEqual({ id: expect.any(String), agentName: 'Codex', cdpVerified: true });
+    expect(send).toHaveBeenCalledWith('external-agent-connection:confirmation', pending);
+    expect((await post({ agentName: 'Claude Code', expectedContext })).status).toBe(429);
+    expect(send).toHaveBeenCalledTimes(1);
+    await connection.dismissConfirmation!('other');
+    expect(await connection.getPendingConfirmation!()).toEqual(pending);
+    await connection.dismissConfirmation!(pending!.id);
+    expect(await connection.getPendingConfirmation!()).toBeNull();
+  } finally {
+    await connection.shutdown();
+    await app.close();
+  }
 });

@@ -39,9 +39,20 @@ export interface ConnectionInfoV1 {
   recovery: string | null;
 }
 
+/** The name is supplied by the client; this is not an authenticated identity. */
+export interface ExternalAgentConfirmation {
+  id: string;
+  agentName: string;
+  /** Client assertion, not an independently verified CDP session. */
+  cdpVerified?: boolean;
+}
+
 export interface ExternalAgentConnectionApi {
   getConnectionInfo(): Promise<ConnectionInfoV1>;
   retryConnection(): Promise<ConnectionInfoV1>;
+  getPendingConfirmation?(): Promise<ExternalAgentConfirmation | null>;
+  dismissConfirmation?(id: string): Promise<void>;
+  onConfirmation?(listener: (confirmation: ExternalAgentConfirmation) => void): () => void;
   /** Native desktop execution; deliberately unavailable in browser/server mode. */
   directRun?: ExternalAgentRunApi;
 }
@@ -83,6 +94,9 @@ export const EXTERNAL_AGENT_RUN_CHANNELS = {
 export const EXTERNAL_AGENT_CONNECTION_CHANNELS = {
   getInfo: 'external-agent-connection:getInfo',
   retry: 'external-agent-connection:retry',
+  confirmation: 'external-agent-connection:confirmation',
+  getConfirmation: 'external-agent-connection:getConfirmation',
+  dismissConfirmation: 'external-agent-connection:dismissConfirmation',
 } as const;
 
 export const EXTERNAL_AGENT_RENDERER_MARKER = '__AGENT_TEAMS_CONNECTION_CONTEXT__';

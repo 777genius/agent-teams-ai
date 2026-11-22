@@ -21,10 +21,19 @@ rebinds the existing supervisor. Child binding is immutable and controller
 requests cannot fall back to another app or data root. Loopback identity is an
 expectation contract, not authentication.
 
+CDP defaults to enabled. Existing unversioned preferences are migrated to enabled once, including previously saved off values because they do not distinguish defaults from user choices. Turning CDP off after migration is preserved. Local processes can control the renderer and exposed APIs while CDP is active.
+
 CDP startup switches are set before Electron readiness. Discovery identifies the
 main renderer through Electron's target ownership API, never window titles.
 Saved toggles require restart; disabling a preference cannot revoke an already
 open native listener.
+
+The dashboard opens the AI agent settings, which distinguish server readiness
+from client discovery and offer client-specific registration commands. The
+settings and prompt use the same command builder. Copy reads a fresh snapshot
+and rejects an app/root change; it does not register a client or establish an
+MCP session. An explicitly disabled HTTP bridge has its own recovery state.
+CDP remains optional and its endpoints and access controls are under Advanced.
 
 Verification covers a real HTTP root fence, the existing supervisor lifecycle,
 settings restart states, and controller/MCP HTTP contracts. Packaged CDP and a
@@ -59,3 +68,14 @@ header. Its optional `onManagementApplied` callback follows newly accepted
 committed changes in the popup's live app/root context; merely opening, copying
 or closing the popup does not invoke it. Creation navigation preserves its
 autosaved form, description and prompt drafts.
+
+The settings setup prompt is available after MCP and enabled CDP
+are both ready. It asks an external client to register MCP, verify the live
+app/root context and exact renderer marker over CDP, and then call
+`app_show_connection_confirmation`. The tool also accepts MCP-only reports;
+for a CDP report the app checks that renderer access is still available, while
+the client's own CDP verification and name remain self-reported. The desktop
+control route checks the expected context, validates the bounded name, and
+retains one pending request until the renderer dismisses it. The tool is
+excluded from the limited native management profile, so existing one-shot team
+operations do not gain a new side effect.

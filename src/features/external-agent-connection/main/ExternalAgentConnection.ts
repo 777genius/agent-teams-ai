@@ -15,6 +15,7 @@ interface ConnectionDependencies {
   getBoundControlUrl(): string | null;
   hasTeamManagement?(): boolean;
   startControl(): Promise<void>;
+  httpEnabled: boolean;
   mcp: {
     getCurrentHandle(): { url: string; generation: number } | null;
     ensureStarted(): Promise<unknown>;
@@ -120,11 +121,13 @@ export class ExternalAgentConnection {
       },
       errorCode: !local
         ? 'LOCAL_CONTEXT_REQUIRED'
-        : failure
-          ? 'MCP_START_FAILED'
-          : cdp.status === 'error'
-            ? 'CDP_DISCOVERY_FAILED'
-            : null,
+        : failure && !this.deps.httpEnabled
+          ? 'MCP_HTTP_DISABLED'
+          : failure
+            ? 'MCP_START_FAILED'
+            : cdp.status === 'error'
+              ? 'CDP_DISCOVERY_FAILED'
+              : null,
       reason,
       recovery: !local
         ? 'Switch to the local context.'

@@ -374,6 +374,8 @@ export interface AppConfig {
     telemetryEnabled: boolean;
     /** Full renderer CDP access; changes apply after an app restart. */
     externalAgentCdpEnabled?: boolean;
+    /** Records the one-time migration to the default-on CDP preference. */
+    externalAgentCdpSettingsVersion?: number;
   };
   /** Provider connection preferences for app-launched multimodel sessions */
   providerConnections: {

@@ -334,6 +334,29 @@ async function getConnectionInfo(context) {
   return requestJsonWithFallback(resolveControlBaseUrls(context), '/api/app/connection');
 }
 
+async function showConnectionConfirmation(context, flags = {}) {
+  desktopBinding.assertConnectionExpectation(flags);
+  if (
+    typeof flags.agentName !== 'string' ||
+    !flags.agentName.trim() ||
+    flags.agentName.length > 80 ||
+    /[\u0000-\u001f\u007f]/.test(flags.agentName)
+  ) {
+    throw new Error('Invalid agent name');
+  }
+  if (flags.cdpVerified !== undefined && typeof flags.cdpVerified !== 'boolean') {
+    throw new Error('Invalid CDP verification flag');
+  }
+  return requestJson(resolveControlBaseUrls(context)[0], '/api/app/connection/confirmation', {
+    method: 'POST',
+    body: {
+      agentName: flags.agentName.trim(),
+      expectedContext: flags.expectedContext,
+      ...(flags.cdpVerified !== undefined ? { cdpVerified: flags.cdpVerified } : {}),
+    },
+  });
+}
+
 async function getTeam(context, flags = {}) {
   const baseUrls = resolveControlBaseUrls(context, flags);
   return requestJsonWithFallback(
@@ -528,6 +551,7 @@ module.exports = {
   getMemberRosterContext,
   listTeams,
   getConnectionInfo,
+  showConnectionConfirmation,
   getTeam,
   createTeam,
   updateTeam,
