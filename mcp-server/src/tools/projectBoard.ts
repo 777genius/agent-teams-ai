@@ -1,9 +1,10 @@
-import { type FastMCP, UserError } from 'fastmcp';
+import { type FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import agentTeamsControllerModule from 'agent-teams-controller';
 
 import { resolveBoardTeam } from '../utils/teamConfig';
+import { asClientRefusal } from '../utils/appRefusal';
 
 const { AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES } = agentTeamsControllerModule;
 
@@ -20,25 +21,6 @@ interface BoardToolArgs {
   claudeDir?: string;
   projectPath?: string;
   [key: string]: unknown;
-}
-
-/**
- * A refusal of the app (an error the controller marks `appRefusal`, with its `code`) as the MCP
- * client sees it: a client only gets the text of a tool error, and FastMCP shows a `UserError` as
- * it is instead of `Tool '…' execution failed: …`. So the text starts with the code,
- * `[PROJECT_REQUIRED] …`, and the code is also in the structured content and on the error.
- */
-function asClientRefusal(error: unknown): unknown {
-  const refusal = error as { appRefusal?: unknown; code?: unknown } | null;
-  if (
-    !(error instanceof Error) ||
-    refusal?.appRefusal !== true ||
-    typeof refusal.code !== 'string'
-  ) {
-    return error;
-  }
-  const { code } = refusal;
-  return Object.assign(new UserError(`[${code}] ${error.message}`, { code }), { code });
 }
 
 /**

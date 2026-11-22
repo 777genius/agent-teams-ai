@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { TEAM_PROJECT_CONTEXT_VIEW_CHANNEL } from '../../../src/features/team-project-context/contracts';
+import { trackProjectCopyLaunch } from '../../../src/features/team-project-context/main/projectCopyLaunches';
 import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
 import { registerTeamProjectContextViewHandler } from '../../../src/features/team-project-context/main/TeamProjectContextViewIpc';
 import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
@@ -32,7 +33,9 @@ async function fixture(mode?: 'shared' | 'per_project') {
     fs.mkdir(projectB),
   ]);
   await claimTeamForThisProfile({
-    teamName: 'builders', teamsBasePath: getTeamsBasePath(), reason: 'create',
+    teamName: 'builders',
+    teamsBasePath: getTeamsBasePath(),
+    reason: 'create',
   });
   const store = new TeamMetaStore();
   await store.writeMeta('builders', {
@@ -47,13 +50,22 @@ async function fixture(mode?: 'shared' | 'per_project') {
     }),
     removeHandler: vi.fn((name: string) => handlers.delete(name)),
   };
-  registerTeamProjectContextViewHandler(ipc as never);
+  const runtime = {
+    getRuntimeState: vi.fn(async (teamName: string) => ({
+      teamName,
+      isAlive: false,
+      runId: null as string | null,
+      progress: null as import('../../../src/shared/types').TeamRuntimeState['progress'],
+    })),
+    hasProvisioningRun: vi.fn(() => false),
+  };
+  registerTeamProjectContextViewHandler(ipc as never, runtime);
   const resolve = async (projectPath: string | null, teamName = 'builders') => {
     const handler = handlers.get(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL);
     if (!handler) throw new Error('Handler not registered');
     return handler(null, teamName, projectPath);
   };
-  return { projectA, projectB, resolve };
+  return { projectA, projectB, resolve, runtime };
 }
 
 afterEach(async () => {
@@ -75,22 +87,34 @@ describe('project context view IPC (read-only)', () => {
   it('distinguishes missing project, empty, pending and verified ready history', async () => {
     const f = await fixture('per_project');
     expect(await f.resolve(null)).toEqual({
-      success: true, data: { mode: 'per_project', state: 'needs_project' },
+      success: true,
+      data: { mode: 'per_project', state: 'needs_project' },
     });
     expect(await f.resolve(f.projectB)).toEqual({
-      success: true, data: { mode: 'per_project', state: 'empty' },
+      success: true,
+      data: { mode: 'per_project', state: 'empty' },
     });
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     const reserved = await registry.reserve('builders', f.projectA);
     expect(await f.resolve(f.projectA)).toEqual({
-      success: true, data: { mode: 'per_project', state: 'pending' },
+      success: true,
+      data: {
+        mode: 'per_project',
+        state: 'pending',
+        reason: 'incomplete',
+        projectPath: f.projectA,
+        runId: null,
+      },
     });
     const teamDir = path.join(getTeamsBasePath(), reserved.executionTeamName);
     await fs.mkdir(teamDir);
     await fs.mkdir(path.join(getTasksBasePath(), reserved.executionTeamName));
-    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify({
-      name: reserved.executionTeamName,
-    }));
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: reserved.executionTeamName,
+      })
+    );
     await claimTeamForThisProfile({
       teamName: reserved.executionTeamName,
       teamsBasePath: getTeamsBasePath(),
@@ -106,7 +130,11 @@ describe('project context view IPC (read-only)', () => {
         removeHandler: (_channel: string) => undefined,
       };
       registerTeamProjectContextViewHandler(ipc as never);
-      return handlers.get(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL)!(null, reserved.executionTeamName, null);
+      return handlers.get(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL)!(
+        null,
+        reserved.executionTeamName,
+        null
+      );
     })();
     expect(handlerResult).toEqual({
       success: true,
@@ -129,6 +157,82 @@ describe('project context view IPC (read-only)', () => {
     });
   });
 
+  it('distinguishes a tracked launch from a stopped interrupted launch and unknown ownership', async () => {
+    const f = await fixture('per_project');
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const reserved = await registry.reserve('builders', f.projectB);
+    const tracked = trackProjectCopyLaunch(reserved.executionTeamName);
+    try {
+      expect(await f.resolve(f.projectB)).toMatchObject({
+        data: { state: 'pending', reason: 'launching' },
+      });
+    } finally {
+      tracked.end();
+    }
+    f.runtime.getRuntimeState.mockResolvedValue({
+      teamName: reserved.executionTeamName,
+      isAlive: false,
+      runId: 'failed-before-restart',
+      progress: {
+        runId: 'failed-before-restart',
+        teamName: reserved.executionTeamName,
+        state: 'failed',
+        message: 'Old failure',
+        startedAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+    });
+    expect(await f.resolve(f.projectB)).toMatchObject({
+      data: {
+        state: 'pending',
+        reason: 'incomplete',
+        runId: 'failed-before-restart',
+        projectPath: f.projectB,
+      },
+    });
+    f.runtime.getRuntimeState.mockResolvedValueOnce({
+      teamName: reserved.executionTeamName,
+      isAlive: false,
+      runId: 'new-run',
+      progress: {
+        runId: 'old-run',
+        teamName: reserved.executionTeamName,
+        state: 'failed',
+        message: 'Old failure',
+        startedAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+    });
+    expect(await f.resolve(f.projectB)).toMatchObject({ data: { reason: 'unknown' } });
+    f.runtime.hasProvisioningRun.mockReturnValue(true);
+    expect(await f.resolve(f.projectB)).toMatchObject({ data: { reason: 'unknown' } });
+    f.runtime.hasProvisioningRun.mockReturnValue(false);
+    f.runtime.getRuntimeState.mockRejectedValue(new Error('Cannot establish process ownership'));
+    expect(await f.resolve(f.projectB)).toMatchObject({ data: { reason: 'unknown' } });
+    expect(await registry.inspect('builders', f.projectB)).toEqual(reserved);
+  });
+
+  it('names the pending project for edit recovery without opening or modifying its history', async () => {
+    const f = await fixture('per_project');
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    await registry.reserve('builders', f.projectB);
+    expect(await f.resolve(null)).toEqual({
+      success: true,
+      data: {
+        mode: 'per_project',
+        state: 'needs_project',
+        recoveryProjectPath: f.projectB,
+      },
+    });
+    expect(await f.resolve(f.projectA)).toEqual({
+      success: true,
+      data: {
+        mode: 'per_project',
+        state: 'empty',
+      },
+    });
+  });
+
   it('refuses an alias whose logical team is not per-project instead of opening another history', async () => {
     const f = await fixture('per_project');
     const registry = TeamProjectContextRegistry.fromCurrentApp();
@@ -136,9 +240,12 @@ describe('project context view IPC (read-only)', () => {
     const teamDir = path.join(getTeamsBasePath(), reserved.executionTeamName);
     await fs.mkdir(teamDir);
     await fs.mkdir(path.join(getTasksBasePath(), reserved.executionTeamName));
-    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify({
-      name: reserved.executionTeamName,
-    }));
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: reserved.executionTeamName,
+      })
+    );
     await claimTeamForThisProfile({
       teamName: reserved.executionTeamName,
       teamsBasePath: getTeamsBasePath(),
@@ -147,7 +254,8 @@ describe('project context view IPC (read-only)', () => {
     await registry.confirmReady('builders', f.projectA, reserved.executionTeamName);
     const store = new TeamMetaStore();
     await store.updateMeta('builders', (meta) => ({
-      ...meta!, projectContextMode: 'shared',
+      ...meta!,
+      projectContextMode: 'shared',
     }));
 
     expect(await f.resolve(f.projectA)).toEqual({

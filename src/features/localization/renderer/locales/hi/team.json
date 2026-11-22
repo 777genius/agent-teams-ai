@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} शुरू करने में विफल रहा",
         "teammatesFailedToStart": "{{count}} टीममेट्स शुरू करने में विफल रहा",
-        "teammatesFailedRatio": "{{count}}/{{total}} टीममेट्स शुरू करने में विफल रहा"
+        "teammatesFailedRatio": "{{count}}/{{total}} टीममेट्स शुरू करने में विफल रहा",
+        "manualPermissionUnsupported": "यह लॉन्च तरीका टूल की मैन्युअल मंज़ूरी का समर्थन नहीं करता। मंज़ूरी का समर्थन करने वाला तरीका चुनें और फिर कोशिश करें।"
       },
       "skipped": {
         "memberSkipped": "{{name}} इस प्रक्षेपण के लिए छोड़ दिया",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "प्रोजेक्ट “{{project}}” में टीम का लॉन्च पूरा नहीं हुआ। फिर से लॉन्च करें।",
+    "unknown": "प्रोजेक्ट “{{project}}” में पिछला रन रुकने की पुष्टि नहीं हुई है। दोबारा लॉन्च करने से पहले उसकी स्थिति जाँचें।",
+    "retryLaunch": "फिर से लॉन्च करें",
+    "recoveryProject": "इस टीम को संपादित करने से पहले प्रोजेक्ट “{{project}}” का अधूरा लॉन्च जाँचें।",
+    "openProject": "प्रोजेक्ट खोलें"
   }
 }

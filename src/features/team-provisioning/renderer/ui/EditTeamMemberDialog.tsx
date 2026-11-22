@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ProjectContextRecoveryNotice } from '@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice';
 import { formatTeamModelSummary } from '@renderer/components/team/dialogs/teamModelSummary';
 import {
   createMemberDraftsFromInputs,
@@ -365,6 +366,9 @@ export const EditTeamMemberDialog = ({
             {error ?? t('editTeam.errors.settingsChanged')}
           </p>
         ) : null}
+        {error && projectDefinition && (
+          <ProjectContextRecoveryNotice teamName={teamName} onNavigate={onClose} />
+        )}
         <DialogFooter>
           <Button variant="outline" disabled={saving} onClick={close}>
             {t('editTeam.actions.cancel')}

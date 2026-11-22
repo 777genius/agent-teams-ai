@@ -227,10 +227,18 @@ type TeamSliceHarnessState = TeamSlice &
     | 'setActiveTab'
     | 'updateTabLabel'
     | 'warmTaskChangeSummaries'
-  > & Partial<Pick<AppState,
-    'projects' | 'repositoryGroups' | 'selectedRepositoryId' | 'selectedWorktreeId' |
-    'fetchSessionsInitial' | 'activeProjectId'
-  >>;
+  > &
+  Partial<
+    Pick<
+      AppState,
+      | 'projects'
+      | 'repositoryGroups'
+      | 'selectedRepositoryId'
+      | 'selectedWorktreeId'
+      | 'fetchSessionsInitial'
+      | 'activeProjectId'
+    >
+  >;
 
 type TestTabInput = Omit<AppState['paneLayout']['panes'][number]['tabs'][number], 'createdAt'> & {
   createdAt?: number;
@@ -491,13 +499,23 @@ function createRuntimeSnapshot(
 describe('teamSlice actions', () => {
   it('reuses the existing team tab instead of opening a second one', () => {
     const store = createSliceStore();
-    const existing = createTestTab({ id: 'team-tab', type: 'team', teamName: 'builders', label: 'Builders' });
+    const existing = createTestTab({
+      id: 'team-tab',
+      type: 'team',
+      teamName: 'builders',
+      label: 'Builders',
+    });
     store.setState({
       getAllPaneTabs: vi.fn(() => [existing]),
       teamByName: {
         builders: {
-          teamName: 'builders', displayName: 'Builders', description: '',
-          memberCount: 0, taskCount: 0, lastActivity: null, projectContextMode: 'per_project',
+          teamName: 'builders',
+          displayName: 'Builders',
+          description: '',
+          memberCount: 0,
+          taskCount: 0,
+          lastActivity: null,
+          projectContextMode: 'per_project',
         },
       } as AppState['teamByName'],
     });
@@ -511,13 +529,27 @@ describe('teamSlice actions', () => {
     const fetchSessionsInitial = vi.fn().mockResolvedValue(undefined);
     store.setState({
       projects: [],
-      repositoryGroups: [{
-        id: 'repo-b', identity: null, name: 'B', mostRecentSession: 0, totalSessions: 0,
-        worktrees: [{
-          id: 'worktree-b', path: '/TEST/project-b', name: 'project-b',
-          isMainWorktree: false, source: 'git', sessions: [], totalSessions: 0, createdAt: 1,
-        }],
-      }] as AppState['repositoryGroups'],
+      repositoryGroups: [
+        {
+          id: 'repo-b',
+          identity: null,
+          name: 'B',
+          mostRecentSession: 0,
+          totalSessions: 0,
+          worktrees: [
+            {
+              id: 'worktree-b',
+              path: '/TEST/project-b',
+              name: 'project-b',
+              isMainWorktree: false,
+              source: 'git',
+              sessions: [],
+              totalSessions: 0,
+              createdAt: 1,
+            },
+          ],
+        },
+      ] as AppState['repositoryGroups'],
       selectedProjectId: 'unrelated-project',
       selectedWorktreeId: null,
       selectedRepositoryId: null,
@@ -531,9 +563,12 @@ describe('teamSlice actions', () => {
       activeProjectId: 'worktree-b',
     });
     expect(fetchSessionsInitial).toHaveBeenCalledWith('worktree-b');
-    expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'team', teamName: 'builders',
-    }));
+    expect(store.getState().openTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'team',
+        teamName: 'builders',
+      })
+    );
   });
 
   it('addresses group tasks to the existing team tab and consumes only the newest intent', () => {
@@ -616,7 +651,9 @@ describe('teamSlice actions', () => {
     hoisted.createTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.launchTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.getProjectContextView.mockImplementation(async (teamName: string) => ({
-      mode: 'shared', state: 'ready', executionTeamName: teamName,
+      mode: 'shared',
+      state: 'ready',
+      executionTeamName: teamName,
     }));
     hoisted.invalidateTaskChangeSummaries.mockResolvedValue(undefined);
     hoisted.getProvisioningStatus.mockResolvedValue({
@@ -1052,13 +1089,11 @@ describe('teamSlice actions', () => {
       store.getState().onProvisioningProgress(failure);
       expect(store.getState().provisioningRuns[ready.runId]).toEqual(failure);
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe(failure.error);
-      store
-        .getState()
-        .onProvisioningProgress({
-          ...ready,
-          state: 'ready',
-          updatedAt: '2026-03-12T10:02:00.000Z',
-        });
+      store.getState().onProvisioningProgress({
+        ...ready,
+        state: 'ready',
+        updatedAt: '2026-03-12T10:02:00.000Z',
+      });
       expect(store.getState().provisioningRuns[ready.runId]).toEqual(failure);
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe(failure.error);
     }
@@ -7546,9 +7581,11 @@ describe('teamSlice actions', () => {
         JSON.stringify(oldSettings)
       );
       hoisted.getProjectContextView.mockResolvedValue({
-        mode: 'per_project', state: 'ready',
+        mode: 'per_project',
+        state: 'ready',
         executionTeamName: 'ptc-project-a',
-        workContextId: 'work-a', projectPath: '/tmp/project-a',
+        workContextId: 'work-a',
+        projectPath: '/tmp/project-a',
       });
       const priorWrite = createDeferredPromise<void>();
       hoisted.updateToolApprovalSettings
@@ -7556,18 +7593,14 @@ describe('teamSlice actions', () => {
         .mockResolvedValueOnce(undefined);
 
       // The user previously enabled auto-allow in the physical approval sheet.
-      await store.getState().updateToolApprovalSettings(
-        { autoAllowAll: true }, 'ptc-project-a'
-      );
+      await store.getState().updateToolApprovalSettings({ autoAllowAll: true }, 'ptc-project-a');
       const launching = store.getState().launchTeam({
         teamName: 'builders',
         cwd: '/tmp/project-a',
         skipPermissions: false,
       });
       await vi.waitFor(() =>
-        expect(hoisted.getProjectContextView).toHaveBeenCalledWith(
-          'builders', '/tmp/project-a'
-        )
+        expect(hoisted.getProjectContextView).toHaveBeenCalledWith('builders', '/tmp/project-a')
       );
       expect(hoisted.launchTeam).not.toHaveBeenCalled();
       priorWrite.resolve();
@@ -7575,15 +7608,18 @@ describe('teamSlice actions', () => {
 
       const expected = { ...oldSettings, autoAllowAll: false };
       expect(hoisted.updateToolApprovalSettings).toHaveBeenLastCalledWith(
-        'ptc-project-a', expected
+        'ptc-project-a',
+        expected
       );
       expect(store.getState().toolApprovalSettingsByTeam['ptc-project-a']).toEqual(expected);
       expect(store.getState().toolApprovalSettings).toEqual(expected);
-      expect(JSON.parse(
-        window.localStorage.getItem('team:toolApprovalSettings:ptc-project-a') ?? '{}'
-      )).toEqual(expected);
+      expect(
+        JSON.parse(window.localStorage.getItem('team:toolApprovalSettings:ptc-project-a') ?? '{}')
+      ).toEqual(expected);
       expect(hoisted.launchTeam).toHaveBeenCalledWith({
-        teamName: 'builders', cwd: '/tmp/project-a', skipPermissions: false,
+        teamName: 'builders',
+        cwd: '/tmp/project-a',
+        skipPermissions: false,
       });
 
       await store.getState().selectTeam('ptc-project-a');
@@ -9048,6 +9084,118 @@ describe('teamSlice actions', () => {
       expect(store.getState().memberSpawnStatusesByTeam['my-team']?.alice?.status).toBe('online');
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
       expect(store.getState().provisioningRuns['run-new']?.state).toBe('assembling');
+    });
+
+    it.each(['ready', 'failed'] as const)(
+      'binds a project alias banner to its verified successor while logical progress is %s',
+      async (nextState) => {
+        const store = createSliceStore();
+        const old = {
+          runId: 'project-r1',
+          teamName: 'ptc-a',
+          state: 'failed' as const,
+          message: 'Old A failure',
+          error: 'Old A failure',
+          startedAt: '2026-03-12T10:00:00.000Z',
+          updatedAt: '2026-03-12T10:00:01.000Z',
+        };
+        const other = { ...old, runId: 'project-b-r1', teamName: 'ptc-b', message: 'B failure' };
+        store.setState({
+          currentProvisioningRunIdByTeam: {
+            builders: 'project-r1',
+            'ptc-a': 'project-r1',
+            'ptc-b': other.runId,
+          },
+          currentRuntimeRunIdByTeam: {
+            builders: 'project-r1',
+            'ptc-a': 'project-r1',
+            'ptc-b': other.runId,
+          },
+          provisioningRuns: { [old.runId]: old, [other.runId]: other },
+          provisioningErrorByTeam: {
+            builders: 'Old A failure',
+            'ptc-a': 'Old A failure',
+            'ptc-b': 'B failure',
+          },
+          leadActivityByTeam: { 'ptc-a': 'offline' },
+          memberSpawnStatusesByTeam: {
+            'ptc-a': {
+              alice: createMemberSpawnStatus({ status: 'error', runtimeAlive: false }),
+            },
+          },
+        });
+        hoisted.getMemberSpawnStatuses.mockResolvedValue(
+          createMemberSpawnSnapshot({
+            runId: 'project-r2',
+            statuses: { alice: createMemberSpawnStatus({ status: 'online' }) },
+          })
+        );
+        const successor = {
+          ...old,
+          runId: 'project-r2',
+          teamName: 'builders',
+          state: nextState,
+          message: nextState === 'failed' ? 'Current A failure' : 'Ready',
+          error: nextState === 'failed' ? 'Current A failure' : undefined,
+          startedAt: '2026-03-12T10:01:00.000Z',
+          updatedAt: '2026-03-12T10:01:01.000Z',
+        };
+        hoisted.getProvisioningStatus.mockResolvedValue(successor);
+
+        await store.getState().fetchMemberSpawnStatuses('ptc-a');
+        await flushMicrotasks();
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toEqual(successor);
+        expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe(
+          nextState === 'failed' ? 'Current A failure' : undefined
+        );
+        expect(store.getState().provisioningErrorByTeam.builders).toBe(
+          nextState === 'failed' ? 'Current A failure' : undefined
+        );
+        expect(store.getState().provisioningErrorByTeam['ptc-b']).toBe('B failure');
+        expect(store.getState().currentProvisioningRunIdByTeam['ptc-b']).toBe(other.runId);
+
+        // Both possible transports of R1 are stale even if their event arrives last.
+        store.getState().onProvisioningProgress({ ...old, updatedAt: '2026-03-12T11:00:00.000Z' });
+        store
+          .getState()
+          .onProvisioningProgress({
+            ...old,
+            teamName: 'builders',
+            updatedAt: '2026-03-12T11:00:00.000Z',
+          });
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toEqual(successor);
+        expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe('project-r2');
+      }
+    );
+
+    it('does not use a stopped earlier project pointer to resurrect same-timestamp failure', () => {
+      const store = createSliceStore();
+      const startedAt = '2026-03-12T10:00:00.000Z';
+      const current = {
+        runId: 'b-r2',
+        teamName: 'builders',
+        state: 'ready' as const,
+        message: 'Current B ready',
+        startedAt,
+        updatedAt: startedAt,
+      };
+      store.setState({
+        currentProvisioningRunIdByTeam: { builders: 'b-r2', 'ptc-b': 'b-r2' },
+        currentRuntimeRunIdByTeam: { builders: 'b-r2', 'ptc-b': 'b-r2', 'ptc-a': 'a-r1' },
+        provisioningRuns: { 'b-r2': current },
+        provisioningStartedAtFloorByTeam: { builders: startedAt },
+      });
+      store
+        .getState()
+        .onProvisioningProgress({
+          ...current,
+          runId: 'a-r1',
+          state: 'failed',
+          message: 'Late A failure',
+        });
+      expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toEqual(current);
+      expect(store.getState().provisioningErrorByTeam.builders).toBeUndefined();
+      expect(store.getState().currentRuntimeRunIdByTeam.builders).toBe('b-r2');
     });
 
     it('does not retarget a different run while the pinned spawn is still live', async () => {

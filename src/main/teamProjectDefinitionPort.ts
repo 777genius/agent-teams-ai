@@ -1,29 +1,37 @@
-import { TeamProjectContextLaunchConflictError } from '@features/team-project-context/main';
+import {
+  TeamProjectContextLaunchConflictError,
+  TeamProjectLiveEditJournal,
+} from '@features/team-project-context/main';
 import { TeamManagementError } from '@features/team-prompt-management/main';
 
 import { buildEditor, refreshProjectCopies } from './ipc/teams/teamProjectDefinitionEdit';
+import { createTeamDefinitionManagementEdit } from './teamDefinitionManagementEdit';
 
 import type { DefinitionEditPorts } from './ipc/teams/teamProjectDefinitionEdit';
+import type { TeamDefinitionNativeEdits } from './teamDefinitionManagementEdit';
 import type { TeamProjectDefinitionPort } from '@features/team-prompt-management/main';
 
 /**
  * The rules of the desktop edit router, for external (HTTP/MCP) writers: the
- * same classification, the same stopped-gate and the same projection of the
- * logical definition onto its stopped project copies.
+ * same classification, lifecycle gates, durable live-edit fence and projection
+ * of the logical definition onto its stopped project copies.
  *
- * A project that is running, launching or stopping blocks the edit with the
- * ordinary codes (TEAM_ACTIVE, TEAM_PROVISIONING); any other failure of the
- * gate (for example an unreadable context index) propagates, so nothing is
- * written when the state cannot be proven.
+ * With native mutation ports, one ready project can be edited live. Without
+ * them the adapter remains stopped-only. Launching/stopping or unknown state
+ * fails closed before persistence.
  */
 export function createTeamProjectDefinitionPort(
-  ports: DefinitionEditPorts
+  ports: DefinitionEditPorts,
+  nativeEdits?: TeamDefinitionNativeEdits
 ): TeamProjectDefinitionPort {
   return {
     classify: (teamName) => buildEditor(ports).classify(teamName),
     assertEditable: async (logicalTeamName) => {
       try {
-        await buildEditor(ports).assertEditable(logicalTeamName);
+        const editor = buildEditor(ports);
+        if (nativeEdits && !(await new TeamProjectLiveEditJournal().hasPending(logicalTeamName)))
+          await editor.findRunningContextForEdit(logicalTeamName);
+        else await editor.assertEditable(logicalTeamName);
       } catch (error) {
         if (error instanceof TeamProjectContextLaunchConflictError) {
           throw new TeamManagementError(
@@ -39,5 +47,6 @@ export function createTeamProjectDefinitionPort(
       }
     },
     refreshCopies: (logicalTeamName) => refreshProjectCopies(buildEditor(ports), logicalTeamName),
+    ...(nativeEdits ? { applyEdit: createTeamDefinitionManagementEdit(ports, nativeEdits) } : {}),
   };
 }

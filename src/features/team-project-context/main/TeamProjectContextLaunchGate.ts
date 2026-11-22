@@ -4,7 +4,11 @@ import type { TeamRuntimeState } from '@shared/types';
 interface ContextRegistry {
   list(
     logicalTeamName: string
-  ): Promise<readonly Pick<PersistedTeamWorkContext, 'executionTeamName' | 'state'>[]>;
+  ): Promise<
+    readonly (Pick<PersistedTeamWorkContext, 'executionTeamName' | 'state'> & {
+      projectPath?: string;
+    })[]
+  >;
 }
 
 export interface RunningProjectContextForEdit {
@@ -34,7 +38,8 @@ export class TeamProjectContextLaunchConflictError extends Error {
 
   constructor(
     message: string,
-    readonly reason: TeamProjectContextConflictReason = 'running'
+    readonly reason: TeamProjectContextConflictReason = 'running',
+    readonly projectPath?: string
   ) {
     super(message);
   }
@@ -104,11 +109,13 @@ export class TeamProjectContextLaunchGate {
     allowRunning: boolean
   ): Promise<RunningProjectContextForEdit | null> {
     const all = await this.contexts.list(logicalTeamName);
-    if (all.some((context) => context.state !== 'ready')) {
+    const incomplete = all.find((context) => context.state !== 'ready');
+    if (incomplete) {
       throw new TeamProjectContextLaunchConflictError(
-        'A project of this team is still being prepared, or its last start was interrupted. ' +
-          'Open that project and launch the team there again so it can finish, then edit the team',
-        'unreconciled'
+        `The team in project ${incomplete.projectPath ?? incomplete.executionTeamName} is still being prepared, or its last start was interrupted. ` +
+          'Open that project to check its status and retry the launch when it has stopped, then edit the team',
+        'unreconciled',
+        incomplete.projectPath
       );
     }
     let running: RunningProjectContextForEdit | null = null;
@@ -120,6 +127,7 @@ export class TeamProjectContextLaunchGate {
       const readyRun =
         allowRunning &&
         name !== logicalTeamName &&
+        state.teamName === name &&
         state.isAlive &&
         Boolean(state.runId) &&
         state.progress?.state === 'ready' &&

@@ -73,6 +73,7 @@ import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
 import { hasMixedPersistedLaunchMetadata } from './TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
+import { TeamLiveRosterMutationError } from './TeamLiveRosterMutationError';
 import { isMaterializableInboxMemberName, TeamMemberResolver } from './TeamMemberResolver';
 import { planTeamMemberRestore } from './TeamMemberRestorePlan';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
@@ -641,32 +642,31 @@ export class TeamDataService {
     };
   }
 
-  private async assertRosterMutationAllowed(
+  async assertRosterMutationAllowed(
     teamName: string,
-    nextMembers: ReturnType<typeof toProvisioningMemberShape>
+    nextMembers: ReturnType<typeof toProvisioningMemberShape>,
+    knownRunning?: true
   ): Promise<void> {
     const context = await this.readTeamLaneMutationContext(teamName);
     const nextPlan = fromProvisioningMembers(context.leadProviderId, nextMembers);
     if (!nextPlan.ok) {
       throw new Error(nextPlan.message);
     }
-    const nextMixed = isMixedOpenCodeSideLanePlan(nextPlan.plan);
-    if (!(context.currentMixed || nextMixed)) {
+    if (!(context.currentMixed || isMixedOpenCodeSideLanePlan(nextPlan.plan))) {
       return;
     }
-    const isRunning = (await this.readProcesses(teamName).catch(() => [] as TeamProcess[])).some(
+    const isRunning = knownRunning ?? (await this.readProcesses(teamName).catch(() => [] as TeamProcess[])).some(
       (process) => !process.stoppedAt
     );
-    if (isRunning) {
-      if (
-        !isSupportedRunningMixedRosterMutation({
-          leadProviderId: context.leadProviderId,
-          previousMembers: context.activeMembers,
-          nextMembers,
-        })
-      ) {
-        throw new Error(MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE);
-      }
+    if (!isRunning) return;
+    if (
+      !isSupportedRunningMixedRosterMutation({
+        leadProviderId: context.leadProviderId,
+        previousMembers: context.activeMembers,
+        nextMembers,
+      })
+    ) {
+      throw new TeamLiveRosterMutationError(MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE);
     }
   }
 

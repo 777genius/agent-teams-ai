@@ -85,6 +85,7 @@ import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+import { describeMemberLaunchFailureReason } from '@renderer/utils/memberLaunchFailureReasonText';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
@@ -321,7 +322,6 @@ export const CreateTeamDialog = ({
     [effectiveCliStatus?.providers]
   );
 
-  // ── Persisted draft state (survives tab navigation) ──────────────────
   const createTeamDraft = useCreateTeamDraft();
   const {
     runtimeSelectionVersion,
@@ -3099,7 +3099,7 @@ export const CreateTeamDialog = ({
                 backgroundColor: 'var(--field-error-bg)',
               }}
             >
-              {activeError}
+              {describeMemberLaunchFailureReason(activeError, t)}
             </p>
           ) : null}
         </CreateTeamSurface>

@@ -8,6 +8,7 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
 
 import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
+import { TeamLiveRosterMutationError } from './teamLiveRosterMutationPolicy';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
@@ -34,6 +35,15 @@ export class ProjectCopyEditError extends Error {
   constructor() {
     super(PROJECT_COPY_EDIT_MESSAGE);
     this.name = 'ProjectCopyEditError';
+  }
+}
+
+export class TeamProjectRuntimeChangedError extends Error {
+  readonly code = 'TEAM_RUNTIME_CHANGED';
+
+  constructor() {
+    super('The project runtime changed while preparing this edit; retry');
+    this.name = 'TeamProjectRuntimeChangedError';
   }
 }
 
@@ -91,8 +101,16 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
   );
 }
 
-function failure(error: unknown): { success: false; error: string } {
-  return { success: false, error: error instanceof Error ? error.message : String(error) };
+function failure(error: unknown): IpcResult<never> {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    success: false,
+    error: message,
+    ...(error instanceof TeamLiveRosterMutationError ||
+    error instanceof TeamProjectRuntimeChangedError
+      ? { failure: { code: error.code, message } }
+      : {}),
+  };
 }
 
 /** Where a definition write goes; a project copy is refused (throws) here. */
@@ -132,12 +150,13 @@ export function runLogicalDefinitionWrite<R>(
  * edit or launch is admitted until the runtime has stopped, after which launch projection repairs
  * the copy from the authoritative definition.
  */
-async function runLogicalLiveDefinitionWrite<R>(
+export async function runLogicalLiveDefinitionWrite<R>(
   ports: Pick<DefinitionEditPorts, 'data'>,
   editor: TeamProjectDefinitionEditor,
   journal: Pick<TeamProjectLiveEditJournal, 'hasPending' | 'begin' | 'clear'>,
   logicalName: string,
-  write: (target: string) => Promise<IpcResult<R>>
+  write: (target: string) => Promise<IpcResult<R>>,
+  preflightLive?: (executionTeamName: string) => Promise<void>
 ): Promise<IpcResult<R>> {
   return ports.data().runConfigurationOperation(logicalName, async () => {
     const running = await editor.findRunningContextForEdit(logicalName);
@@ -158,7 +177,17 @@ async function runLogicalLiveDefinitionWrite<R>(
         current?.executionTeamName !== running.executionTeamName ||
         current.runId !== running.runId
       ) {
-        throw new Error('The project runtime changed while preparing this edit; retry');
+        throw new TeamProjectRuntimeChangedError();
+      }
+      if (preflightLive) {
+        await preflightLive(running.executionTeamName);
+        const prepared = await editor.findRunningContextForEdit(logicalName);
+        if (
+          prepared?.executionTeamName !== running.executionTeamName ||
+          prepared.runId !== running.runId
+        ) {
+          throw new TeamProjectRuntimeChangedError();
+        }
       }
       await journal.begin(logicalName);
       try {
@@ -167,6 +196,7 @@ async function runLogicalLiveDefinitionWrite<R>(
           return {
             success: false,
             error: `${definition.error ?? 'Edit failed'}. Stop the team before retrying so the project copy can be reconciled.`,
+            failure: { code: 'PARTIAL_UPDATE', cause: definition.failure },
           };
         }
         const stillRunning = await editor.findRunningContextForEdit(logicalName);
@@ -181,6 +211,7 @@ async function runLogicalLiveDefinitionWrite<R>(
           return {
             success: false,
             error: `The team definition was saved, but its running project could not be updated (${active.error ?? 'unknown error'}). Stop the team before retrying; its project copy will be reconciled at the next launch.`,
+            failure: { code: 'PARTIAL_UPDATE', cause: active.failure },
           };
         }
         await journal.clear(logicalName, running.executionTeamName);
@@ -190,6 +221,7 @@ async function runLogicalLiveDefinitionWrite<R>(
         return {
           success: false,
           error: `The edit may be partially applied (${error instanceof Error ? error.message : String(error)}). Stop the team before retrying; its project copy will be reconciled at the next launch.`,
+          failure: { code: 'PARTIAL_UPDATE' },
         };
       }
     });
@@ -222,7 +254,8 @@ export function createProjectDefinitionEditRouting(
   return function withProjectDefinitionEdit<R>(
     handler: EditHandler<R>,
     refuseNative?: (...rest: unknown[]) => string | null,
-    refuseLogical?: (...rest: unknown[]) => string | null
+    refuseLogical?: (...rest: unknown[]) => string | null,
+    preflightLive?: (executionTeamName: string, ...rest: unknown[]) => Promise<void>
   ): EditHandler<R> {
     return async (event, teamName, ...rest) => {
       const name = validateTeamName(teamName);
@@ -244,7 +277,8 @@ export function createProjectDefinitionEditRouting(
           editor,
           createJournal(),
           logicalName,
-          (destination) => handler(event, destination, ...rest)
+          (destination) => handler(event, destination, ...rest),
+          preflightLive ? (destination) => preflightLive(destination, ...rest) : undefined
         );
       } catch (error) {
         return failure(error);

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import { ProjectContextRecoveryNotice } from '@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice';
 import { MemberDraftRow } from '@renderer/components/team/members/MemberDraftRow';
 import {
   buildMembersFromDrafts,
@@ -750,6 +751,7 @@ export const EditTeamDialog = ({
           )}
         </div>
 
+        {error && <ProjectContextRecoveryNotice teamName={teamName} onNavigate={onClose} />}
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
             {t('editTeam.actions.cancel')}

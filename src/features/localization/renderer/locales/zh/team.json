@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} 启动失败",
         "teammatesFailedToStart": "{{count}} 队友启动失败",
-        "teammatesFailedRatio": "{{count}}/{{total}} 队友启动失败"
+        "teammatesFailedRatio": "{{count}}/{{total}} 队友启动失败",
+        "manualPermissionUnsupported": "此启动方式不支持手动批准工具操作。请选择支持批准操作的启动方式，然后重试。"
       },
       "skipped": {
         "memberSkipped": "{{name}} 跳过本次启动",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "团队在项目“{{project}}”中的启动未完成。请重试启动。",
+    "unknown": "尚未确认项目“{{project}}”中的上一次运行已停止。请先检查状态，再重新启动。",
+    "retryLaunch": "重试启动",
+    "recoveryProject": "编辑此团队前，请检查项目“{{project}}”中未完成的启动。",
+    "openProject": "打开项目"
   }
 }

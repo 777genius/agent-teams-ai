@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} başlatılamadı",
         "teammatesFailedToStart": "{{count}} takım arkadaşı başlatılamadı",
-        "teammatesFailedRatio": "{{count}}/{{total}} takım arkadaşı başlatılamadı"
+        "teammatesFailedRatio": "{{count}}/{{total}} takım arkadaşı başlatılamadı",
+        "manualPermissionUnsupported": "Bu başlatma yöntemi manuel araç onayını desteklemiyor. Onayları destekleyen bir yöntem seçip yeniden deneyin."
       },
       "skipped": {
         "memberSkipped": "{{name}} bu başlatma için atlandı",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "“{{project}}” projesinde ekip başlatılamadı. Yeniden başlatmayı deneyin.",
+    "unknown": "“{{project}}” projesindeki önceki çalışmanın durduğu doğrulanmadı. Yeniden başlatmadan önce durumunu kontrol edin.",
+    "retryLaunch": "Yeniden başlatmayı dene",
+    "recoveryProject": "Bu ekibi düzenlemeden önce “{{project}}” projesindeki tamamlanmamış başlatmayı kontrol edin.",
+    "openProject": "Projeyi aç"
   }
 }

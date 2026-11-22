@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} فشل في البدء",
         "teammatesFailedToStart": "{{count}} زملاء الفريق فشلوا في البدء",
-        "teammatesFailedRatio": "{{count}}/{{total}} زملاء الفريق فشلوا في البدء"
+        "teammatesFailedRatio": "{{count}}/{{total}} زملاء الفريق فشلوا في البدء",
+        "manualPermissionUnsupported": "طريقة التشغيل هذه لا تدعم الموافقة اليدوية على الأدوات. اختر طريقة تدعم الموافقات ثم أعد المحاولة."
       },
       "skipped": {
         "memberSkipped": "{{name}} تخطيت هذا الإطلاق",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "لم يكتمل تشغيل الفريق في المشروع «{{project}}». أعد محاولة التشغيل.",
+    "unknown": "لم يُؤكد توقف التشغيل السابق في المشروع «{{project}}». تحقق من حالته قبل تشغيله مجددًا.",
+    "retryLaunch": "إعادة محاولة التشغيل",
+    "recoveryProject": "تحقق من التشغيل غير المكتمل في المشروع «{{project}}» قبل تعديل هذا الفريق.",
+    "openProject": "فتح المشروع"
   }
 }

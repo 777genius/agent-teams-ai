@@ -157,7 +157,11 @@ import {
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
 import {
-  getProvisioningProgressError,
+  getCurrentProvisioningProgressForTeam,
+  projectProvisioningProgressOwners,
+  projectProvisioningRuntimeAdoption,
+} from '../team/teamProvisioningRunIdentity';
+import {
   isActiveProvisioningState,
   isTerminalProvisioningState,
   shouldIgnoreProvisioningProgressRegression,
@@ -1618,13 +1622,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
 // --- Per-team launch params persistence ---
 const LAUNCH_PARAMS_PREFIX = 'team:launchParams:';
 
-export function getCurrentProvisioningProgressForTeam(
-  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
-  teamName: string
-): TeamProvisioningProgress | null {
-  const currentRunId = state.currentProvisioningRunIdByTeam?.[teamName];
-  return currentRunId ? (state.provisioningRuns?.[currentRunId] ?? null) : null;
-}
+export { getCurrentProvisioningProgressForTeam } from '../team/teamProvisioningRunIdentity';
 
 function stringArraysEqual(
   a: readonly string[] | undefined,
@@ -1820,14 +1818,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       clearMemberSpawnStatusesIpcBackoff(teamName);
       const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
-      set((prev) =>
-        projectIncomingMemberSpawnSnapshot({
-          teamName,
-          snapshot,
-          prev,
+      set((prev) => {
+        const projected = projectIncomingMemberSpawnSnapshot({
+          teamName, snapshot, prev,
           onEqualSuppressed: maybeLogMemberSpawnUiEqualSuppressed,
-        })
-      );
+        });
+        return {
+          ...projected,
+          ...projectProvisioningRuntimeAdoption(prev, teamName, projected.currentRuntimeRunIdByTeam?.[teamName]),
+        };
+      });
       const nextRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
       if (
         snapshot.runId &&
@@ -1878,6 +1878,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           adoption,
           false
         );
+        const progressProjection = projectProvisioningRuntimeAdoption(prev, teamName, nextCurrentRuntimeRunIdByTeam[teamName]);
         const visibleSnapshot = prev.teamAgentRuntimeByTeam[teamName];
         const previousSnapshot = getTeamAgentRuntimeFreshnessSnapshot(
           teamName,
@@ -1890,9 +1891,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           if (nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam) {
             return {};
           }
-          return { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
+          return { ...progressProjection, currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
         }
         return {
+          ...progressProjection,
           ...(nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam
             ? {}
             : { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam }),
@@ -4189,7 +4191,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: floor,
       },
     }));
-    // Clear stale provisioning runs for this team so the banner starts fresh
     set((state) => {
       const cleaned = { ...state.provisioningRuns };
       for (const [runId, run] of Object.entries(cleaned)) {
@@ -4743,6 +4744,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             previousState: previousProgress?.state,
             nextRunId: progress.runId,
             currentRuntimeRunId: state.currentRuntimeRunIdByTeam[progress.teamName],
+            nextRunObserved: Object.values(state.currentRuntimeRunIdByTeam).includes(progress.runId),
+            previousStartedAt: previousProgress?.startedAt,
+            nextStartedAt: progress.startedAt,
             ignoredRuntimeRunIds: state.ignoredRuntimeRunIds,
             pinnedSpawnStatuses: state.memberSpawnStatusesByTeam[progress.teamName],
           })
@@ -4764,10 +4768,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
       }
 
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      const progressError = getProvisioningProgressError(progress);
-      if (progressError) nextErrors[progress.teamName] = progressError;
-      else delete nextErrors[progress.teamName];
+      const progressOwners = projectProvisioningProgressOwners({ ...state, currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam }, progress);
       // Clean up provisioning snapshot on terminal failure states
       const nextSnapshots =
         progress.state === 'failed' || progress.state === 'cancelled'
@@ -4779,12 +4780,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : state.provisioningSnapshotByTeam;
       return {
         provisioningRuns: nextRuns,
-        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+        ...progressOwners,
         currentRuntimeRunIdByTeam: {
           ...state.currentRuntimeRunIdByTeam,
           [progress.teamName]: progress.runId,
         },
-        provisioningErrorByTeam: nextErrors,
         provisioningSnapshotByTeam: nextSnapshots,
       };
     });

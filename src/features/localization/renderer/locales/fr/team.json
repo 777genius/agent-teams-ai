@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} a échoué à démarrer",
         "teammatesFailedToStart": "{{count}} les coéquipiers n'ont pas commencé",
-        "teammatesFailedRatio": "{{count}}/{{total}} les coéquipiers n'ont pas commencé"
+        "teammatesFailedRatio": "{{count}}/{{total}} les coéquipiers n'ont pas commencé",
+        "manualPermissionUnsupported": "Ce mode de lancement ne prend pas en charge l’approbation manuelle des outils. Choisissez un mode compatible avec les approbations, puis réessayez."
       },
       "skipped": {
         "memberSkipped": "{{name}} J'ai sauté pour ce lancement",
@@ -3311,5 +3312,12 @@
         "invalidRequest": "The export request was invalid."
       }
     }
+  },
+  "projectContextView": {
+    "incomplete": "Le démarrage de l’équipe dans le projet « {{project}} » n’a pas abouti. Réessayez.",
+    "unknown": "L’arrêt de l’exécution précédente dans le projet « {{project}} » n’est pas confirmé. Vérifiez son état avant de relancer.",
+    "retryLaunch": "Relancer",
+    "recoveryProject": "Vérifiez le démarrage inachevé dans le projet « {{project}} » avant de modifier cette équipe.",
+    "openProject": "Ouvrir le projet"
   }
 }

@@ -11,6 +11,9 @@ import {
   createProjectDefinitionEditRouting,
   PROJECT_COPY_EDIT_MESSAGE,
 } from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
+import { preflightRosterMutation } from '../../../src/main/ipc/teams/teamRosterMutationPreflight';
+import { preflightConfigUpdate } from '../../../src/main/ipc/teams/teamUpdateConfigRequest';
+import { TeamLiveRosterMutationError } from '../../../src/main/services/team/TeamLiveRosterMutationError';
 
 import type { TeamCreateRequest, TeamRuntimeState } from '../../../src/shared/types/team';
 
@@ -22,7 +25,11 @@ import type { TeamCreateRequest, TeamRuntimeState } from '../../../src/shared/ty
 
 type Context = { executionTeamName: string; state: 'ready' | 'reserved' };
 
-function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
+function world(options: {
+  contexts?: Context[];
+  unreadable?: string[];
+  preflight?: (teamName: string, ...args: unknown[]) => Promise<void>;
+} = {}) {
   const contexts: Context[] = options.contexts ?? [
     { executionTeamName: 'ptc-a', state: 'ready' },
     { executionTeamName: 'ptc-b', state: 'ready' },
@@ -88,7 +95,7 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
     { data: () => ({ runConfigurationOperation }) as never, runtime: () => ({}) as never, run: () => ({}) as never },
     () => editor,
     () => journal
-  )(handler);
+  )(handler, undefined, undefined, options.preflight);
   return { contexts, running, ready, wrapped, handler, writes, ports, runConfigurationOperation, runtime, journal };
 }
 
@@ -144,7 +151,7 @@ describe('definition edit routing with the real editor and gate', () => {
     const stuck = world({ contexts: [{ executionTeamName: 'ptc-a', state: 'reserved' }] });
     await expect(stuck.wrapped(event, 'builders', {})).resolves.toMatchObject({
       success: false,
-      error: expect.stringMatching(/interrupted.*launch the team there again/i),
+      error: expect.stringMatching(/project ptc-a.*interrupted.*retry the launch/i),
     });
     for (const w of [running, launching, stuck]) expect(w.writes).toEqual([]);
   });
@@ -158,6 +165,85 @@ describe('definition edit routing with the real editor and gate', () => {
     expect(w.journal.pending).toBe(false);
     expect(w.writes).toContain('project:ptc-b');
     expect(w.writes).not.toContain('project:ptc-a');
+  });
+
+  it('rejects an OpenCode-led role replacement before either write or the recovery marker', async () => {
+    const data = {
+      getTeamData: vi.fn(async () => ({ members: [
+        { name: 'team-lead', providerId: 'opencode', role: 'Team Lead' },
+        { name: 'alice', providerId: 'opencode', role: 'dev' },
+      ] }) as never),
+      assertRosterMutationAllowed: vi.fn(async () => undefined),
+    };
+    const w = world({ preflight: (name, ...args) => preflightRosterMutation(data, name, 'replace', ...args) });
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    const begin = vi.spyOn(w.journal, 'begin');
+    await expect(w.wrapped(event, 'builders', { members: [{ name: 'alice', role: 'new role' }] })).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('running OpenCode-led team'),
+      failure: { code: 'RESTART_REQUIRED' },
+    });
+    expect(w.writes).toEqual([]);
+    expect(w.handler).not.toHaveBeenCalled();
+    expect(begin).not.toHaveBeenCalled();
+    expect(w.journal.pending).toBe(false);
+  });
+
+  it('runs the shared mixed-roster preflight before persisting a permitted live change', async () => {
+    const data = {
+      getTeamData: vi.fn(async () => ({ members: [
+        { name: 'team-lead', providerId: 'codex', role: 'Team Lead' },
+        { name: 'alice', providerId: 'codex', role: 'dev' },
+      ] }) as never),
+      assertRosterMutationAllowed: vi.fn(async () => undefined),
+    };
+    const w = world({ preflight: (name, ...args) => preflightRosterMutation(data, name, 'replace', ...args) });
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    await expect(w.wrapped(event, 'builders', { members: [{ name: 'alice', providerId: 'codex', role: 'new role' }] })).resolves.toMatchObject({ success: true });
+    expect(data.assertRosterMutationAllowed).toHaveBeenCalledWith('ptc-a', [expect.objectContaining({ name: 'alice', role: 'new role' })], true);
+    expect(data.assertRosterMutationAllowed.mock.invocationCallOrder[0]).toBeLessThan(w.handler.mock.invocationCallOrder[0]);
+    expect(w.handler.mock.calls.map((call) => call[1])).toEqual(['builders', 'ptc-a']);
+    expect(w.journal.pending).toBe(false);
+  });
+
+  it('does not create a marker when shared mixed-roster validation refuses', async () => {
+    const preflight = vi.fn(async () => { throw new TeamLiveRosterMutationError('Stop the mixed team before editing'); });
+    const w = world({ preflight });
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    const begin = vi.spyOn(w.journal, 'begin');
+    await expect(w.wrapped(event, 'builders', { members: [] })).resolves.toMatchObject({
+      success: false,
+      failure: { code: 'RESTART_REQUIRED' },
+    });
+    expect(begin).not.toHaveBeenCalled();
+    expect(w.writes).toEqual([]);
+  });
+
+  it('rejects malformed config updates before writes or the recovery marker', async () => {
+    const w = world({ preflight: preflightConfigUpdate });
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    const begin = vi.spyOn(w.journal, 'begin');
+    await expect(w.wrapped(event, 'builders', { name: 42 })).resolves.toMatchObject({
+      success: false, error: 'name must be a string',
+    });
+    expect(begin).not.toHaveBeenCalled();
+    expect(w.writes).toEqual([]);
+  });
+
+  it('rechecks run identity after asynchronous preflight before starting the journal', async () => {
+    let runId = 'original-run';
+    const w = world({ preflight: async () => { runId = 'replacement-run'; } });
+    w.runtime.getRuntimeState.mockImplementation(async (name): Promise<TeamRuntimeState> => name === 'ptc-a'
+      ? ({ teamName: name, isAlive: true, runId, progress: { teamName: name, runId, state: 'ready' } } as TeamRuntimeState)
+      : ({ teamName: name, isAlive: false, runId: null, progress: null }));
+    const begin = vi.spyOn(w.journal, 'begin');
+    await expect(w.wrapped(event, 'builders', { members: [] })).resolves.toMatchObject({ success: false, error: expect.stringContaining('runtime changed'), failure: { code: 'TEAM_RUNTIME_CHANGED' } });
+    expect(begin).not.toHaveBeenCalled();
+    expect(w.writes).toEqual([]);
   });
 
   it('keeps the marker and reports recovery if durability cannot be confirmed', async () => {
@@ -179,7 +265,7 @@ describe('definition edit routing with the real editor and gate', () => {
       ? ({ success: false, error: 'attach failed' } as never)
       : ({ success: true, data: undefined }));
     await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({
-      success: false, error: expect.stringMatching(/definition was saved.*Stop the team/),
+      success: false, error: expect.stringMatching(/definition was saved.*Stop the team/), failure: { code: 'PARTIAL_UPDATE' },
     });
     expect(w.journal.pending).toBe(true);
     w.handler.mockClear();

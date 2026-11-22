@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getController } from '../controller';
 import { jsonTextContent } from '../utils/format';
+import { asClientRefusal } from '../utils/appRefusal';
 import { teamMemberMcpPolicySchema } from '../utils/schemas';
 
 const controlContextSchema = {
@@ -100,7 +101,7 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'team_update',
     description:
-      'Edit exactly one configuration group of a stopped or draft team. Get its current configurationRevision first. Does not launch or stop agents.',
+      'Edit one configuration group using a fresh configurationRevision. Supported edits also work while the team is ready and running; unsupported live changes return RESTART_REQUIRED. Lead instructions apply at next launch. Never stops or relaunches the whole team implicitly.',
     parameters: z
       .object({
         ...managementTargetSchema,
@@ -135,13 +136,18 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
           ).length === 1,
         'Specify exactly one configuration group'
       ),
-    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, ...payload }) =>
-      jsonTextContent(
-        await getController(teamName, claudeDir).runtime.updateTeam({
-          ...controlFlags({ controlUrl, waitTimeoutMs }),
-          ...payload,
-        })
-      ),
+    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, ...payload }) => {
+      try {
+        return jsonTextContent(
+          await getController(teamName, claudeDir).runtime.updateTeam({
+            ...controlFlags({ controlUrl, waitTimeoutMs }),
+            ...payload,
+          })
+        );
+      } catch (error) {
+        throw asClientRefusal(error);
+      }
+    },
   });
   server.addTool({
     name: 'team_trash',

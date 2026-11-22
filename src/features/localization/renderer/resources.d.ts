@@ -6122,6 +6122,11 @@ export default interface Resources {
       "title": "CLI Processes"
     },
     "projectContextView": {
+      "incomplete": "The team launch in project “{{project}}” did not finish. Retry the launch.";
+      "unknown": "The previous run in project “{{project}}” has not been confirmed stopped. Check its status before launching again.";
+      "retryLaunch": "Retry launch";
+      "recoveryProject": "Check the unfinished launch in project “{{project}}” before editing this team.";
+      "openProject": "Open project";
       "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",
       "emptyTitle": "Not launched in this project yet",
       "loading": "Loading team project history…",
@@ -6189,6 +6194,7 @@ export default interface Resources {
         "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Waiting for OpenCode: {{names}}",
         "countPendingDiagnostic": "{{count}} {{label}}",
         "failed": {
+          "manualPermissionUnsupported": "This launch method does not support manual tool approval. Choose a launch method that supports approvals, then retry.";
           "memberFailedToStart": "{{name}} failed to start",
           "teammatesFailedRatio": "{{count}}/{{total}} teammates failed to start",
           "teammatesFailedToStart": "{{count}} teammates failed to start"
