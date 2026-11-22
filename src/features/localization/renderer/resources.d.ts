@@ -6435,6 +6435,7 @@ export default interface Resources {
       "badges": {
         "custom": "Custom",
         "default": "Default",
+        "differ": "Differs by project",
         "repair": "Needs repair"
       },
       "broken": {
@@ -6453,6 +6454,7 @@ export default interface Resources {
       },
       "feedback": {
         "error": "Could not save: {{message}}",
+        "notApplied": "Saved for the team, but not applied yet in every project: they are listed above. Save again to apply it there.",
         "saved": "Saved",
         "saving": "Saving…"
       },
@@ -6483,6 +6485,18 @@ export default interface Resources {
       },
       "popover": {
         "openSettings": "Change the default for all teams…"
+      },
+      "projects": {
+        "differ": "The projects of this team use different review flows. Saving applies the settings below to all of them:",
+        "followsDefault": "the default",
+        "item": "{{project}}: {{flow}}",
+        "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
+        "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project.",
+        "prompt": "Instructions: \"{{prompt}}\"",
+        "scope": "One review flow for every project of this team.",
+        "unreadable": "settings that can't be read",
+        "unreadableProjects": "The projects of this team cannot be read, so its review flow cannot be shown or changed: {{message}}",
+        "use": "Use these settings"
       },
       "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
       "promptLabel": "Instructions for agents (optional)",

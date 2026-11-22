@@ -11,6 +11,7 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 
+import { isAbsoluteProjectPath } from './projectPathIdentity';
 import { realpathOfMissingPath } from './realpathOfMissingPath';
 
 const INDEX_FILE = 'project-contexts.json';
@@ -76,7 +77,7 @@ async function exists(filePath: string): Promise<boolean> {
  * This is an identity key, not a filesystem access authorization.
  */
 async function canonicalProjectPath(value: string): Promise<string> {
-  if (typeof value !== 'string' || !path.isAbsolute(value)) {
+  if (typeof value !== 'string' || !isAbsoluteProjectPath(value)) {
     throw new TeamProjectContextUnavailableError('Choose an absolute project folder');
   }
   const canonical = await fs.realpath(value);
@@ -94,7 +95,7 @@ async function canonicalProjectPath(value: string): Promise<string> {
  * real directory.
  */
 async function historicalProjectPathKey(value: string): Promise<string> {
-  if (typeof value !== 'string' || !path.isAbsolute(value)) {
+  if (typeof value !== 'string' || !isAbsoluteProjectPath(value)) {
     throw new TeamProjectContextUnavailableError('Choose an absolute project folder');
   }
   try {
@@ -138,9 +139,9 @@ function validateIndex(value: unknown, logicalTeamName: string): TeamProjectCont
     // key in memory; do not rewrite the saved manifest on a read.
     const projectKey =
       typeof row.projectKey === 'string'
-        ? (process.platform === 'win32'
-            ? path.win32.normalize(row.projectKey).toLowerCase()
-            : row.projectKey)
+        ? process.platform === 'win32'
+          ? path.win32.normalize(row.projectKey).toLowerCase()
+          : row.projectKey
         : null;
     if (
       typeof row.id !== 'string' ||
@@ -148,7 +149,7 @@ function validateIndex(value: unknown, logicalTeamName: string): TeamProjectCont
       projectKey === null ||
       !path.isAbsolute(projectKey) ||
       typeof row.projectPath !== 'string' ||
-      !path.isAbsolute(row.projectPath) ||
+      !isAbsoluteProjectPath(row.projectPath) ||
       typeof row.executionTeamName !== 'string' ||
       !TEAM_NAME.test(row.executionTeamName) ||
       row.executionTeamName.length > 64 ||
@@ -203,7 +204,9 @@ export class TeamProjectContextRegistry {
     }
     const owner = await readTeamOwnerProfileScope(teamDir);
     if (owner !== this.paths.profileScope) {
-      throw new TeamProjectContextUnavailableError('Team belongs to a different or unknown profile');
+      throw new TeamProjectContextUnavailableError(
+        'Team belongs to a different or unknown profile'
+      );
     }
   }
 
@@ -250,54 +253,70 @@ export class TeamProjectContextRegistry {
   /** Serialize project creation against a logical team move to trash. */
   async beginSoftDelete(logicalTeamName: string): Promise<void> {
     await this.assertOwnedDirectory(logicalTeamName);
-    await withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      if (index.deleting) {
-        throw new TeamProjectContextUnavailableError('Permanent deletion is already in progress');
-      }
-      index.softDeleting = true;
-      await this.writeIndex(index);
-    }, { preventLiveOwnerTakeover: true });
+    await withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        if (index.deleting) {
+          throw new TeamProjectContextUnavailableError('Permanent deletion is already in progress');
+        }
+        index.softDeleting = true;
+        await this.writeIndex(index);
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   /** Unfreeze the team after successful restore or rejected trash preflight. */
   async cancelSoftDelete(logicalTeamName: string): Promise<void> {
     await this.assertOwnedDirectory(logicalTeamName);
-    await withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      if (index.deleting) {
-        throw new TeamProjectContextUnavailableError('Permanent deletion is already in progress');
-      }
-      if (!index.softDeleting) return;
-      delete index.softDeleting;
-      await this.writeIndex(index);
-    }, { preventLiveOwnerTakeover: true });
+    await withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        if (index.deleting) {
+          throw new TeamProjectContextUnavailableError('Permanent deletion is already in progress');
+        }
+        if (!index.softDeleting) return;
+        delete index.softDeleting;
+        await this.writeIndex(index);
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   /** Block new reservations before a multi-context permanent deletion starts. */
   async beginPermanentDeletion(logicalTeamName: string): Promise<void> {
     await this.assertOwnedDirectory(logicalTeamName);
-    await withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      if (index.deleting) return;
-      index.deleting = true;
-      await this.writeIndex(index);
-    }, { preventLiveOwnerTakeover: true });
+    await withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        if (index.deleting) return;
+        index.deleting = true;
+        await this.writeIndex(index);
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   /** Undo the admission fence only if deletion preflight has not removed data. */
   async cancelPermanentDeletion(logicalTeamName: string): Promise<void> {
     await this.assertOwnedDirectory(logicalTeamName);
-    await withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      if (!index.deleting) return;
-      delete index.deleting;
-      await this.writeIndex(index);
-    }, { preventLiveOwnerTakeover: true });
+    await withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        if (!index.deleting) return;
+        delete index.deleting;
+        await this.writeIndex(index);
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   /**
@@ -333,7 +352,8 @@ export class TeamProjectContextRegistry {
     const matches = new Map<string, OwnedExecutionAlias[]>();
     let scanError: Error | null = null;
     try {
-      const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true })
+      const entries = await fs
+        .readdir(this.paths.teamsBasePath, { withFileTypes: true })
         .catch((error: NodeJS.ErrnoException) => {
           if (error.code === 'ENOENT') return [];
           throw error;
@@ -364,7 +384,9 @@ export class TeamProjectContextRegistry {
       }
       const found = matches.get(name) ?? [];
       if (found.length > 1) {
-        results.set(name, { error: new TeamProjectContextUnavailableError('Ambiguous project runtime alias') });
+        results.set(name, {
+          error: new TeamProjectContextUnavailableError('Ambiguous project runtime alias'),
+        });
         continue;
       }
       const [match] = found;
@@ -430,8 +452,7 @@ export class TeamProjectContextRegistry {
   ): Promise<void> {
     await this.assertOwnedDirectory(logicalTeamName);
     const row = (await this.readIndex(logicalTeamName)).contexts.find(
-      (context) =>
-        context.executionTeamName === executionTeamName && context.state === 'reserved'
+      (context) => context.executionTeamName === executionTeamName && context.state === 'reserved'
     );
     if (!row) throw new TeamProjectContextUnavailableError('Unknown pending project runtime');
     await this.assertOwnedDirectory(row.executionTeamName);
@@ -457,7 +478,10 @@ export class TeamProjectContextRegistry {
   }
 
   /** Only verified ready contexts qualify for history reads and writes. */
-  async find(logicalTeamName: string, projectPath: string): Promise<PersistedTeamWorkContext | null> {
+  async find(
+    logicalTeamName: string,
+    projectPath: string
+  ): Promise<PersistedTeamWorkContext | null> {
     const row = await this.inspect(logicalTeamName, projectPath);
     if (row?.state === 'reserved') {
       throw new TeamProjectContextUnavailableError('Project context creation is incomplete');
@@ -502,25 +526,29 @@ export class TeamProjectContextRegistry {
     expectedId: string
   ): Promise<boolean> {
     await this.assertOwnedDirectory(logicalTeamName);
-    return withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      const entry = index.contexts.find(
-        (row) => row.executionTeamName === executionTeamName && row.id === expectedId
-      );
-      if (!entry) return false;
-      if (
-        (await exists(path.join(this.paths.teamsBasePath, entry.executionTeamName))) ||
-        (await exists(path.join(this.paths.tasksBasePath, entry.executionTeamName)))
-      ) {
-        throw new TeamProjectContextUnavailableError(
-          'Native project data still exists after permanent deletion'
+    return withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        const entry = index.contexts.find(
+          (row) => row.executionTeamName === executionTeamName && row.id === expectedId
         );
-      }
-      index.contexts = index.contexts.filter((row) => row.id !== entry.id);
-      await this.writeIndex(index);
-      return true;
-    }, { preventLiveOwnerTakeover: true });
+        if (!entry) return false;
+        if (
+          (await exists(path.join(this.paths.teamsBasePath, entry.executionTeamName))) ||
+          (await exists(path.join(this.paths.tasksBasePath, entry.executionTeamName)))
+        ) {
+          throw new TeamProjectContextUnavailableError(
+            'Native project data still exists after permanent deletion'
+          );
+        }
+        index.contexts = index.contexts.filter((row) => row.id !== entry.id);
+        await this.writeIndex(index);
+        return true;
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   /**
@@ -528,59 +556,61 @@ export class TeamProjectContextRegistry {
    * The EXISTING Team Provisioning create flow remains the sole writer of
    * native team config, tasks and launch state.
    */
-  async reserve(
-    logicalTeamName: string,
-    projectPath: string
-  ): Promise<PersistedTeamWorkContext> {
+  async reserve(logicalTeamName: string, projectPath: string): Promise<PersistedTeamWorkContext> {
     await this.assertOwnedDirectory(logicalTeamName);
     const projectKey = await canonicalProjectPath(projectPath);
-    return withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      if (index.deleting) {
-        throw new TeamProjectContextUnavailableError(
-          'Team permanent deletion is in progress; new project contexts are disabled'
-        );
-      }
-      if (index.softDeleting) {
-        throw new TeamProjectContextUnavailableError(
-          'Team trash operation is in progress; new project contexts are disabled'
-        );
-      }
-      const existing = index.contexts.find((c) => c.projectKey === projectKey);
-      if (existing) {
-        if (existing.state === 'ready') await this.assertOwnedDirectory(existing.executionTeamName);
-        return existing;
-      }
-      if (index.contexts.length >= MAX_PROJECT_CONTEXTS) {
-        throw new TeamProjectContextUnavailableError('Team has too many project contexts');
-      }
-      let executionTeamName: string | null = null;
-      for (let attempt = 0; attempt < 8; attempt++) {
-        const candidate = 'ptc-' + randomUUID().replaceAll('-', '').slice(0, 24);
-        if (
-          !index.contexts.some((c) => c.executionTeamName === candidate) &&
-          !(await exists(path.join(this.paths.teamsBasePath, candidate))) &&
-          !(await exists(path.join(this.paths.tasksBasePath, candidate)))
-        ) {
-          executionTeamName = candidate;
-          break;
+    return withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        if (index.deleting) {
+          throw new TeamProjectContextUnavailableError(
+            'Team permanent deletion is in progress; new project contexts are disabled'
+          );
         }
-      }
-      if (!executionTeamName) {
-        throw new TeamProjectContextUnavailableError('Could not reserve a unique team context');
-      }
-      const reserved: PersistedTeamWorkContext = {
-        id: randomUUID(),
-        projectKey,
-        projectPath: projectKey,
-        executionTeamName,
-        state: 'reserved',
-      };
-      index.contexts.push(reserved);
-      await this.writeIndex(index);
-      return reserved;
-    }, { preventLiveOwnerTakeover: true });
+        if (index.softDeleting) {
+          throw new TeamProjectContextUnavailableError(
+            'Team trash operation is in progress; new project contexts are disabled'
+          );
+        }
+        const existing = index.contexts.find((c) => c.projectKey === projectKey);
+        if (existing) {
+          if (existing.state === 'ready')
+            await this.assertOwnedDirectory(existing.executionTeamName);
+          return existing;
+        }
+        if (index.contexts.length >= MAX_PROJECT_CONTEXTS) {
+          throw new TeamProjectContextUnavailableError('Team has too many project contexts');
+        }
+        let executionTeamName: string | null = null;
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const candidate = 'ptc-' + randomUUID().replaceAll('-', '').slice(0, 24);
+          if (
+            !index.contexts.some((c) => c.executionTeamName === candidate) &&
+            !(await exists(path.join(this.paths.teamsBasePath, candidate))) &&
+            !(await exists(path.join(this.paths.tasksBasePath, candidate)))
+          ) {
+            executionTeamName = candidate;
+            break;
+          }
+        }
+        if (!executionTeamName) {
+          throw new TeamProjectContextUnavailableError('Could not reserve a unique team context');
+        }
+        const reserved: PersistedTeamWorkContext = {
+          id: randomUUID(),
+          projectKey,
+          projectPath: projectKey,
+          executionTeamName,
+          state: 'reserved',
+        };
+        index.contexts.push(reserved);
+        await this.writeIndex(index);
+        return reserved;
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   /**
@@ -594,24 +624,27 @@ export class TeamProjectContextRegistry {
     expectedContextId: string
   ): Promise<boolean> {
     await this.assertOwnedDirectory(logicalTeamName);
-    return withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      const row = index.contexts.find(
-        (entry) =>
-          entry.executionTeamName === executionTeamName && entry.id === expectedContextId
-      );
-      if (!row || row.state !== 'reserved') return false;
-      if (
-        (await exists(path.join(this.paths.teamsBasePath, row.executionTeamName))) ||
-        (await exists(path.join(this.paths.tasksBasePath, row.executionTeamName)))
-      ) {
-        return false;
-      }
-      index.contexts = index.contexts.filter((entry) => entry.id !== row.id);
-      await this.writeIndex(index);
-      return true;
-    }, { preventLiveOwnerTakeover: true });
+    return withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        const row = index.contexts.find(
+          (entry) => entry.executionTeamName === executionTeamName && entry.id === expectedContextId
+        );
+        if (!row || row.state !== 'reserved') return false;
+        if (
+          (await exists(path.join(this.paths.teamsBasePath, row.executionTeamName))) ||
+          (await exists(path.join(this.paths.tasksBasePath, row.executionTeamName)))
+        ) {
+          return false;
+        }
+        index.contexts = index.contexts.filter((entry) => entry.id !== row.id);
+        await this.writeIndex(index);
+        return true;
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   async confirmReady(
@@ -621,33 +654,40 @@ export class TeamProjectContextRegistry {
   ): Promise<PersistedTeamWorkContext> {
     await this.assertOwnedDirectory(logicalTeamName);
     const projectKey = await canonicalProjectPath(projectPath);
-    return withFileLock(this.indexPath(logicalTeamName), async () => {
-      await this.assertOwnedDirectory(logicalTeamName);
-      const index = await this.readIndex(logicalTeamName);
-      if (index.deleting || index.softDeleting) {
-        throw new TeamProjectContextUnavailableError(
-          'Cannot confirm a project context while the team is being deleted'
-        );
-      }
-      const row = index.contexts.find((c) => c.projectKey === projectKey);
-      if (!row || row.executionTeamName !== executionTeamName) {
-        throw new TeamProjectContextUnavailableError('Unrecognized project context confirmation');
-      }
-      await this.assertOwnedDirectory(row.executionTeamName);
-      for (const required of [
-        path.join(this.paths.teamsBasePath, row.executionTeamName, 'config.json'),
-        path.join(this.paths.tasksBasePath, row.executionTeamName),
-      ]) {
-        const stat = await fs.lstat(required);
-        if (stat.isSymbolicLink() || !(required.endsWith('.json') ? stat.isFile() : stat.isDirectory())) {
-          throw new TeamProjectContextUnavailableError('Native project context is incomplete');
+    return withFileLock(
+      this.indexPath(logicalTeamName),
+      async () => {
+        await this.assertOwnedDirectory(logicalTeamName);
+        const index = await this.readIndex(logicalTeamName);
+        if (index.deleting || index.softDeleting) {
+          throw new TeamProjectContextUnavailableError(
+            'Cannot confirm a project context while the team is being deleted'
+          );
         }
-      }
-      if (row.state === 'ready') return row;
-      const ready: PersistedTeamWorkContext = { ...row, state: 'ready' };
-      index.contexts = index.contexts.map((c) => c.id === ready.id ? ready : c);
-      await this.writeIndex(index);
-      return ready;
-    }, { preventLiveOwnerTakeover: true });
+        const row = index.contexts.find((c) => c.projectKey === projectKey);
+        if (!row || row.executionTeamName !== executionTeamName) {
+          throw new TeamProjectContextUnavailableError('Unrecognized project context confirmation');
+        }
+        await this.assertOwnedDirectory(row.executionTeamName);
+        for (const required of [
+          path.join(this.paths.teamsBasePath, row.executionTeamName, 'config.json'),
+          path.join(this.paths.tasksBasePath, row.executionTeamName),
+        ]) {
+          const stat = await fs.lstat(required);
+          if (
+            stat.isSymbolicLink() ||
+            !(required.endsWith('.json') ? stat.isFile() : stat.isDirectory())
+          ) {
+            throw new TeamProjectContextUnavailableError('Native project context is incomplete');
+          }
+        }
+        if (row.state === 'ready') return row;
+        const ready: PersistedTeamWorkContext = { ...row, state: 'ready' };
+        index.contexts = index.contexts.map((c) => (c.id === ready.id ? ready : c));
+        await this.writeIndex(index);
+        return ready;
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 }

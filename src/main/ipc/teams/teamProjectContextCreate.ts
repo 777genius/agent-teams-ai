@@ -20,6 +20,7 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
+import { createLaunchReviewFlowProjection } from './teamReviewFlow';
 
 import type {
   TeamProvisioningRunApi,
@@ -36,10 +37,15 @@ import type {
 export interface ProjectTeamRuntimePorts {
   data: Pick<
     TeamDataService,
-    'createTeamConfig' | 'getSavedRequest' | 'replaceMembers' | 'runConfigurationOperation' | 'updateConfig'
+    | 'createTeamConfig'
+    | 'getSavedRequest'
+    | 'replaceMembers'
+    | 'runConfigurationOperation'
+    | 'setReviewFlowSettings'
+    | 'updateConfig'
   >;
   runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
-  run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
+  run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun' | 'isProvisioningLaunchActive'>;
 }
 
 export interface ProjectTeamCreatePorts extends ProjectTeamRuntimePorts {
@@ -59,9 +65,12 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
       await ports.data.updateConfig(name, update);
     },
     launchSettings,
+    projectReviewFlow: createLaunchReviewFlowProjection(ports.data),
     assertStoppedForRosterSync: async (name) => {
-      if (ports.run.hasProvisioningRun(name) ||
-          !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))) {
+      if (
+        ports.run.hasProvisioningRun(name) ||
+        !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))
+      ) {
         throw new TeamProjectContextLaunchConflictError(
           'Stop this project runtime before applying team roster changes'
         );
@@ -70,7 +79,9 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     assertOwnedAlias: async (teamName) => {
       const owner = await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName));
       if (owner !== resolveThisAppProfileScope()) {
-        throw new TeamProjectContextLaunchRefusedError('Unowned project context: refusing native launch');
+        throw new TeamProjectContextLaunchRefusedError(
+          'Unowned project context: refusing native launch'
+        );
       }
     },
   });
@@ -117,8 +128,9 @@ export async function createTeamWithProjectContext(
       rememberProjectRunIdentity(result.runId, request.teamName, creation.teamName);
       return result;
     },
-    confirmReady: (address, execution) =>
-      resolver.confirmProvisionedContext(address, execution),
+    isProvisioningLaunchActive: (name) =>
+      ports.run.isProvisioningLaunchActive?.(name) ?? ports.run.hasProvisioningRun(name),
+    confirmReady: (address, execution) => resolver.confirmProvisionedContext(address, execution),
   });
   return coordinator.create(request, onProgress);
 }

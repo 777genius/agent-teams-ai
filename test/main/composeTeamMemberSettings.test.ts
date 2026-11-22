@@ -23,8 +23,8 @@ import {
   TeamProjectDefinitionEditor,
 } from '../../src/features/team-project-context/main';
 import {
-  definitionMemberSettingsLifecycle,
   DefinitionLeadMemberSettingsRepositoryAdapter,
+  definitionMemberSettingsLifecycle,
 } from '../../src/features/team-provisioning/main/adapters/output/DefinitionLeadMemberSettingsAdapters';
 import { createTeamMemberSettingsFeature } from '../../src/features/team-provisioning/main/composition/createTeamMemberSettingsFeature';
 import { fingerprintResolvedMember } from '../../src/features/team-provisioning/renderer/utils/memberSettingsPresentation';
@@ -221,7 +221,9 @@ function world(
       runtime: () => ({}) as never,
       run: () => ({}) as never,
     },
-    () => editor
+    () => editor,
+    undefined,
+    () => ({ hasPending: async () => false, begin: async () => undefined, clear: async () => undefined })
   );
   return {
     routed,

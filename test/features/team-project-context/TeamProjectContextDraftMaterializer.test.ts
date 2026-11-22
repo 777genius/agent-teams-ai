@@ -30,6 +30,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     replaceMembers: vi.fn(async () => undefined),
     updateDisplayMetadata: vi.fn(async () => undefined),
     launchSettings: { save: vi.fn(async () => undefined) },
+    projectReviewFlow: vi.fn(async () => undefined),
     assertStoppedForRosterSync: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
@@ -46,6 +47,11 @@ describe('TeamProjectContextDraftMaterializer', () => {
       teamName: 'ptc-sandbox', cwd: '/sandbox/b', members: [{ name: 'alice' }],
       prompt: 'rules', projectContextMode: 'shared',
     }, { claimOwnerOnCreate: true });
+    // The new copy's board takes the team's review flow once the copy exists.
+    expect(f.store.projectReviewFlow).toHaveBeenCalledWith('builders', 'ptc-sandbox');
+    expect(f.store.createTeamConfig.mock.invocationCallOrder[0]).toBeLessThan(
+      f.store.projectReviewFlow.mock.invocationCallOrder[0]
+    );
   });
 
   it('releases an empty reservation when native draft creation rejects', async () => {
@@ -57,6 +63,7 @@ describe('TeamProjectContextDraftMaterializer', () => {
     expect(f.context.releaseUnusedReservation).toHaveBeenCalledWith(
       'builders', 'ptc-sandbox', reserved.workContextId
     );
+    expect(f.store.projectReviewFlow).not.toHaveBeenCalled();
 
   });
 
@@ -72,7 +79,8 @@ describe('TeamProjectContextDraftMaterializer', () => {
     });
     expect(f.store.assertOwnedAlias).toHaveBeenCalledWith('ptc-sandbox');
     expect(f.store.createTeamConfig).not.toHaveBeenCalled();
-
+    // An existing copy (also one that runs) is brought to the team's review flow at every launch.
+    expect(f.store.projectReviewFlow).toHaveBeenCalledWith('builders', 'ptc-sandbox');
   });
 
   it('synchronizes an edited logical roster into a stopped ready project before launch', async () => {

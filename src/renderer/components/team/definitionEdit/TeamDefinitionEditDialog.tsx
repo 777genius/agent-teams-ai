@@ -35,18 +35,25 @@ export const TeamDefinitionEditDialog = ({
   const { t } = useAppTranslation('team');
   const [input, setInput] = useState<DefinitionEditorInput | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isTeamAlive, setIsTeamAlive] = useState(false);
 
-  const load = useCallback(async (): Promise<DefinitionEditorInput> => {
-    const saved = await api.teams.getSavedRequest(logicalTeamName);
+  const load = useCallback(async (): Promise<{ input: DefinitionEditorInput; alive: boolean }> => {
+    const [saved, alive] = await Promise.all([
+      api.teams.getSavedRequest(logicalTeamName),
+      api.teams.processAlive(logicalTeamName),
+    ]);
     if (!saved) throw new Error(t('detail.editDefinition.notFound'));
-    return buildDefinitionEditorInput(saved, logicalTeamName);
+    return { input: buildDefinitionEditorInput(saved, logicalTeamName), alive };
   }, [logicalTeamName, t]);
 
   useEffect(() => {
     let alive = true;
     void load().then(
       (next) => {
-        if (alive) setInput(next);
+        if (alive) {
+          setInput(next.input);
+          setIsTeamAlive(next.alive);
+        }
       },
       (error: unknown) => {
         if (alive) setLoadError(error instanceof Error ? error.message : String(error));
@@ -72,14 +79,16 @@ export const TeamDefinitionEditDialog = ({
       currentMembers={input.currentMembers}
       leadMember={input.leadMember}
       resolvedMemberColorMap={resolvedMemberColorMap}
-      isTeamAlive={false}
+      isTeamAlive={isTeamAlive}
       isTeamProvisioning={false}
       projectPath={projectPath}
       onClose={onClose}
       onChangeLeadRuntime={onChangeLeadRuntime}
       onSaved={async () => {
         // Show the saved definition in the dialog's own baseline, then refresh the screen.
-        setInput(await load());
+        const next = await load();
+        setInput(next.input);
+        setIsTeamAlive(next.alive);
         await onSaved();
       }}
     />

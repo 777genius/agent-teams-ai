@@ -5,15 +5,14 @@ import {
   applyCommittedLeadRuntime,
   isCanonicalSettingsLead,
   type MemberSettingsRelaunchDraft,
-  memberSettingsTargetToMember,
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
 import { api } from '@renderer/api';
 
 import { refreshAfterDefinitionEdit } from './definitionEditActions';
-import { buildDefinitionEditorInput } from './definitionEditorInput';
 import { DefinitionLoadErrorDialog } from './DefinitionLoadErrorDialog';
+import { loadDefinitionMembers } from './definitionMemberSettings';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -28,7 +27,10 @@ interface Props {
   isTeamProvisioning: boolean;
   projectPath?: string | null;
   onClose: () => void;
-  onRelaunchRequired: (draft: MemberSettingsRelaunchDraft) => void;
+  onRelaunchRequired: (
+    draft: MemberSettingsRelaunchDraft,
+    definitionMembers?: ResolvedTeamMember[]
+  ) => void;
 }
 
 /**
@@ -54,6 +56,7 @@ export const TeamMemberSettingsDialogRoute = ({
       logicalTeamName={logicalTeamName}
       visibleTeamName={teamName}
       memberName={memberName}
+      leadName={members.find(isCanonicalSettingsLead)?.name}
       projectPath={projectPath}
       onClose={onClose}
       onRelaunchRequired={onRelaunchRequired}
@@ -72,32 +75,11 @@ export const TeamMemberSettingsDialogRoute = ({
     />
   );
 
-/** The saved roster of the definition, with the edited member exactly as main compares it. */
-async function loadDefinitionMembers(
-  logicalTeamName: string,
-  memberName: string
-): Promise<ResolvedTeamMember[] | 'team_missing' | 'member_missing'> {
-  const [saved, target] = await Promise.all([
-    api.teams.getSavedRequest(logicalTeamName),
-    api.teams.getMemberSettingsTarget({ teamName: logicalTeamName, memberName }),
-  ]);
-  if (!saved) return 'team_missing';
-  // The open project may still show a member that the definition no longer has.
-  if (!target) return 'member_missing';
-  const input = buildDefinitionEditorInput(saved, logicalTeamName);
-  const edited = memberSettingsTargetToMember(target);
-  const key = edited.name.toLowerCase();
-  const others = input.currentMembers.filter((member) => member.name.toLowerCase() !== key);
-  // The lead is edited as itself (its launch settings); otherwise it is the lead of the others.
-  return isCanonicalSettingsLead(edited)
-    ? [edited, ...others]
-    : [input.leadMember, ...others, edited];
-}
-
 const DefinitionMemberSettingsDialog = ({
   logicalTeamName,
   visibleTeamName,
   memberName,
+  leadName,
   projectPath,
   onClose,
   onRelaunchRequired,
@@ -105,24 +87,29 @@ const DefinitionMemberSettingsDialog = ({
   Pick<Props, 'memberName' | 'projectPath' | 'onClose' | 'onRelaunchRequired'> & {
     logicalTeamName: string;
     visibleTeamName: string;
+    leadName?: string;
   }
 >): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const [members, setMembers] = useState<ResolvedTeamMember[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isTeamAlive, setIsTeamAlive] = useState(false);
 
   const load = useCallback(async (): Promise<ResolvedTeamMember[]> => {
-    const next = await loadDefinitionMembers(logicalTeamName, memberName);
+    const next = await loadDefinitionMembers(logicalTeamName, memberName, leadName);
     if (next === 'team_missing') throw new Error(t('detail.editDefinition.notFound'));
     if (next === 'member_missing') throw new Error(t('detail.editDefinition.memberNotFound'));
     return next;
-  }, [logicalTeamName, memberName, t]);
+  }, [logicalTeamName, memberName, leadName, t]);
 
   useEffect(() => {
     let alive = true;
-    void load().then(
-      (next) => {
-        if (alive) setMembers(next);
+    void Promise.all([load(), api.teams.processAlive(logicalTeamName)]).then(
+      ([next, running]) => {
+        if (alive) {
+          setMembers(next);
+          setIsTeamAlive(running);
+        }
       },
       (error: unknown) => {
         if (alive) setLoadError(error instanceof Error ? error.message : String(error));
@@ -131,7 +118,7 @@ const DefinitionMemberSettingsDialog = ({
     return () => {
       alive = false;
     };
-  }, [load]);
+  }, [load, logicalTeamName]);
 
   if (loadError !== null)
     return <DefinitionLoadErrorDialog message={loadError} onClose={onClose} />;
@@ -141,8 +128,8 @@ const DefinitionMemberSettingsDialog = ({
       teamName={logicalTeamName}
       memberName={memberName}
       members={members}
-      // The definition never runs; a running project makes main refuse the save.
-      isTeamAlive={false}
+      isTeamAlive={isTeamAlive}
+      projectDefinition
       isTeamProvisioning={false}
       projectPath={projectPath}
       onClose={onClose}
@@ -152,7 +139,7 @@ const DefinitionMemberSettingsDialog = ({
         setMembers(await load());
         await refreshAfterDefinitionEdit(visibleTeamName);
       }}
-      onRelaunchRequired={onRelaunchRequired}
+      onRelaunchRequired={(draft) => onRelaunchRequired(draft, members)}
     />
   );
 };

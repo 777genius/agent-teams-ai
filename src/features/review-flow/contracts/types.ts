@@ -25,6 +25,23 @@ export interface ReviewFlowPolicy extends ReviewFlowSettings {
 /** Teams that carry their own settings instead of following the default, keyed by team name. */
 export type TeamReviewFlowOverrides = Record<string, ReviewFlowSettings>;
 
+/**
+ * A team with separate history per project has one review flow, saved with the team and copied to
+ * the board of each of its projects (agents read the board of their own project).
+ */
+export interface ProjectTeamReviewFlow {
+  /** The team saved its setting. Before that each project keeps what it had. */
+  saved: boolean;
+  /** The saved setting: its own, or `null` when it follows the default (also `null` while not saved). */
+  settings: ReviewFlowSettings | null;
+  /** What the team saved cannot be read: its launches are refused until a save repairs it. */
+  unreadable?: true;
+  /** Its projects cannot be listed (a damaged contexts index), so nothing can be saved for it. */
+  projectsError?: string;
+  /** Its project copies. Their boards are listed in `overrides` and `unreadableTeams` by copy name. */
+  projects: { executionTeamName: string; projectPath: string }[];
+}
+
 export interface ReviewFlowOverview {
   /** The saved default, or the built-in one when the saved file cannot be read (see `defaultsError`). */
   defaults: ReviewFlowSettings;
@@ -33,4 +50,6 @@ export interface ReviewFlowOverview {
   overrides: TeamReviewFlowOverrides;
   /** Teams whose saved review-flow settings are invalid. Resetting them to the default repairs them. */
   unreadableTeams: string[];
+  /** Every team with separate history per project, keyed by team name. */
+  projectTeams: Record<string, ProjectTeamReviewFlow>;
 }

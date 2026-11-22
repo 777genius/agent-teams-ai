@@ -36,7 +36,7 @@ describe('launch dialog wiring of per-project teams', () => {
     const dialogs = launchDialogElements(source);
     expect(dialogs).toHaveLength(1);
     expect(dialogs[0]).toContain('rosterReadOnly={Boolean(logicalTeamName)}');
-    expect(source).toContain('setLaunchDialogState(buildChangeRuntimeLaunchState({');
+    expect(source).toMatch(/setLaunchDialogState\(\s*buildChangeRuntimeLaunchState\(\{/);
     // A per-project relaunch returns before the shared relaunch flow, which is for ordinary teams.
     const handler = source.slice(source.indexOf('const handleRelaunchDialogSubmit'));
     expect(handler.indexOf('if (logicalTeamName) {')).toBeLessThan(handler.indexOf('executeTeamRelaunch({'));

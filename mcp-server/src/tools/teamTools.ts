@@ -161,8 +161,9 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
     name: 'team_create',
     description:
       'Create a draft team configuration through the local Agent Teams control API. This does not launch the team. ' +
-      'projectContextMode (required, fixed at creation): shared keeps one history for all project folders and works with every MCP tool; ' +
-      'per_project keeps tasks and chats separate for every project folder the team is launched in (team_launch with cwd), but the task, message and review tools do not support it yet.',
+      'projectContextMode (required, fixed at creation): shared keeps one history for all project folders; ' +
+      'per_project keeps tasks and chats separate for every project folder the team is launched in (team_launch with cwd), ' +
+      'and the task, message, review and other board tools then take that folder in projectPath.',
     parameters: z
       .object({
         ...teamContextSchema,

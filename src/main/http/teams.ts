@@ -9,6 +9,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerProjectBoardRoute } from './teams/projectBoardRoute';
 import { createProjectContextHttp } from './teams/projectContextHttp';
 import { registerTeamLaunchRoute } from './teams/teamLaunchRoute';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
@@ -249,6 +250,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     getTeamDataApi: () => getTeamDataApi(services),
     management: managementFeature,
   });
+  registerProjectBoardRoute(app, services);
 
   app.get('/api/teams', async (_request, reply) => {
     try {
