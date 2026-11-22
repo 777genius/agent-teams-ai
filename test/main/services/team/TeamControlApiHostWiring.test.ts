@@ -82,6 +82,7 @@ function createHost({ publish = writeTeamControlApiState, missingRoutes }: HostO
     teamHttpHandlerApis: { routes: 'team' },
     crossTeamHttpApi: { routes: 'cross-team' },
   };
+  const customTeamTemplatesFeature = { routes: 'custom-team-templates' };
   let running = false;
   let shuttingDown = false;
   const isShutdownStarted = () => shuttingDown;
@@ -126,6 +127,7 @@ function createHost({ publish = writeTeamControlApiState, missingRoutes }: HostO
       missingRoutes === 'teamHttpHandlerApis' ? null : routes.teamHttpHandlerApis,
     crossTeamHttpApi: missingRoutes === 'crossTeamHttpApi' ? null : routes.crossTeamHttpApi,
     teamGroupChatsFeature: {},
+    customTeamTemplatesFeature,
     bindTeamHttpDataApi: () => ({}),
     projectTeamLaunchFactory: () => () => ({}),
     teamDataService: {},
@@ -146,6 +148,7 @@ function createHost({ publish = writeTeamControlApiState, missingRoutes }: HostO
   return {
     server,
     routes,
+    customTeamTemplatesFeature,
     start: () => host.startHttpServer(() => Promise.resolve()),
     resolve: (kind: ResolverKind) => host[kind](),
     shutdown: () => {
@@ -185,6 +188,7 @@ describe('existing app Host endpoint wiring', () => {
       expect.objectContaining({
         teamApis: host.routes.teamHttpHandlerApis,
         crossTeam: host.routes.crossTeamHttpApi,
+        customTeamTemplatesFeature: host.customTeamTemplatesFeature,
       }),
       expect.any(Function),
       3456

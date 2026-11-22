@@ -12,7 +12,7 @@ function createService(overrides: TeamReviewFlowOverrides = {}, unreadable: stri
     },
     teams: {
       writeOverride: vi.fn(async () => undefined),
-      listOverrides: vi.fn(async () => ({ overrides, unreadable })),
+      listOverrides: vi.fn(async () => ({ overrides, unreadable, projectTeams: { builders: { saved: true, settings: null, projects: [] } } })),
     },
   };
   return { service: new ReviewFlowService(ports), ports };
@@ -26,6 +26,7 @@ describe('ReviewFlowService', () => {
       defaults: { reviewFlow: 'agent_approval', reviewFlowPrompt: '' },
       overrides: { alpha: custom },
       unreadableTeams: [],
+      projectTeams: { builders: { saved: true, settings: null, projects: [] } },
     });
   });
 
@@ -37,6 +38,7 @@ describe('ReviewFlowService', () => {
       defaultsError: 'Review flow defaults are corrupt',
       overrides: {},
       unreadableTeams: ['broken-team'],
+      projectTeams: { builders: { saved: true, settings: null, projects: [] } },
     });
   });
 

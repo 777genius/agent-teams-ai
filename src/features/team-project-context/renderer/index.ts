@@ -1,4 +1,4 @@
-export { projectCopyLabel } from '../core';
+export { findProjectCopyOwner, projectCopyLabel } from '../core';
 export {
   TeamDisplayLabel,
   useProjectCopyOwnerName,

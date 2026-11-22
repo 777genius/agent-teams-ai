@@ -20,6 +20,7 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
+import { createLaunchReviewFlowProjection } from './teamReviewFlow';
 
 import type {
   TeamProvisioningRunApi,
@@ -40,6 +41,7 @@ export interface ProjectTeamRuntimePorts {
     | 'getSavedRequest'
     | 'replaceMembers'
     | 'runConfigurationOperation'
+    | 'setReviewFlowSettings'
     | 'updateConfig'
   >;
   runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
@@ -63,6 +65,7 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
       await ports.data.updateConfig(name, update);
     },
     launchSettings,
+    projectReviewFlow: createLaunchReviewFlowProjection(ports.data),
     assertStoppedForRosterSync: async (name) => {
       if (
         ports.run.hasProvisioningRun(name) ||
