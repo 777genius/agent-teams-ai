@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { matchesGlob } from 'node:path';
 import { test } from 'node:test';
 
 import {
@@ -129,4 +130,90 @@ test('GitHub Pages: production deployment requires the main branch', () => {
   ]) {
     assert.equal(source.match(location)?.[1], mainOnly);
   }
+});
+
+
+/**
+ * Emulate GitHub's ordered workflow path evaluation for the small maintained
+ * Kanban-exclusion policy. A later negative pattern withdraws a broad include;
+ * any other matching positive path in the PR still schedules the workflow.
+ */
+function pathsForTrigger(name: string, event: 'pull_request' | 'push'): string[] {
+  const lines = workflow(name).split('\n');
+  const start = lines.indexOf('  ' + event + ':');
+  assert.ok(start >= 0, name + ': missing ' + event);
+  const end = lines.findIndex((line, i) => i > start && /^  [\w-]+:\s*$/.test(line));
+  const block = lines.slice(start, end >= 0 ? end : lines.length);
+  const paths = block.indexOf('    paths:');
+  assert.ok(paths >= 0, name + ': missing path filter');
+  const patterns: string[] = [];
+  for (const line of block.slice(paths + 1)) {
+    if (/^\s*(?:#.*)?$/.test(line)) continue;
+    const entry = /^      - (.+)$/.exec(line);
+    if (!entry) break;
+    const value = entry[1].trim();
+    patterns.push(value.replace(/^(['"])(.*)\1$/, '$2'));
+  }
+  return patterns;
+}
+
+function selectedByPaths(patterns: string[], path: string): boolean {
+  let selected = false;
+  for (const pattern of patterns) {
+    const negative = pattern.startsWith('!');
+    if (matchesGlob(path, negative ? pattern.slice(1) : pattern)) selected = !negative;
+  }
+  return selected;
+}
+
+test('Kanban-only changes trigger dedicated E2E, not unrelated create/template E2E', () => {
+  const kanban = 'src/renderer/components/team/kanban/KanbanBoard.tsx';
+  const sharedTeam = 'src/renderer/components/team/TeamDetailView.tsx';
+  const create = 'src/renderer/components/team/CreateTeamPage.tsx';
+  const template = 'src/features/custom-team-templates/renderer/ui/CustomTemplateDialog.tsx';
+  const scenarios = [
+    ['custom-team-templates-desktop-e2e', ['pull_request'] as const],
+    ['teams-create-page-desktop-e2e', ['pull_request', 'push'] as const],
+  ];
+  for (const [name, events] of scenarios) {
+    for (const event of events) {
+      const paths = pathsForTrigger(name, event);
+      const include = paths.indexOf('src/renderer/components/team/**');
+      const exclude = paths.indexOf('!src/renderer/components/team/kanban/**');
+      assert.ok(include >= 0 && exclude > include, name + ' must preserve ordered exclusion');
+      assert.equal(selectedByPaths(paths, kanban), false, name + ': Kanban-only must skip');
+      assert.equal(selectedByPaths(paths, sharedTeam), true, name + ': shared team must run');
+      assert.equal(selectedByPaths(paths, create), true, name + ': create-page changes must run');
+      assert.equal(selectedByPaths(paths, template), name === 'custom-team-templates-desktop-e2e');
+      assert.equal(
+        [kanban, sharedTeam].some((path) => selectedByPaths(paths, path)),
+        true, name + ': combined Kanban and shared-team change must run',
+      );
+    }
+  }
+  for (const event of ['pull_request', 'push'] as const) {
+    assert.equal(
+      selectedByPaths(pathsForTrigger('kanban-table-desktop-e2e', event), kanban),
+      true, 'dedicated Kanban E2E must keep all board changes',
+    );
+  }
+});
+
+test('heavy team-history and template E2E defer Draft but run on Ready/main/manual', () => {
+  const gate = "if: github.event_name != 'pull_request' || github.event.pull_request.draft != true";
+  for (const [name, job] of [
+    ['custom-team-templates-desktop-e2e', 'desktop'],
+    ['project-scoped-team-history-desktop-e2e', 'desktop-history'],
+  ] as const) {
+    const text = workflow(name);
+    const trigger = text.split('\njobs:')[0];
+    assert.match(trigger, /ready_for_review/);
+    const body = text.split('\n  ' + job + ':\n')[1]?.split(/\n  [\w-]+:\n/)[0];
+    assert.ok(body, name + ': missing native E2E job');
+    assert.ok(body.includes(gate), name + ': must defer Draft');
+    assert.doesNotMatch(body, /continue-on-error:\s*true/);
+  }
+  assert.match(workflow('custom-team-templates-desktop-e2e'), /workflow_dispatch:/);
+  assert.match(workflow('project-scoped-team-history-desktop-e2e'), /  push:\n    branches: \[main\]/);
+  assert.match(workflow('project-scoped-team-history-desktop-e2e'), /os: \[ubuntu-latest, windows-latest, macos-latest\]/);
 });
