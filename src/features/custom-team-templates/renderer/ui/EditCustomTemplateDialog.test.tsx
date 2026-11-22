@@ -403,13 +403,13 @@ describe('EditCustomTemplateDialog', () => {
     expect(editor.tagName).toBe('TEXTAREA');
     expect(editor.getAttribute('aria-label')).toBeTruthy();
     await act(async () => {
-      setText('#member-0-role-custom', 'Custom specialist\\nNext responsibility');
+      setText('#member-0-role-custom', 'Custom specialist\nNext responsibility');
     });
     await save();
     expect(updateTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
         fields: expect.objectContaining({
-          members: [{ name: 'alice', role: 'Custom specialist\\nNext responsibility' }],
+          members: [{ name: 'alice', role: 'Custom specialist\nNext responsibility' }],
         }),
       })
     );
