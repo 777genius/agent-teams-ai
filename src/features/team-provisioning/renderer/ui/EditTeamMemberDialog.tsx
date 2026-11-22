@@ -44,6 +44,7 @@ export interface EditTeamMemberDialogProps {
   member: ResolvedTeamMember;
   isTeamAlive: boolean;
   isTeamProvisioning: boolean;
+  projectDefinition?: boolean;
   isMixedTeam: boolean;
   leadProviderId?: TeamProviderId;
   leadProviderBackendId?: TeamProviderBackendId;
@@ -86,6 +87,7 @@ export const EditTeamMemberDialog = ({
   member,
   isTeamAlive,
   isTeamProvisioning,
+  projectDefinition = false,
   isMixedTeam,
   leadProviderId,
   leadProviderBackendId,
@@ -266,7 +268,13 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'recovery_required') {
-      setError(t('editTeam.errors.saveFailed'));
+      setError(
+        t(
+          projectDefinition
+            ? 'detail.tooltips.editUnavailableRunningProject'
+            : 'editTeam.errors.saveFailed'
+        )
+      );
       return;
     }
     if (result.effect === 'lead_restart_rolled_back') {

@@ -5,6 +5,7 @@ import {
 import {
   createNodeDefinitionLeadSettingsFeature,
   createNodeTeamMemberSettingsFeature,
+  MemberSettingsCommandExecutor,
   type NodeTeamMemberSettingsFeatureDependencies,
   type TeamMemberSettingsFeatureApi,
 } from '@features/team-provisioning/main';
@@ -15,9 +16,9 @@ import {
   buildEditor,
   classifyDefinitionWrite,
   ProjectCopyEditError,
-  runLogicalDefinitionWrite,
 } from './ipc/teams/teamProjectDefinitionEdit';
 import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
+import { createProjectMemberSettingsWriter } from './projectLiveMemberSettings';
 
 import type { DefinitionEditPorts } from './ipc/teams/teamProjectDefinitionEdit';
 import type {
@@ -62,8 +63,28 @@ export interface MemberSettingsFeatures {
 export function routeMemberSettingsWrites(
   features: MemberSettingsFeatures,
   ports: DefinitionEditPorts,
-  createEditor: (ports: DefinitionEditPorts) => ReturnType<typeof buildEditor> = buildEditor
+  createEditor: (ports: DefinitionEditPorts) => ReturnType<typeof buildEditor> = buildEditor,
+  commands = new MemberSettingsCommandExecutor('project-live-member-settings'),
+  createJournal?: Parameters<typeof createProjectMemberSettingsWriter>[3]
 ): TeamMemberSettingsFeatureApi {
+  const writeProject = createProjectMemberSettingsWriter(
+    features,
+    ports,
+    commands,
+    createJournal,
+    (error, request) => {
+      const reason = memberSettingsRefusalOf(error);
+      return reason
+        ? {
+            outcome: 'refused',
+            reason,
+            memberName: request.memberName,
+            message: error instanceof Error ? error.message : String(error),
+            replayed: false,
+          }
+        : null;
+    }
+  );
   return {
     async getMemberSettingsTarget(request) {
       const logical = (await createEditor(ports).classify(request.teamName)) === 'logical';
@@ -73,21 +94,11 @@ export function routeMemberSettingsWrites(
       try {
         const editor = createEditor(ports);
         if ((await classifyDefinitionWrite(editor, request.teamName)) === 'native') {
+          if (request.relaunchGuard)
+            throw new Error('Project relaunch guard requires a per-project team');
           return await features.team.updateMemberSettings(request);
         }
-        return await runLogicalDefinitionWrite(
-          ports,
-          editor,
-          request.teamName,
-          () =>
-            (request.targetKind === 'lead'
-              ? features.definitionLead
-              : features.team
-            ).updateMemberSettings(request),
-          (result) =>
-            result.outcome === 'completed' &&
-            (result.effect === 'persisted_only' || result.effect === 'recovery_required')
-        );
+        return await writeProject(editor, request);
       } catch (error) {
         const reason = memberSettingsRefusalOf(error);
         if (!reason) throw error;
@@ -152,6 +163,12 @@ export function composeTeamMemberSettings(
       data: () => input.data,
       runtime: () => input.apis.runtime,
       run: () => input.apis.provisioningRun,
-    }
+    },
+    buildEditor,
+    new MemberSettingsCommandExecutor(
+      'project-live-member-settings',
+      ledger.commandRunner,
+      ledger.isDurableStorageAvailable
+    )
   );
 }

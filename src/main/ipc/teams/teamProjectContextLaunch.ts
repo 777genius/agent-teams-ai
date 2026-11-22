@@ -4,6 +4,7 @@ import {
   recordLaunchSettings,
   rememberProjectRunIdentity,
   TeamProjectContextLaunchConflictError,
+  TeamProjectLiveEditJournal,
   trackProjectCopyLaunch,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
@@ -65,6 +66,14 @@ export async function prepareTeamContextLaunch(
   const logicalMeta = await new TeamMetaStore().getMeta(request.teamName);
   if (logicalMeta?.deletedAt) {
     throw new Error('TEAM_TRASHED: Restore the team before launching');
+  }
+
+  // An interrupted live definition edit is reconciled only after all copies are confirmed down.
+  // Each subsequent launch projects the authoritative definition onto its own copy.
+  const editJournal = new TeamProjectLiveEditJournal();
+  if (await editJournal.hasPending(request.teamName)) {
+    await parts.gate.assertAllContextsStopped(request.teamName);
+    await editJournal.clear(request.teamName);
   }
 
   const address = { logicalTeamName: request.teamName, projectPath: request.cwd };

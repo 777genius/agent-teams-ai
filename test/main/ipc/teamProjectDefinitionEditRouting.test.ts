@@ -28,6 +28,7 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
     { executionTeamName: 'ptc-b', state: 'ready' },
   ];
   const running = new Set<string>();
+  const ready = new Set<string>();
   const saved = new Map<string, Partial<TeamCreateRequest>>([
     ['builders', { teamName: 'builders', members: [{ name: 'alice', role: 'dev' }, { name: 'bob' }], description: 'D', color: 'blue', displayName: 'Builders' }],
     ['ptc-a', { teamName: 'ptc-a', members: [{ name: 'alice', role: 'dev' }], description: 'D', color: 'blue', displayName: 'Builders' }],
@@ -41,7 +42,7 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
     hasProvisioningRun: vi.fn((_name: string) => false),
     getRuntimeState: vi.fn(
       async (name: string): Promise<TeamRuntimeState> =>
-        ({ teamName: name, isAlive: running.has(name), runId: null, progress: null }) as TeamRuntimeState
+        ({ teamName: name, isAlive: running.has(name), runId: ready.has(name) ? 'run-' + name : null, progress: ready.has(name) ? { teamName: name, runId: 'run-' + name, state: 'ready' } : null }) as TeamRuntimeState
     ),
   };
   const writes: string[] = [];
@@ -61,24 +62,34 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
     registry,
     new TeamProjectContextLaunchGate(registry, runtime),
     ports,
-    async () => undefined
+    async (name) => {
+      if (running.has(name)) throw new Error('copy is running');
+    }
   );
   // A real per-team mutual exclusion standing in for runConfigurationOperation.
-  let tail: Promise<unknown> = Promise.resolve();
-  const runConfigurationOperation = vi.fn(<T,>(_name: string, operation: () => Promise<T>): Promise<T> => {
-    const next = tail.then(operation, operation);
-    tail = next.catch(() => undefined);
+  const tails = new Map<string, Promise<unknown>>();
+  const runConfigurationOperation = vi.fn(<T,>(name: string, operation: () => Promise<T>): Promise<T> => {
+    const previous = tails.get(name) ?? Promise.resolve();
+    const next = previous.then(operation, operation);
+    tails.set(name, next.catch(() => undefined));
     return next;
   });
   const handler = vi.fn(async (..._args: unknown[]) => {
     writes.push('logical');
     return { success: true as const, data: undefined };
   });
+  const journal = {
+    pending: false,
+    async hasPending() { return this.pending; },
+    async begin() { this.pending = true; },
+    async clear() { this.pending = false; },
+  };
   const wrapped = createProjectDefinitionEditRouting(
     { data: () => ({ runConfigurationOperation }) as never, runtime: () => ({}) as never, run: () => ({}) as never },
-    () => editor
+    () => editor,
+    () => journal
   )(handler);
-  return { contexts, running, wrapped, handler, writes, ports, runConfigurationOperation, runtime };
+  return { contexts, running, ready, wrapped, handler, writes, ports, runConfigurationOperation, runtime, journal };
 }
 
 const event = {} as never;
@@ -136,6 +147,138 @@ describe('definition edit routing with the real editor and gate', () => {
       error: expect.stringMatching(/interrupted.*launch the team there again/i),
     });
     for (const w of [running, launching, stuck]) expect(w.writes).toEqual([]);
+  });
+
+  it('writes a running copy only after saving its definition and clears the marker', async () => {
+    const w = world();
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    await expect(w.wrapped(event, 'builders', { name: 'updated' })).resolves.toMatchObject({ success: true });
+    expect(w.handler.mock.calls.map((call) => call[1])).toEqual(['builders', 'ptc-a']);
+    expect(w.journal.pending).toBe(false);
+    expect(w.writes).toContain('project:ptc-b');
+    expect(w.writes).not.toContain('project:ptc-a');
+  });
+
+  it('keeps the marker and reports recovery if durability cannot be confirmed', async () => {
+    const w = world();
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    w.journal.clear = async () => { throw new Error('sync failed'); };
+    await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({
+      success: false, error: expect.stringMatching(/partially applied.*sync failed/),
+    });
+    expect(w.journal.pending).toBe(true);
+  });
+
+  it('keeps a failed live edit blocked until the runtime stops, then lets the definition reconcile', async () => {
+    const w = world();
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    w.handler.mockImplementation(async (_event, name) => name === 'ptc-a'
+      ? ({ success: false, error: 'attach failed' } as never)
+      : ({ success: true, data: undefined }));
+    await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({
+      success: false, error: expect.stringMatching(/definition was saved.*Stop the team/),
+    });
+    expect(w.journal.pending).toBe(true);
+    w.handler.mockClear();
+    await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: false });
+    expect(w.handler).not.toHaveBeenCalled();
+    w.running.clear();
+    w.ready.clear();
+    await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: true });
+    expect(w.journal.pending).toBe(false);
+  });
+
+  it('holds the active runtime gate across both writes so a stop waits for the edit', async () => {
+    const w = world();
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    let release!: () => void;
+    let started!: () => void;
+    const writing = new Promise<void>((resolve) => { started = resolve; });
+    w.handler.mockImplementation(async (_event, name) => {
+      if (name === 'builders') {
+        started();
+        await new Promise<void>((resolve) => { release = resolve; });
+      }
+      return { success: true, data: undefined };
+    });
+    const edit = w.wrapped(event, 'builders', {});
+    await writing;
+    let stopped = false;
+    const stop = w.runConfigurationOperation('ptc-a', async () => { stopped = true; });
+    await Promise.resolve();
+    expect(stopped).toBe(false);
+    release();
+    await expect(edit).resolves.toMatchObject({ success: true });
+    await stop;
+    expect(stopped).toBe(true);
+  });
+
+  it('rechecks the runtime after acquiring its gate and does not write if it stopped', async () => {
+    const w = world();
+    w.running.add('ptc-a');
+    w.ready.add('ptc-a');
+    let release!: () => void;
+    let started!: () => void;
+    const holding = new Promise<void>((resolve) => { started = resolve; });
+    const stop = w.runConfigurationOperation('ptc-a', async () => {
+      started();
+      await new Promise<void>((resolve) => { release = resolve; });
+      w.running.clear();
+      w.ready.clear();
+    });
+    await holding;
+    const edit = w.wrapped(event, 'builders', {});
+    await vi.waitFor(() => expect(w.runConfigurationOperation.mock.calls.filter(([name]) => name === 'ptc-a')).toHaveLength(2));
+    release();
+    await stop;
+    await expect(edit).resolves.toMatchObject({ success: false, error: expect.stringMatching(/runtime changed/) });
+    expect(w.handler).not.toHaveBeenCalled();
+    expect(w.journal.pending).toBe(false);
+  });
+
+  it('refuses if the same project has a different run after acquiring its gate', async () => {
+    const w = world();
+    let runId = 'first-run';
+    w.runtime.getRuntimeState.mockImplementation(async (name): Promise<TeamRuntimeState> => name === 'ptc-a'
+      ? ({ teamName: name, isAlive: true, runId, progress: { teamName: name, runId, state: 'ready' } } as TeamRuntimeState)
+      : ({ teamName: name, isAlive: false, runId: null, progress: null }));
+    let release!: () => void;
+    let started!: () => void;
+    const holding = new Promise<void>((resolve) => { started = resolve; });
+    const gate = w.runConfigurationOperation('ptc-a', async () => {
+      started();
+      await new Promise<void>((resolve) => { release = resolve; });
+      runId = 'second-run';
+    });
+    await holding;
+    const edit = w.wrapped(event, 'builders', {});
+    await vi.waitFor(() => expect(w.runConfigurationOperation.mock.calls.filter(([name]) => name === 'ptc-a')).toHaveLength(2));
+    release();
+    await gate;
+    await expect(edit).resolves.toMatchObject({ success: false, error: expect.stringMatching(/runtime changed/) });
+    expect(w.handler).not.toHaveBeenCalled();
+    expect(w.journal.pending).toBe(false);
+  });
+
+  it('retains the recovery marker if the run changes after the definition is saved', async () => {
+    const w = world();
+    let runId = 'first-run';
+    w.runtime.getRuntimeState.mockImplementation(async (name): Promise<TeamRuntimeState> => name === 'ptc-a'
+      ? ({ teamName: name, isAlive: true, runId, progress: { teamName: name, runId, state: 'ready' } } as TeamRuntimeState)
+      : ({ teamName: name, isAlive: false, runId: null, progress: null }));
+    w.handler.mockImplementation(async (_event, name) => {
+      if (name === 'builders') runId = 'second-run';
+      return { success: true, data: undefined };
+    });
+    await expect(w.wrapped(event, 'builders', {})).resolves.toMatchObject({
+      success: false, error: expect.stringMatching(/partially applied.*Stop the team/),
+    });
+    expect(w.handler.mock.calls.map((call) => call[1])).toEqual(['builders']);
+    expect(w.journal.pending).toBe(true);
   });
 
   it('a launch that takes the logical lock first is serialized before the check: the edit is refused', async () => {

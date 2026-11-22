@@ -135,3 +135,4 @@ export {
   recoverMissingProjectTeamDefinitions,
 } from './TeamProjectDefinitionBackup';
 export { TeamProjectDefinitionEditor } from './TeamProjectDefinitionEditor';
+export { TeamProjectLiveEditJournal } from './TeamProjectLiveEditJournal';

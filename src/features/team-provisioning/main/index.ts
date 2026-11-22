@@ -1,4 +1,8 @@
 export {
+  createMemberSettingsFingerprint,
+  normalizeEditableMemberSettings,
+} from '../core/domain/memberSettingsPolicy';
+export {
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,
 } from './adapters/input/registerTeamMemberSettingsIpc';
@@ -11,6 +15,8 @@ export {
   createNodeDefinitionLeadSettingsFeature,
   createNodeTeamMemberSettingsFeature,
   createTeamMemberSettingsFeature,
+  MemberSettingsCommandExecutor,
+  memberSettingsRecoveryRequiredResult,
   type NodeDefinitionLeadSettingsFeatureDependencies,
   type NodeTeamMemberSettingsFeatureDependencies,
   type TeamMemberSettingsFeatureApi,

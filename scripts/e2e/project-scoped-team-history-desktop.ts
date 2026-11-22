@@ -748,7 +748,7 @@ async function verifyDefinitionEdit(f: Fixture) {
   }
 }
 
-interface MembersFile { members: { name: string; isolation?: string; role?: string; removedAt?: number }[] }
+interface MembersFile { members: { name: string; isolation?: string; role?: string; workflow?: string; removedAt?: number }[] }
 
 /**
  * Member settings of a per-project team are edited in its definition, through the real member
@@ -930,6 +930,50 @@ async function verifyMemberSettings(f: Fixture) {
       (meta) => meta.model === undefined && meta.effort === undefined,
       'lead model and effort cleared in ' + team);
   }
+
+  // A confirmed settings relaunch commits only against the exact team and roster baseline.
+  const baseline = async () => {
+    const saved = await ipcOutcome('window.electronAPI.teams.getSavedRequest(' + JSON.stringify(f.logical) + ')');
+    assert(saved.ok && typeof saved.value?.savedSettingsFingerprint === 'string', 'Saved team fingerprint required');
+    const rows: { memberName: string; expectedFingerprint: string }[] = [];
+    let aliceSettings: Record<string, unknown> | undefined;
+    for (const memberName of ['lead', 'alice']) {
+      const member = await ipcOutcome('window.electronAPI.teams.getMemberSettingsTarget(' +
+        JSON.stringify({ teamName: f.logical, memberName }) + ')');
+      assert(member.ok && member.value?.settings, 'Saved target required: ' + JSON.stringify(member));
+      const currentSettings = member.value.settings as Record<string, unknown>;
+      const probe = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
+        memberName, expectedFingerprint: 'stale', ...(memberName === 'lead'
+          ? { targetKind: 'lead', leadRuntime: { model: null, effort: null }, settings: undefined }
+          : { settings: currentSettings }),
+      }) + ')');
+      assert(probe.ok && probe.value?.outcome === 'target_conflict' && typeof probe.value.actualFingerprint === 'string',
+        'Current target fingerprint required: ' + JSON.stringify(probe));
+      rows.push({ memberName, expectedFingerprint: probe.value.actualFingerprint });
+      if (memberName === 'alice') aliceSettings = currentSettings;
+    }
+    assert(aliceSettings);
+    return { teamFingerprint: saved.value.savedSettingsFingerprint as string, rows, aliceSettings };
+  };
+  const beforeGuard = await baseline();
+  const guardedWrite = (value: Awaited<ReturnType<typeof baseline>>, workflow: string | null, teamFingerprint = value.teamFingerprint) =>
+    ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
+      expectedFingerprint: value.rows.find((row) => row.memberName === 'alice')!.expectedFingerprint,
+      settings: { ...value.aliceSettings, workflow },
+      relaunchGuard: { expectedTeamSettingsFingerprint: teamFingerprint, baseline: value.rows },
+    }) + ')');
+  const rejectedGuard = await guardedWrite(beforeGuard, 'E2E guarded workflow', 'stale');
+  assert(!rejectedGuard.ok && /launch settings changed/.test(rejectedGuard.error ?? ''),
+    'A stale relaunch baseline must fail: ' + JSON.stringify(rejectedGuard));
+  const savedGuard = await guardedWrite(beforeGuard, 'E2E guarded workflow');
+  assert(savedGuard.ok && savedGuard.value?.effect === 'persisted_only', 'Guarded member save: ' + JSON.stringify(savedGuard));
+  for (const team of [f.logical, f.nativeA, f.nativeB]) {
+    await waitForJson<MembersFile>(membersOf(team), (file) => alice(file)?.workflow === 'E2E guarded workflow',
+      'guarded member settings projected into ' + team);
+  }
+  const afterGuard = await baseline();
+  const resetGuard = await guardedWrite(afterGuard, null);
+  assert(resetGuard.ok && resetGuard.value?.effect === 'persisted_only', 'Guarded member reset: ' + JSON.stringify(resetGuard));
 
   assert.equal(await history(), historyBefore, 'Member settings mutated project tasks or inboxes');
   assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'The durable context mapping changed');

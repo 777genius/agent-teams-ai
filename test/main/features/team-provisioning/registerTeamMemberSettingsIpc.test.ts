@@ -3,6 +3,7 @@ import {
   TEAM_UPDATE_MEMBER_SETTINGS,
 } from '@features/team-provisioning/contracts';
 import {
+  parseUpdateMemberSettingsRequest,
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,
 } from '@features/team-provisioning/main/adapters/input/registerTeamMemberSettingsIpc';
@@ -79,6 +80,22 @@ describe('registerTeamMemberSettingsIpc', () => {
       success: true,
       data: expect.objectContaining({ outcome: 'completed' }),
     });
+  });
+
+  it('validates a confirmed relaunch baseline and rejects duplicate member identities', () => {
+    const guard = { expectedTeamSettingsFingerprint: ' team-settings ', baseline: [
+      { memberName: ' Alice ', expectedFingerprint: ' alice-settings ' },
+      { memberName: 'team-lead', expectedFingerprint: 'lead-settings' },
+    ] };
+    expect(parseUpdateMemberSettingsRequest({ ...request(), relaunchGuard: guard }).relaunchGuard).toEqual({
+      expectedTeamSettingsFingerprint: 'team-settings', baseline: [
+        { memberName: 'Alice', expectedFingerprint: 'alice-settings' },
+        { memberName: 'team-lead', expectedFingerprint: 'lead-settings' },
+      ],
+    });
+    expect(() => parseUpdateMemberSettingsRequest({ ...request(), relaunchGuard: {
+      ...guard, baseline: [...guard.baseline, { memberName: 'alice', expectedFingerprint: 'other' }],
+    } })).toThrow(/Duplicate relaunch baseline/);
   });
 
   it.each([

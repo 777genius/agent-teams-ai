@@ -22,8 +22,8 @@ import {
   readRosterForMutation,
   refuseLeadPromptOfNativeTeam,
   refuseSettingsRelaunchOfDefinition,
-  route,
   rosterOf,
+  route,
 } from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
 
 import type { TeamKind } from '../../../src/features/team-project-context/main';
@@ -33,12 +33,14 @@ function routing(target: TeamKind) {
   const editor = {
     classify: vi.fn(async () => target),
     assertEditable: vi.fn(async () => undefined),
+    findRunningContextForEdit: vi.fn(async () => null),
     projectToAliases: vi.fn(async () => ({ failed: [] as { executionTeamName: string; message: string }[] })),
   };
   const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
   const wrapped = createProjectDefinitionEditRouting(
     { data: () => ({ runConfigurationOperation: (_name: string, operation: () => Promise<unknown>) => operation() }) } as never,
-    () => editor as unknown as TeamProjectDefinitionEditor
+    () => editor as unknown as TeamProjectDefinitionEditor,
+    () => ({ hasPending: async () => false, begin: async () => undefined, clear: async () => undefined })
   )(handler);
   return { editor, handler, wrapped };
 }
@@ -75,7 +77,7 @@ describe('withProjectDefinitionEdit', () => {
 
   it('refuses a per-project edit while any project runs and writes nothing', async () => {
     const r = routing('logical');
-    r.editor.assertEditable.mockRejectedValue(new Error('Stop it in every project'));
+    r.editor.findRunningContextForEdit.mockRejectedValue(new Error('Stop it in every project'));
     await expect(r.wrapped(event, 'builders', {})).resolves.toEqual({
       success: false,
       error: 'Stop it in every project',
@@ -190,12 +192,14 @@ describe('lead instructions in the update-config route', () => {
     const editor = {
       classify: vi.fn(async () => target),
       assertEditable: vi.fn(async () => undefined),
+      findRunningContextForEdit: vi.fn(async () => null),
       projectToAliases: vi.fn(async () => ({ failed: [] as { executionTeamName: string; message: string }[] })),
     };
     const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
     const wrapped = createProjectDefinitionEditRouting(
       { data: () => ({ runConfigurationOperation: (_name: string, operation: () => Promise<unknown>) => operation() }) } as never,
-      () => editor as unknown as TeamProjectDefinitionEditor
+      () => editor as unknown as TeamProjectDefinitionEditor,
+    () => ({ hasPending: async () => false, begin: async () => undefined, clear: async () => undefined })
     )(handler, refuseLeadPromptOfNativeTeam);
     return { editor, handler, wrapped };
   }
@@ -223,7 +227,7 @@ describe('lead instructions in the update-config route', () => {
     await expect(r.wrapped(event, 'builders', { prompt: 'new rules' })).resolves.toMatchObject({
       success: true,
     });
-    expect(r.editor.assertEditable).toHaveBeenCalledWith('builders');
+    expect(r.editor.findRunningContextForEdit).toHaveBeenCalledWith('builders');
     expect(r.handler).toHaveBeenCalledWith(event, 'builders', { prompt: 'new rules' });
     expect(r.editor.projectToAliases).toHaveBeenCalledWith('builders');
   });
@@ -248,12 +252,14 @@ describe('settings-originated relaunch of a per-project team', () => {
     const editor = {
       classify: vi.fn(async () => target),
       assertEditable: vi.fn(async () => undefined),
+      findRunningContextForEdit: vi.fn(async () => null),
       projectToAliases: vi.fn(async () => ({ failed: [] })),
     };
     const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
     const wrapped = createProjectDefinitionEditRouting(
       { data: () => ({ runConfigurationOperation: (_name: string, operation: () => Promise<unknown>) => operation() }) } as never,
-      () => editor as unknown as TeamProjectDefinitionEditor
+      () => editor as unknown as TeamProjectDefinitionEditor,
+    () => ({ hasPending: async () => false, begin: async () => undefined, clear: async () => undefined })
     )(handler, undefined, refuseSettingsRelaunchOfDefinition);
     return { editor, handler, wrapped };
   }

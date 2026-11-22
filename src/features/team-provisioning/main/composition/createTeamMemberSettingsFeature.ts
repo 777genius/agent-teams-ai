@@ -1,6 +1,7 @@
 import {
   ApplicationCommandFailureKind,
   type ApplicationCommandJsonValue,
+  type ApplicationCommandReconciliation,
   type ApplicationCommandRunner,
   ApplicationCommandRunOutcome,
 } from '@features/application-command-ledger';
@@ -103,7 +104,7 @@ function withReplay(
   return { ...result, replayed };
 }
 
-function recoveryRequiredResult(
+export function memberSettingsRecoveryRequiredResult(
   request: UpdateMemberSettingsRequest,
   currentFingerprint: string | null,
   cause: string
@@ -224,6 +225,55 @@ class InProcessMemberSettingsCommandRunner {
   }
 }
 
+/** Shared durable/process-local idempotency for a member settings command. */
+export class MemberSettingsCommandExecutor {
+  private readonly fallback = new InProcessMemberSettingsCommandRunner();
+
+  constructor(
+    private readonly namespace: string,
+    private readonly runner?: ApplicationCommandRunner | null,
+    private readonly isDurable?: () => Promise<boolean>
+  ) {}
+
+  async run(
+    request: UpdateMemberSettingsRequest,
+    execute: () => Promise<UpdateMemberSettingsResult>,
+    prepareReconcile: () => Promise<
+      () => Promise<ApplicationCommandReconciliation<ApplicationCommandJsonValue>>
+    >
+  ): Promise<UpdateMemberSettingsResult> {
+    if (!this.runner || (this.isDurable && !(await this.isDurable()))) {
+      return this.fallback.run(request, execute);
+    }
+    const reconcile = await prepareReconcile();
+    const run = await this.runner.run<ApplicationCommandJsonValue, typeof COMMAND_OPERATION>(
+      {
+        namespace: this.namespace,
+        scopeKey: commandScope(request),
+        commandId: request.commandId,
+        idempotencyKey: request.idempotencyKey,
+        operation: COMMAND_OPERATION,
+        payload: jsonValue(request),
+        classifyError: (error) => ({
+          failureKind:
+            error instanceof MemberSettingsPersistenceFailedError
+              ? error.recoveryRequired
+                ? ApplicationCommandFailureKind.Terminal
+                : ApplicationCommandFailureKind.Retryable
+              : ApplicationCommandFailureKind.UnknownAfterTimeout,
+          message: describeError(error),
+        }),
+        reconcile,
+      },
+      async () => jsonValue(await execute())
+    );
+    return withReplay(
+      run.result as UpdateMemberSettingsResult,
+      run.outcome === ApplicationCommandRunOutcome.Replayed
+    );
+  }
+}
+
 function requireLifecycle(
   dependencies: TeamMemberSettingsFeatureDependencies
 ): MemberSettingsLifecyclePort {
@@ -252,7 +302,11 @@ export function createTeamMemberSettingsFeature(
     repository,
     lifecycle: requireLifecycle(dependencies),
   });
-  const fallback = new InProcessMemberSettingsCommandRunner();
+  const commands = new MemberSettingsCommandExecutor(
+    COMMAND_NAMESPACE,
+    dependencies.commandRunner,
+    dependencies.isDurableStorageAvailable
+  );
 
   return {
     async getMemberSettingsTarget(request) {
@@ -260,54 +314,29 @@ export function createTeamMemberSettingsFeature(
       return target ? toMemberSettingsTarget(target) : null;
     },
     async updateMemberSettings(request) {
-      const execute = () => useCase.execute(request);
-      if (
-        !dependencies.commandRunner ||
-        (dependencies.isDurableStorageAvailable &&
-          !(await dependencies.isDurableStorageAvailable()))
-      ) {
-        return fallback.run(request, execute);
-      }
-
-      const proposed = await repository.findTarget(request.teamName, request.memberName);
-      const normalizedSettings = proposed
-        ? normalizeEditableMemberSettings(
-            request.targetKind === 'lead'
-              ? { ...proposed.settings, ...request.leadRuntime }
-              : request.settings
-          )
-        : null;
-      const proposedFingerprint = proposed
-        ? createMemberSettingsFingerprint({ ...proposed, settings: normalizedSettings! })
-        : null;
-      const run = await dependencies.commandRunner.run<
-        ApplicationCommandJsonValue,
-        typeof COMMAND_OPERATION
-      >(
-        {
-          namespace: COMMAND_NAMESPACE,
-          scopeKey: commandScope(request),
-          commandId: request.commandId,
-          idempotencyKey: request.idempotencyKey,
-          operation: COMMAND_OPERATION,
-          payload: jsonValue(request),
-          classifyError: (error) => ({
-            failureKind:
-              error instanceof MemberSettingsPersistenceFailedError
-                ? error.recoveryRequired
-                  ? ApplicationCommandFailureKind.Terminal
-                  : ApplicationCommandFailureKind.Retryable
-                : ApplicationCommandFailureKind.UnknownAfterTimeout,
-            message: describeError(error),
-          }),
-          reconcile: async () => {
+      return commands.run(
+        request,
+        () => useCase.execute(request),
+        async () => {
+          const proposed = await repository.findTarget(request.teamName, request.memberName);
+          const normalizedSettings = proposed
+            ? normalizeEditableMemberSettings(
+                request.targetKind === 'lead'
+                  ? { ...proposed.settings, ...request.leadRuntime }
+                  : request.settings
+              )
+            : null;
+          const proposedFingerprint = proposed
+            ? createMemberSettingsFingerprint({ ...proposed, settings: normalizedSettings! })
+            : null;
+          return async () => {
             const current = await repository.findTarget(request.teamName, request.memberName);
             const currentFingerprint = current ? createMemberSettingsFingerprint(current) : null;
             if (current && proposedFingerprint && currentFingerprint === proposedFingerprint) {
               return {
                 outcome: 'applied',
                 result: jsonValue(
-                  recoveryRequiredResult(
+                  memberSettingsRecoveryRequiredResult(
                     request,
                     currentFingerprint,
                     'Settings were persisted, but runtime lifecycle completion cannot be proven'
@@ -324,20 +353,15 @@ export function createTeamMemberSettingsFeature(
             return {
               outcome: 'applied',
               result: jsonValue(
-                recoveryRequiredResult(
+                memberSettingsRecoveryRequiredResult(
                   request,
                   currentFingerprint,
                   'Target settings match neither the previous nor proposed fingerprint'
                 )
               ),
             };
-          },
-        },
-        async () => jsonValue(await execute())
-      );
-      return withReplay(
-        run.result as UpdateMemberSettingsResult,
-        run.outcome === ApplicationCommandRunOutcome.Replayed
+          };
+        }
       );
     },
   };

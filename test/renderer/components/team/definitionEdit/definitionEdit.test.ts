@@ -47,7 +47,7 @@ describe('getDefinitionEditAccess', () => {
     ).toEqual({ canEdit: false, unavailableKey: null });
   });
 
-  it('explains why the controls are off while provisioning or while a per-project team runs', () => {
+  it('explains why controls are off while provisioning and allows a ready running project', () => {
     expect(getDefinitionEditAccess({ ...base, isProvisioning: true })).toEqual({
       canEdit: true,
       unavailableKey: 'detail.tooltips.editUnavailableProvisioning',
@@ -56,7 +56,7 @@ describe('getDefinitionEditAccess', () => {
       getDefinitionEditAccess({ ...base, logicalTeamName: 'builders', isAlive: true })
     ).toEqual({
       canEdit: true,
-      unavailableKey: 'detail.tooltips.editUnavailableRunningProject',
+      unavailableKey: null,
     });
   });
 
@@ -166,7 +166,7 @@ describe('change runtime for a per-project team', () => {
   const baselineMembers = [{ name: 'alice' }] as never;
   const draft = { targetKind: 'lead' } as never;
 
-  it('always opens relaunch mode without a member settings draft, so the definition is never written', () => {
+  it('opens relaunch mode and retains the member settings intent', () => {
     for (const isAlive of [false, true]) {
       expect(
         buildChangeRuntimeLaunchState({
@@ -176,7 +176,7 @@ describe('change runtime for a per-project team', () => {
           memberSettingsDraft: draft,
           baselineMembers,
         })
-      ).toEqual({ open: true, mode: 'relaunch', memberSettingsDraft: undefined, baselineMembers });
+      ).toMatchObject({ open: true, mode: 'relaunch', memberSettingsDraft: draft, baselineMembers, memberSettingsCommandId: expect.any(String) });
     }
   });
 

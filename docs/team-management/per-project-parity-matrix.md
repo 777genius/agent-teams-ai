@@ -347,3 +347,9 @@ Known limits:
 - Every board tool of every agent lists the optional `projectPath`: 44 tools, about 3.6k characters, roughly 0.9k to 1.2k tokens per agent, also for agents of ordinary teams, where it is ignored.
 - Any call with `projectPath` asks the app, also for an ordinary team: without the app it is refused, a relative path answers 400, and a copy named with a folder that is not its project (an agent's worktree, for example) answers `PROJECT_MISMATCH`. A configured team without `projectPath` (copies included) works as before, without the app.
 - Results name the copy (`ptc-…`): a tool runs as if called with the copy's name.
+
+## Update: editing a running project team
+
+The desktop definition editor can edit the roster and member settings when exactly one owned project runtime is confirmed ready. The existing native runtime rules still apply; launching, unreconciled, multiple or changed runtimes are refused. The logical definition and the active copy are updated under their respective locks, and stopped copies are refreshed. A durable pending marker prevents further edits or launches after an interrupted or partial update until all runtimes are confirmed stopped and the definition can be projected again. Settings that require a relaunch use a guarded stop, save and launch flow with a stable command ID; changed roster or settings invalidate the baseline. The earlier gap 6 and settings-relaunch descriptions are historical.
+
+The runtime gates and settings use cases are covered by integration tests with synthetic state. A real Electron E2E covers guarded settings, stale baselines and projection into two copies in a sandbox with provider execution disabled; an actual provider-backed live edit has not been exercised by that E2E. See [Editing a per-project team](./per-project-team-editing.md) for recovery and restrictions.
