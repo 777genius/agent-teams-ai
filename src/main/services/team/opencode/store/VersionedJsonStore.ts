@@ -1,8 +1,49 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
 import { type FileLockOptions, withFileLock } from '../../fileLock';
+
+// Local writers wait their turn before spending the cross-process acquisition
+// budget. Share the queue across store instances and retain it through release.
+const localUpdates = new Map<string, Promise<unknown>>();
+
+// An updater awaiting a nested write to its own path would wait on itself forever.
+// Track active async ancestry, not only the file key, so unrelated writers still queue.
+// Deactivate completed contexts to allow detached follow-up work after an updater exits.
+interface ActiveLocalUpdate {
+  filePath: string;
+  active: boolean;
+  parent: ActiveLocalUpdate | undefined;
+}
+const activeLocalUpdate = new AsyncLocalStorage<ActiveLocalUpdate>();
+
+function queueLocalUpdate<T>(filePath: string, update: () => Promise<T>): Promise<T> {
+  const key = path.resolve(filePath);
+  const parent = activeLocalUpdate.getStore();
+  for (let context = parent; context; context = context.parent) {
+    if (context.active && context.filePath === key) {
+      return Promise.reject(new Error(`Reentrant VersionedJsonStore update for ${key}`));
+    }
+  }
+  const previous = localUpdates.get(key) ?? Promise.resolve();
+  const current = previous.catch(() => undefined).then(async () => {
+    const context: ActiveLocalUpdate = { filePath: key, active: true, parent };
+    try {
+      return await activeLocalUpdate.run(context, update);
+    } finally {
+      context.active = false;
+    }
+  });
+  localUpdates.set(key, current);
+  const retire = () => {
+    if (localUpdates.get(key) === current) localUpdates.delete(key);
+  };
+  void current.then(retire, retire);
+  return current;
+}
 
 export interface VersionedJsonStoreEnvelope<TData> {
   schemaVersion: number;
@@ -83,6 +124,12 @@ export class VersionedJsonStore<TData> {
   }
 
   async updateLocked(
+    updater: (current: TData) => TData | Promise<TData>
+  ): Promise<VersionedJsonStoreUpdateResult<TData>> {
+    return queueLocalUpdate(this.filePath, () => this.updateAfterLocalQueue(updater));
+  }
+
+  private async updateAfterLocalQueue(
     updater: (current: TData) => TData | Promise<TData>
   ): Promise<VersionedJsonStoreUpdateResult<TData>> {
     return withFileLock(
