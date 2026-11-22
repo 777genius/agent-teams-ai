@@ -1,3 +1,4 @@
+import { MyTemplatesAction } from '@features/custom-team-templates/renderer';
 import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -125,6 +126,7 @@ export const TeamListHeader = ({
             </TooltipTrigger>
             <TooltipContent className="max-w-72">{t('teamImport.title')}</TooltipContent>
           </Tooltip>
+          <MyTemplatesAction />
           <Button className="gap-2" disabled={!canCreate} onClick={onCreate}>
             <Plus size={15} />
             {hasCreationDraft

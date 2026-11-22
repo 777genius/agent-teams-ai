@@ -2,6 +2,7 @@ import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
+import { createCustomTeamTemplatesBridge } from '@features/custom-team-templates/preload';
 import { createDocumentPreviewBridge } from '@features/document-preview/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
@@ -44,6 +45,32 @@ import {
   CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_PROGRESS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
+  CONFIG_ADD_CUSTOM_PROJECT_PATH,
+  CONFIG_ADD_IGNORE_REGEX,
+  CONFIG_ADD_IGNORE_REPOSITORY,
+  CONFIG_ADD_TRIGGER,
+  CONFIG_CLEAR_SNOOZE,
+  CONFIG_FIND_WSL_CLAUDE_ROOTS,
+  CONFIG_GET,
+  CONFIG_GET_CLAUDE_ROOT_INFO,
+  CONFIG_GET_TRIGGERS,
+  CONFIG_HIDE_SESSION,
+  CONFIG_HIDE_SESSIONS,
+  CONFIG_OPEN_IN_EDITOR,
+  CONFIG_PIN_SESSION,
+  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
+  CONFIG_REMOVE_IGNORE_REGEX,
+  CONFIG_REMOVE_IGNORE_REPOSITORY,
+  CONFIG_REMOVE_TRIGGER,
+  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
+  CONFIG_SELECT_FOLDERS,
+  CONFIG_SNOOZE,
+  CONFIG_TEST_TRIGGER,
+  CONFIG_UNHIDE_SESSION,
+  CONFIG_UNHIDE_SESSIONS,
+  CONFIG_UNPIN_SESSION,
+  CONFIG_UPDATE,
+  CONFIG_UPDATE_TRIGGER,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
@@ -262,34 +289,6 @@ import {
   WINDOW_IS_MAXIMIZED,
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
-} from './constants/ipcChannels';
-import {
-  CONFIG_ADD_CUSTOM_PROJECT_PATH,
-  CONFIG_ADD_IGNORE_REGEX,
-  CONFIG_ADD_IGNORE_REPOSITORY,
-  CONFIG_ADD_TRIGGER,
-  CONFIG_CLEAR_SNOOZE,
-  CONFIG_FIND_WSL_CLAUDE_ROOTS,
-  CONFIG_GET,
-  CONFIG_GET_CLAUDE_ROOT_INFO,
-  CONFIG_GET_TRIGGERS,
-  CONFIG_HIDE_SESSION,
-  CONFIG_HIDE_SESSIONS,
-  CONFIG_OPEN_IN_EDITOR,
-  CONFIG_PIN_SESSION,
-  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
-  CONFIG_REMOVE_IGNORE_REGEX,
-  CONFIG_REMOVE_IGNORE_REPOSITORY,
-  CONFIG_REMOVE_TRIGGER,
-  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
-  CONFIG_SELECT_FOLDERS,
-  CONFIG_SNOOZE,
-  CONFIG_TEST_TRIGGER,
-  CONFIG_UNHIDE_SESSION,
-  CONFIG_UNHIDE_SESSIONS,
-  CONFIG_UNPIN_SESSION,
-  CONFIG_UPDATE,
-  CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
@@ -524,6 +523,7 @@ const electronAPI: ElectronAPI = {
   ...createRecentProjectsBridge(),
   reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
+  customTeamTemplates: createCustomTeamTemplatesBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),

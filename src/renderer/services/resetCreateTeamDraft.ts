@@ -17,5 +17,6 @@ export async function resetCreateTeamDraft(): Promise<void> {
     draftStorage.deleteDraft('createTeam:description'),
     draftStorage.deleteDraft('createTeam:prompt'),
     draftStorage.deleteDraft('createTeam:prompt:chips'),
+    draftStorage.deleteDraft('createTeam:templateSelection'),
   ]);
 }

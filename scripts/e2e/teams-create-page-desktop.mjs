@@ -1885,6 +1885,10 @@ async function main() {
       JSON.stringify('Design, build and validate apps, websites and digital products.'),
       'template applied after explicit confirmation'
     );
+    await cdp.waitFor(
+      `document.querySelector('[data-testid="create-template-option-builtin-software-product"]')?.getAttribute('aria-pressed') === 'true' && document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')`,
+      'header template reflected in shared selection and editable team prompt'
+    );
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');

@@ -122,7 +122,8 @@
     "format:native:proposal": "node scripts/local-checks/desktop-native-check.ts --proposal",
     "test:native:parity": "vitest run --config scripts/local-checks/vitest.native-parity.config.ts",
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
-    "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts"
+    "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
+    "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
