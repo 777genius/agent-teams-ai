@@ -160,6 +160,7 @@ import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/Json
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
+import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
 import {
   buildMemberWorkSyncReviewPickupEscalationMessageId,
   buildMemberWorkSyncReviewPickupEscalationText,
@@ -171,7 +172,6 @@ import {
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
-  isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -530,7 +530,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
-  const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  const useHttpMcpBridge = isAgentTeamsMcpHttpEnabled(bridgeEnv);
   assertStartupActive(isShutdownStarted);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;

@@ -10,10 +10,10 @@ import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServe
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
+import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import {
   applyOpenCodeBoundControlEnvironment,
-  isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -61,9 +61,9 @@ export function composeExternalAgentConnection(options: {
     getCdpEnabled: () => configManager.getConfig().general.externalAgentCdpEnabled === true,
     getAppVersion: () => app.getVersion(),
     mcp: agentTeamsMcpHttpServer,
-    httpEnabled: isOpenCodeMcpHttpBridgeEnabled(),
+    httpEnabled: isAgentTeamsMcpHttpEnabled(),
     assertNoLiveRuntimeConsumers: () => {
-      if (isOpenCodeMcpHttpBridgeEnabled() && options.hasLiveRuntimeConsumers?.()) {
+      if (isAgentTeamsMcpHttpEnabled() && options.hasLiveRuntimeConsumers?.()) {
         throw new Error('Stop teams using MCP before changing the app root or context.');
       }
     },
@@ -118,7 +118,7 @@ export function composeExternalAgentConnection(options: {
       }
     },
     async start(): Promise<void> {
-      if (!isOpenCodeMcpHttpBridgeEnabled() && configManager.getConfig().httpServer?.enabled) {
+      if (!isAgentTeamsMcpHttpEnabled() && configManager.getConfig().httpServer?.enabled) {
         await options.startControl().catch(() => undefined);
       }
       await connection.retryConnection();

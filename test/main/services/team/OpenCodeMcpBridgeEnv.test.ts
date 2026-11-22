@@ -1,4 +1,5 @@
 import { BoundControlContext } from '@features/external-agent-connection/main/BoundControlContext';
+import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
 import {
   configureDesktopMcpEnvironment,
   getDesktopMcpChildEnvironment,
@@ -13,7 +14,6 @@ import {
   copyOpenCodeLocalMcpLaunchEnv,
   createOpenCodeMcpAppContext,
   hasOpenCodeLocalMcpLaunchEnv,
-  isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
   retainOpenCodeHttpMcpBridgeEnv,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
@@ -187,17 +187,21 @@ describe('OpenCodeMcpBridgeEnv', () => {
   });
 
   it('uses the app-owned HTTP MCP bridge by default', () => {
-    expect(isOpenCodeMcpHttpBridgeEnabled({})).toBe(true);
-    expect(isOpenCodeMcpHttpBridgeEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: '1' })).toBe(true);
-    expect(isOpenCodeMcpHttpBridgeEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: 'true' })).toBe(true);
+    expect(isAgentTeamsMcpHttpEnabled({})).toBe(true);
+    expect(isAgentTeamsMcpHttpEnabled({ AGENT_TEAMS_MCP_HTTP: '1' })).toBe(true);
+    expect(isAgentTeamsMcpHttpEnabled({ AGENT_TEAMS_MCP_HTTP: '0' })).toBe(false);
+    expect(isAgentTeamsMcpHttpEnabled({ AGENT_TEAMS_MCP_HTTP: '1', CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0' })).toBe(true);
+    expect(isAgentTeamsMcpHttpEnabled({ AGENT_TEAMS_MCP_HTTP: '0', CLAUDE_TEAM_OPENCODE_MCP_HTTP: '1' })).toBe(false);
+    expect(isAgentTeamsMcpHttpEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: '1' })).toBe(true);
+    expect(isAgentTeamsMcpHttpEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: 'true' })).toBe(true);
   });
 
   it('keeps the legacy local MCP command path behind an explicit opt-out', () => {
-    expect(isOpenCodeMcpHttpBridgeEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0' })).toBe(false);
-    expect(isOpenCodeMcpHttpBridgeEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: ' false ' })).toBe(
+    expect(isAgentTeamsMcpHttpEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0' })).toBe(false);
+    expect(isAgentTeamsMcpHttpEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: ' false ' })).toBe(
       false
     );
-    expect(isOpenCodeMcpHttpBridgeEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: 'off' })).toBe(false);
+    expect(isAgentTeamsMcpHttpEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: 'off' })).toBe(false);
   });
 
   it('accepts process-style env objects', () => {
@@ -206,7 +210,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
       CLAUDE_TEAM_OPENCODE_MCP_HTTP: 'no',
     };
 
-    expect(isOpenCodeMcpHttpBridgeEnabled(env)).toBe(false);
+    expect(isAgentTeamsMcpHttpEnabled(env)).toBe(false);
   });
 
   it('detects complete local MCP launch env', () => {

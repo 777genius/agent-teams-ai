@@ -244,7 +244,7 @@ async function startApp(fixture) {
     XDG_STATE_HOME: fixture.xdgStateHome,
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
     ...(process.platform === 'win32' ? {} : { SHELL: '/bin/sh' }),
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',

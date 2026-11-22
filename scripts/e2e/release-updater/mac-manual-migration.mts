@@ -310,7 +310,7 @@ async function launch(
     NODE_ENV: 'production',
     LANG: 'en_US.UTF-8',
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
   };
   log = createWriteStream(path.join(launchOutput, 'desktop.log'), {
     flags: 'wx',

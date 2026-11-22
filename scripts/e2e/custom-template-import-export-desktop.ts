@@ -257,7 +257,7 @@ async function start() {
       XDG_STATE_HOME: path.join(root, 'xdg-state'),
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
       CLAUDE_TERMINAL_DAEMON_BINARY: runtime,
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       NODE_BINARY: process.execPath,
       ELECTRON_DISABLE_SANDBOX: '1',
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
