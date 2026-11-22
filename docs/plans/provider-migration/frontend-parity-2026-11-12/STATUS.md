@@ -2,6 +2,464 @@
 
 Обновлено: **22 ноября 2026**. Единственный текущий рабочий план.
 
+## Original E2E на `06842c53`, 22 ноября
+
+Восстановленный кандидат опубликован обычным non-force synchronize: commit
+`06842c53e5039085998abc4e67a9c0aaff227893`, единственный parent `cd18a49d`, tree
+`d91b7ca3e98856355ca653230b795a09d7d07e43`. PR #1192 остаётся Draft, прежний base
+`8d46f13f` не изменён. Все шесть исходных attempt-1 семейств достигли terminal
+состояния в original poll64; условие ожидания перед следующим source push
+выполнено. Ручных rerun/dispatch/cancel нет.
+
+К original poll64 завершены Process (5/5 SUCCESS), Native (9/9 SUCCESS), Teams
+(Windows/Linux SUCCESS, macOS FAILURE) и Host/frontend (26 SUCCESS, три
+исходных scenario FAILURE и производный aggregate FAILURE). Source Fast feedback
+завершён SUCCESS; retained coexistence завершился FAILURE до donor Create,
+его производный Full qualification завершён FAILURE. Его original log
+подтвердил `RETAINED_COEXISTENCE_RESULT=failure` и exit1; последующие metadata
+и complete-qualification gates skipped, без продвижения в PASS.
+Packaged Windows x64, ARM64 и
+Darwin x64, ARM64 и Linux завершены SUCCESS; все пять original packaged artifacts
+квалифицированы раздельно; их общий Packaged gate завершён SUCCESS.
+Всего 69 jobs: 51 SUCCESS, 7 FAILURE и 11 SKIPPED, без queued/running.
+Сохраняются пять primary failures и два производных aggregate failures.
+Новый кандидат D требует собственных original E2E; SKIP/UNKNOWN не превращаются
+в PASS. Read-only PR checkpoint 19:18 UTC подтвердил прежние head/base,
+#1192 Draft без labels, #1186 без изменений и 43/43 resolved review threads.
+
+Исходные ZIP/logs, отдельные scoped analyses, локальные проверки кандидата и
+ограничения observer ledger включены в
+[manifest публикации](evidence/continuation-06842-20261122.json).
+Архив собирается побайтно из перечисленных там ordered parts; original failures
+и unqualified scopes сохраняются. Exact final assembly review опубликовано
+[отдельно](evidence/continuation-06842-20261122-review.json).
+
+Packaged Windows x64 original artifact `14761234443` квалифицирован: exact
+2041 source pins и 632 Host blobs совпали с H через исходный CRLF transform.
+Bundled V2 прошёл 11 localhost-scripted requests, manual permission, Stop и
+cold history restore без replay; оба Host exit0. Отдельный same-Main UI proof
+сохраняет Main PID/birth, один Host successor, один input/Refresh/Retry,
+два UI Stop и один Quit, zero model/probe/vendor executions. Native receipts
+сохраняют `observed-absent` вместе с `signalAccepted=unknown`; это не переписано
+в signal success. Product Quit0, final controller drained. Четыре PNG просмотрены;
+102 finite tests PASS/0 SKIP, четыре explicit TS7 gates. Full bundle bytes
+не входят в ZIP: их pins остаются runner observations. Общий packaged gate,
+vendor auth и release этим одним job не квалифицированы.
+
+Packaged Windows ARM64 artifact `14762666403` также PASS в тех же двух
+раздельных scopes. Все 2041 ordered pins точно равны x64 receipt и связаны с
+его сохранённым published-Git proof; повторный полный Git rehash не заявляется.
+101 finite PASS + 1 expected x64-only SKIP, четыре TS7 gates. Native V2 сохраняет
+11 scripted requests, Stop/cold restore/no replay и restoration; Windows
+same-Main — exact single successor, два Stop с `signalAccepted=unknown`, Quit0,
+19 retained lineage identities absent и controller drained. Два CLIXML warning
+сохранены. Native FILETIME и census UTC имеют разную точность: exact native
+identities стабильны отдельно, равенство двух форматов до 100ns не утверждается.
+
+Packaged Darwin x64 artifact `14763302074`: native manual V2, 11 scripted
+requests, два Host exit0, Stop/cold restore/no replay и restoration PASS.
+Отдельный GUI relaunch сохраняет один input/Stop, новый app/Host identity,
+восемь finite peers absent и frozen inputs. Successor Quit unconfirmed, без
+retry/signal; `successorNativeCustody=false` и `naturalExitQualified=false`
+сохранены. 2004 raw-LF pins bound to H; 38 finite PASS + 1 Windows-only SKIP.
+Successor home screenshot не выдаётся за resumed conversation. Полного bundle
+в ZIP нет, общий family gate этим job не заменяется.
+
+Packaged Linux artifact `14764360131`: 313 offline checks / 0 issues; native
+manual V2, 11 localhost requests, два Host exit0, Stop/cold history restore без
+replay и restoration PASS. Исходный raw-LF Host digest bound to H; общего
+ordered before/after source array в Linux receipt нет. 38 finite PASS плюс один
+Windows-only SKIP, два scoped TS7 gates. Отдельный Xvfb/MCP startup smoke
+использовал owned SIGTERM cleanup; исходные DBus/GPU/provider-status diagnostics
+сохранены. Четыре JSON в ZIP, без GUI receipts/PNG/full bundle. Desktop Resume,
+native coordination, genuine provider auth и release этим job не квалифицированы.
+
+Packaged Darwin ARM64 artifact `14764607531`: 347 checks / 0 issues; exact
+2004 ordered source pins совпали с x64 witness и исходным raw-LF Git H proof.
+Native manual V2 сохраняет 11 localhost requests, два Host exit0, Stop/cold
+restore/no replay и restoration. Отдельный GUI relaunch: 20 UI steps, семь
+finite peers absent, original app exit0, новый app/Host и replacement writer.
+Successor Quit unconfirmed; его absence наблюдался, но native custody/natural
+exit остаются unqualified. Stopped PNG показывает Running/Stopping…, а machine
+receipt отдельно фиксирует closed/sealed/released и Stop checkpoint. Successor
+PNG — home screen, без resumed conversation. 38 finite PASS / 1 Windows-only
+SKIP, два scoped TS7 gates; полные bundle bytes отсутствуют. Два initial wrong-repo
+API 404 сохранены; actual ZIP/log получены по canonical repo по одному разу.
+
+Original Host Team job `137212869582` подтвердил полный TS7 `typecheck:workspace`,
+дополнительный agent-backend typecheck и typed lint: **0 errors / 6450 warnings**.
+Это доказательство для `06842c53`; прежние local exit137 без TS diagnostics
+сохранены, новый unpublished source автоматически не квалифицирован. Четыре
+frontend shards: 26818 PASS / 38 SKIP / 0 FAIL, 2227 eligible files; семь файлов
+полностью skipped. Genuine/native journeys в этот finite набор не входят.
+
+### Ограничение журнала наблюдений CI
+
+После завершения локального long-lived observer cell его межвызовный cache
+оказался на poll52, хотя файлы уже дошли до poll58. Следующее фактическое чтение
+18:29:55 UTC получило повторный номер 53 и заменило прежний raw poll53 от
+18:02:47 UTC. Прежние raw bytes отсутствуют среди сохранённых доказательств;
+они не восстанавливаются по соседним снимкам. Новые bytes сохранены отдельно,
+а chronological observation59 явно отмечен как derived ordinal correction.
+Между poll58 и этим чтением прошло 127s вместо требуемых 300s — один факт
+нарушения cadence сохранён в `observer-state-recovery/incident.json`.
+
+После инцидента повторно совпали все 51 original H ZIP, 17 original job logs
+и 15 D source hashes. Исходные workflows завершились штатно: rerun/dispatch/cancel
+равны нулю. Старый observer заменён после independent exact R2: 33 checks PASS,
+четыре isolated filesystem tests PASS. Номера и время берутся из файлов,
+перед чтением фиксируется durable reservation, новая запись exclusive и
+не заменяет существующий снимок. Poll60–64 завершены этой реализацией,
+по одному наблюдению на functions cell. Первая ошибочная carrier invocation
+сохранена отдельно: ReferenceError до reservation, cursor writes и любых API
+calls; исправлен способ вызова, reviewed macro не менялся. Все пять original
+raw captures сохранены отдельными immutable копиями; SHA, reservation, poll,
+head, time и results совпадают с canonical snapshots. Исторический пробел
+и cadence violation остаются ограничением evidence, без продвижения E2E verdict.
+
+## Следующий кандидат D
+
+### Prospective retained fixture correction и existing diagnostics
+
+Original retained job `137242767455` снова завершился FAIL на исходном 30s
+`original Create visible`: 289 read resolutions, 0 mutation retry. Compat
+начался через 18.694s от начала окна; deep result записан после начала shutdown.
+`opencode_bridge_no_output` — support label generic nonzero-exit failure, не
+измерение нулевого stdout. Один donor localhost preflight request не имеет
+timestamp; business Send/Task/Review/Quit не достигнуты. Exact 22 donor input
+pins, Node/Electron/runtime/custodian совпадают с cd18; donor source не менялся.
+
+До edits root R1 и independent R2 выбрали два изменения только TEST/CI inputs:
+один существующий caller mode `metadata` → `donor-saved-only` в donor setup и
+два literal paths в прежнем always-upload: `userData/opencode-bridge/diagnostics/`
+`latest.json` и `events.ndjson`. Текущая заглушка ложно возвращает успешную
+Codex version, после чего оригинал делает два запрещённых app-server обращения.
+Существующий режим сообщает отсутствие Codex; прочие metadata и все native
+refusals сохраняются. Direct OpenCode/orchestrator paths и закрытые HOME/PATH
+не меняются. Это correction false availability, не доказанный latency fix.
+
+Exact4a writer уже redacts credential assignments и исключает raw stdin/stdout/
+stderr/input; strings ограничены 4000+marker, previews — 2000. Events rotation
+срабатывает при >3MiB перед append и сохраняет хвост около 1.5MiB: это не
+абсолютный hard cap. Диагностические previews могут содержать иной TEST text.
+Изолированный donor env не наследует credentials. Сбор двух existing files
+не изменяет исторический donor, runtime behavior, read/click count, deadline,
+authority, custody, cleanup или acceptance. Их отсутствие в текущем ZIP остаётся
+явным observation gap, исторический FAIL не пересматривается.
+
+Budget: одна замена argument и два upload paths, два файла; no new helper/test.
+Complexity 1/10, reliability 9/10; достаточность для исходного E2E неизвестна.
+Проверки: existing `candidate-runtime-paths.test.ts` finite sentinel/fallback
+cases, canonical `typecheck:legacy-host-scripts` на TS7, scoped lint, exact diff
+и independent R2. Host C source/dist остаются прежними, повтор его полного
+gate не требуется. Slice зафиксирован до terminal всех шести original families;
+это условие публикации выполнено в poll64. PR остаётся Draft.
+
+Slice завершён: существующие finite cases 2/2 PASS, canonical strict scripts
+TS7 PASS за 4.367s, scoped lint и whitespace PASS. Exact independent R2 принят;
+все четыре проверки выполнены по одному разу. Общий D содержит 15 source paths;
+ordered closure 2005/2016 не расширялся, свежие hashes изменились ровно у двух
+approved existing paths. Все 13 source files C и 1417 source/dist/TEST pins полного
+Host C gate совпадают; повтор сборки/полного Host gate не выполнялся.
+Первый D closure metadata script остановился на неверном key `path` вместо
+существующего `file`; ошибка и script сохранены. V2 исправил только чтение этого
+key и прошёл исходные assertions, без source edits или test reruns.
+Independent composition D review: 754 checks PASS, 0 blockers; exact patch
+составлен из прежних 13 C chunks и двух reviewed followup chunks. Fresh
+2016 closure + 1417 Host pins дают 2782 unique files; все SHA/stat совпали.
+
+### Замороженный Host кандидат C
+
+Все четыре узких source slices прошли exact R1/R2. Two-entry memo сохраняет
+132 fresh reads, уменьшая pure decodes 96→2; validation-only memo оставляет
+fresh JSON.parse и исходные authority/currentness observations. Teams passive
+placement diagnostic — 34/34 PASS, исходный wrong-row negative остаётся FAIL;
+причина macOS layout shift и product fix ещё не установлены.
+
+Saved-preflight adjacent Team fence — 40/40 PASS, Host TS7 build/test types,
+scoped lint и source-size guard PASS. Regression сохраняет исходные четыре
+namespace и три state/grant reads в прежнем порядке; physical publication 2→1.
+Все Runtime/history/roster/source/recipe callbacks остаются вне lock. Один
+controlled diagnostic с прежней неизменной private 32-call fixture дал B
+212.745ms → C 208.569ms wall; sampled FileLock 110.589→97.097ms inclusive.
+Одного замера недостаточно для доказательства значимого speedup или причины
+Darwin timeout. Оба raw profiles и отдельный C after-map сохранены.
+
+Полный canonical finite Host gate на замороженном C: **1737 total / 1735 PASS /
+2 expected SKIP / 0 FAIL**, 153 files, 437.983s; 1417 source/dist/TEST pins
+совпадают до/после. Skips — Windows cwd case на Linux и dedicated current-main
+lock, не supplied локально. Genuine Claude/Codex, original GUI/CI не запускались.
+
+### Prospective one-path source coverage correction
+
+Финальная static проверка явно остановилась: changed existing
+`packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` отсутствует в
+прежнем B Host manifest. До edit выбран один literal path addition в existing
+`desktop-proof-supplementary-sources.ts`, без удаления или перестановки прежних
+paths. Ожидаемые counts — 2005 common / 2016 management. Root R1 и independent
+prospective R2 завершены до изменения. Budget — одна manifest line,
+complexity 1/10, reliability 9/10; никаких runtime/UI/oracle/deadline изменений.
+Проверка — original-order static expansion, fresh source hashes и scoped lint.
+Полный Host gate уже исполнил exact bytes этого TEST, новый full rerun не нужен.
+Correction завершён: fresh hashes для 2005 common / 2016 management, прежний
+порядок сохранён, все выбранные paths существуют; exact old B manifest получается
+удалением единственной добавленной literal line. Scoped lint, source-size,
+Team architecture, runtime-artifact и whitespace guards PASS. Initial failed
+closure assertion сохранён; последующая проверка не выдаётся за первый успех.
+Два Teams-only observer/test inputs учитываются отдельно: они не исполняются
+Host suite и не выдаются за покрытые его source closure.
+
+Финальное independent C review: 104 checks PASS, 0 blockers/nonblockers;
+повторно сверены все 1417 local pins, raw profiles, 1265-entry C after-map,
+13-path source patch, manifest correction и отдельные Teams-only inputs.
+Read-only PR checkpoint 16:14 UTC: head/base прежние, #1192 Draft,
+#1186 не изменён, все 43 review threads resolved. Это не original CI PASS C.
+
+Darwin ARM Resume job `137212869580` завершился INCOMPLETE до первого Launch:
+истёк original preflight `team-preflight-f76ddaca…`, cold boundary отсутствует.
+Original ZIP `14758849619`, все 20 CRC и 2003 ordered pins до/после проверены.
+Graph interval — 19.258s, native-ready — 50.619s от run marker. В исходных
+identity/catalog-1 windows `isCurrent` занял 32 calls / 14389ms и 32 / 11514ms.
+Это depth-deduplicated synchronous wall time, пересекающееся с custody intervals,
+не CPU attribution. Catalog-1 custody вернулся на 2406ms позже original cutoff;
+request admission/session/model request не состоялись, durable probe held.
+Последующий natural app exit0 и физическое отсутствие Host/group не выпускают
+этот held resource. Холодный Resume и Stop этим artifact не квалифицированы.
+
+До дальнейшего source изменения разрешён один отдельный local diagnostic на
+замороженном B: TEST-копия existing unstarted saved-model fixture и именованный
+цикл 32 исходных `probe.isCurrent()` для CPU attribution. Только закрытые TEST
+данные, без native allocation; original repo test не изменяется. Дополнительные
+reads принадлежат только diagnostic copy и не считаются исходным E2E или его
+повтором. Сохраняются source/dist pins, command, log и raw profile. Новый
+production slice допускается лишь после измерения и отдельного R1/R2 плана.
+
+### Prospective Teams macOS observation slice
+
+Original macOS job `137212868284` отказал в Schedules при подтверждении выбора
+команды, до Save. После исходного final geometry sample строка сдвинулась с
+`[130,249,753,44]` на `[130,277,753,44]`; единственный trusted click `(506.5,271)`
+попал в другую строку того же popup. Original option оставался connected/enabled.
+Имеющихся данных недостаточно, чтобы различить перемещение всего popup,
+вставку/перестановку соседней строки или изменение высоты. Product fix и новый
+wait/retry на этом основании не выбраны.
+
+До edits выбран ограниченный TEST-only slice: только существующие
+`teams-create-page-schedule-observation.mjs` и его test. В исходные BEFORE и
+capture-event записи добавляются numeric bounds уже retained popup/trigger и
+первых шести option rows, anonymous observer IDs и overflow flag. Сохраняются
+64-node ID cap, 12-event cap, прежний ASCII 12288-byte budget и exception
+isolation. Если расширение превышает budget, удаляются только новые placement
+поля; прежние diagnostic facts не теряются. Text/labels/values не добавляются.
+
+Нет новых CDP calls, frames, observers, inputs, awaits, authority/currentness
+reads, timeout или acceptance predicates. Один exact afterFinal `+28px` wrong-row
+negative обязан сохранить единственные press/release, исходный FAIL и cleanup.
+Дополнительные passive cases различают popup translation и preceding-row
+insertion, проверяют cap/error/privacy fallback. Бюджет ≤45 observer и ≤140 TEST
+изменённых строк; сложность 2/10, надёжность 9/10. Root R1 и independent R2
+завершены до edits. Индексируется не более шести узлов из одного popup-scoped
+NodeList; null ID после общего cap не доказывает replacement/insertion, прежние
+IDs не перенумеровываются. Проверка — прежняя пара owned-process / schedule-observation
+Node TEST files, scoped lint и exact diff review. Это диагностика следующего
+original запуска, а не объявленное исправление macOS E2E.
+
+### Prospective saved-preflight same-Team fence slice
+
+Отдельный controlled diagnostic B сделал 32 свежих saved-seed `isCurrent`
+observations: 212.745ms wall, 212.947ms sampled loop. Inclusive FileLock —
+110.589ms, Runtime history — 63.131ms; они пересекаются. Self samples преимущественно
+принадлежат filesystem operations; pure launch validation не доминирует. Это
+Linux TEST attribution, а не измерение причин Darwin latency. Original Darwin
+Review `137212869722` тоже остановился до Launch/model: 32 calls в каждом из
+четырёх currentness windows заняли 14031/10719/10128/7312ms, probe остался held.
+
+Root R1 и отдельный read-only source audit выбрали только два соседних Team reads
+в `savedTeamModelProbe.source`: исходный read-authority и немедленный
+`runtimeCaptures`. Сохраняется первый исходный fence; inventory выполняется
+внутри его callback. Optional `inheritedNamespace?: true` у внутреннего
+`TeamOwner.runtimeCaptures` сохраняет второй nested namespace boundary, как
+существующая convention. Default method path остаётся прежним. Callback
+возвращает только authority и hasCaptures boolean; authority/state не кешируются.
+
+Требуемый порядок неизменен: NS1, NS2, grant/state A, NS3, NS4, grant/state B,
+state C. Две публикации/освобождения одного Team lock становятся одной; не
+удаляется ни namespace scan, ни state/grant read. Этот fence заканчивается ДО
+`assertRuntimeHistory`, `readRoster`, `captureRuntimeSource`, compilation и
+recipe resolution. Control/read gate и writer prelude исходного `current()`
+остаются в прежнем порядке. Обёртка всего current/source/history запрещена:
+Runtime/provider observations должны оставаться вне Team fence.
+
+Бюджет: ровно два production файла, ≤35 изменённых строк; ≤180 строк в
+существующем saved-team-model-probe TEST. Complexity 3/10, reliability 8/10;
+выигрыш ограничен одной lock publication на source call, достаточность для E2E
+не установлена. Independent prospective R2 завершён до edits. Проверки:
+точный read/order trace и 2→1 publication, отказ на каждом namespace/grant
+boundary с original release, отсутствие Runtime calls под Team lock, прежний
+default inventory path, saved-source mutation/revocation/history regressions;
+Host TS7 build/scoped types, focused TEST/lint и exact independent review.
+После review допускается одно сравнение с сохранённым 32-call diagnostic B,
+без изменений его fixture/действий. Source push был отложен до terminal всех
+шести исходных семейств, наблюдавшегося в poll64; deadlines и original
+acceptance не меняются.
+
+Process Windows x64 и ARM64 подтверждены original ZIP: по 204 Host PASS / 3
+platform SKIPPED, 63 broker PASS, 153 retained Main PASS, включая 44 captured Host
+cases. Оба native parent в каждой платформе завершили 26 finite scenarios и
+66/66 helper closure; A/B source receipts не содержат cold replay. Эти результаты
+относятся к process fixture lane, а не к packaged или genuine-vendor proof.
+
+Process Darwin ARM64 также подтверждён original ZIP: 205 Host / 63 protocol /
+153 retained Main / 29 finite POSIX PASS; 2 Linux-only SKIPPED. Original group
+закрыт, descendant отсутствует, соседний TEST process сохранён; UNKNOWN case
+остаётся held до естественного TEST release. Native provider, Darwin native
+registration, executable admission, Desktop и release этим scope не доказаны.
+Windows static V01 job отдельно подтвердил 500 PASS / 1 POSIX-only SKIPPED на
+точном head и закреплённом current-main product input; это не native E2E.
+
+Linux V2 management job `137212869512` завершился FAILURE. Settings прошёл;
+2014 ordered source pins совпадают до/после. Live membership сохранил 2003
+совпадающих pins, но остался INCOMPLETE: единственный Add создал durable held
+command, Carol не опубликована. Его model probe достиг второго catalog custody
+return в 13:18:28.429Z; исходный cutoff — 13:18:28.708Z. Admission не состоялся,
+lease released в .712Z, close-result/unconfirmed в .720Z. `resourceHeld=true`
+не превращается в released из-за последующей пустой process group. Remove,
+Restore, нормальный Quit/cold census и Stop этим запуском ещё не квалифицированы.
+
+В том же original job Settings имеет 20 currentness summaries по 8 calls / 3–20ms;
+Add — 12/1571ms, 12/1591ms, 9/1082ms, без catalog-3. Credential total — 31.602s
+против 2.714–2.880s в Settings. Внутренних timings десяти credential HTTP requests
+нет: весь интервал нельзя приписывать одному filesystem operation. Один existing
+controlled live Add TEST на exact Node24.21 прошёл без source edits; CPU sampling
+показал 943.210ms aggregate `assertFlight` вне негативного observer, с большой
+долей повторной Team state / launch validation. Это не latency одного CI callback.
+
+### Следующий prospective slice: два чистых decode результата
+
+На частной TEST-копии точных двух source receipts из original artifact выполнена
+последовательность `A,B,A,B,B,A,B,A,B,B,B` ×12. Получены 132 original reads,
+96 schema decodes и 36 hits; bytes и guards неизменны. Это подтверждает churn
+one-entry memo, но не достаточность будущего исправления для всего E2E.
+
+До production edits выбран двухэлементный memo только в существующем
+`FileManagementCommandStore`: прежний совокупный byte budget, exact path плюс
+полностью совпавшие свежепрочитанные bytes, независимые копии результата и
+полное очищение при неудачном read/decode/close. Все filesystem observations,
+source-history comparisons, authority/currentness calls, locks и deadlines
+сохраняются. Не добавляются cache authority или новое состояние в journal.
+Бюджет ≤60 production и ≤180 regression строк; сложность 3/10, надёжность 9/10,
+уверенность в устранении churn 9/10; original E2E остаётся обязательным.
+
+Проверка: прежние integrity/rollback cases; чередование двух records с двумя
+decode вместо 96 при тех же 132 reads; изменение bytes/прав/path identity,
+отсутствие/повреждение/failed close; caller mutation isolation; третий record и
+совокупный memory bound. Root R1 и независимый source/diagnostic review выполнены
+до edits. Отдельное переиспользование launch validation пока исследуется и этим
+планом не разрешается автоматически.
+
+### Дополнительный prospective slice: pure launch decode / validation
+
+Независимые R1/R2 исходного `FileTeamRuntimeBindings.read` подтвердили чистоту
+его header/runId/fingerprint и четырёх структурных validators: они не читают
+filesystem, grants, текущее время или физическую custody. Профиль existing live
+Add TEST показал повторную стоимость именно этого пути. До edits выбран один
+private snapshot для одного pathname/runId и совпавшего полного входного текста
+JSON decoder, с лимитом 1MiB UTF-8 текста. Это не утверждение raw-byte equality:
+исходный `readFileSync(..., 'utf8')` и его replacement semantics сохраняются.
+
+Узкий seam — optional pure decoder во втором аргументе существующего
+`TeamStore.read`, применённый `TeamOwnerStore` к тому же свежему чтению. Decoder
+делает только lookup/JSON.parse; snapshot остаётся в локальной closure, store
+получает новый frozen opaque token при КАЖДОМ вызове decoder. Только exact
+returned-token identity разрешает использование private snapshot. Игнорирование
+decoder либо другой возвращённый объект выполняет прежнюю validation без memo.
+Header и validators на miss остаются ПОСЛЕ `store.read`, в прежнем error scope.
+Missing/throw/reentrant failure очищает memo; publication — после successful
+read, validation и clone. Oversized valid text остаётся допустимым без reuse.
+
+`current`, `retained`, `checkpointSource`, Team/Runtime authority, callbacks,
+filesystem arguments/reads, locks и deadlines не изменяются. Бюджет — три
+production файла, ≤100 изменённых строк; ≤250 focused regression строк и
+прозрачная передача optional decoder в прежнем TEST observer без изменения
+его assertions. Сложность 4/10, надёжность 9/10, уверенность в bounded pure reuse
+9/10; достаточность ускорения для original E2E пока не установлена.
+
+Проверки: свежие физические чтения при hit, data-only validation reuse,
+изменённые/повреждённые/missing/same-size-mtime данные, runId/path isolation,
+caller mutation, ignored/foreign/multiple decoder results, throw после decoder
+и reentrancy, oversized text без нового refusal. Existing live authority TEST
+сохраняет два сегмента по одной lock publication, четырём namespace observations
+и шести state reads, Runtime вне Team lock; profiler сравнивает тот же конечный
+TEST с исходным baseline и не заменяет native E2E. Root и два независимых
+prospective review завершены до production edits.
+
+### Уточнение launch slice после контрольного профиля
+
+Первый private decoded-row candidate прошёл 26/26 focused cases, Host build и
+TEST typecheck на TS7, сохранив original authority counts. Сопоставимый finite
+Add профиль уменьшил aggregate ordinary `assertFlight` с 943.210 до 902.414ms;
+pure validators — с 313.444 до 1.181ms, но новый полный row clone занял 165.175ms.
+Это sampled inclusive times с пересечениями, а не CI latency; первый профиль и
+source hashes сохраняются. Достаточность для original cutoff не подтверждена.
+
+До следующей правки root и два независимых review выбрали более узкий вариант B:
+свежий `JSON.parse` при КАЖДОМ decoder call и memo только успешной pure validation
+для exact text/name/runId, без сохранённого row, полного private clone или deep
+freeze. Parsed row остаётся внутри локальной closure за прежним exact-token
+guard; наружу из private read возвращается только объект нового parse. Публичные
+`current` / `retained` / `checkpointSource` и их projection clone неизменны.
+Read/parse/validation failures очищают memo, missing/foreign/ignored decoder и
+oversized text сохраняют прежний fallback. Ошибка публичного projection clone
+возникает после successful private read и сама по себе не обещает eviction.
+
+Прежний бюджет трёх production файлов и focused regression сохраняется; no new
+depth limits, authority cache, reads, locks, retries или deadlines. Тесты должны
+проверять validation reuse отдельно от parse counts, поскольку parse всегда
+свежий. После focused regressions и independent exact review разрешён один
+дополнительный профиль того же finite TEST для измеренного clone bottleneck,
+затем штатный полный Host test leg. Это не rerun исходного GUI/CI и не E2E PASS.
+Сложность 3/10, надёжность 9/10, уверенность в устранении private clone 10/10;
+общая E2E latency остаётся предметом нового original запуска после terminal всех
+шести текущих семейств.
+
+Замороженный B прошёл root R1 и independent R2 на exact source
+`cd5c2b937fa60c4a32125c6869f585ae52b6422ba7e3fa047e8c4cb9c32cd85a`:
+50 изменённых production строк / 3 файла, 201 regression строка / 11 cases.
+Host build, TEST TS7 и 26 focused cases PASS. Единственный дополнительный
+профиль сохранил 2 × (1 publication / 4 namespace / 6 state reads), TEST PASS;
+ordinary `assertFlight` sampled total — 707.087ms против baseline943.210ms,
+примерно на25% меньше. Private full-row clone отсутствует; публичный projection
+clone сохранён. Это одно controlled измерение, не обещание CI latency.
+
+Первый management slice отдельно прошёл 44 existing/new cases, TS7 и lint;
+на той же частной receipt-копии теперь 2 decodes / 130 hits при прежних132 reads,
+opens, payload reads и closes. Baseline и candidate использовали разные Node
+patch versions, поэтому их elapsed time не используется как speedup proof.
+На этапе B ordered source closure — 2004 common / 2015 management, ровно один новый
+focused TEST path; все прежние пути и относительный порядок сохранены.
+
+Полный canonical Host TEST leg B завершился за9m47s: 153 исходных selectors,
+1734 PASS / 2 SKIPPED / 0 FAIL. Один skip требует Windows, второй — dedicated
+current-main product lock, отсутствующий локально. Все1417 source/dist/test pins
+совпали до/после. Результат independently qualified; genuine Claude/Codex не
+исполнялись. Manifest fast lint, source-size, architecture, runtime-artifact
+guards и diff check нового кандидата PASS.
+
+Полный canonical `typecheck:workspace` с Go soft limit3GiB завершился137 без
+TS diagnostics за66.18s внутри root chain из восьми compiler commands; точный
+неудачный command не наблюдался. Maximum child RSS —1779828KiB, это не общий RSS
+и не установленная причина kill. Старый результат137 сохранён. После independent
+resource review разрешена одна отдельная попытка с1GiB и свежей проверкой
+доступной памяти, без изменений compiler/configs/GOGC/GOMAXPROCS; автоматических
+дальнейших уменьшений или повторов не будет. Полный workspace пока INCOMPLETE.
+
+Эта последняя1GiB попытка также завершилась137 без diagnostics за47.38s,
+maximum child RSS2032400KiB; source неизменен. Локальные full-type попытки
+остановлены, причина signal остаётся UNKNOWN. Отдельно original Windows Teams
+job на опубликованном06842 прошёл root application `tsc --noEmit` с alias7.0.2;
+его driver — Node26.12.1 / pnpm11.22.0. Это не весь workspace и не проверка
+неопубликованного B.
+
 ## Восстановление продолжения `cd18a49d`, 22 ноября
 
 Живой GitHub подтверждает Draft #1192 на `cd18a49d58dfa4afe09d53f8af27edfc75bead0e`,

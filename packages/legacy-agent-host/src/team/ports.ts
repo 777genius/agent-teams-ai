@@ -163,7 +163,8 @@ export interface TeamStore {
   /** Private bounded command-result artifact, never an arbitrary filesystem selector. */
   readCommandResult?(reference: { sha256: string; sizeBytes: number }): unknown;
   fenced<T>(action: () => T): T;
-  read<T>(name: string): T | undefined;
+  /** Optional pure decoding of the freshly read text; stores may return ordinary data instead. */
+  read<T>(name: string, decode?: (text: string) => T): T | undefined;
   write(name: string, value: unknown): void;
   list<T>(directory: string): T[];
   productFingerprint(teamName: string): string;

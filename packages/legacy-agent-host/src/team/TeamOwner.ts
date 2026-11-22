@@ -265,7 +265,9 @@ export class TeamOwner {
   runtimeCapture(principalId: string) {
     return this.runtimeRegistration.current(principalId);
   }
-  runtimeCaptures(principalId: string) {
+  runtimeCaptures(principalId: string, inheritedNamespace?: true) {
+    // A joined original read retains both inventory namespace observations.
+    if (inheritedNamespace) return this.store.fenced(() => this.runtimeRegistration.all(principalId));
     return this.runtimeRegistration.all(principalId);
   }
   hasRuntimeCapture(principalId: string, binding: RuntimeMemberBinding): boolean {

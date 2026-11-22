@@ -113,9 +113,10 @@ export class TeamOwnerStore implements TeamStore {
     } finally { timing?.finish(); }
   }
 
-  read<T>(name: string): T | undefined {
+  read<T>(name: string, decode?: (text: string) => T): T | undefined {
     try {
-      return JSON.parse(readFileSync(join(this.directory, name), 'utf8')) as T;
+      const text = readFileSync(join(this.directory, name), 'utf8');
+      return decode ? decode(text) : JSON.parse(text) as T;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw new TeamOwnerError('hold');

@@ -8,7 +8,7 @@ import { observeScheduleTeamSelection, scheduleOptionObservationSource } from '.
 
 const teamName = 'teams-create-page-e2e-test';
 function fixture({ setupFailure = false, clickFailure = null, waitFailure = null, readFailure = false,
-  beforeEvents = () => {}, eventCycles = 1 } = {}) {
+  beforeSetup = () => {}, beforeEvents = () => {}, eventCycles = 1 } = {}) {
   const listeners = [], calls = [], options = [];
   let registrations = 0, selected = false, removed = 0, snapshot;
   const option = {
@@ -47,6 +47,7 @@ function fixture({ setupFailure = false, clickFailure = null, waitFailure = null
   const client = {
     async click(expression, task, observedTeam) {
       calls.push({ kind: 'click', expression, task, observedTeam });
+      beforeSetup({ option, trigger, popup, document, browser, event });
       runInContext(scheduleOptionObservationSource(observedTeam), renderer);
       if (clickFailure) throw clickFailure;
       beforeEvents({ option, trigger, popup, document, browser, event });
@@ -198,6 +199,87 @@ test('event geometry keeps the original count and byte bounds with bounded scrol
   assert.equal(f.calls.filter(call => call.kind === 'click').length, 1);
 });
 
+test('passive placement distinguishes popup translation from an inserted preceding row', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  for (const translate of [true, false]) {
+    let top = 20, popupTop = 10, rows;
+    const original = new Error('TEST original acknowledgement');
+    const f = fixture({ waitFailure: original, beforeSetup({ option, popup, trigger }) {
+      rows = [option]; popup.querySelectorAll = () => rows;
+      option.getBoundingClientRect = () => ({ left: 10, top, width: 80, height: 20 });
+      popup.getBoundingClientRect = () => ({ left: 0, top: popupTop, width: 100, height: 100 });
+      trigger.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 10 });
+    }, beforeEvents() {
+      top += 28;
+      if (translate) popupTop += 28;
+      else rows.unshift({ getBoundingClientRect: () => ({ left: 10, top: 20, width: 80, height: 28 }) });
+    } });
+    await assert.rejects(observeScheduleTeamSelection(f.client, teamName), error => error === original);
+    const before = f.snapshot.before.placement, after = f.snapshot.events[0].layout.placement;
+    assert.equal(after.popup.box[1] - before.popup.box[1], translate ? 28 : 0);
+    assert.equal(after.rows.length, translate ? 1 : 2);
+    assert.equal(after.rows.at(-1).id, before.rows[0].id);
+    assert.equal(after.rows.at(-1).box[1] - before.rows[0].box[1], 28);
+    assert.deepEqual(after.trigger, before.trigger); assert.equal(after.rowsCapped, false);
+    assert.deepEqual(f.calls.map(call => call.kind), ['click', 'wait', 'read']);
+    assert.equal(f.snapshot.cleanupComplete, true); assert.equal(f.listeners.length, 0);
+  }
+});
+
+test('placement reads at most six rows and retains no private text or invalid numbers', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const indices = [], row = { get textContent() { throw new Error('PRIVATE text'); },
+    getBoundingClientRect: () => ({ left: Infinity, top: 1_000_001, width: NaN, height: 20 }) };
+  const f = fixture({ beforeSetup({ popup }) {
+    popup.querySelectorAll = () => new Proxy({ length: 7 }, { get(target, key) {
+      if (key === 'length') return target.length;
+      const index = Number(key); assert.ok(index >= 0 && index < 6); indices.push(index); return row;
+    } });
+  } });
+  await observeScheduleTeamSelection(f.client, teamName);
+  assert.equal(indices.length, 24); assert.equal(f.snapshot.before.placement.rows.length, 6);
+  assert.equal(f.snapshot.before.placement.rowsCapped, true);
+  assert.deepEqual(f.snapshot.before.placement.rows[0].box, [null, null, null, 20]);
+  assert.equal(JSON.stringify(f.snapshot).includes('PRIVATE'), false);
+  assert.equal(f.snapshot.cleanupComplete, true); assert.equal(f.listeners.length, 0);
+});
+
+test('unavailable placement cannot alter the original failure or listener cleanup', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const original = new Error('TEST original acknowledgement');
+  const f = fixture({ waitFailure: original, beforeSetup({ popup }) {
+    popup.querySelectorAll = () => { throw new Error('PRIVATE query failure'); };
+  } });
+  await assert.rejects(observeScheduleTeamSelection(f.client, teamName), error => error === original);
+  assert.equal(f.snapshot.before.placement, null); assert.equal(f.snapshot.events[0].layout.placement, null);
+  assert.equal(f.snapshot.events[0].targetInOption, true); assert.equal(f.snapshot.finished, 'failure');
+  assert.equal(JSON.stringify(f.snapshot).includes('PRIVATE'), false);
+  assert.equal(f.snapshot.cleanupComplete, true); assert.equal(f.listeners.length, 0);
+});
+
+test('oversized placement is omitted while the original bounded event facts survive', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const f = fixture({ eventCycles: 3, beforeSetup({ popup }) {
+    const rows = Array.from({ length: 6 }, () => ({
+      getBoundingClientRect: () => ({ left: 999999.999, top: 999999.999, width: 999999.999, height: 999999.999 }),
+    }));
+    popup.querySelectorAll = () => rows;
+  }, beforeEvents({ option }) {
+    let parent = null;
+    for (let depth = 0; depth < 20; depth++) parent = { parentElement: parent,
+      scrollTop: depth + 1, scrollLeft: 0, scrollHeight: 300, clientHeight: 100 };
+    option.parentElement = parent;
+  } });
+  await observeScheduleTeamSelection(f.client, teamName);
+  assert.equal(f.snapshot.placementOmitted, true); assert.equal(f.snapshot.before.placement, undefined);
+  assert.equal(f.snapshot.events.length, 12); assert.equal(f.snapshot.eventsCapped, true);
+  assert.ok(f.snapshot.events.every(event => event.layout?.placement === undefined));
+  assert.deepEqual(f.snapshot.events[0].layout.intended.box, [10, 20, 80, 20]);
+  assert.equal(f.snapshot.events[0].layout.scroll.intended.rows.length, 3);
+  assert.ok(JSON.stringify(f.snapshot).length <= 12_288);
+  assert.equal(f.snapshot.cleanupComplete, true); assert.equal(f.listeners.length, 0);
+});
+
 test('partial observer installation cleans up and cannot prevent the original selection', async (t) => {
   t.mock.method(process.stderr, 'write', () => true);
   const f = fixture({ setupFailure: true });
@@ -277,7 +359,7 @@ function actualScheduleClick(options = {}) {
   option.textContent = teamName;
   const paragraph = new Element('P', option), foreign = new Element('DIV', popup), label = new Element('INPUT', dialog);
   const review = new Element('INPUT', dialog);
-  Object.assign(c, { option, trigger, popup, dialog });
+  Object.assign(c, { option, trigger, popup, dialog, foreign });
   const document = {
     visibilityState: 'visible', activeElement: label, hasFocus: () => true,
     querySelectorAll() { return [c.option]; },
@@ -404,6 +486,29 @@ test('actual schedule click prepares hover and distinct render samples before it
   assert.ok(snapshot.events.every(row => row.targetInOption)); assert.equal(snapshot.cleanupComplete, true);
   const press = h.c.calls.findIndex(row => row.method === 'Input.dispatchMouseEvent' && row.params.type === 'mousePressed');
   assert.ok(h.c.calls.slice(press).every(row => row.method !== 'Runtime.callFunctionOn' && row.params.type !== 'mouseMoved'));
+});
+
+test('actual click retains the post-final-sample 28px wrong-row failure without another input', async () => {
+  const h = actualScheduleClick({ beforeFinal(c) {
+    c.placementRows = [c.option]; c.popup.querySelectorAll = () => c.placementRows;
+    c.foreign.attributes.role = 'option';
+    c.foreign.getBoundingClientRect = () => ({ left: 130, top: 249, width: 753, height: 28 });
+  }, afterFinal(c) { c.rect.top += 28; c.placementRows = [c.foreign, c.option]; } });
+  await assert.rejects(h.select(), /Timed out waiting for saved prompt acknowledgement for the exact fixture team visible before Save/);
+  assert.equal(h.c.presses, 1); assert.equal(h.c.releases, 1); assert.equal(h.c.hovers, 1);
+  assert.equal(h.c.frames, 3); assert.equal(h.c.finalReads, 1); assert.equal(h.c.uiMutations, 0);
+  assert.equal(h.c.waits.at(-1).timeoutMs, 45_000);
+  const snapshot = JSON.parse(h.c.writes.at(-1)).snapshot, event = snapshot.events[0];
+  assert.equal(snapshot.before.geometry.top, 249); assert.equal(event.trusted, true);
+  assert.deepEqual(event.layout.intended.box, [130, 277, 753, 44]);
+  assert.deepEqual(event.layout.target.box, [130, 249, 753, 28]);
+  assert.equal(event.targetInOption, false); assert.equal(event.layout.target.inPopup, true);
+  assert.equal(event.layout.intended.id, snapshot.before.placement.rows[0].id);
+  assert.equal(snapshot.finished, 'failure'); assert.equal(snapshot.after.state.triggerTextMatches, false);
+  const press = h.c.calls.findIndex(row => row.params.type === 'mousePressed');
+  assert.ok(h.c.calls.slice(press).every(row => row.method !== 'Runtime.callFunctionOn' && row.params.type !== 'mouseMoved'));
+  assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
+  assert.equal(snapshot.cleanupComplete, true); assert.equal(h.c.listeners.length, 0);
 });
 
 test('schedule preparation refuses replacement of its original node, popup or dialog owner after hover', async () => {

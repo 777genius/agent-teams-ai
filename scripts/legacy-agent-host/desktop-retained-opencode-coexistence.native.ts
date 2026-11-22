@@ -538,7 +538,7 @@ async function runDonorHistory(input: {
   proof.inputs = donor; proof.root = root;
   const { desktopAgentSentinelSource, desktopShellEnvironmentProbeSource } = await import('./desktop-backend-fixture.ts');
   const sentinelLog = join(root, 'sentinel-invocations.ndjson');
-  const sentinel = desktopAgentSentinelSource(String(node.path), sentinelLog, String(runtime.cliVersion), 'metadata');
+  const sentinel = desktopAgentSentinelSource(String(node.path), sentinelLog, String(runtime.cliVersion), 'donor-saved-only');
   for (const directory of ['bin', 'claude/local/node_modules/.bin'])
     for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel', 'terminal-daemon'])
       await writeFile(join(root, directory, name), sentinel, { mode: 0o700, flag: 'wx' });

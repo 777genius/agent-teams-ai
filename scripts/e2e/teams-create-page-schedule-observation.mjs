@@ -210,10 +210,22 @@ function installScheduleOptionObservation(browser, document, option, point, expe
     }
     return { rows, capped: Boolean(element) };
   });
+  const placement = () => safely(() => {
+    const options = popup?.querySelectorAll('[role=option]');
+    if (!options) return null;
+    const rows = [];
+    for (let index = 0; index < Math.min(options.length, 6); index++) {
+      const row = options[index];
+      rows.push({ id: nodeId(row), box: box(row) });
+    }
+    return { popup: { id: nodeId(popup), box: box(popup) },
+      trigger: { id: nodeId(trigger), box: box(trigger) }, rows, rowsCapped: options.length > 6 };
+  });
   const layout = (target, hit) => ({
     intended: { id: nodeId(option), box: box(option) }, target: node(target), hit: node(hit),
     scroll: { intended: scroll(option), hit: scroll(hit),
       viewport: [browser.scrollX, browser.scrollY, browser.innerWidth, browser.innerHeight].map(number) },
+    placement: placement(),
   });
   const state = () => {
     const currentTrigger = safely(() => document.querySelector(triggerSelector));
@@ -285,7 +297,15 @@ function installScheduleOptionObservation(browser, document, option, point, expe
       } catch { record.after = null; }
       finally { dispose(); }
       try {
-        const raw = JSON.stringify(record);
+        let raw = JSON.stringify(record);
+        if (raw.length > 12_288) {
+          // The extension may be omitted; it must not discard original facts.
+          if (record.before) delete record.before.placement;
+          for (const event of record.events) if (event.layout) delete event.layout.placement;
+          record.placementOmitted = true;
+          raw = JSON.stringify(record);
+          if (raw.length > 12_288) { delete record.placementOmitted; raw = JSON.stringify(record); }
+        }
         return raw.length <= 12_288 && /^[\x20-\x7e]*$/.test(raw) ? JSON.parse(raw) : null;
       } catch { return null; }
     },
@@ -296,7 +316,8 @@ function installScheduleOptionObservation(browser, document, option, point, expe
     popup = typeof popupId === 'string' && popupId.length <= 256 ? document.getElementById(popupId) : null;
     record.before = { state: state(), geometry: geometry(),
       optionRoleMatches: option?.getAttribute('role') === 'option', optionInTriggerPopup: contains(popup, option),
-      triggerInScheduleDialog: contains(document.querySelector('[role=dialog] #schedule-label')?.closest('[role=dialog]'), trigger) };
+      triggerInScheduleDialog: contains(document.querySelector('[role=dialog] #schedule-label')?.closest('[role=dialog]'), trigger),
+      placement: placement() };
     Object.defineProperty(browser, slot, { value: recorder });
     for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
       const listener = event => observe(event, kind, capture ? 'capture' : 'bubble');

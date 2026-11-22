@@ -1186,6 +1186,8 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/tmp/claude-team-preflight-debug.log
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.ndjson
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.1.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/opencode-bridge/diagnostics/events.ndjson
 
   codex-login-desktop:
     name: Codex login Desktop (Linux x64)

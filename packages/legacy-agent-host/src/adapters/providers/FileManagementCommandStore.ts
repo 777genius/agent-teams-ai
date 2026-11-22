@@ -44,8 +44,8 @@ type DecodedCommand = { path: string; bytes: Buffer; value: StoredManagementComm
 export class FileManagementCommandStore implements ManagementCommandStore {
   private readonly directory: string;
   private readonly identity: { dev: number; ino: number };
-  // Keep at most one bounded receipt; this is never a cache of filesystem authority.
-  private decoded: DecodedCommand | undefined;
+  // Two pure decodes share the original single-receipt byte budget; never filesystem authority.
+  private decoded: DecodedCommand[] = [];
 
   constructor(root: string, private readonly readOnly = false) {
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root)
@@ -67,13 +67,20 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   read(commandId: string): StoredManagementCommand | undefined {
-    this.checkDirectory();
-    const path = this.path(commandId);
+    let path: string;
+    try {
+      this.checkDirectory();
+      path = this.path(commandId);
+    } catch (error) {
+      this.decoded = [];
+      throw error;
+    }
     try {
       const parsed = this.parse(path);
       if (parsed.commandId !== commandId) throw new ManagementCommandError('held');
       return parsed;
     } catch (error) {
+      this.decoded = [];
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw new ManagementCommandError('held');
     }
@@ -139,19 +146,24 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   *list(): Iterable<StoredManagementCommand> {
-    this.checkDirectory();
-    for (const name of readdirSync(this.directory)) {
-      if (/^\.tmp-[a-f0-9-]{36}$/.test(name)) {
-        const temporary = lstatSync(join(this.directory, name));
-        if (!temporary.isFile() || temporary.isSymbolicLink())
-          throw new ManagementCommandError('held');
-        continue; // A pre-publication crash has no authoritative receipt.
+    try {
+      this.checkDirectory();
+      for (const name of readdirSync(this.directory)) {
+        if (/^\.tmp-[a-f0-9-]{36}$/.test(name)) {
+          const temporary = lstatSync(join(this.directory, name));
+          if (!temporary.isFile() || temporary.isSymbolicLink())
+            throw new ManagementCommandError('held');
+          continue; // A pre-publication crash has no authoritative receipt.
+        }
+        if (!/^[a-f0-9]{64}\.json$/.test(name)) throw new ManagementCommandError('held');
+        const path = join(this.directory, name);
+        const saved = this.parse(path);
+        if (this.path(saved.commandId) !== path) throw new ManagementCommandError('held');
+        yield saved;
       }
-      if (!/^[a-f0-9]{64}\.json$/.test(name)) throw new ManagementCommandError('held');
-      const path = join(this.directory, name);
-      const saved = this.parse(path);
-      if (this.path(saved.commandId) !== path) throw new ManagementCommandError('held');
-      yield saved;
+    } catch (error) {
+      this.decoded = [];
+      throw error;
     }
   }
 
@@ -160,8 +172,8 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
   private parse(path: string): StoredManagementCommand {
     const previous = this.decoded;
-    this.decoded = undefined;
-    let completed: DecodedCommand | undefined;
+    this.decoded = [];
+    let completed: DecodedCommand[] = [];
     let fd: number | undefined;
     let observed = false;
     try {
@@ -190,7 +202,7 @@ export class FileManagementCommandStore implements ManagementCommandStore {
         throw new ManagementCommandError('held');
       this.checkDirectory();
       const bytes = buffer.subarray(0, length);
-      let decoded = previous?.path === path && previous.bytes.equals(bytes) ? previous : undefined;
+      let decoded = previous.find(entry => entry.path === path && entry.bytes.equals(bytes));
       if (!decoded) {
         const raw = JSON.parse(
           new TextDecoder('utf-8', { fatal: true }).decode(bytes)
@@ -202,13 +214,16 @@ export class FileManagementCommandStore implements ManagementCommandStore {
         decoded = { path, bytes, value: storedManagementCommandSchema.parse(body) };
       }
       const result = structuredClone(decoded.value);
-      completed = decoded;
+      completed = [decoded];
+      const retained = previous.find(entry => entry.path !== path);
+      if (retained && retained.bytes.length + decoded.bytes.length <= sourceReceiptBytes)
+        completed.push(retained);
       return result;
     } catch (error) {
       if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
       throw new ManagementCommandError('held');
     } finally {
-      this.decoded = undefined;
+      this.decoded = [];
       if (fd !== undefined) closeSync(fd);
       this.decoded = completed;
     }

@@ -1234,13 +1234,14 @@ function checkLiveRosterProbeAuthority(t: TestContext, live: Awaited<ReturnType<
       if (observing && args[0] === directory) segment.namespaceReads++;
       return directories(...args);
     }),
-    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore, name: string): T | undefined {
+    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore, name: string,
+      decode?: (text: string) => T): T | undefined {
       if (observing && this.directory === store.directory && name === 'state.json') {
         const [pid, , token] = fs.readFileSync(lock, 'utf8').split('\n');
         assert.equal(pid, String(process.pid)); assert.match(token!, /^[a-f0-9-]{36}$/);
         segment.tokens.push(token!);
       }
-      return (read<T>).call(this, name);
+      return (read<T>).call(this, name, decode);
     }),
     t.mock.method(TeamLiveRosterMembership.prototype, 'withOriginal', function<T>(this: TeamLiveRosterMembership,
       source: Parameters<typeof original>[0], callback: (row: Parameters<Parameters<typeof original>[1]>[0]) => T): T {

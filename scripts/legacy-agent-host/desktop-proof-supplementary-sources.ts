@@ -42,6 +42,8 @@ export const desktopProofSupplementarySources = [
   'test/helpers/sourceModuleGraph.ts',
   'packages/legacy-agent-host/tests/team-owner-namespace-paths.test.ts',
   'packages/legacy-agent-host/tests/file-receipt-decode-cache.test.ts',
+  'packages/legacy-agent-host/tests/team-runtime-bindings-decode.test.ts',
+  'packages/legacy-agent-host/tests/saved-team-model-probe.test.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeCurrentnessTiming.ts',
   'packages/legacy-agent-host/tests/opencode-currentness-timing.test.ts',
   'mcp-server/package.json',

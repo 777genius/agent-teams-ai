@@ -38,13 +38,14 @@ type Options = {
 function source(options: Options) {
   options.assertCurrent();
   const { profile, team } = options;
-  const authority = team.owner.withLaunchAuthority(
+  const { authority, hasCaptures } = team.owner.withLaunchAuthority(
     profile.principalId,
     'read',
-    (revision) => revision
+    (authority) => ({ authority,
+      hasCaptures: team.owner.runtimeCaptures(profile.principalId, true).length > 0 })
   );
   if (
-    team.owner.runtimeCaptures(profile.principalId).length ||
+    hasCaptures ||
     team.definition.members.some((member) => member.delivery)
   ) {
     if (!options.assertRuntimeHistory) throw new TeamLaunchError('hold', 'saved-model-runtime-history');
