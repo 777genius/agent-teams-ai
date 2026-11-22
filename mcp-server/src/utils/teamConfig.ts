@@ -70,6 +70,83 @@ export function assertConfiguredTeam(teamName: string, claudeDir?: string): void
   }
 }
 
+/**
+ * What the metadata of a team without `config.json` says, as far as this server can read it:
+ * `per_project` for a team that keeps a separate history per project, `unreadable` for a file that
+ * is there but cannot be read (only the app can tell then), `null` for anything else.
+ */
+function readHistoryMode(metaPath: string): 'per_project' | 'unreadable' | null {
+  const meta = readJsonObject(metaPath);
+  if (meta) {
+    if (meta.version !== 1 || typeof meta.cwd !== 'string' ||
+        (Object.hasOwn(meta, 'projectContextMode') &&
+          meta.projectContextMode !== 'shared' && meta.projectContextMode !== 'per_project')) {
+      return 'unreadable';
+    }
+    return isPerProjectTeamMeta(meta) ? 'per_project' : null;
+  }
+  return fs.existsSync(metaPath) ? 'unreadable' : null;
+}
+
+function appUnreachableMessage(
+  teamName: string,
+  reason: 'projectPath' | 'per_project' | 'unreadable'
+): string {
+  const head = {
+    projectPath: `projectPath was given for team "${teamName}", and the Agent Teams app checks it`,
+    per_project:
+      `Team "${teamName}" keeps a separate history per project, and the Agent Teams app chooses ` +
+      'its board in a project',
+    unreadable:
+      `Team "${teamName}" has no config.json and its metadata cannot be read here; only the ` +
+      'Agent Teams app can tell what it is',
+  }[reason];
+  const way =
+    reason === 'projectPath'
+      ? 'Start the app, or call without projectPath.'
+      : 'Start the app, or use the exact name of a project team (projectHistoryContexts of team_list).';
+  return `${head}, but the app could not be reached. ${way}`;
+}
+
+/**
+ * The team whose board a board tool works on: one rule for every board tool, applied where the
+ * tools are registered (`tools/projectBoard.ts`).
+ *
+ * - A configured team (an ordinary team, or a project copy named exactly) without `projectPath` is
+ *   itself and the app is not asked, so these calls behave exactly as before.
+ * - With `projectPath`, the app checks it: an ordinary team keeps one history for every project;
+ *   a project copy must be the copy of that project and its launch must have finished.
+ * - A team that keeps a separate history per project has no board of its own: the app resolves it
+ *   with `projectPath` to its ready copy for that project, or refuses with a code and what to do.
+ *   So does a team whose metadata this server cannot read. No copy is ever created here.
+ * - Anything else is an unknown team, as before.
+ *
+ * A refusal of the app is thrown as the controller reports it (with `code`); the tool registration
+ * shows it to the client.
+ */
+export async function resolveBoardTeam(
+  teamName: string,
+  claudeDir?: string,
+  projectPath?: string
+): Promise<string> {
+  const { configPath, metaPath } = resolveTeamPaths(teamName, claudeDir);
+  const configured = isConfiguredTeamConfig(readJsonObject(configPath));
+  if (configured && !projectPath) return teamName;
+  const mode = configured ? null : readHistoryMode(metaPath);
+  if (!configured && !mode) throw new Error(unknownTeamMessage(teamName));
+  const target = await getController(teamName, claudeDir).appRouting.getBoardTarget(projectPath);
+  if (target === null) throw new Error(appUnreachableMessage(teamName, mode ?? 'projectPath'));
+  const board = typeof target.teamName === 'string' ? target.teamName : '';
+  if (configured) {
+    if (board !== teamName) throw new Error(`The app named another board for team "${teamName}"`);
+    return teamName;
+  }
+  // The app does not see a per-project team under this name: it has no board.
+  if (!board || board === teamName) throw new Error(unknownTeamMessage(teamName));
+  assertConfiguredTeam(board, claudeDir);
+  return board;
+}
+
 export function assertConfiguredTaskActor(
   teamName: string,
   actor: string,

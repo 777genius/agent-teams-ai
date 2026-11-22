@@ -56,6 +56,7 @@ export type TeamProvisioningStatusApi = FeatureTeamProvisioningStatusApi;
 export interface TeamProvisioningRunApi {
   cancelProvisioning(runId: string): Promise<void>;
   hasProvisioningRun(teamName: string): boolean;
+  isProvisioningLaunchActive?(teamName: string): boolean;
 }
 
 export interface TeamTaskActivityRepairApi {
@@ -476,6 +477,9 @@ export function bindTeamProvisioningRunApi(source: TeamProvisioningRunApi): Team
   return {
     cancelProvisioning: source.cancelProvisioning.bind(source),
     hasProvisioningRun: source.hasProvisioningRun.bind(source),
+    ...(source.isProvisioningLaunchActive
+      ? { isProvisioningLaunchActive: source.isProvisioningLaunchActive.bind(source) }
+      : {}),
   };
 }
 

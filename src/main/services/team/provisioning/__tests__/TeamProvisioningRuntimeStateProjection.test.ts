@@ -1,3 +1,7 @@
+import {
+  isProjectCopyLaunching,
+  trackProjectCopyLaunch,
+} from '@features/team-project-context/main';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -86,6 +90,31 @@ function createProjection(
 }
 
 describe('TeamProvisioningRuntimeStateProjection', () => {
+  it('distinguishes a cancelled launch from retained cleanup ownership', () => {
+    const teamName = 'cleanup-pending';
+    const runId = 'run-cancelled';
+    const ownedRun = run(runId, teamName);
+    const { projection } = createProjection({
+      provisioningRunByTeam: new Map([[teamName, runId]]),
+      runs: new Map([[runId, ownedRun]]),
+    });
+    expect(projection.isProvisioningLaunchActive(teamName)).toBe(true);
+    const tracked = trackProjectCopyLaunch(teamName);
+    tracked.watchRun(() => projection.isProvisioningLaunchActive(teamName));
+    expect(isProjectCopyLaunching(teamName)).toBe(true);
+    ownedRun.cancelRequested = true;
+    expect(projection.isProvisioningLaunchActive(teamName)).toBe(false);
+    expect(isProjectCopyLaunching(teamName)).toBe(false);
+    expect(projection.hasProvisioningRun(teamName)).toBe(true);
+  });
+
+  it('treats a registered launch without its run as active until its ownership disappears', () => {
+    const { projection } = createProjection({
+      provisioningRunByTeam: new Map([['team', 'pending-1']]),
+    });
+    expect(projection.isProvisioningLaunchActive('team')).toBe(true);
+    expect(projection.isProvisioningLaunchActive('other')).toBe(false);
+  });
   it('reports active provisioning and child process runs', async () => {
     const teamName = 'child-team';
     const runId = 'run-child';

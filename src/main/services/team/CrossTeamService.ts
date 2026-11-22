@@ -1,6 +1,7 @@
 import {
   assertCrossTeamSender,
   createAppCrossTeamRecipientPorts,
+  createProjectLaunchProbe,
   findProjectCopyOwner,
   projectTeamSummaries,
   resolveCrossTeamRecipient,
@@ -108,7 +109,13 @@ export class CrossTeamService {
   }
 
   private ports(): CrossTeamRecipientPorts {
-    return this.recipientPorts ?? createAppCrossTeamRecipientPorts();
+    const ports = this.recipientPorts ?? createAppCrossTeamRecipientPorts();
+    if (ports.isLaunching) return ports;
+    // A pending copy is being launched while a launch of it is in flight or its team runs;
+    // otherwise its launch failed and the sender is told to launch again, not to wait.
+    const messaging = this.messaging;
+    const isTeamAlive = messaging ? (name: string) => messaging.isTeamAlive(name) : undefined;
+    return { ...ports, isLaunching: createProjectLaunchProbe(isTeamAlive) };
   }
 
   private route(
