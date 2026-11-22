@@ -517,6 +517,7 @@ try {
     AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claude,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     AGENT_TEAMS_MCP_HTTP: '0',
+    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
   };
   evidence.childEnvironmentKeys = Object.keys(env);
   const mainPort = await freePort();

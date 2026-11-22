@@ -180,6 +180,7 @@ async function launch(label: string, version: string) {
     NODE_ENV: 'production',
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     AGENT_TEAMS_MCP_HTTP: '0',
+    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
   };
   const index = await oldMacLaunch(commands);
   child = spawn(

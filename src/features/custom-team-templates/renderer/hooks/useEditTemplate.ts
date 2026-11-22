@@ -319,25 +319,9 @@ export function useEditTemplate({
         setBusy(false);
         return false;
       }
+      let result: Awaited<ReturnType<typeof api.customTeamTemplates.importTemplate>>;
       try {
-        const result = await api.customTeamTemplates.importTemplate({ portable });
-        if (requestId !== requestIdRef.current) return false;
-        if (result.status === 'imported') {
-          pendingUpdateRef.current = null;
-          setStatus('saved');
-          onSaved?.(result.template);
-          return true;
-        }
-        if (result.status === 'validationFailed') {
-          setIssues(result.issues);
-          setStatus('idle');
-        } else if (result.status === 'nameConflict') setStatus('nameConflict');
-        else if (result.status === 'unresolvedWriteOutcome') {
-          pendingCreateIdRef.current = result.templateId || null;
-          setStatus('unresolvedWriteOutcome');
-        }
-        else setStatus('storageUnavailable');
-        return false;
+        result = await api.customTeamTemplates.importTemplate({ portable });
       } catch (error) {
         if (requestId === requestIdRef.current) {
           if (isHttpPayloadTooLarge(error)) {
@@ -351,6 +335,27 @@ export function useEditTemplate({
       } finally {
         if (requestId === requestIdRef.current) setBusy(false);
       }
+
+      if (requestId !== requestIdRef.current) return false;
+      // Result processing, including UI callbacks, must not enter the transport catch.
+      if (result.status === 'imported') {
+        pendingUpdateRef.current = null;
+        setStatus('saved');
+        onSaved?.(result.template);
+        return true;
+      }
+      if (result.status === 'validationFailed') {
+        setIssues(result.issues);
+        setStatus('idle');
+      } else if (result.status === 'nameConflict') {
+        setStatus('nameConflict');
+      } else if (result.status === 'unresolvedWriteOutcome') {
+        pendingCreateIdRef.current = result.templateId || null;
+        setStatus('unresolvedWriteOutcome');
+      } else {
+        setStatus('storageUnavailable');
+      }
+      return false;
     }
 
     let result: Awaited<ReturnType<typeof api.customTeamTemplates.updateTemplate>>;
