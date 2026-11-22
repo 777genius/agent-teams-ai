@@ -2,8 +2,10 @@ import {
   assertOptionalEffort,
   assertOptionalFastMode,
 } from '@main/services/team/TeamRequestValidation';
+import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
 
 import type { TeamKind } from '../contracts';
+import type { ProjectCopyLaunch } from './projectCopyLaunches';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type {
   TeamCreateRequest,
@@ -23,6 +25,8 @@ export interface PreparedProjectContextLaunch {
   mapProgress?: ProjectContextProgressMapper;
   /** Saves the launch settings of `request` for the team and its copy; a no-op unless the run is fresh. */
   recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
+  /** The launch of a pending copy, tracked from its reservation (`trackProjectCopyLaunch`). */
+  launch?: ProjectCopyLaunch;
 }
 
 export interface ProjectContextLaunchPorts {
@@ -32,6 +36,7 @@ export interface ProjectContextLaunchPorts {
    * materialize the copy. Any team that is not a logical one comes back as it is.
    */
   prepare(request: TeamLaunchRequest): Promise<PreparedProjectContextLaunch>;
+  isProvisioningLaunchActive(teamName: string): boolean;
   rememberRunIdentity(runId: string, logicalTeamName: string, executionTeamName: string): void;
 }
 
@@ -64,8 +69,21 @@ export async function launchInProjectContext<T>(
   assertOptionalFastMode(request.fastMode);
   const selected = await ports.prepare(request);
   if (selected.request.teamName === request.teamName) return null;
-  const result = await launcher.invoke(selected.request, selected.mapProgress);
+  // A pending copy counts as being launched until its run settled and the copy was confirmed.
+  const tracked = selected.launch;
+  const mapProgress =
+    tracked && selected.mapProgress ? tracked.settleOn(selected.mapProgress) : selected.mapProgress;
+  let result: T;
+  try {
+    result = await launcher.invoke(selected.request, mapProgress);
+  } catch (error) {
+    tracked?.end();
+    throw error;
+  }
   const run = launcher.started(result);
+  // No run of this launch to wait for: refused, or the copy was already starting or running.
+  if (!run || !isFreshLaunch(run)) tracked?.end();
+  else tracked?.watchRun(() => ports.isProvisioningLaunchActive(selected.request.teamName));
   if (run) {
     ports.rememberRunIdentity(run.runId, request.teamName, selected.request.teamName);
     // What this launch stated becomes the team's launch settings, on every transport.

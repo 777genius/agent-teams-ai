@@ -33,6 +33,14 @@ on:
       - 'src/features/review-flow/**'
       - 'src/main/ipc/teams/teamReviewFlow.ts'
       - 'src/main/services/team/TeamMetaStore.ts'
+      - 'src/main/http/teams/projectBoardRoute.ts'
+      - 'src/main/http/teams/projectContextHttp.ts'
+      - 'mcp-server/src/**'
+      - 'src/main/services/team/contracts/TeamProvisioningApis.ts'
+      - 'src/main/services/team/provisioning/**'
+      - 'agent-teams-controller/src/internal/appRouting.js'
+      - 'agent-teams-controller/src/internal/controlApiClient.js'
+      - 'agent-teams-controller/src/mcpToolCatalog.js'
   push:
     branches: [main]
     paths:
@@ -65,6 +73,14 @@ on:
       - 'src/features/review-flow/**'
       - 'src/main/ipc/teams/teamReviewFlow.ts'
       - 'src/main/services/team/TeamMetaStore.ts'
+      - 'src/main/http/teams/projectBoardRoute.ts'
+      - 'src/main/http/teams/projectContextHttp.ts'
+      - 'mcp-server/src/**'
+      - 'src/main/services/team/contracts/TeamProvisioningApis.ts'
+      - 'src/main/services/team/provisioning/**'
+      - 'agent-teams-controller/src/internal/appRouting.js'
+      - 'agent-teams-controller/src/internal/controlApiClient.js'
+      - 'agent-teams-controller/src/mcpToolCatalog.js'
 
 permissions:
   contents: read

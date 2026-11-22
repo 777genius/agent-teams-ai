@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { isProjectCopyLaunching } from '../../../src/features/team-project-context/main/projectCopyLaunches';
 import { TeamProjectContextCreateCoordinator } from '../../../src/features/team-project-context/main/TeamProjectContextCreateCoordinator';
 
 import type {
   TeamCreateRequest,
+  TeamCreateResponse,
   TeamProvisioningProgress,
 } from '../../../src/shared/types/team';
 
@@ -32,10 +34,11 @@ function fixture() {
     releaseUnusedReservation: vi.fn(async () => true),
     assertOtherContextsStopped: vi.fn(async () => undefined),
     ensurePhysicalDraft: vi.fn(async () => context),
-    createNativeTeam: vi.fn(async (_: TeamCreateRequest, emit: (event: TeamProvisioningProgress) => void) => {
+    createNativeTeam: vi.fn(async (_: TeamCreateRequest, emit: (event: TeamProvisioningProgress) => void): Promise<TeamCreateResponse> => {
       nativeProgressRef.current = emit;
       return { runId: 'run-a' };
     }),
+    isProvisioningLaunchActive: () => true,
     confirmReady: vi.fn(async () => ready),
   };
   return {
@@ -86,6 +89,13 @@ describe('TeamProjectContextCreateCoordinator', () => {
         teamName: 'builders', state: 'ready',
       }));
     });
+  });
+
+  it('does not retain a second launch when the native team is already launching', async () => {
+    const f = fixture();
+    f.ports.createNativeTeam.mockResolvedValue({ runId: 'run-a', launchStatus: 'already_launching', alreadyLaunching: true });
+    await f.create.create(request, vi.fn());
+    expect(isProjectCopyLaunching(context.executionTeamName)).toBe(false);
   });
 
   it('uses canonical context path when the user-supplied path is a symlink alias', async () => {

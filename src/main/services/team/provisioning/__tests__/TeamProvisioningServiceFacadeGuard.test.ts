@@ -98,6 +98,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'hasTeamOperationInProgress',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
+  'isProvisioningLaunchActive',
   'isTeamAlive',
   'isTeamManagedByThisProfile',
   'isTeamManagedByThisProfileSync',

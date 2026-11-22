@@ -12,7 +12,7 @@ import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // @ts-expect-error The existing shared CDP transport has no TypeScript declaration.
 import { CdpClient } from './comment-notification/cdp.mjs';
@@ -1394,7 +1394,117 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   });
   assert.equal(shared.status, 201, 'Explicit shared create: ' + JSON.stringify(shared));
   assert.equal(shared.body?.projectContextMode, 'shared');
-  return { launchStatus: launched.status, finalState, copy: copy.executionTeamName };
+  return { team, launchStatus: launched.status, finalState, copy: copy.executionTeamName };
+}
+
+interface McpTool {
+  name: string;
+  execute(args: Record<string, unknown>): Promise<unknown>;
+}
+
+/**
+ * The MCP board tools of an external client on a per-project team, through the real tools of the
+ * MCP server (its source), the controller package and the HTTP control API of this app: the board
+ * of the project named by projectPath is used and no other; without a project, in a project without
+ * history or while a launch is pending there, the call is refused with a code and writes nothing;
+ * a project copy named exactly and an ordinary team work as before. The app shows what was written
+ * in the project it belongs to. Nothing here reaches the runtime.
+ */
+async function verifyMcpBoardTools(f: Fixture, http: { team: string; finalState: unknown }) {
+  assert(cdp);
+  const { registerTools } = await import(
+    pathToFileURL(path.join(repoRoot, 'mcp-server', 'src', 'tools', 'index.ts')).href
+  ) as { registerTools(server: { addTool(tool: McpTool): void }): void };
+  const tools = new Map<string, McpTool>();
+  registerTools({ addTool: (tool) => { tools.set(tool.name, tool); } });
+  const call = async (name: string, args: Record<string, unknown>) => {
+    const tool = tools.get(name);
+    assert(tool, 'Missing MCP tool ' + name);
+    const result = await tool.execute({ claudeDir: f.claudeRoot, ...args }) as {
+      content: { text: string }[];
+    };
+    return result.content[0].text;
+  };
+  const refusal = async (name: string, args: Record<string, unknown>) => {
+    const outcome = await call(name, args).then(() => null, (error: Error & { code?: string }) => error);
+    assert(outcome, name + ' must be refused: ' + JSON.stringify(args));
+    return outcome;
+  };
+  const taskFiles = async (team: string) =>
+    (await readdir(path.join(f.claudeRoot, 'tasks', team)).catch(() => [] as string[])).sort();
+  const inbox = (team: string, member: string) =>
+    readFile(path.join(f.rootTeams, team, 'inboxes', member + '.json'), 'utf8').catch(() => '');
+  const indexBefore = await readFile(f.indexPath, 'utf8');
+  const logicalTasksBefore = await taskFiles(f.logical);
+  const copyBTasksBefore = await taskFiles(f.nativeB);
+  const logical = { teamName: f.logical };
+
+  // 1. The board of the project named by projectPath, and only that one.
+  await call('task_create', {
+    ...logical, projectPath: f.projectA, subject: 'MCP_BOARD_PROJECT_A', createdBy: 'user',
+  });
+  const listA = await call('task_list', { ...logical, projectPath: f.projectA });
+  const listB = await call('task_list', { ...logical, projectPath: f.projectB });
+  assert(listA.includes('MCP_BOARD_PROJECT_A') && listA.includes('PROJECT_A_TASK_ONLY'),
+    'task_list of project A: ' + listA.slice(0, 400));
+  assert(listB.includes('PROJECT_B_TASK_ONLY') && !listB.includes('MCP_BOARD_PROJECT_A'),
+    'A task written for project A is listed in project B: ' + listB.slice(0, 400));
+  assert.deepEqual(await taskFiles(f.nativeB), copyBTasksBefore, 'Project B got a task file');
+  await call('message_send', {
+    ...logical, projectPath: f.projectB, from: 'lead', to: 'alice', text: 'MCP_BOARD_MESSAGE_PROJECT_B',
+  });
+  assert((await inbox(f.nativeB, 'alice')).includes('MCP_BOARD_MESSAGE_PROJECT_B'));
+  assert(!(await inbox(f.nativeA, 'alice')).includes('MCP_BOARD_MESSAGE_PROJECT_B'),
+    'A message for project B reached project A');
+
+  // 2. Unchanged: a project copy by its exact name, and an ordinary team (a project is ignored).
+  // A copy named with a project must be the copy of that project.
+  assert((await call('task_list', { teamName: f.nativeA })).includes('MCP_BOARD_PROJECT_A'));
+  assert((await call('task_list', { teamName: f.nativeA, projectPath: f.projectA }))
+    .includes('MCP_BOARD_PROJECT_A'));
+  const mismatch = await refusal('task_list', { teamName: f.nativeB, projectPath: f.projectA });
+  assert.equal(mismatch.code, 'PROJECT_MISMATCH', String(mismatch));
+  await call('task_create', {
+    teamName: f.partnerA, projectPath: f.projectB, subject: 'MCP_BOARD_SHARED_TEAM', createdBy: 'user',
+  });
+  assert((await call('task_list', { teamName: f.partnerA })).includes('MCP_BOARD_SHARED_TEAM'));
+
+  // 3. Refused, never guessed, and nothing written or reserved.
+  const noProject = await refusal('task_create', { ...logical, subject: 'MCP_NO_PROJECT', createdBy: 'user' });
+  assert.equal(noProject.code, 'PROJECT_REQUIRED', String(noProject));
+  // An MCP client only sees the text: the code leads it.
+  assert(noProject.message.startsWith('[PROJECT_REQUIRED] '), noProject.message);
+  assert(noProject.message.includes(f.projectA) && noProject.message.includes(f.projectB),
+    'The refusal must name the projects of the team: ' + noProject.message);
+  const noHistory = await refusal('task_create', {
+    ...logical, projectPath: f.projectC, subject: 'MCP_NO_HISTORY', createdBy: 'user',
+  });
+  assert.equal(noHistory.code, 'NO_PROJECT_HISTORY', String(noHistory));
+  if (http.finalState !== 'ready') {
+    // The HTTP section left its copy reserved after a failed launch: no launch runs there now,
+    // so waiting would not help and the refusal says to launch again.
+    const pending = await refusal('task_list', { teamName: http.team, projectPath: f.projectC });
+    assert.equal(pending.code, 'PROJECT_LAUNCH_INCOMPLETE', String(pending));
+  }
+  assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'A board call changed the contexts index');
+  assert.deepEqual(await taskFiles(f.logical), logicalTasksBefore, 'The per-project team got a task of its own');
+  for (const own of ['config.json', path.join('inboxes', 'alice.json')]) {
+    await assert.rejects(readFile(path.join(f.rootTeams, f.logical, own)), { code: 'ENOENT' },
+      'The per-project team got a board file: ' + own);
+  }
+
+  // 4. The app shows the task in project A, never in project B.
+  await waitFor('(async () => (await window.electronAPI.teams.getData(' + JSON.stringify(f.nativeA) +
+    ')).tasks.some((t) => t.subject === "MCP_BOARD_PROJECT_A"))()', 'the MCP task in the project A board');
+  const subjectsB = await cdp.evaluate('(async () => (await window.electronAPI.teams.getData(' +
+    JSON.stringify(f.nativeB) + ')).tasks.map((t) => t.subject))()') as string[];
+  assert(!subjectsB.includes('MCP_BOARD_PROJECT_A'), 'The app shows the project A task in project B');
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'MCP_BOARD_PROJECT_A'), 'the MCP task on the project A board');
+  await cdp.screenshot(path.join(f.screenshots, 'mcp-board-project-a.png'));
+  return { refusals: [noProject.code, noHistory.code, mismatch.code] };
 }
 
 /**
@@ -1748,26 +1858,37 @@ async function run() {
     // After the strict audit above: the launches of these sections reach the denying runtime on purpose.
     await verifyLaunchSettings(f);
     // The runtime child writes its audit line a moment after a launch: wait until the audit of the
-    // previous section stops growing, so a late line of it is not counted for the HTTP section.
-    let auditBeforeHttp = (await readAudit()).length;
-    for (let stableSince = Date.now(), giveUpAt = Date.now() + 60_000; Date.now() - stableSince < 5_000;) {
-      assert(Date.now() < giveUpAt, 'The runtime audit kept growing after the launch settings section');
-      await pause(500);
-      const length = (await readAudit()).length;
-      if (length !== auditBeforeHttp) [auditBeforeHttp, stableSince] = [length, Date.now()];
-    }
+    // previous section stops growing, so a late line of it is not counted for the next section.
+    const settledAuditLength = async (previousSection: string) => {
+      let length = (await readAudit()).length;
+      for (let stableSince = Date.now(), giveUpAt = Date.now() + 60_000; Date.now() - stableSince < 5_000;) {
+        assert(Date.now() < giveUpAt, 'The runtime audit kept growing after ' + previousSection);
+        await pause(500);
+        const current = (await readAudit()).length;
+        if (current !== length) [length, stableSince] = [current, Date.now()];
+      }
+      return length;
+    };
+    const auditBeforeHttp = await settledAuditLength('the launch settings section');
     const httpLaunch = await verifyHttpCreateAndLaunch(f);
     const afterHttp = (await readAudit()).slice(auditBeforeHttp);
     assert(afterHttp.filter(isLaunch).length <= 2,
       'The HTTP launch and its retry may reach the runtime only for their one project copy');
     assert.equal(afterHttp.filter((args) => !isLaunch(args) && !isReadOnly(args)).length, 0,
       'Unexpected runtime calls after the HTTP launch');
+    const auditBeforeBoard = await settledAuditLength('the HTTP section');
+    const mcpBoard = await verifyMcpBoardTools(f, httpLaunch);
+    // Board tools read and write files only: nothing of them may reach the runtime.
+    const afterBoard = (await readAudit()).slice(auditBeforeBoard);
+    assert.equal(afterBoard.filter((args) => !isReadOnly(args)).length, 0,
+      'Unexpected runtime calls from the MCP board tools: ' + JSON.stringify(afterBoard.map((args) =>
+        args.slice(0, 2).map((token) => /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / member settings of a per-project team / one review flow of a per-project team, its project boards and a new copy / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / member settings of a per-project team / one review flow of a per-project team, its project boards and a new copy / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team / MCP board tools of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
-      httpLaunch,
+      httpLaunch, mcpBoard,
     }, null, 2));
   } catch (error) {
     await cdp?.screenshot(path.join(f.screenshots, 'failure.png')).catch(() => undefined);
