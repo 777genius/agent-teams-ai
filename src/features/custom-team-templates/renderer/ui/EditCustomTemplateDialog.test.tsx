@@ -5,10 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateTemplate = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
+const importTemplate = vi.hoisted(() => vi.fn());
 
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
-  api: { customTeamTemplates: { updateTemplate, listTemplates } },
+  api: { customTeamTemplates: { updateTemplate, listTemplates, importTemplate } },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -39,6 +40,29 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     React.createElement('header', null, children),
   DialogTitle: ({ children }: { children: React.ReactNode }) =>
     React.createElement('h2', null, children),
+}));
+vi.mock('@renderer/components/team/dialogs/MembersJsonEditor', () => ({
+  MembersJsonEditor: ({
+    value,
+    onChange,
+    onClose,
+    error,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    onClose: () => void;
+    error: string | null;
+  }) => (
+    <div>
+      <textarea
+        aria-label="JSON"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <button onClick={onClose}>Hide JSON</button>
+      {error && <span>{error}</span>}
+    </div>
+  ),
 }));
 
 import { EditCustomTemplateDialog } from './EditCustomTemplateDialog';
@@ -126,6 +150,7 @@ async function recheck(): Promise<void> {
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   updateTemplate.mockReset();
+  importTemplate.mockReset();
   listTemplates.mockReset();
   updateTemplate.mockResolvedValue({
     status: 'updated',
@@ -149,6 +174,87 @@ afterEach(() => {
 });
 
 describe('EditCustomTemplateDialog', () => {
+  it('edits the full template as JSON and blocks invalid or unknown fields', async () => {
+    await render();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="template-edit-json"]')?.click();
+    });
+    const json = field('[aria-label="JSON"]');
+    expect(JSON.parse(json.value).members[0].name).toBe('alice');
+    await act(async () => {
+      setText('[aria-label="JSON"]', '{');
+    });
+    expect(saveButton().disabled).toBe(true);
+    expect(host.textContent).toContain('customTemplates.bulk.invalidEditorJson');
+    await act(async () => {
+      setText(
+        '[aria-label="JSON"]',
+        JSON.stringify({
+          name: 'Updated',
+          description: '',
+          teamPrompt: 'New prompt',
+          members: [{ name: 'bob', role: 'reviewer', workflow: 'Inspect' }],
+          unexpected: true,
+        })
+      );
+    });
+    expect(saveButton().disabled).toBe(true);
+    await act(async () => {
+      setText(
+        '[aria-label="JSON"]',
+        JSON.stringify({
+          name: 'Updated',
+          description: '',
+          teamPrompt: 'New prompt',
+          members: [{ name: 'bob', role: 'reviewer', workflow: 'Inspect' }],
+        })
+      );
+    });
+    expect(saveButton().disabled).toBe(false);
+    await save();
+    expect(updateTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: {
+          name: 'Updated',
+          description: undefined,
+          teamPrompt: 'New prompt',
+          members: [{ name: 'bob', role: 'reviewer', workflow: 'Inspect' }],
+        },
+      })
+    );
+  });
+  it('creates a new template using the same editor and portable validation', async () => {
+    importTemplate.mockResolvedValueOnce({ status: 'imported', template });
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft', name: '' }}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', 'New reusable team');
+    });
+    await act(async () => {
+      const button = [...host.querySelectorAll('button')].find((item) =>
+        item.textContent?.includes('customTemplates.actions.save')
+      );
+      button?.click();
+    });
+    expect(importTemplate).toHaveBeenCalledWith({
+      portable: expect.objectContaining({
+        format: 'agent-teams-custom-template',
+        name: 'New reusable team',
+        members: template.members,
+      }),
+    });
+    expect(onSaved).toHaveBeenCalledWith(template);
+    expect(updateTemplate).not.toHaveBeenCalled();
+  });
   it.each([
     { memberField: 'workflow', newline: '\n' },
     { memberField: 'workflow', newline: '\r\n' },
@@ -167,7 +273,8 @@ describe('EditCustomTemplateDialog', () => {
           },
         ],
       });
-      const selector = `#member-0-${memberField}`;
+      const selector =
+        memberField === 'role' ? '#member-0-role + div textarea' : `#member-0-${memberField}`;
       const control = field(selector);
       // Browsers may normalize CRLF to LF; the two lines must remain distinct.
       expect(control.value.replace(/\r\n/g, '\n')).toBe('Review change.\nCheck risks.');

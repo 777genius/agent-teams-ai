@@ -107,9 +107,10 @@ describe('CreateTeamTemplatePicker', () => {
     expect(listTemplates).toHaveBeenCalledTimes(1);
     expect(onApply).not.toHaveBeenCalled();
     expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
-    expect(host.textContent).toContain('customTemplates.createFromTemplate.noneHint');
+    expect(optionNone()?.textContent).toContain('customTemplates.createFromTemplate.noneLabel');
     // Built-in and custom templates stay clearly distinguishable.
     expect(optionBuiltin('marketing')).not.toBeNull();
+    expect(optionBuiltin('marketing')?.querySelector('svg.lucide-megaphone')).not.toBeNull();
     expect(optionCustom('tmpl-custom-1')).not.toBeNull();
   });
 

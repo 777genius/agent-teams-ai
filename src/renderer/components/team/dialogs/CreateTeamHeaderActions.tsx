@@ -2,27 +2,21 @@ import { ExternalAgentPromptAction } from '@features/external-agent-connection/r
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
-import { CreateTeamTemplatePicker } from './CreateTeamTemplatePicker';
+import type { ReactNode } from 'react';
 
-import type { ComponentProps } from 'react';
-
-type Props = ComponentProps<typeof CreateTeamTemplatePicker> & {
+type Props = {
   local: boolean;
   isLight: boolean;
   onManagementApplied?: () => void;
+  disabled?: boolean;
+  templatePicker: ReactNode;
 };
 
 export const CreateTeamHeaderActions = ({
   local,
   isLight,
   onManagementApplied,
-  form,
-  descriptionDraft,
-  promptDraft,
-  defaultDescription,
-  hasPromptChips,
-  clearPromptChips,
-  onTemplateApplied,
+  templatePicker,
   disabled,
 }: Props): React.JSX.Element => {
   return (
@@ -34,18 +28,7 @@ export const CreateTeamHeaderActions = ({
         onSettings={() => useStore.getState().openSettingsTab('externalAgentConnection')}
         onManagementApplied={onManagementApplied}
       />
-      <div className="w-56 min-w-0 max-w-full">
-        <CreateTeamTemplatePicker
-          form={form}
-          descriptionDraft={descriptionDraft}
-          promptDraft={promptDraft}
-          defaultDescription={defaultDescription}
-          hasPromptChips={hasPromptChips}
-          clearPromptChips={clearPromptChips}
-          onTemplateApplied={onTemplateApplied}
-          disabled={disabled}
-        />
-      </div>
+      {templatePicker}
     </div>
   );
 };

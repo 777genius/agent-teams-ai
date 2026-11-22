@@ -69,6 +69,8 @@ export function ExternalAgentPromptAction({
             runApi={api.directRun}
             connection={info}
             isLight={isLight}
+            onRetry={info.mcp.status !== 'ready' ? () => void retry() : undefined}
+            retrying={retrying}
             onSettings={() => {
               setOpen(false);
               onSettings();
@@ -79,7 +81,7 @@ export function ExternalAgentPromptAction({
             {error ?? t(local ? 'externalPrompt.loading' : 'externalPrompt.localOnly')}
           </p>
         )}
-        {local && (error || info?.mcp.status !== 'ready') && (
+        {local && error && !info && (
           <Button
             type="button"
             variant="outline"

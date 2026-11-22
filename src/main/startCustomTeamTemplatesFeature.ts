@@ -51,6 +51,7 @@ export function startCustomTeamTemplatesFeature(
   const desktopFileService = new CustomTeamTemplateDesktopFileService({
     importTemplate: feature.importTemplate,
     exportTemplate: feature.exportTemplate,
+    listTemplates: feature.listTemplates,
     files: new ElectronCustomTeamTemplateFileGateway(),
   });
   registerCustomTeamTemplatesIpc(ipcMain, feature);

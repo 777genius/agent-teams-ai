@@ -1,6 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@renderer/components/ui/dialog';
+import { Layers3 } from 'lucide-react';
 
 import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
 import { buildDefaultTeamDescription } from './createTeamDescription';
@@ -34,7 +44,6 @@ interface Props {
     | 'setMembers'
     | 'setLaunchTeam'
     | 'setSoloTeam'
-    | 'setRuntimeSelection'
     | 'setSyncModelsWithLead'
   >;
   templateSelection: UseCreateTeamTemplateSelectionResult;
@@ -58,6 +67,11 @@ export const CreateTeamTemplateSelectionField = ({
   promptDraft,
   promptChipDraft,
 }: Readonly<Props>): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  React.useEffect(() => {
+    if (!open) setPickerOpen(false);
+  }, [open]);
   const confirmBeforeApply = hasExistingCreateTeamDraftContent({
     form,
     description: descriptionDraft.value,
@@ -67,34 +81,54 @@ export const CreateTeamTemplateSelectionField = ({
   });
 
   return (
-    <CreateTeamTemplatePicker
-      confirmBeforeApply={confirmBeforeApply}
-      open={open}
-      disabled={disabled}
-      initialSelection={
-        isCopy && templateSelection.appliedTemplateSource === 'none'
-          ? ''
-          : templateSelection.storedTemplateSelection.value
-      }
-      initialSelectionReady={
-        form.isLoaded &&
-        templateSelection.templateSelectionDraft.isLoaded &&
-        descriptionDraft.isLoaded &&
-        promptDraft.isLoaded
-      }
-      onApply={(draft, source, value) =>
-        applyTemplateToCreateTeam(draft, source, value, {
-          templateSelection,
-          descriptionDraft,
-          promptDraft,
-          promptChipDraft,
-          setMembers: form.setMembers,
-          setLaunchTeam: form.setLaunchTeam,
-          setSoloTeam: form.setSoloTeam,
-          setRuntimeSelection: form.setRuntimeSelection,
-          setSyncModelsWithLead: form.setSyncModelsWithLead,
-        })
-      }
-    />
+    <Dialog open={open && pickerOpen} onOpenChange={setPickerOpen}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => setPickerOpen(true)}
+        data-testid="open-create-template-picker"
+      >
+        <Layers3 className="size-4" />
+        {t('customTemplates.bulk.chooseTemplate')}
+      </Button>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{t('customTemplates.bulk.chooseTemplate')}</DialogTitle>
+          <DialogDescription>
+            {t('customTemplates.createFromTemplate.description')}
+          </DialogDescription>
+        </DialogHeader>
+        <CreateTeamTemplatePicker
+          confirmBeforeApply={confirmBeforeApply}
+          open={open && pickerOpen}
+          disabled={disabled}
+          initialSelection={
+            isCopy && templateSelection.appliedTemplateSource === 'none'
+              ? ''
+              : templateSelection.storedTemplateSelection.value
+          }
+          initialSelectionReady={
+            form.isLoaded &&
+            templateSelection.templateSelectionDraft.isLoaded &&
+            descriptionDraft.isLoaded &&
+            promptDraft.isLoaded
+          }
+          onApply={(draft, source, value) => {
+            applyTemplateToCreateTeam(draft, source, value, {
+              templateSelection,
+              descriptionDraft,
+              promptDraft,
+              promptChipDraft,
+              setMembers: form.setMembers,
+              setLaunchTeam: form.setLaunchTeam,
+              setSoloTeam: form.setSoloTeam,
+              setSyncModelsWithLead: form.setSyncModelsWithLead,
+            });
+            setPickerOpen(false);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
   );
 };

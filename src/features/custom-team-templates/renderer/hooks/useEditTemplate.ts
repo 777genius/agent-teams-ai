@@ -25,6 +25,7 @@ export type EditTemplateStatus =
 export interface UseEditTemplateInput {
   open: boolean;
   template: CustomTeamTemplateV1 | null;
+  creating?: boolean;
   onSaved?: (updated: CustomTeamTemplateV1) => void;
 }
 
@@ -46,6 +47,7 @@ export interface UseEditTemplateResult {
   addMember: (member?: Partial<CustomTeamTemplateMemberV1>) => void;
   updateMember: (index: number, patch: Partial<CustomTeamTemplateMemberV1>) => void;
   removeMember: (index: number) => void;
+  replaceMembers: (members: readonly CustomTeamTemplateMemberV1[]) => void;
   save: () => Promise<boolean>;
   recheck: () => Promise<boolean>;
   reset: () => void;
@@ -109,6 +111,7 @@ function matchesPendingUpdate(stored: CustomTeamTemplateV1, pending: PendingUpda
 export function useEditTemplate({
   open,
   template,
+  creating = false,
   onSaved,
 }: UseEditTemplateInput): UseEditTemplateResult {
   const [name, setNameState] = useState(template?.name ?? '');
@@ -200,6 +203,11 @@ export function useEditTemplate({
     setIssues((prev) => prev.filter((i) => !i.field.startsWith('members')));
   }, []);
 
+  const replaceMembers = useCallback((next: readonly CustomTeamTemplateMemberV1[]) => {
+    setMembersState(next.map((member) => ({ ...member })));
+    setIssues((prev) => prev.filter((issue) => !issue.field.startsWith('members')));
+  }, []);
+
   const reset = useCallback(() => {
     if (!template) return;
     pendingUpdateRef.current = null;
@@ -263,6 +271,37 @@ export function useEditTemplate({
     setBusy(true);
     setStatus('saving');
     setIssues([]);
+
+    if (creating) {
+      try {
+        const result = await api.customTeamTemplates.importTemplate({
+          portable: {
+            format: 'agent-teams-custom-template',
+            schemaVersion: 1,
+            ...fields,
+          },
+        });
+        if (requestId !== requestIdRef.current) return false;
+        if (result.status === 'imported') {
+          pendingUpdateRef.current = null;
+          setStatus('saved');
+          onSaved?.(result.template);
+          return true;
+        }
+        if (result.status === 'validationFailed') {
+          setIssues(result.issues);
+          setStatus('idle');
+        } else if (result.status === 'nameConflict') setStatus('nameConflict');
+        else if (result.status === 'unresolvedWriteOutcome') setStatus('unresolvedWriteOutcome');
+        else setStatus('storageUnavailable');
+        return false;
+      } catch {
+        if (requestId === requestIdRef.current) setStatus('unresolvedWriteOutcome');
+        return false;
+      } finally {
+        if (requestId === requestIdRef.current) setBusy(false);
+      }
+    }
 
     let result: Awaited<ReturnType<typeof api.customTeamTemplates.updateTemplate>>;
     try {
@@ -340,7 +379,18 @@ export function useEditTemplate({
         return false;
       }
     }
-  }, [busy, description, expectedRevision, members, name, onSaved, status, teamPrompt, template]);
+  }, [
+    busy,
+    creating,
+    description,
+    expectedRevision,
+    members,
+    name,
+    onSaved,
+    status,
+    teamPrompt,
+    template,
+  ]);
 
   const recheck = useCallback(async (): Promise<boolean> => {
     const pending = pendingUpdateRef.current;
@@ -393,7 +443,7 @@ export function useEditTemplate({
 
   const canSave = !busy && name.trim().length > 0 && status !== 'unresolvedWriteOutcome';
   const canRecheck =
-    !busy && status === 'unresolvedWriteOutcome' && pendingUpdateRef.current !== null;
+    !creating && !busy && status === 'unresolvedWriteOutcome' && pendingUpdateRef.current !== null;
 
   return {
     name,
@@ -413,6 +463,7 @@ export function useEditTemplate({
     addMember,
     updateMember,
     removeMember,
+    replaceMembers,
     save,
     recheck,
     reset,

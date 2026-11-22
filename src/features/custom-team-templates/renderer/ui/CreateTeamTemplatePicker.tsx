@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
-import { TemplateApplyConfirmDialog } from '@features/team-templates/renderer';
+import { TEAM_TEMPLATE_ICONS, TemplateApplyConfirmDialog } from '@features/team-templates/renderer';
 import { Button } from '@renderer/components/ui/button';
-import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
 import {
@@ -149,7 +149,8 @@ export const CreateTeamTemplatePicker = ({
   };
 
   const handleSelect = (value: string): void => {
-    if (!open || !selectionReady || disabled || value === selection || pendingSelection !== null) return;
+    if (!open || !selectionReady || disabled || value === selection || pendingSelection !== null)
+      return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
       customs,
@@ -181,15 +182,6 @@ export const CreateTeamTemplatePicker = ({
           setPendingSelection(null);
         }}
       />
-      <div>
-        <p className="text-sm font-medium text-[var(--color-text)]">
-          {t('customTemplates.createFromTemplate.title')}
-        </p>
-        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-          {t('customTemplates.createFromTemplate.description')}
-        </p>
-      </div>
-
       {!selectionReady ? (
         <p
           role="status"
@@ -213,9 +205,6 @@ export const CreateTeamTemplatePicker = ({
         <span className="text-sm font-semibold text-[var(--color-text)]">
           {t('customTemplates.createFromTemplate.noneLabel')}
         </span>
-        <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
-          {t('customTemplates.createFromTemplate.noneHint')}
-        </span>
       </Button>
 
       <div className="space-y-1.5">
@@ -228,6 +217,7 @@ export const CreateTeamTemplatePicker = ({
               template.id as Parameters<typeof builtinTemplateSelectionValue>[0]
             );
             const active = selection === value;
+            const Icon = TEAM_TEMPLATE_ICONS[template.id];
             return (
               <Button
                 key={template.id}
@@ -241,10 +231,13 @@ export const CreateTeamTemplatePicker = ({
                 onClick={() => handleSelect(value)}
               >
                 <span className="flex items-start justify-between gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-text)]">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
+                    <Icon
+                      className="size-4 shrink-0 text-[var(--color-text-muted)]"
+                      aria-hidden="true"
+                    />
                     {t(`templates.names.${template.id}`)}
                   </span>
-                  <ShieldCheck className="size-4 shrink-0 text-sky-400" />
                 </span>
                 <span className="mt-1 line-clamp-2 block text-xs text-[var(--color-text-muted)]">
                   {t(`templates.descriptions.${template.id}`)}
@@ -415,7 +408,7 @@ export const CreateTeamTemplatePicker = ({
           </>
         ) : (
           <p className="text-[var(--color-text-muted)]">
-            {t('customTemplates.createFromTemplate.noneHint')}
+            {t('customTemplates.createFromTemplate.noneLabel')}
           </p>
         )}
       </div>
