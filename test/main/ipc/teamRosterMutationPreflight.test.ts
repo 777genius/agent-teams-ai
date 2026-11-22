@@ -53,11 +53,7 @@ describe('read-only roster mutation preflight', () => {
     const alice = { name: 'alice', providerId: 'opencode' as const, role: 'Old role' };
     const data = ports([{ name: 'team-lead', providerId: 'opencode' }, alice]);
     await preflightRosterMutation(data, 'ptc-a', 'role', 'alice', ' New role ');
-    expect(data.assertRosterMutationAllowed).toHaveBeenCalledWith(
-      'ptc-a',
-      [{ ...alice, role: 'New role' }],
-      true
-    );
+    expect(data.assertRosterMutationAllowed).not.toHaveBeenCalled();
     expect(alice.role).toBe('Old role');
   });
 

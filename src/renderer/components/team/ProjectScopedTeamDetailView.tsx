@@ -166,18 +166,21 @@ export const ProjectScopedTeamDetailView = ({
   const state = result?.key === key ? result.context?.state : undefined;
   useEffect(() => {
     let alive = true;
-    void refresh(() => alive);
-    // Poll only while native provisioning is pending or immediately after an
-    // explicit launch. A ready context requires no persistent background timer.
+    // Wait for each read before scheduling another, so slow responses are not
+    // perpetually superseded. Explicit refreshes still use the request-ID fence.
     const shouldPoll = isActive && (state === 'pending' || awaitingReadyKey === key);
-    const timer = shouldPoll
-      ? setInterval(() => {
-          void refresh(() => alive);
-        }, POLL_INTERVAL_MS)
-      : null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = async (): Promise<void> => {
+      await refresh(() => alive);
+      if (alive && shouldPoll)
+        timer = setTimeout(() => {
+          void poll();
+        }, POLL_INTERVAL_MS);
+    };
+    void poll();
     return () => {
       alive = false;
-      if (timer !== null) clearInterval(timer);
+      if (timer !== null) clearTimeout(timer);
     };
   }, [isActive, state, awaitingReadyKey, key, refresh]);
 

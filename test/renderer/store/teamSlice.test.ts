@@ -9157,7 +9157,7 @@ describe('teamSlice actions', () => {
         expect(store.getState().currentProvisioningRunIdByTeam['ptc-b']).toBe(other.runId);
 
         // Both possible transports of R1 are stale even if their event arrives last.
-        store.getState().onProvisioningProgress({ ...old, updatedAt: '2026-03-12T11:00:00.000Z' });
+        store.getState().onProvisioningProgress({ ...old, teamName: 'ptc-a', updatedAt: '2026-03-12T11:00:00.000Z' });
         store
           .getState()
           .onProvisioningProgress({

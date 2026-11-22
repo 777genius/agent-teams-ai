@@ -133,7 +133,8 @@ export async function preflightRosterMutation(
   )
     return;
   // The dedicated role setter only saves for the next launch; replacement is a live mutation.
-  if (operation !== 'role') assertLiveRosterMutationAllowed(previous, next);
+  if (operation === 'role') return;
+  assertLiveRosterMutationAllowed(previous, next);
   await data.assertRosterMutationAllowed(
     teamName,
     next.filter((member) => !isLeadRosterMutationMember(member)),

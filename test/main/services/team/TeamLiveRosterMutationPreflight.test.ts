@@ -5,7 +5,7 @@ import { preflightRosterMutation } from '../../../../src/main/ipc/teams/teamRost
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
 function mixedTeam(
-  members: { name: string; providerId?: 'codex' | 'opencode' }[] = [
+  members: { name: string; providerId?: 'codex' | 'opencode'; role?: string }[] = [
     { name: 'alice', providerId: 'opencode' },
   ]
 ) {
@@ -57,6 +57,26 @@ describe('live preflight uses confirmed runtime liveness', () => {
         providerId: 'opencode',
       })
     ).resolves.toBeUndefined();
+    expect(w.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('allows a deferred primary role edit but still refuses the same live replacement', async () => {
+    const members = [
+      { name: 'primary', providerId: 'codex' as const, role: 'Old role' },
+      { name: 'alice', providerId: 'opencode' as const },
+    ];
+    const w = mixedTeam(members);
+    vi.spyOn(w.service, 'getTeamData').mockResolvedValue({
+      members: [{ name: 'team-lead', providerId: 'codex' }, ...members],
+    } as never);
+    await expect(
+      preflightRosterMutation(w.service, 'preflight-test', 'role', 'primary', 'New role')
+    ).resolves.toBeUndefined();
+    await expect(
+      preflightRosterMutation(w.service, 'preflight-test', 'replace', {
+        members: [{ ...members[0], role: 'New role' }, members[1]],
+      })
+    ).rejects.toMatchObject({ code: 'RESTART_REQUIRED' });
     expect(w.writeMembers).not.toHaveBeenCalled();
   });
 

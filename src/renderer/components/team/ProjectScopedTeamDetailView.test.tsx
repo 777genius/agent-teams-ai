@@ -428,14 +428,31 @@ describe('ProjectScopedTeamDetailView project switching', () => {
 
   it('does not let an older incomplete response replace newer unknown ownership', async () => {
     vi.useFakeTimers();
-    const unknown = { mode: 'per_project', state: 'pending', reason: 'unknown', projectPath: '/TEST/a', runId: null };
+    const unknown = {
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'unknown',
+      projectPath: '/TEST/a',
+      runId: null,
+    };
     getView.mockResolvedValue(unknown);
-    await act(async () => root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     let resolveOlder!: (value: unknown) => void;
-    getView.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
-    await act(async () => { vi.advanceTimersByTime(2500); });
-    const refresh = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'actions.refresh');
+    getView.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveOlder = resolve;
+        })
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
+    const refresh = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'actions.refresh'
+    );
     await act(async () => refresh?.click());
     await settle();
     await act(async () => resolveOlder({ ...unknown, reason: 'incomplete' }));
@@ -444,11 +461,44 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.textContent).not.toContain('projectContextView.retryLaunch');
   });
 
+  it('reaches ready when each context read takes longer than the poll interval', async () => {
+    vi.useFakeTimers();
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'unknown',
+      projectPath: '/TEST/a',
+      runId: null,
+    });
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    getView.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(native('ptc-a', '/TEST/a')), 3000))
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5500);
+    });
+    await settle();
+    expect(host.querySelector('[data-testid="team-detail"]')?.getAttribute('data-team')).toBe(
+      'ptc-a'
+    );
+  });
+
   it('keeps another project active run out of a launching project banner', async () => {
-    getView.mockResolvedValue({ mode: 'per_project', state: 'pending', reason: 'launching', projectPath: '/TEST/a', runId: 'run-a' });
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'launching',
+      projectPath: '/TEST/a',
+      runId: 'run-a',
+    });
     state.currentProvisioningRunIdByTeam.builders = 'run-b';
     state.provisioningRuns['run-b'] = { runId: 'run-b', teamName: 'builders', state: 'spawning' };
-    await act(async () => root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
     expect(host.textContent).toContain('projectContextView.pending');
