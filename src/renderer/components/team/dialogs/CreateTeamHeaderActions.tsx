@@ -22,6 +22,7 @@ export const CreateTeamHeaderActions = ({
   defaultDescription,
   hasPromptChips,
   clearPromptChips,
+  onTemplateApplied,
   disabled,
 }: Props): React.JSX.Element => {
   return (
@@ -41,6 +42,7 @@ export const CreateTeamHeaderActions = ({
           defaultDescription={defaultDescription}
           hasPromptChips={hasPromptChips}
           clearPromptChips={clearPromptChips}
+          onTemplateApplied={onTemplateApplied}
           disabled={disabled}
         />
       </div>

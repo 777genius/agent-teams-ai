@@ -2,17 +2,6 @@ import { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@renderer/components/ui/alert-dialog';
-import { buttonVariants } from '@renderer/components/ui/button';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,11 +12,13 @@ import { useStore } from '@renderer/store';
 
 import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
 
+import { TemplateApplyConfirmDialog } from './TemplateApplyConfirmDialog';
 import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
-import type { TeamCreateConfigRequest } from '@shared/types';
-import type { TeamProviderId } from '@shared/types';
+import type { TeamTemplateV1 } from '../contracts';
+import type { TeamCreateConfigRequest, TeamProviderId } from '@shared/types';
 
+export { TemplateApplyConfirmDialog } from './TemplateApplyConfirmDialog';
 export { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 export const TeamTemplatePicker = ({
@@ -35,14 +26,16 @@ export const TeamTemplatePicker = ({
   confirmBeforeApply = false,
   disabled = false,
 }: {
-  onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
+  onApply: (
+    draft: ReturnType<typeof applyTeamTemplate>,
+    templateId: TeamTemplateV1['id']
+  ) => void;
   /** Ask before replacing non-default content in the owning form. */
   confirmBeforeApply?: boolean;
   /** Prevent replacement while persisted form fields are hydrating. */
   disabled?: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { t: tCommon } = useAppTranslation('common');
   const [pendingTemplate, setPendingTemplate] = useState<(typeof TEAM_TEMPLATES)[number] | null>(
     null
   );
@@ -58,7 +51,7 @@ export const TeamTemplatePicker = ({
           const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
           if (!template) return;
           if (!confirmBeforeApply) {
-            onApply(applyTeamTemplate(template));
+            onApply(applyTeamTemplate(template), template.id);
             return;
           }
           setPendingTemplate(template);
@@ -84,36 +77,16 @@ export const TeamTemplatePicker = ({
           })}
         </SelectContent>
       </Select>
-      <AlertDialog
+      <TemplateApplyConfirmDialog
         open={pendingTemplate !== null && !disabled}
-        onOpenChange={(next) => !next && setPendingTemplate(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t('templates.confirmTitle', { defaultValue: 'Apply team template?' })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('templates.confirmMessage', {
-                defaultValue:
-                  'This will replace your teammates, instructions and team settings with the template’s values.',
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: 'default' })}
-              onClick={() => {
-                if (pendingTemplate && !disabled) onApply(applyTeamTemplate(pendingTemplate));
-                setPendingTemplate(null);
-              }}
-            >
-              {t('templates.confirmAction', { defaultValue: 'Apply template' })}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onCancel={() => setPendingTemplate(null)}
+        onConfirm={() => {
+          if (pendingTemplate && !disabled) {
+            onApply(applyTeamTemplate(pendingTemplate), pendingTemplate.id);
+          }
+          setPendingTemplate(null);
+        }}
+      />
     </>
   );
 };

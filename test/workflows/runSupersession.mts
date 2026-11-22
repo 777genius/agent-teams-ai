@@ -26,6 +26,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'anthropic-env-portability',
     'codeql',
     'codex-runtime-smoke',
+    'custom-team-templates-desktop-e2e',
     'dependency-review',
     'electron-dev-profile-cross-platform',
     'kanban-table-desktop-e2e',

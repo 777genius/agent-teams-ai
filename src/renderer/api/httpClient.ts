@@ -5,6 +5,7 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
+import { createHttpCustomTeamTemplatesApi, type CustomTeamTemplatesApi } from '@features/custom-team-templates';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -227,8 +228,10 @@ function createBrowserRuntimeProviderError(
 function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
-
 export class HttpAPIClient implements ElectronAPI {
+  get customTeamTemplates(): CustomTeamTemplatesApi {
+    return createHttpCustomTeamTemplatesApi(this.baseUrl);
+  }
   reviewFlow: ReviewFlowElectronApi = {
     getOverview: async () => {
       throw new Error('Review flow settings are only available in the desktop app');
@@ -240,7 +243,6 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Review flow settings are only available in the desktop app');
     },
   };
-
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -270,7 +272,6 @@ export class HttpAPIClient implements ElectronAPI {
     dismiss: async () => ({ saved: false }),
     onStateChanged: () => () => {},
   };
-
   private unavailableAnnouncements(): AnnouncementsSnapshot {
     return {
       status: 'unavailable',
@@ -281,7 +282,6 @@ export class HttpAPIClient implements ElectronAPI {
       autoShowEnabled: false,
     };
   }
-
   private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures

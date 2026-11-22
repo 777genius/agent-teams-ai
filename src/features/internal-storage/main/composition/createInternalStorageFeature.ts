@@ -33,6 +33,7 @@ import { InternalStorageBackendSelector } from './InternalStorageBackendSelector
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
+import type { CustomTeamTemplateStorageGateway } from '@features/custom-team-templates/contracts';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
 
@@ -59,6 +60,10 @@ export interface InternalStorageApplicationCommandLedgerBackend {
   isDurable: () => Promise<boolean>;
 }
 
+export interface InternalStorageCustomTeamTemplatesBackend {
+  gateway: CustomTeamTemplateStorageGateway;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -74,6 +79,7 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable, so callers must leave durable commands off.
    */
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
+  customTeamTemplatesBackend: InternalStorageCustomTeamTemplatesBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
@@ -165,6 +171,7 @@ export function createInternalStorageFeature(
     applicationCommandLedgerBackend: workerAvailable
       ? { gateway: client, selector, isDurable: () => selector.select(true, false) }
       : null,
+    customTeamTemplatesBackend: workerAvailable ? { gateway: client } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),
