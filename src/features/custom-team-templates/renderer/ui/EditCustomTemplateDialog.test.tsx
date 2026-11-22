@@ -289,6 +289,57 @@ describe('EditCustomTemplateDialog', () => {
     );
   });
 
+  it('allows recovery from a definite HTTP 413 while creating a template', async () => {
+    importTemplate.mockRejectedValueOnce(new Error('HTTP 413 Payload Too Large'));
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft-413', name: '' }}
+          onClose={onClose}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', 'Reusable large template');
+    });
+    await act(async () => {
+      const save = [...host.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('customTemplates.actions.save')
+      );
+      save?.click();
+    });
+    expect(host.querySelector('[data-testid="edit-template-request-failed"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    const createButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('customTemplates.actions.save')
+    );
+    expect(createButton?.disabled).toBe(false);
+  });
+
+  it('supports entering the first newline in a new custom-role value', async () => {
+    await render({
+      ...template,
+      members: [{ name: 'alice', role: 'Custom specialist' }],
+    });
+    const editor = field('#member-0-role-custom');
+    expect(editor.tagName).toBe('TEXTAREA');
+    expect(editor.getAttribute('aria-label')).toBeTruthy();
+    await act(async () => {
+      setText('#member-0-role-custom', 'Custom specialist\\nNext responsibility');
+    });
+    await save();
+    expect(updateTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: expect.objectContaining({
+          members: [{ name: 'alice', role: 'Custom specialist\\nNext responsibility' }],
+        }),
+      })
+    );
+  });
+
   it('creates a new template using the same editor and portable validation', async () => {
     importTemplate.mockResolvedValueOnce({ status: 'imported', template });
     await act(async () => {

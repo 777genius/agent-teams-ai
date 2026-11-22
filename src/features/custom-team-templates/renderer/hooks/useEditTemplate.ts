@@ -61,6 +61,16 @@ interface PendingUpdate {
   fields: UpdateCustomTeamTemplateFields;
 }
 
+/** Fastify rejects oversized payloads before starting either write operation. */
+function isHttpPayloadTooLarge(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    String((error as { message: unknown }).message).includes('HTTP 413')
+  );
+}
+
 function normalizeDescription(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -295,8 +305,15 @@ export function useEditTemplate({
         else if (result.status === 'unresolvedWriteOutcome') setStatus('unresolvedWriteOutcome');
         else setStatus('storageUnavailable');
         return false;
-      } catch {
-        if (requestId === requestIdRef.current) setStatus('unresolvedWriteOutcome');
+      } catch (error) {
+        if (requestId === requestIdRef.current) {
+          if (isHttpPayloadTooLarge(error)) {
+            pendingUpdateRef.current = null;
+            setStatus('requestSizeValidationFailed');
+          } else {
+            setStatus('unresolvedWriteOutcome');
+          }
+        }
         return false;
       } finally {
         if (requestId === requestIdRef.current) setBusy(false);
@@ -316,12 +333,7 @@ export function useEditTemplate({
       // payloads before the route handler runs, so the mutation was never
       // dispatched. Treat it as a definitive, known failure rather than an
       // ambiguous unresolved write.
-      const isHttp413 =
-        typeof error === 'object' &&
-        error !== null &&
-        'message' in error &&
-        String((error as { message: string }).message).includes('HTTP 413');
-      if (isHttp413) {
+      if (isHttpPayloadTooLarge(error)) {
         setStatus('requestSizeValidationFailed');
         return false;
       }

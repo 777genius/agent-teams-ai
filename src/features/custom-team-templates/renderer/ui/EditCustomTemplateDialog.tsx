@@ -52,7 +52,7 @@ const TemplateRoleSelect = ({
       value={selection}
       disabled={disabled}
       customRole={selection === CUSTOM_ROLE ? role : ''}
-      multilineCustomRole={role.includes('\n') || role.includes('\r')}
+      multilineCustomRole
       onValueChange={(value) => {
         setCustom(value === CUSTOM_ROLE);
         onChange(value === CUSTOM_ROLE || value === NO_ROLE ? '' : value);

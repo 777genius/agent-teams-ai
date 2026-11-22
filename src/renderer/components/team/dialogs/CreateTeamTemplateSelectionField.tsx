@@ -69,6 +69,7 @@ export const CreateTeamTemplateSelectionField = ({
 }: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerTriggerRef = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
     if (!open) setPickerOpen(false);
   }, [open]);
@@ -83,6 +84,7 @@ export const CreateTeamTemplateSelectionField = ({
   return (
     <Dialog open={open && pickerOpen} onOpenChange={setPickerOpen}>
       <Button
+        ref={pickerTriggerRef}
         type="button"
         variant="outline"
         disabled={disabled}
@@ -92,7 +94,13 @@ export const CreateTeamTemplateSelectionField = ({
         <Layers3 className="size-4" />
         {t('customTemplates.bulk.chooseTemplate')}
       </Button>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] max-w-3xl overflow-y-auto"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          pickerTriggerRef.current?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{t('customTemplates.bulk.chooseTemplate')}</DialogTitle>
           <DialogDescription>

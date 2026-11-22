@@ -105,6 +105,11 @@ export const RoleSelect = ({
   );
   const [internalError, setInternalError] = useState<string | null>(null);
   const error = externalError ?? internalError;
+  const generatedId = React.useId();
+  const customRoleId = id ? `${id}-custom` : `custom-role-${generatedId}`;
+  const customRoleErrorId = `${customRoleId}-error`;
+  const customRoleDescribedBy =
+    [ariaDescribedBy, error ? customRoleErrorId : null].filter(Boolean).join(' ') || undefined;
 
   const handleValueChange = useCallback(
     (newValue: string) => {
@@ -173,6 +178,10 @@ export const RoleSelect = ({
         <div>
           {multilineCustomRole ? (
             <Textarea
+              id={customRoleId}
+              aria-label={t('members.roleSelect.customRolePlaceholder')}
+              aria-invalid={ariaInvalid || Boolean(error) || undefined}
+              aria-describedby={customRoleDescribedBy}
               className={inputClassName ?? 'text-xs'}
               value={customRole}
               onChange={handleCustomChange}
@@ -181,6 +190,10 @@ export const RoleSelect = ({
             />
           ) : (
             <Input
+              id={customRoleId}
+              aria-label={t('members.roleSelect.customRolePlaceholder')}
+              aria-invalid={ariaInvalid || Boolean(error) || undefined}
+              aria-describedby={customRoleDescribedBy}
               className={inputClassName ?? 'h-8 text-xs'}
               value={customRole}
               onChange={handleCustomChange}
@@ -189,7 +202,11 @@ export const RoleSelect = ({
               autoFocus
             />
           )}
-          {error ? <span className="mt-0.5 block text-[10px] text-red-400">{error}</span> : null}
+          {error ? (
+            <span id={customRoleErrorId} className="mt-0.5 block text-[10px] text-red-400">
+              {error}
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>
