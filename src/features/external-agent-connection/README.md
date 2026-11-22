@@ -25,7 +25,9 @@ Desktop MCP HTTP is enabled by default. `AGENT_TEAMS_MCP_HTTP=0` disables it;
 the older `CLAUDE_TEAM_OPENCODE_MCP_HTTP` name remains a fallback for existing
 configurations. When both have values, the new name takes precedence.
 
-CDP startup switches are set before Electron readiness. Discovery identifies the
+CDP renderer access is enabled by default and listens on loopback; local processes
+with access to the debugging endpoint can control the renderer. An explicitly
+saved disabled setting remains disabled. CDP startup switches are set before Electron readiness. Discovery identifies the
 main renderer through Electron's target ownership API, never window titles.
 Saved toggles require restart; disabling a preference cannot revoke an already
 open native listener.

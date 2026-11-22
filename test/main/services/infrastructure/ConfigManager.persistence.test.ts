@@ -16,6 +16,20 @@ describe('ConfigManager persistence barrier', () => {
     dir = null;
   });
 
+  it('enables renderer access by default while preserving an explicit opt-out', async () => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-cdp-default-'));
+    const file = path.join(dir, 'settings.json');
+    expect(new ConfigManager(file).getConfig().general.externalAgentCdpEnabled).toBe(true);
+    fs.writeFileSync(file, JSON.stringify({ general: { theme: 'dark' } }));
+    const missingSetting = new ConfigManager(file);
+    expect(missingSetting.getConfig().general.externalAgentCdpEnabled).toBe(true);
+    await missingSetting.waitForPersistence();
+    fs.writeFileSync(file, JSON.stringify({ general: { externalAgentCdpEnabled: false } }));
+    const disabled = new ConfigManager(file);
+    expect(disabled.getConfig().general.externalAgentCdpEnabled).toBe(false);
+    await disabled.waitForPersistence();
+  });
+
   it('serializes rapid updates and waits until the final snapshot is on disk', async () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-persistence-'));
     const file = path.join(dir, 'settings.json');

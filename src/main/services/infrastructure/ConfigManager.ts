@@ -401,7 +401,7 @@ const DEFAULT_CONFIG: AppConfig = {
     useNativeTitleBar: false,
     customProjectPaths: [],
     telemetryEnabled: true,
-    externalAgentCdpEnabled: false,
+    externalAgentCdpEnabled: true,
   },
   providerConnections: {
     anthropic: {
