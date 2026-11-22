@@ -9,8 +9,8 @@ import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '@features/memb
 import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
-import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
+import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import {
   applyOpenCodeBoundControlEnvironment,

@@ -1,9 +1,9 @@
 import { BoundControlContext } from '@features/external-agent-connection/main/BoundControlContext';
-import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
 import {
   configureDesktopMcpEnvironment,
   getDesktopMcpChildEnvironment,
 } from '@features/external-agent-connection/main/desktopMcpEnvironment';
+import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
 import {
   applyOpenCodeBoundControlEnvironment,
   buildOpenCodeAppProcessOwnershipMarkers,
