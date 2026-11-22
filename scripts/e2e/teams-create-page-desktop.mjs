@@ -1850,6 +1850,18 @@ async function main() {
         `${option} && !${option}.disabled`,
         'hydrated Software Product Team template tile'
       );
+      // The nested confirmation can still cover its parent picker after
+      // Cancel. A DOM-ready option is not necessarily a native click target.
+      await cdp.waitFor(
+        `(() => {
+          const button = ${option};
+          const rect = button?.getBoundingClientRect();
+          if (!rect || button.disabled || rect.width <= 0 || rect.height <= 0) return false;
+          const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          return hit === button || button.contains(hit);
+        })()`,
+        'unobstructed template tile after confirmation', 15_000
+      );
       await cdp.click(option);
       await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };
@@ -1876,6 +1888,8 @@ async function main() {
       `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
       ".find(button => button.textContent?.trim() === 'Cancel')"
     );
+    await cdp.waitFor(`!Boolean(${templateConfirmationExpression})`,
+      'template replacement confirmation dismissed after Cancel');
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
