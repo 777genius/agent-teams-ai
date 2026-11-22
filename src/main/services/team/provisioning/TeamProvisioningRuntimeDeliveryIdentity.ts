@@ -1,5 +1,6 @@
 import {
   createAppCrossTeamRecipientPorts,
+  createProjectLaunchProbe,
   resolveCrossTeamRecipient,
 } from '@features/team-project-context/main';
 
@@ -17,9 +18,17 @@ export interface RuntimeDeliveryIdentitySources {
 /** Which physical team receives a cross-team message (`resolveCrossTeamRecipient`). */
 export type CrossTeamTargetRoute = (route: CrossTeamRoute) => Promise<string>;
 
-/** The rule of the running app, the same one `CrossTeamService` applies. */
+/**
+ * The rule of the running app, the same one `CrossTeamService` applies. A pending copy reads as
+ * being launched only while a launch of it is in flight in this app.
+ */
 export const routeCrossTeamTargetInApp: CrossTeamTargetRoute = async (route) =>
-  (await resolveCrossTeamRecipient(createAppCrossTeamRecipientPorts(), route)).teamName;
+  (
+    await resolveCrossTeamRecipient(
+      createAppCrossTeamRecipientPorts(createProjectLaunchProbe()),
+      route
+    )
+  ).teamName;
 
 export async function readRuntimeDeliveryIdentitySources(
   teamNames: readonly string[],

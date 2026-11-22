@@ -1,12 +1,15 @@
 import {
+  createProjectBoardPorts,
   createTeamTargetPorts,
   projectTeamSummaries,
+  resolveProjectBoardTarget,
   resolveTeamTarget,
   TeamProjectContextRegistry,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import type {
+  ProjectBoardTarget,
   ResolvedTeamTarget,
   StopVerification,
   TeamModeMetaReader,
@@ -30,6 +33,15 @@ export interface ProjectContextHttp {
   resolve(teamName: string): Promise<ResolvedTeamTarget>;
   /** Folds project copies into their logical team, like the in-app team list. */
   projectTeams(teams: TeamSummary[]): Promise<TeamSummary[]>;
+  /**
+   * The team whose board the MCP board tools use for a team name and a project. `isLaunching`
+   * tells a launch in flight from one that failed.
+   */
+  boardTarget(
+    teamName: string,
+    projectPath: string | undefined,
+    isLaunching?: (teamName: string) => boolean
+  ): Promise<ProjectBoardTarget>;
 }
 
 export function createProjectContextHttp(hooks?: ProjectContextHttpHooks): ProjectContextHttp {
@@ -40,5 +52,10 @@ export function createProjectContextHttp(hooks?: ProjectContextHttpHooks): Proje
     registry,
     resolve: (teamName) => resolveTeamTarget(ports, teamName),
     projectTeams: (teams) => projectTeamSummaries(teams, meta, registry),
+    boardTarget: (teamName, projectPath, isLaunching) =>
+      resolveProjectBoardTarget(createProjectBoardPorts(meta, registry, isLaunching), {
+        teamName,
+        projectPath,
+      }),
   };
 }

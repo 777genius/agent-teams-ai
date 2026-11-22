@@ -10,8 +10,8 @@ import {
   resolveCrossTeamRecipient,
   TeamProjectContextRegistry,
 } from '../../../src/features/team-project-context/main';
-import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
+import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -103,6 +103,22 @@ describe('resolveCrossTeamRecipient', () => {
     await expect(
       resolveCrossTeamRecipient(w.ports, { fromTeam: 'partner', toTeam: w.copies.b })
     ).resolves.toEqual({ teamName: w.copies.b });
+  });
+
+  it('refuses an exact copy if its project mapping changes during lookup', async () => {
+    const w = await world();
+    const disappeared = { ...w.ports, inspectContext: async () => null };
+    await expect(resolveCrossTeamRecipient(disappeared, { fromTeam: 'partner', toTeam: w.copies.a }))
+      .rejects.toMatchObject({ code: 'UNRESOLVED' });
+    const replaced = {
+      ...w.ports,
+      inspectContext: async () => ({
+        id: 'other', projectKey: w.project('a'), projectPath: w.project('a'),
+        executionTeamName: w.copies.b, state: 'ready' as const,
+      }),
+    };
+    await expect(resolveCrossTeamRecipient(replaced, { fromTeam: 'partner', toTeam: w.copies.a }))
+      .rejects.toMatchObject({ code: 'UNRESOLVED' });
   });
 
   it('refuses an exact copy name of the sender team and of a copy still being launched', async () => {

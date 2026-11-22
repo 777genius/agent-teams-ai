@@ -1,3 +1,4 @@
+import { trackProjectCopyLaunch } from '@features/team-project-context/main';
 import {
   type CrossTeamRecipientMetadataReader,
   CrossTeamService,
@@ -236,6 +237,62 @@ describe('CrossTeamService', () => {
         await expect(routed('/work/alpha').resolveRecipient('team-a', 'team-b')).resolves.toEqual({
           teamName: 'team-b',
         });
+      });
+
+      // The wiring of "a launch runs": a tracked launch of the copy, or its live team, reads as
+      // pending; otherwise its launch failed and the sender is told to launch again. Both by the
+      // team's name and by the copy's exact name.
+      it('tells a pending copy that is being launched from one whose launch failed', async () => {
+        const gamma = {
+          id: 'gamma',
+          projectKey: '/work/gamma',
+          projectPath: '/work/gamma',
+          executionTeamName: 'ptc-gamma',
+          state: 'reserved' as const,
+        };
+        configReader.getConfig.mockImplementation((teamName: string) =>
+          Promise.resolve(
+            teamName === 'team-a' ? makeConfig({ name: 'team-a', projectPath: '/work/gamma' }) : makeConfig()
+          )
+        );
+        const service = new CrossTeamService(
+          configReader as unknown as TeamConfigReader,
+          dataService as unknown as TeamDataService,
+          inboxWriter as unknown as TeamInboxWriter,
+          provisioning as unknown as TeamProvisioningService,
+          recipientMetadataReader,
+          {
+            findCopyOwners: (names) =>
+              Promise.resolve(
+                new Map(
+                  names.map((name) => [
+                    name,
+                    { alias: name === 'ptc-gamma' ? { logicalTeamName: 'builders', context: gamma } : null },
+                  ])
+                )
+              ),
+            getMode: (teamName) =>
+              Promise.resolve(teamName === 'builders' ? 'per_project' : 'shared'),
+            inspectContext: () => Promise.resolve(gamma),
+          }
+        );
+        const codes = () =>
+          Promise.all(
+            ['builders', 'ptc-gamma'].map((toTeam) =>
+              service.resolveRecipient('team-a', toTeam).then(
+                () => 'delivered',
+                (error: { code?: string }) => error.code
+              )
+            )
+          );
+        const failed = ['PROJECT_LAUNCH_INCOMPLETE', 'PROJECT_LAUNCH_INCOMPLETE'];
+        const pending = ['PROJECT_LAUNCH_PENDING', 'PROJECT_LAUNCH_PENDING'];
+        expect(await codes()).toEqual(failed);
+        const launch = trackProjectCopyLaunch('ptc-gamma');
+        expect(await codes()).toEqual(pending);
+        launch.end();
+        provisioning.isTeamAlive.mockImplementation((teamName: string) => teamName === 'ptc-gamma');
+        expect(await codes()).toEqual(pending);
       });
     });
 

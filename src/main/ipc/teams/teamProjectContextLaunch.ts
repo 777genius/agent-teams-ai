@@ -4,6 +4,7 @@ import {
   recordLaunchSettings,
   rememberProjectRunIdentity,
   TeamProjectContextLaunchConflictError,
+  trackProjectCopyLaunch,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
@@ -16,8 +17,14 @@ import type {
   DefinitionLaunchSettingsStore,
   ProjectContextLaunchPorts,
   ProjectContextProgressMapper,
+  ProjectCopyLaunch,
 } from '@features/team-project-context/main';
-import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
+import type {
+  IpcResult,
+  TeamLaunchRequest,
+  TeamLaunchResponse,
+  TeamProvisioningProgress,
+} from '@shared/types';
 
 const logger = createLogger('IPC:teams:projectLaunch');
 
@@ -33,6 +40,8 @@ export interface PreparedTeamContextLaunch {
    * what the definition says and never records).
    */
   recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
+  /** The launch of a pending copy, tracked from its reservation; the launch use case ends it. */
+  launch?: ProjectCopyLaunch;
 }
 
 /**
@@ -60,7 +69,11 @@ export async function prepareTeamContextLaunch(
 
   const address = { logicalTeamName: request.teamName, projectPath: request.cwd };
   const reserved = await parts.resolver.reserveForProvisioning(address);
-  if (!reserved.workContextId || !reserved.projectPath) throw new Error('Missing project context identity');
+  if (!reserved.workContextId || !reserved.projectPath)
+    throw new Error('Missing project context identity');
+  // A pending copy counts as being launched from here, before its run exists.
+  const launch =
+    reserved.state === 'reserved' ? trackProjectCopyLaunch(reserved.executionTeamName) : undefined;
   const canonicalAddress = {
     logicalTeamName: address.logicalTeamName,
     projectPath: reserved.projectPath,
@@ -78,14 +91,18 @@ export async function prepareTeamContextLaunch(
       );
     }
     await parts.gate.assertOtherContextsStopped(
-      address.logicalTeamName, reserved.executionTeamName
+      address.logicalTeamName,
+      reserved.executionTeamName
     );
     const physical = await parts.materializer.ensureProjectDraft(canonicalAddress);
     if (physical.executionTeamName !== reserved.executionTeamName) {
-      throw new TeamProjectContextLaunchConflictError('Project context changed during launch admission');
+      throw new TeamProjectContextLaunchConflictError(
+        'Project context changed during launch admission'
+      );
     }
     return {
       request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },
+      launch,
       recordLaunch: (response) =>
         recordAcceptedLaunch(parts.launchSettings, request, physical.executionTeamName, response),
       mapProgress: (progress, deliver) => {
@@ -94,7 +111,8 @@ export async function prepareTeamContextLaunch(
           deliver(logicalProgress);
           return;
         }
-        void parts.resolver.confirmProvisionedContext(canonicalAddress, physical.executionTeamName)
+        void parts.resolver
+          .confirmProvisionedContext(canonicalAddress, physical.executionTeamName)
           .then(() => deliver(logicalProgress))
           .catch((error: unknown) => {
             deliver({
@@ -107,11 +125,16 @@ export async function prepareTeamContextLaunch(
       },
     };
   } catch (error) {
+    launch?.end();
     // Only an empty, unmaterialized reservation may be forgotten. Retain any
     // physical state for explicit reconciliation after crash or partial launch.
-    await parts.registry.releaseUnusedReservation(
-      address.logicalTeamName, reserved.executionTeamName, reserved.workContextId
-    ).catch(() => false);
+    await parts.registry
+      .releaseUnusedReservation(
+        address.logicalTeamName,
+        reserved.executionTeamName,
+        reserved.workContextId
+      )
+      .catch(() => false);
     throw error;
   }
 }
@@ -137,6 +160,8 @@ export function projectContextLaunchPorts(
   return {
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     prepare: (request) => prepareTeamContextLaunch(request, ports, { parts }),
+    isProvisioningLaunchActive: (teamName) =>
+      ports.run.isProvisioningLaunchActive?.(teamName) ?? ports.run.hasProvisioningRun(teamName),
     rememberRunIdentity: rememberProjectRunIdentity,
   };
 }
@@ -145,8 +170,10 @@ export function projectContextLaunchPorts(
 export function withPreparedContextLaunch(
   request: TeamLaunchRequest,
   ports: ProjectTeamRuntimePorts,
-  invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) =>
-    Promise<IpcResult<TeamLaunchResponse>>
+  invoke: (
+    request: TeamLaunchRequest,
+    mapper?: ProjectContextProgressMapper
+  ) => Promise<IpcResult<TeamLaunchResponse>>
 ): Promise<IpcResult<TeamLaunchResponse> | null> {
   return launchInProjectContext(request, projectContextLaunchPorts(ports), {
     invoke,
