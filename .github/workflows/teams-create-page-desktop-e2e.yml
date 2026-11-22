@@ -17,6 +17,8 @@ on:
       - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'src/renderer/components/team/**'
+      # Task-board presentation has its own Linux/native Kanban E2E.
+      - '!src/renderer/components/team/kanban/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
       - 'src/features/gateway-provider/renderer/**'
@@ -38,6 +40,8 @@ on:
       - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'src/renderer/components/team/**'
+      # Task-board presentation has its own Linux/native Kanban E2E.
+      - '!src/renderer/components/team/kanban/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
       - 'src/features/gateway-provider/renderer/**'

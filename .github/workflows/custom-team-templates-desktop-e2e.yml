@@ -9,6 +9,8 @@ on:
       - 'src/features/internal-storage/**'
       - 'src/main/startCustomTeamTemplatesFeature.ts'
       - 'src/renderer/components/team/**'
+      # Task-board presentation has its own Linux/native Kanban E2E.
+      - '!src/renderer/components/team/kanban/**'
       - 'scripts/e2e/custom-template-import-export-desktop.ts'
       - 'package.json'
   workflow_dispatch:
@@ -22,6 +24,7 @@ concurrency:
 
 jobs:
   desktop:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     name: Real Electron template import/export/create
     runs-on: ubuntu-latest
     timeout-minutes: 55
