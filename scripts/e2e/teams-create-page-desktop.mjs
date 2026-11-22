@@ -665,6 +665,44 @@ async function expandCreateAdvancedCli(client, toggle, inputSelector) {
   await client.waitFor(`Boolean(${input})`, 'Advanced CLI input expanded');
 }
 
+/**
+ * Reopen a remounted Create Team page using real CDP clicks. The draft picker
+ * can finish hydrating before the optional section settles; a click made
+ * during that remount can be lost. Re-check the actual expanded control instead
+ * of treating a dispatched click as proof that the section opened.
+ */
+async function restoreCreateAdvancedCliAfterRemount(client, optionalToggle, advancedToggle, inputSelector) {
+  const expanded = `(${optionalToggle})?.getAttribute('aria-expanded') === 'true'`;
+  const input = `document.querySelector(${JSON.stringify(inputSelector)})`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await client.evaluate(`${expanded} && Boolean(${input})`)) return;
+    try {
+      await client.waitFor(
+        "document.querySelector('[data-testid=create-team-page] #launch-team')?.getAttribute('data-state') === 'checked'",
+        'run-after-create option retained on remount', 5_000
+      );
+      if (!(await client.evaluate(expanded))) await client.click(optionalToggle);
+      await client.waitFor(
+        `${expanded} && Boolean(${advancedToggle})`,
+        'real optional launch settings expanded after remount', 5_000
+      );
+      await expandCreateAdvancedCli(client, advancedToggle, inputSelector);
+      await client.waitFor(`${expanded} && Boolean(${input})`,
+        'real Advanced CLI input visible after remount', 5_000);
+      return;
+    } catch (error) {
+      if (attempt !== 2) continue;
+      const state = await client.evaluate(`(() => ({
+        optionalExpanded: ${expanded},
+        launchChecked: document.querySelector('[data-testid=create-team-page] #launch-team')?.getAttribute('data-state'),
+        advancedTogglePresent: Boolean(${advancedToggle}),
+        inputPresent: Boolean(${input}),
+      }))()`);
+      throw new Error(`Cannot reopen remounted Advanced CLI controls: ${JSON.stringify(state)}`, { cause: error });
+    }
+  }
+}
+
 async function setBrowserWindowZoom(inspector, factor) {
   return inspector.evaluate(
     "(() => {" +
@@ -1281,11 +1319,10 @@ async function main() {
     const optionalSettingsButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.includes('Optional launch settings')
         && button.getBoundingClientRect().width > 0)`;
-    await cdp.click(optionalSettingsButton);
     const createAdvancedToggle = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.trim() === 'Advanced' && !button.disabled
         && button.getBoundingClientRect().width > 0)`;
-    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     try {
       await cdp.waitFor(
         `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
@@ -1336,11 +1373,7 @@ async function main() {
     // Resume hydrates the form and text drafts independently of restoring its name.
     // Do not open the optional controls while they may still remount.
     await waitForCreateTemplateHydration(cdp, 'resumed creation form and text drafts hydrated');
-    const optionalExpandedAfterResume = await cdp.evaluate(
-      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
-    );
-    if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
-    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     try {
       await cdp.waitFor(
         `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
@@ -1574,12 +1607,7 @@ async function main() {
     // A pane split can remount CreateTeamDialog: verify session-only CLI edits survive.
     const inputStillMounted = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
     if (!inputStillMounted) {
-      const optionalButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
-        .find(button => button.textContent?.includes('Optional launch settings')
-          && button.getBoundingClientRect().width > 0)`;
-      const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
-      if (!expanded) await cdp.click(optionalButton);
-      await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+      await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     }
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
@@ -1652,11 +1680,7 @@ async function main() {
     // Verify the documented debug override survives actual renderer -> IPC ->
     // persisted metadata. The fixture never launches tmux or a paid provider.
     await waitForCreateTemplateHydration(cdp, 'hydrated form before native teammate-mode override');
-    const overrideSettingsExpanded = await cdp.evaluate(
-      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
-    );
-    if (!overrideSettingsExpanded) await cdp.click(optionalSettingsButton);
-    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     const allowedTeammateArgs = '--max-turns 5 --teammate-mode tmux';
     await cdp.fill(customArgsSelector, allowedTeammateArgs);
     await cdp.waitFor(
