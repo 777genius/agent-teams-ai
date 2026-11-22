@@ -19,7 +19,7 @@ import {
 const roots: string[] = [];
 
 async function fixture(mode?: 'shared' | 'per_project') {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'team-context-view-'));
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'team-context-view-')));
   roots.push(root);
   setClaudeBasePathOverride(path.join(root, 'claude'));
   setAppDataBasePath(path.join(root, 'app'));
@@ -210,6 +210,42 @@ describe('project context view IPC (read-only)', () => {
     f.runtime.getRuntimeState.mockRejectedValue(new Error('Cannot establish process ownership'));
     expect(await f.resolve(f.projectB)).toMatchObject({ data: { reason: 'unknown' } });
     expect(await registry.inspect('builders', f.projectB)).toEqual(reserved);
+  });
+
+  it('reports the verified current run while a project launch is still tracked', async () => {
+    const f = await fixture('per_project');
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const reserved = await registry.reserve('builders', f.projectA);
+    const tracked = trackProjectCopyLaunch(reserved.executionTeamName);
+    try {
+      f.runtime.getRuntimeState.mockResolvedValue({
+        teamName: reserved.executionTeamName,
+        isAlive: true,
+        runId: 'current-launch',
+        progress: {
+          teamName: reserved.executionTeamName,
+          runId: 'current-launch',
+          state: 'spawning',
+          message: 'Joining',
+          startedAt: '2026-11-22',
+          updatedAt: '2026-11-22',
+        },
+      });
+      await expect(f.resolve(f.projectA)).resolves.toMatchObject({
+        data: { reason: 'launching', runId: 'current-launch' },
+      });
+      f.runtime.getRuntimeState.mockResolvedValue({
+        teamName: 'unrelated',
+        isAlive: true,
+        runId: 'other-run',
+        progress: null,
+      });
+      await expect(f.resolve(f.projectA)).resolves.toMatchObject({
+        data: { reason: 'unknown', runId: null },
+      });
+    } finally {
+      tracked.end();
+    }
   });
 
   it('names the pending project for edit recovery without opening or modifying its history', async () => {

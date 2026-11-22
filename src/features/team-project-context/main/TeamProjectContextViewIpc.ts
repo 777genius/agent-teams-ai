@@ -27,8 +27,9 @@ async function pendingContext(
     projectPath,
     runId: null,
   };
-  if (isProjectCopyLaunching(executionTeamName)) return { ...view, reason: 'launching' };
-  if (!runtime) return { ...view, reason: 'unknown' };
+  // Tracking proves work is ongoing; only a validated runtime snapshot identifies its run.
+  if (!runtime)
+    return { ...view, reason: isProjectCopyLaunching(executionTeamName) ? 'launching' : 'unknown' };
   try {
     const state = await runtime.getRuntimeState(executionTeamName);
     if (
@@ -45,7 +46,7 @@ async function pendingContext(
     const stopped = !runtime.hasProvisioningRun(executionTeamName) && isStoppedTeamRuntime(state);
     return { ...view, runId, reason: stopped ? 'incomplete' : 'unknown' };
   } catch {
-    return { ...view, reason: 'unknown' };
+    return { ...view, reason: isProjectCopyLaunching(executionTeamName) ? 'launching' : 'unknown' };
   }
 }
 
