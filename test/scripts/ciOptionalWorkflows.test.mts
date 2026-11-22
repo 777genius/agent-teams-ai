@@ -217,3 +217,59 @@ test('heavy team-history and template E2E defer Draft but run on Ready/main/manu
   assert.match(workflow('project-scoped-team-history-desktop-e2e'), /  push:\n    branches: \[main\]/);
   assert.match(workflow('project-scoped-team-history-desktop-e2e'), /os: \[ubuntu-latest, windows-latest, macos-latest\]/);
 });
+
+
+test('packaged policy selection and result gate free native Linux runner capacity', () => {
+  const source = workflow('electron-packaged-ci');
+  const job = (name: string): string => {
+    const start = source.indexOf('\n  ' + name + ':\n');
+    assert.ok(start >= 0, name + ': missing job');
+    const after = source.slice(start + name.length + 5);
+    const end = after.search(/\n  [a-z][\w-]*:\n/);
+    return end < 0 ? after : after.slice(0, end);
+  };
+  const scope = job('packaged-scope');
+  const smoke = job('packaged-smoke');
+  const gate = job('packaged-full-gate');
+  assert.match(scope, /^    runs-on: ubuntu-latest$/m);
+  assert.match(gate, /^    runs-on: ubuntu-latest$/m);
+  assert.doesNotMatch(scope + gate, /vars\.CI_LINUX_RUNNER/);
+  assert.match(scope, /node --test scripts\/ci\/packaged-ci-policy\.test\.mts/);
+  assert.match(scope, /node scripts\/ci\/packaged-ci-cli\.mts classify/);
+  assert.match(smoke, /^    runs-on: \$\{\{ matrix\.runner \}\}$/m);
+  assert.match(smoke, /needs: packaged-scope/);
+  assert.match(gate, /needs: \[packaged-scope, packaged-smoke\]/);
+  assert.match(gate, /node scripts\/ci\/packaged-ci-cli\.mts gate/);
+  for (const platform of ['darwin-arm64', 'darwin-x64', 'win32-x64', 'win32-arm64', 'linux-x64']) {
+    assert.match(smoke, new RegExp('^          - platform: ' + platform + '$', 'm'));
+  }
+  assert.match(source, /ready_for_review/);
+});
+
+test('updater contract-only PR jobs do not reserve native Linux E2E runners', () => {
+  for (const [name, job] of [
+    ['updater-windows', 'tooling-quality'],
+    ['updater-windows-ota', 'tooling-quality'],
+    ['updater-linux-packages', 'linux-package-tooling-quality'],
+  ] as const) {
+    const source = workflow(name);
+    const anchor = '\n  ' + job + ':\n';
+    const start = source.indexOf(anchor);
+    assert.ok(start >= 0, name + ': missing original PR contract check');
+    const after = source.slice(start + anchor.length);
+    const next = after.search(/\n  [a-z][\w-]*:\n/);
+    const body = next < 0 ? after : after.slice(0, next);
+    assert.match(body, /^    if: github\.event_name == 'pull_request'$/m);
+    assert.match(body, /^    runs-on: ubuntu-latest$/m);
+    assert.doesNotMatch(body, /vars\.CI_LINUX_RUNNER/);
+    assert.match(body, /pnpm typecheck/);
+    assert.match(body, /pnpm lint:ci:files/);
+    assert.match(source, /workflow_dispatch:/);
+    assert.doesNotMatch(body, /continue-on-error:\s*true/);
+  }
+  for (const name of ['updater-windows', 'updater-windows-ota']) {
+    assert.match(workflow(name), /  windows-predecessor:/);
+  }
+  assert.match(workflow('updater-windows-ota'), /  windows-ota:/);
+  assert.match(workflow('updater-linux-packages'), /  native:/);
+});
