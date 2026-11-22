@@ -94,6 +94,7 @@ function setOverview(
     defaultsError: null,
     overrides,
     unreadableTeams: [],
+    projectTeams: {},
     ...fns,
     ...extra,
   };

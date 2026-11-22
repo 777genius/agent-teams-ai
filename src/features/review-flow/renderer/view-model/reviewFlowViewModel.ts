@@ -63,25 +63,28 @@ export function scopeFromValue(value: string): ReviewFlowScope {
 }
 
 /**
- * The boards a review flow can be set for. The setting lives with a board: a
- * team with separate history per project has no board of its own, each of its
- * projects has one (its project copy), so it is listed once per project as
- * "Team · project" and has no entry before its first launch in a project. An
- * ordinary team is its own board; copies it retained from an earlier period
- * keep their boards and are named the same way.
+ * The teams a review flow can be set for. A team with separate history per
+ * project has one setting for the team (see `foldProjectTeamBoards`), so it is
+ * listed once and its project copies are not (`projectCopies`, from the main
+ * process, also covers a copy whose first launch never finished, which the team
+ * list still shows as a row of its own). An ordinary team is its own board;
+ * copies it retained from an earlier period keep boards of their own and are
+ * named after the team and the project.
  */
 export function reviewFlowBoardsOf(
   teams: readonly BoardCatalogTeam[],
-  copyLabel: (executionTeamName: string) => string | null
+  copyLabel: (executionTeamName: string) => string | null,
+  projectCopies: ReadonlySet<string>
 ): TeamIdentity[] {
   return teams.flatMap((team): TeamIdentity[] => {
+    if (projectCopies.has(team.teamName)) return [];
+    const own = { teamName: team.teamName, displayName: team.displayName };
+    if (team.projectContextMode === 'per_project') return [own];
     const copies = (team.projectHistoryContexts ?? []).map((context) => ({
       teamName: context.executionTeamName,
       displayName: copyLabel(context.executionTeamName) ?? context.executionTeamName,
     }));
-    return team.projectContextMode === 'per_project'
-      ? copies
-      : [{ teamName: team.teamName, displayName: team.displayName }, ...copies];
+    return [own, ...copies];
   });
 }
 

@@ -22,6 +22,11 @@ type TeamMetaField = Exclude<keyof TeamMetaFile, 'version'>;
  *   a copy is first created from the whole definition once.
  * - `project`: one project copy only, never stated by a launch request: cwd
  *   names the project, launchIdentity belongs to one run.
+ * - `board-definition`: the team itself, but what agents read is the task
+ *   board of their project copy, so the review-flow feature copies it into the
+ *   board of every copy when it is saved (running ones too, as an ordinary
+ *   team's board is written while it runs) and into a copy when it is launched.
+ *   It is never written into the metadata of a copy.
  * - `lifecycle`: identity and state of the definition itself.
  */
 export const TEAM_META_FIELD_OWNER = {
@@ -41,13 +46,19 @@ export const TEAM_META_FIELD_OWNER = {
   extraCliArgs: 'project-launch',
   cwd: 'project',
   launchIdentity: 'project',
+  reviewFlowSettings: 'board-definition',
   projectContextMode: 'lifecycle',
   runtimeSelectionVersion: 'lifecycle',
   deletedAt: 'lifecycle',
   createdAt: 'lifecycle',
 } as const satisfies Record<
   TeamMetaField,
-  'launch-definition' | 'display-definition' | 'project-launch' | 'project' | 'lifecycle'
+  | 'launch-definition'
+  | 'display-definition'
+  | 'project-launch'
+  | 'project'
+  | 'board-definition'
+  | 'lifecycle'
 >;
 
 type KeysOwnedBy<Owner extends string> = {
