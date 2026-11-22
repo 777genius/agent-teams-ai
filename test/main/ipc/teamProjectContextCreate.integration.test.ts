@@ -186,6 +186,10 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     await createTeamWithProjectContext({
       teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
     }, f.onProgress, f.ports);
+    // The native ready event is delivered only after the asynchronous context confirmation.
+    await vi.waitFor(() => expect(f.onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'builders', state: 'ready' })
+    ));
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     const alias = await vi.waitFor(async () => {
       const row = await registry.find('builders', f.projectPath);
@@ -276,6 +280,10 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     await createTeamWithProjectContext({
       teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
     }, f.onProgress, f.ports);
+    // The native ready event is delivered only after the asynchronous context confirmation.
+    await vi.waitFor(() => expect(f.onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'builders', state: 'ready' })
+    ));
     const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
     const meta = JSON.parse(await fs.readFile(metaPath, 'utf8')) as Record<string, unknown>;
     await fs.writeFile(metaPath, JSON.stringify({
@@ -492,6 +500,10 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     await createTeamWithProjectContext({
       teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
     }, f.onProgress, f.ports);
+    // The native ready event is delivered only after the asynchronous context confirmation.
+    await vi.waitFor(() => expect(f.onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'builders', state: 'ready' })
+    ));
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     const a = await vi.waitFor(async () => {
       const row = await registry.find('builders', f.projectPath);
