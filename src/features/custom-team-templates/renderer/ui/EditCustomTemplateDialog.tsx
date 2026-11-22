@@ -350,7 +350,7 @@ export const EditCustomTemplateDialog = ({
                     ? t('customTemplates.bulk.createUnresolved')
                     : t('customTemplates.states.unresolvedMutationBody')}
                 </p>
-                {!creating && (
+                {(!creating || canRecheck) && (
                   <div className="pt-1">
                     <Button
                       type="button"

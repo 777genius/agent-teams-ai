@@ -91,6 +91,20 @@ function membersMatch(
   });
 }
 
+/** A creation can only be confirmed by its server-issued identity and exact content. */
+function matchesPendingCreate(
+  stored: CustomTeamTemplateV1,
+  fields: UpdateCustomTeamTemplateFields
+): boolean {
+  return (
+    resolveTemplateRevision(stored) === 1 &&
+    stored.name === fields.name.normalize('NFC').trim() &&
+    (stored.description ?? null) === normalizeDescription(fields.description) &&
+    stored.teamPrompt === fields.teamPrompt.trim() &&
+    membersMatch(stored.members, fields.members)
+  );
+}
+
 /**
  * Confirms that a stored row is the committed result of one dispatched update.
  *
@@ -142,6 +156,9 @@ export function useEditTemplate({
   const requestIdRef = useRef(0);
   const lastTemplateIdRef = useRef<string | null>(null);
   const pendingUpdateRef = useRef<PendingUpdate | null>(null);
+  // Only typed server responses expose the new id. An unknown transport failure
+  // has no trustworthy id and must not be misreported as a confirmed create.
+  const pendingCreateIdRef = useRef<string | null>(null);
 
   // Initialize draft when opened or when template selection changes
   useEffect(() => {
@@ -149,6 +166,7 @@ export function useEditTemplate({
       if (!open) {
         requestIdRef.current += 1;
         pendingUpdateRef.current = null;
+        pendingCreateIdRef.current = null;
         setBusy(false);
         setStatus('idle');
         setIssues([]);
@@ -162,6 +180,7 @@ export function useEditTemplate({
       lastTemplateIdRef.current = template.templateId;
       requestIdRef.current += 1;
       pendingUpdateRef.current = null;
+      pendingCreateIdRef.current = null;
       setNameState(template.name);
       setDescriptionState(template.description ?? '');
       setTeamPromptState(template.teamPrompt);
@@ -221,6 +240,7 @@ export function useEditTemplate({
   const reset = useCallback(() => {
     if (!template) return;
     pendingUpdateRef.current = null;
+    pendingCreateIdRef.current = null;
     setNameState(template.name);
     setDescriptionState(template.description ?? '');
     setTeamPromptState(template.teamPrompt);
@@ -278,6 +298,7 @@ export function useEditTemplate({
 
     const requestId = ++requestIdRef.current;
     pendingUpdateRef.current = pending;
+    pendingCreateIdRef.current = null;
     setBusy(true);
     setStatus('saving');
     setIssues([]);
@@ -302,7 +323,10 @@ export function useEditTemplate({
           setIssues(result.issues);
           setStatus('idle');
         } else if (result.status === 'nameConflict') setStatus('nameConflict');
-        else if (result.status === 'unresolvedWriteOutcome') setStatus('unresolvedWriteOutcome');
+        else if (result.status === 'unresolvedWriteOutcome') {
+          pendingCreateIdRef.current = result.templateId || null;
+          setStatus('unresolvedWriteOutcome');
+        }
         else setStatus('storageUnavailable');
         return false;
       } catch (error) {
@@ -407,6 +431,10 @@ export function useEditTemplate({
   const recheck = useCallback(async (): Promise<boolean> => {
     const pending = pendingUpdateRef.current;
     if (busy || !template || status !== 'unresolvedWriteOutcome' || !pending) return false;
+    const createId = pendingCreateIdRef.current;
+    // A network failure does not reveal the server-generated identity. Matching
+    // by name alone would risk claiming another concurrent creation as ours.
+    if (creating && !createId) return false;
 
     const requestId = ++requestIdRef.current;
     setBusy(true);
@@ -418,11 +446,20 @@ export function useEditTemplate({
       if (requestId !== requestIdRef.current) return false;
       if (result.status === 'ready' || result.status === 'hasUnreadableRecords') {
         const candidate = result.templates.find(
-          (entry) => entry.templateId === template.templateId
+          (entry) => entry.templateId === (creating ? createId : template.templateId)
         );
-        if (candidate && matchesPendingUpdate(candidate, pending)) {
+        if (
+          candidate &&
+          (creating
+            ? matchesPendingCreate(candidate, pending.fields)
+            : matchesPendingUpdate(candidate, pending))
+        ) {
           stored = candidate;
-        } else if (candidate && resolveTemplateRevision(candidate) > pending.expectedRevision) {
+        } else if (
+          !creating &&
+          candidate &&
+          resolveTemplateRevision(candidate) > pending.expectedRevision
+        ) {
           // The old expected revision can no longer be written. Preserve the
           // user's draft and offer the regular explicit conflict choices.
           advancedRecord = candidate;
@@ -447,15 +484,19 @@ export function useEditTemplate({
     if (!stored) return false;
 
     pendingUpdateRef.current = null;
+    pendingCreateIdRef.current = null;
     setStatus('saved');
     setExpectedRevision(resolveTemplateRevision(stored));
     onSaved?.(stored);
     return true;
-  }, [busy, onSaved, status, template]);
+  }, [busy, creating, onSaved, status, template]);
 
   const canSave = !busy && name.trim().length > 0 && status !== 'unresolvedWriteOutcome';
   const canRecheck =
-    !creating && !busy && status === 'unresolvedWriteOutcome' && pendingUpdateRef.current !== null;
+    !busy &&
+    status === 'unresolvedWriteOutcome' &&
+    pendingUpdateRef.current !== null &&
+    (!creating || pendingCreateIdRef.current !== null);
 
   return {
     name,

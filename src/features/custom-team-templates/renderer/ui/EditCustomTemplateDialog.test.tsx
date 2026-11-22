@@ -289,6 +289,81 @@ describe('EditCustomTemplateDialog', () => {
     );
   });
 
+  it('rechecks a server-identified unresolved create without dispatching it twice', async () => {
+    const draftName = 'New stored template';
+    const stored: CustomTeamTemplateV1 = {
+      ...template,
+      templateId: 'server-created-123',
+      name: draftName,
+      revision: 1,
+    };
+    importTemplate.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: stored.templateId,
+    });
+    listTemplates.mockResolvedValueOnce({ status: 'ready', templates: [stored] });
+
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft-create', name: '' }}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', draftName);
+    });
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .find((button) => button.textContent?.includes('customTemplates.actions.save'))
+        ?.click();
+    });
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+    expect(onSaved).not.toHaveBeenCalled();
+    await recheck();
+    expect(listTemplates).toHaveBeenCalledTimes(1);
+    expect(importTemplate).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledWith(stored);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an unknown create pending when the stored record does not match', async () => {
+    importTemplate.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'server-created-123',
+    });
+    listTemplates.mockResolvedValueOnce({
+      status: 'ready',
+      templates: [{ ...template, templateId: 'server-created-123', revision: 1 }],
+    });
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft-create', name: '' }}
+          onClose={onClose}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', 'Different payload');
+    });
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .find((button) => button.textContent?.includes('customTemplates.actions.save'))
+        ?.click();
+    });
+    await recheck();
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(importTemplate).toHaveBeenCalledTimes(1);
+  });
+
   it('allows recovery from a definite HTTP 413 while creating a template', async () => {
     importTemplate.mockRejectedValueOnce(new Error('HTTP 413 Payload Too Large'));
     await act(async () => {
