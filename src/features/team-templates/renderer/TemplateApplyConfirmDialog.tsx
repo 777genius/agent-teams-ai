@@ -18,7 +18,11 @@ interface Props {
 }
 
 /** Shared confirmation for both Create Team template entry points. */
-export function TemplateApplyConfirmDialog({ open, onCancel, onConfirm }: Props): React.JSX.Element {
+export function TemplateApplyConfirmDialog({
+  open,
+  onCancel,
+  onConfirm,
+}: Readonly<Props>): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
 
@@ -38,10 +42,7 @@ export function TemplateApplyConfirmDialog({ open, onCancel, onConfirm }: Props)
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
-          <AlertDialogAction
-            className={buttonVariants({ variant: 'default' })}
-            onClick={onConfirm}
-          >
+          <AlertDialogAction className={buttonVariants({ variant: 'default' })} onClick={onConfirm}>
             {t('templates.confirmAction', { defaultValue: 'Apply template' })}
           </AlertDialogAction>
         </AlertDialogFooter>

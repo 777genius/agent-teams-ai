@@ -48,7 +48,7 @@ interface Props {
  * Template application remains in its shared helper; this boundary only binds
  * state/handlers and preserves the Copy Team hydration fence.
  */
-export function CreateTeamTemplateSelectionField({
+export const CreateTeamTemplateSelectionField = ({
   open,
   disabled = false,
   isCopy,
@@ -57,7 +57,7 @@ export function CreateTeamTemplateSelectionField({
   descriptionDraft,
   promptDraft,
   promptChipDraft,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element => {
   const confirmBeforeApply = hasExistingCreateTeamDraftContent({
     form,
     description: descriptionDraft.value,
@@ -97,4 +97,4 @@ export function CreateTeamTemplateSelectionField({
       }
     />
   );
-}
+};
