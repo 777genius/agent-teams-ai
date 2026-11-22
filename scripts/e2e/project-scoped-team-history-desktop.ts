@@ -753,13 +753,11 @@ interface MembersFile { members: { name: string; isolation?: string; role?: stri
 /**
  * Member settings of a per-project team are edited in its definition, through the real member
  * settings dialog of the project screen and the same router as the roster: saved in the logical
- * team, projected onto every stopped project copy, refused for a copy, for the lead (its runtime is
- * a launch setting of the team), for a settings-originated relaunch and while a project is not
- * stopped. The review flow is a setting of a board: each project copy has its own, the logical
- * team (no board) is refused with a reason, and the settings page names a copy after its team and
- * project. Nothing here reaches the runtime.
+ * team (the lead's model and effort into the team launch settings), projected onto every stopped
+ * project copy, refused for a copy, for a settings-originated relaunch and while a project is not
+ * stopped. Nothing here reaches the runtime.
  */
-async function verifyMemberSettingsAndReviewFlow(f: Fixture) {
+async function verifyMemberSettings(f: Fixture) {
   assert(cdp);
   const logicalDir = path.join(f.rootTeams, f.logical);
   const membersOf = (team: string) => path.join(f.rootTeams, team, 'members.meta.json');
@@ -977,35 +975,127 @@ async function verifyMemberSettingsAndReviewFlow(f: Fixture) {
   const resetGuard = await guardedWrite(afterGuard, null);
   assert(resetGuard.ok && resetGuard.value?.effect === 'persisted_only', 'Guarded member reset: ' + JSON.stringify(resetGuard));
 
-  // 3. Review flow: one setting per board (project copy); the logical team has none.
-  const human = { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E board override' };
-  const logicalFlow = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
-    JSON.stringify(f.logical) + ', ' + JSON.stringify(human) + ')');
-  assert(!logicalFlow.ok && /separate history per project/.test(logicalFlow.error ?? ''),
-    'A review flow for the logical team must be refused with the reason: ' + JSON.stringify(logicalFlow));
-  const boardFlow = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
-    JSON.stringify(f.nativeA) + ', ' + JSON.stringify(human) + ')');
-  assert(boardFlow.ok, 'The board of project A must take a review flow: ' + JSON.stringify(boardFlow));
-  try {
+  assert.equal(await history(), historyBefore, 'Member settings mutated project tasks or inboxes');
+  assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'The durable context mapping changed');
+}
+
+/**
+ * The review flow of a per-project team is one setting of the team: saved with the team and written
+ * into the board of every project copy (agents read the board of their own project). Before the team
+ * saves one, each project keeps what it had and the app says that they differ; one save from the
+ * board popover of a project applies one setting to all of them. A copy cannot be set on its own.
+ * Nothing here reaches the runtime.
+ */
+async function verifyTeamReviewFlow(f: Fixture) {
+  assert(cdp);
+  const metaPath = path.join(f.rootTeams, f.logical, 'team.meta.json');
+  const boardPath = (team: string) => path.join(f.rootTeams, team, 'kanban-state.json');
+  const boardFlow = async (team: string) => {
+    const board = await readJsonFile(boardPath(team));
+    return { reviewFlow: board.reviewFlow, reviewFlowPrompt: board.reviewFlowPrompt };
+  };
+  const setFlow = (team: string, settings: unknown) => ipcOutcome(
+    'window.electronAPI.reviewFlow.setTeamOverride(' + JSON.stringify(team) + ', ' + JSON.stringify(settings) + ')');
+  const tasks = async () => JSON.stringify(await Promise.all([f.nativeA, f.nativeB].map((alias) =>
+    readJsonFile(path.join(f.claudeRoot, 'tasks', alias, '1.json')))));
+  const tasksBefore = await tasks();
+  const indexBefore = await readFile(f.indexPath, 'utf8');
+
+  // 1. Before this change each project had its own: project A chose human approval, B the default.
+  const boardA = await readJsonFile(boardPath(f.nativeA))
+    .catch(() => ({ teamName: f.nativeA, reviewers: [], tasks: {} }));
+  await json(boardPath(f.nativeA), { ...boardA, reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E project A' });
+  assert(!('reviewFlowSettings' in await readJsonFile(metaPath)), 'The fixture team starts without a team review flow');
+  type ProjectTeamFlow = { saved: boolean; settings: unknown; projects: { executionTeamName: string }[] };
+  const teamFlowOf = async () => {
     const overview = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
-    const overrides = (overview.value?.overrides ?? {}) as Record<string, unknown>;
-    assert.deepEqual(Object.keys(overrides).filter((name) => [f.logical, f.nativeA, f.nativeB].includes(name)),
-      [f.nativeA], 'Only the board of project A may carry the override: ' + JSON.stringify(overview));
-    await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openSettingsTab("reviewFlow"))()');
-    const copyLabel = 'History fixture edited · project-a';
-    await waitFor('document.body.innerText.includes(' + JSON.stringify(copyLabel) + ')',
-      'the settings page names the override of project A after its team and project');
-    const settingsText = await cdp.evaluate('document.body.innerText') as string;
-    assert(!settingsText.includes(f.nativeA) && !settingsText.includes(f.nativeB),
-      'The review flow settings page shows an internal project copy name');
-    await cdp.screenshot(path.join(f.screenshots, 'review-flow-per-project.png'));
-  } finally {
-    const reset = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
-      JSON.stringify(f.nativeA) + ', null)');
-    assert(reset.ok, 'Resetting the board override failed: ' + JSON.stringify(reset));
+    assert(overview.ok, 'The review flow overview must load: ' + JSON.stringify(overview));
+    return (overview.value?.projectTeams as Record<string, ProjectTeamFlow> | undefined)?.[f.logical];
+  };
+  const before = await teamFlowOf();
+  assert(before && !before.saved, 'A team that never saved has no team setting: ' + JSON.stringify(before));
+  assert.deepEqual(before.projects.map((project) => project.executionTeamName).sort(),
+    [f.nativeA, f.nativeB].sort(), 'The overview names both project copies of the team');
+
+  // The board popover of project A shows the team's one setting, and that its projects differ.
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for the review flow');
+  const popoverButton = '(() => Array.from(document.querySelectorAll(' +
+    JSON.stringify('[data-team-name="' + f.nativeA + '"] [data-testid="kanban-approved-settings"]') + '))' +
+    '.find((b) => b.getClientRects().length > 0))()';
+  await waitFor('Boolean(' + popoverButton + ')', 'the review flow action of the board of project A');
+  await cdp.evaluate('(() => { ' + popoverButton + '.click(); return true; })()');
+  const unsynced = '[data-testid="kanban-review-flow-projects-unsynced"]';
+  await waitFor('Boolean(document.querySelector(' + JSON.stringify(unsynced) + '))', 'the popover says the projects differ');
+  const panelText = await cdp.evaluate(
+    'document.querySelector("[data-testid=kanban-review-flow-panel]").innerText') as string;
+  // Everything a project has is shown, its instructions included, so a save never replaces them unseen.
+  for (const line of ['project-a: I give final approval', 'Instructions: "E2E project A"', 'project-b: the default']) {
+    assert(panelText.includes(line), 'The popover must name what each project has (' + line + '): ' + panelText);
+  }
+  assert(!panelText.includes('ptc-'), 'The popover shows a project copy name: ' + panelText);
+  await cdp.screenshot(path.join(f.screenshots, 'review-flow-projects-differ.png'));
+  assert.deepEqual(await boardFlow(f.nativeA), { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E project A' },
+    'Showing the team must not change a project board');
+  assert(!('reviewFlowSettings' in await readJsonFile(metaPath)), 'Showing the team must not save a team setting');
+
+  // 2. Taking over what project A has and one save make it the team's: it reaches project B and
+  // nothing project A had is lost.
+  const projectA = { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E project A' };
+  // Save disabled until explicit choice: one click must not put the default on every project.
+  const saveDisabled = 'document.querySelector("[data-testid=kanban-review-flow-save]").disabled';
+  assert.equal(await cdp.evaluate(saveDisabled), true, 'Save must wait for an explicit choice');
+  await cdp.evaluate('(() => { const item = Array.from(document.querySelectorAll(' +
+    '"[data-testid=kanban-review-flow-panel] li")).find((li) => li.textContent.includes("project-a:"));' +
+    ' item.querySelector("[data-testid=kanban-review-flow-use-project]").click(); return true; })()');
+  await waitFor('!' + saveDisabled, 'Save available after the settings of project A were taken over');
+  await cdp.evaluate('(() => { document.querySelector("[data-testid=kanban-review-flow-save]").click(); return true; })()');
+  await waitForJson(metaPath, (meta) => JSON.stringify(meta.reviewFlowSettings) === JSON.stringify(projectA),
+    'the settings of project A are saved for the team');
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await waitForJson(boardPath(alias), (board) => board.reviewFlow === projectA.reviewFlow &&
+      board.reviewFlowPrompt === projectA.reviewFlowPrompt, 'the board of ' + alias + ' carries them');
   }
 
-  assert.equal(await history(), historyBefore, 'Member or review settings mutated project tasks or inboxes');
+  // 3. A setting of the team is saved once and written into the board of every project.
+  const human = { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E team review flow' };
+  const saved = await setFlow(f.logical, human);
+  assert(saved.ok, 'The review flow of the team must be saved: ' + JSON.stringify(saved));
+  assert.deepEqual((await readJsonFile(metaPath)).reviewFlowSettings, human);
+  for (const alias of [f.nativeA, f.nativeB]) {
+    assert.deepEqual(await boardFlow(alias), human, 'The board of ' + alias + ' carries the team setting');
+  }
+  const after = await teamFlowOf();
+  assert(after?.saved, 'The overview shows the saved team setting: ' + JSON.stringify(after));
+  assert.deepEqual(after.settings, human);
+
+  // 4. A project copy has no setting of its own.
+  const copyWrite = await setFlow(f.nativeB, null);
+  assert(!copyWrite.ok && /project copy/.test(copyWrite.error ?? ''),
+    'A review flow for a project copy must be refused: ' + JSON.stringify(copyWrite));
+  assert.deepEqual(await boardFlow(f.nativeB), human, 'A refused copy write changed its board');
+
+  // 5. The settings page lists the team once, by its name, and never a project copy.
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openSettingsTab("reviewFlow"))()');
+  // Read the settings page itself: the team name is also on the team screen behind it.
+  const settingsPage = 'document.querySelector("[data-testid=review-flow-settings-page]")';
+  await waitFor('(' + settingsPage + '?.innerText ?? "").includes("History fixture edited")',
+    'the settings page lists the per-project team with its setting');
+  const settingsText = await cdp.evaluate(settingsPage + '.innerText') as string;
+  assert(!settingsText.includes(f.nativeA) && !settingsText.includes(f.nativeB) &&
+    !settingsText.includes('· project-'), 'The settings page lists a project copy');
+  await cdp.screenshot(path.join(f.screenshots, 'review-flow-team-setting.png'));
+
+  // Back to the default for the sections after this one.
+  const reset = await setFlow(f.logical, null);
+  assert(reset.ok, 'Resetting the team review flow failed: ' + JSON.stringify(reset));
+  for (const alias of [f.nativeA, f.nativeB]) {
+    assert.deepEqual(await boardFlow(alias), { reviewFlow: undefined, reviewFlowPrompt: undefined },
+      'The board of ' + alias + ' follows the default again');
+  }
+  assert.equal(await tasks(), tasksBefore, 'The review flow mutated project tasks');
   assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'The durable context mapping changed');
 }
 
@@ -1245,6 +1335,11 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   assert.equal(created.body?.projectContextMode, 'per_project');
   assert.equal((await readJsonFile(path.join(teamDir, 'team.meta.json'))).projectContextMode, 'per_project');
   await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' });
+  // A review flow saved before the team ever ran: no board exists yet, the team keeps it.
+  const teamFlow = { reviewFlow: 'lead_then_human', reviewFlowPrompt: 'E2E new copy' };
+  const flowSaved = await ipcOutcome('window.electronAPI.reviewFlow.setTeamOverride(' +
+    JSON.stringify(team) + ', ' + JSON.stringify(teamFlow) + ')');
+  assert(flowSaved.ok, 'The review flow of a team that never ran must be saved: ' + JSON.stringify(flowSaved));
 
   // 2. Launch it in a project it never ran in: one copy, made from the definition, in that folder.
   const launched = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectC });
@@ -1259,6 +1354,17 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   assert.match(copy.executionTeamName, /^ptc-[a-f0-9]{24}$/);
   const copyMeta = await readJsonFile(path.join(f.rootTeams, copy.executionTeamName, 'team.meta.json'));
   assert.equal(copyMeta.projectContextMode, 'shared', 'A copy is an ordinary team');
+  assert(!('reviewFlowSettings' in copyMeta), 'The review flow of the team must not enter the copy metadata');
+  const copyBoard = await waitForJson(path.join(f.rootTeams, copy.executionTeamName, 'kanban-state.json'),
+    (board) => board.reviewFlow === 'lead_then_human', 'the new project copy takes the review flow of its team');
+  assert.equal(copyBoard.reviewFlowPrompt, 'E2E new copy');
+  // Even before its first run is ready, the copy is reported as a project of the team (never its own entry).
+  const flowOverview = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
+  const httpTeamFlow = (flowOverview.value?.projectTeams as Record<string, {
+    projects: { executionTeamName: string }[];
+  }> | undefined)?.[team];
+  assert(httpTeamFlow?.projects.some((project) => project.executionTeamName === copy.executionTeamName),
+    'The review flow overview must fold the new copy into its team: ' + JSON.stringify(httpTeamFlow));
   assert.equal(projectKey(String(copyMeta.cwd)), projectKey(f.projectC));
   await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' },
     'The team itself must never become a runnable team');
@@ -1757,7 +1863,8 @@ async function run() {
     await verifyUi(f);
     await verifyAliasRedirect(f);
     await verifyDefinitionEdit(f);
-    await verifyMemberSettingsAndReviewFlow(f);
+    await verifyMemberSettings(f);
+    await verifyTeamReviewFlow(f);
     await verifyCrossTeam(f);
     const readAudit = async () => (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
@@ -1822,7 +1929,7 @@ async function run() {
         args.slice(0, 2).map((token) => /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / member settings and review flow of a per-project team / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team / MCP board tools of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / member settings of a per-project team / one review flow of a per-project team, its project boards and a new copy / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team / MCP board tools of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
       httpLaunch, mcpBoard,

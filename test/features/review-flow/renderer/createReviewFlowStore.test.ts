@@ -11,15 +11,29 @@ import type {
 const human: ReviewFlowSettings = { reviewFlow: 'human_approval', reviewFlowPrompt: '' };
 const agent: ReviewFlowSettings = { reviewFlow: 'agent_approval', reviewFlowPrompt: '' };
 
-function createApi(overrides: Partial<ReviewFlowElectronApi> = {}): ReviewFlowElectronApi {
+/** Main as the store sees it: what a save writes is what the next read returns. */
+function createApi(
+  overrides: Partial<ReviewFlowElectronApi> = {},
+  saved: ReviewFlowOverview = {
+    defaults: agent,
+    overrides: { alpha: human },
+    unreadableTeams: [],
+    projectTeams: {},
+  }
+): ReviewFlowElectronApi {
   return {
-    getOverview: vi.fn(() =>
-      Promise.resolve({ defaults: agent, overrides: { alpha: human }, unreadableTeams: [] })
-    ),
-    setDefaults: vi.fn((settings: ReviewFlowSettings) => Promise.resolve(settings)),
-    setTeamOverride: vi.fn((_team: string, settings: ReviewFlowSettings | null) =>
-      Promise.resolve(settings)
-    ),
+    getOverview: vi.fn(() => Promise.resolve(structuredClone(saved))),
+    setDefaults: vi.fn((settings: ReviewFlowSettings) => {
+      saved.defaults = settings;
+      delete saved.defaultsError;
+      return Promise.resolve(settings);
+    }),
+    setTeamOverride: vi.fn((team: string, settings: ReviewFlowSettings | null) => {
+      if (settings) saved.overrides[team] = settings;
+      else delete saved.overrides[team];
+      saved.unreadableTeams = saved.unreadableTeams.filter((name) => name !== team);
+      return Promise.resolve(settings);
+    }),
     ...overrides,
   };
 }
@@ -42,7 +56,7 @@ describe('review flow store', () => {
     const getOverview = vi
       .fn<ReviewFlowElectronApi['getOverview']>()
       .mockRejectedValueOnce(new Error('disk unreadable'))
-      .mockResolvedValue({ defaults: human, overrides: {}, unreadableTeams: [] });
+      .mockResolvedValue({ defaults: human, overrides: {}, unreadableTeams: [], projectTeams: {} });
     const store = createReviewFlowStore({ getApi: () => createApi({ getOverview }) });
     await store.getState().load();
     expect(store.getState()).toMatchObject({ status: 'error', error: 'disk unreadable' });
@@ -53,7 +67,12 @@ describe('review flow store', () => {
   it('keeps showing good data when a background refresh fails', async () => {
     const getOverview = vi
       .fn<ReviewFlowElectronApi['getOverview']>()
-      .mockResolvedValueOnce({ defaults: human, overrides: {}, unreadableTeams: [] })
+      .mockResolvedValueOnce({
+        defaults: human,
+        overrides: {},
+        unreadableTeams: [],
+        projectTeams: {},
+      })
       .mockRejectedValueOnce(new Error('boom'));
     const store = createReviewFlowStore({ getApi: () => createApi({ getOverview }) });
     await store.getState().load();
@@ -63,7 +82,8 @@ describe('review flow store', () => {
 
   it('applies saved team overrides and removals, and tells the app which team changed', async () => {
     const onTeamOverrideChanged = vi.fn();
-    const store = createReviewFlowStore({ getApi: () => createApi(), onTeamOverrideChanged });
+    const api = createApi();
+    const store = createReviewFlowStore({ getApi: () => api, onTeamOverrideChanged });
     await store.getState().load();
 
     await store.getState().saveTeamOverride('beta', human);
@@ -73,7 +93,35 @@ describe('review flow store', () => {
     expect(onTeamOverrideChanged.mock.calls).toEqual([['beta'], ['alpha']]);
   });
 
-  it('leaves state untouched and rethrows when a save is rejected', async () => {
+  it('keeps a successful project-team save visible when the refresh fails', async () => {
+    const projects = [{ executionTeamName: 'ptc-a', projectPath: '/a' }];
+    const getOverview = vi.fn<ReviewFlowElectronApi['getOverview']>()
+      .mockResolvedValueOnce({ defaults: agent, overrides: {}, unreadableTeams: ['ptc-a'],
+        projectTeams: { builders: { saved: true, settings: null, projects } } })
+      .mockRejectedValue(new Error('unavailable'));
+    const api = createApi({ getOverview, setTeamOverride: vi.fn(async () => human) });
+    const store = createReviewFlowStore({ getApi: () => api });
+    await store.getState().load();
+    await store.getState().saveTeamOverride('builders', human);
+    expect(store.getState()).toMatchObject({ overrides: { builders: human, 'ptc-a': human },
+      unreadableTeams: [], projectTeams: { builders: { saved: true, settings: human, projects } } });
+  });
+
+  it('keeps a project-listing error when a successful save cannot refresh the missing list', async () => {
+    const getOverview = vi.fn<ReviewFlowElectronApi['getOverview']>()
+      .mockResolvedValueOnce({ defaults: agent, overrides: {}, unreadableTeams: [],
+        projectTeams: { builders: { saved: false, settings: null, projects: [], projectsError: 'unreadable index' } } })
+      .mockRejectedValue(new Error('refresh failed'));
+    const api = createApi({ getOverview, setTeamOverride: vi.fn(async () => human) });
+    const store = createReviewFlowStore({ getApi: () => api });
+    await store.getState().load();
+    await store.getState().saveTeamOverride('builders', human);
+    expect(store.getState().projectTeams.builders).toMatchObject({
+      saved: true, settings: human, projects: [], projectsError: 'unreadable index',
+    });
+  });
+
+  it('re-reads main and rethrows when a save is rejected', async () => {
     const api = createApi({
       setTeamOverride: vi.fn(() => Promise.reject(new Error('write failed'))),
     });
@@ -83,7 +131,46 @@ describe('review flow store', () => {
 
     await expect(store.getState().saveTeamOverride('beta', human)).rejects.toThrow('write failed');
     expect(store.getState().overrides).toEqual({ alpha: human });
+    expect(api.getOverview).toHaveBeenCalledTimes(2);
     expect(onTeamOverrideChanged).not.toHaveBeenCalled();
+  });
+
+  it('shows what a per-project team saved even when some of its project boards failed', async () => {
+    const projects = [
+      { executionTeamName: 'ptc-a', projectPath: '/projects/a' },
+      { executionTeamName: 'ptc-b', projectPath: '/projects/b' },
+    ];
+    const main: ReviewFlowOverview = {
+      defaults: agent,
+      overrides: { 'ptc-a': agent, 'ptc-b': agent },
+      unreadableTeams: [],
+      projectTeams: { builders: { saved: false, settings: null, projects } },
+    };
+    const api = createApi(
+      {
+        // The team and one board are written, the other board is not.
+        setTeamOverride: vi.fn(async (team: string, settings: ReviewFlowSettings | null) => {
+          main.projectTeams[team] = {
+            saved: true,
+            settings,
+            projects: main.projectTeams[team].projects,
+          };
+          main.overrides['ptc-a'] = human;
+          throw new Error('not applied in /projects/b');
+        }),
+      },
+      main
+    );
+    const store = createReviewFlowStore({ getApi: () => api });
+    await store.getState().load();
+
+    await expect(store.getState().saveTeamOverride('builders', human)).rejects.toThrow(
+      'not applied in /projects/b'
+    );
+    expect(store.getState()).toMatchObject({
+      projectTeams: { builders: { saved: true, settings: human, projects } },
+      overrides: { 'ptc-a': human, 'ptc-b': agent },
+    });
   });
 
   it('stores the normalized defaults returned by the main process', async () => {
@@ -108,14 +195,14 @@ describe('review flow store', () => {
       .fn<ReviewFlowElectronApi['getOverview']>()
       .mockReturnValueOnce(stale)
       // The retry reads the disk after the save, so it already holds the saved value.
-      .mockResolvedValue({ defaults: human, overrides: {}, unreadableTeams: [] });
+      .mockResolvedValue({ defaults: human, overrides: {}, unreadableTeams: [], projectTeams: {} });
     const api = createApi({ getOverview });
     const store = createReviewFlowStore({ getApi: () => api });
 
     const loading = store.getState().load();
     await store.getState().saveDefaults(human);
     // The old read, taken before the save, finally resolves with the previous default.
-    releaseStale({ defaults: agent, overrides: {}, unreadableTeams: [] });
+    releaseStale({ defaults: agent, overrides: {}, unreadableTeams: [], projectTeams: {} });
     await loading;
 
     expect(getOverview).toHaveBeenCalledTimes(2);
@@ -130,7 +217,7 @@ describe('review flow store', () => {
           getOverview: vi.fn(async () => {
             calls += 1;
             await store.getState().saveDefaults(human);
-            return { defaults: agent, overrides: {}, unreadableTeams: [] };
+            return { defaults: agent, overrides: {}, unreadableTeams: [], projectTeams: {} };
           }),
         }),
     });
@@ -140,13 +227,17 @@ describe('review flow store', () => {
   });
 
   it('exposes broken saved state and clears it once repaired', async () => {
-    const getOverview = vi.fn<ReviewFlowElectronApi['getOverview']>().mockResolvedValue({
-      defaults: agent,
-      defaultsError: 'defaults file is corrupt',
-      overrides: {},
-      unreadableTeams: ['alpha', 'beta'],
-    });
-    const store = createReviewFlowStore({ getApi: () => createApi({ getOverview }) });
+    const api = createApi(
+      {},
+      {
+        defaults: agent,
+        defaultsError: 'defaults file is corrupt',
+        overrides: {},
+        unreadableTeams: ['alpha', 'beta'],
+        projectTeams: {},
+      }
+    );
+    const store = createReviewFlowStore({ getApi: () => api });
     await store.getState().load();
     expect(store.getState()).toMatchObject({
       defaultsError: 'defaults file is corrupt',

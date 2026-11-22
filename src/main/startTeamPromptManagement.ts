@@ -23,6 +23,7 @@ export type TeamPromptManagementData = Pick<
   | 'createTeamConfig'
   | 'updateConfig'
   | 'replaceMembers'
+  | 'setReviewFlowSettings'
   | 'deleteTeam'
 >;
 export interface TeamPromptManagementLifecycle {

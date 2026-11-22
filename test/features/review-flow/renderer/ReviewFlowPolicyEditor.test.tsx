@@ -33,6 +33,7 @@ vi.mock('@renderer/components/ui/switch', () => ({
   ),
 }));
 
+import { REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED } from '../../../../src/features/review-flow/contracts/errors';
 import { ReviewFlowPolicyEditor } from '../../../../src/features/review-flow/renderer/ui/ReviewFlowPolicyEditor';
 
 import type {
@@ -198,6 +199,112 @@ describe('ReviewFlowPolicyEditor', () => {
     expect(q<HTMLButtonElement>('save')!.disabled).toBe(false);
     await act(async () => q<HTMLButtonElement>('save')!.click());
     expect(onSave).toHaveBeenCalledWith(null);
+  });
+
+  it('a per-project team whose projects differ: shows what each has, instructions included, and keeps a chosen one', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    render({
+      policy: following(agent),
+      projects: {
+        saved: false,
+        unsynced: [
+          { projectLabel: 'app-one', setting: human },
+          { projectLabel: 'app-two', setting: null },
+        ],
+        saveSuggested: false,
+      },
+      onSave,
+    });
+    expect(q('source')!.textContent).toBe('reviewFlow.badges.differ');
+    const notice = q('projects-unsynced')!.textContent;
+    expect(notice).toContain('reviewFlow.projects.differ');
+    expect(notice).toContain('"project":"app-one","flow":"reviewFlow.flows.human_approval.label"');
+    // The instructions of a project are shown, so a save never replaces them unseen.
+    expect(notice).toContain('reviewFlow.projects.prompt{"prompt":"Run e2e."}');
+    const prompt = [...host.querySelectorAll('p')].find((item) => item.textContent?.includes('Run e2e.'));
+    expect(prompt?.classList.contains('truncate')).toBe(false);
+    expect(prompt?.hasAttribute('title')).toBe(false);
+    expect(notice).toContain('"project":"app-two","flow":"reviewFlow.projects.followsDefault"');
+    // Nothing is kept by default: one click must not put the default on every project.
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(true);
+
+    // Taking over the settings of app-one saves them, instructions included, for the whole team.
+    const [useAppOne] = host.querySelectorAll<HTMLButtonElement>(
+      `[data-testid="${P}-use-project"]`
+    );
+    act(() => useAppOne.click());
+    expect(q('use-default')!.getAttribute('aria-checked')).toBe('false');
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(onSave).toHaveBeenCalledWith(human);
+  });
+
+  it('a per-project team whose projects differ: taking over a project on the default is a choice too', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    render({
+      policy: following(agent),
+      projects: {
+        saved: false,
+        unsynced: [
+          { projectLabel: 'app-one', setting: human },
+          { projectLabel: 'app-two', setting: null },
+        ],
+        saveSuggested: false,
+      },
+      onSave,
+    });
+    const [, useAppTwo] = host.querySelectorAll<HTMLButtonElement>(
+      `[data-testid="${P}-use-project"]`
+    );
+    act(() => useAppTwo.click());
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(false);
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(onSave).toHaveBeenCalledWith(null);
+  });
+
+  it('a per-project team whose projects cannot be listed: says why and cannot be saved', () => {
+    render({
+      policy: own(human),
+      projects: { saved: true, unsynced: [], saveSuggested: false, projectsError: 'Corrupt index' },
+    });
+    expect(q('projects-unsynced')!.textContent).toContain(
+      'reviewFlow.projects.unreadableProjects{"message":"Corrupt index"}'
+    );
+    act(() => q<HTMLButtonElement>('use-default')!.click());
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(true);
+  });
+
+  it('says in the app language that a save reached the team but not every project', async () => {
+    const onSave = vi.fn(() => Promise.reject(new Error(REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED)));
+    render({
+      policy: own(human),
+      projects: { saved: true, unsynced: [], saveSuggested: false },
+      onSave,
+    });
+    act(() => q<HTMLButtonElement>('use-default')!.click());
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(q('feedback')!.textContent).toBe('reviewFlow.feedback.notApplied');
+  });
+
+  it('a per-project team whose projects agree on settings never saved for the team: offers the save', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    render({
+      policy: own(human),
+      projects: { saved: false, unsynced: [], saveSuggested: true },
+      onSave,
+    });
+    expect(q('projects-unsynced')!.textContent).toContain('reviewFlow.projects.notSaved');
+    expect(q('source')!.textContent).toBe('reviewFlow.badges.custom');
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(false);
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(onSave).toHaveBeenCalledWith(human);
+  });
+
+  it('a per-project team in step with its projects: only says the setting is for every project', () => {
+    render({ policy: own(human), projects: { saved: true, unsynced: [], saveSuggested: false } });
+    expect(host.textContent).toContain('reviewFlow.projects.scope');
+    expect(q('projects-unsynced')).toBeNull();
+    expect(q('source')!.textContent).toBe('reviewFlow.badges.custom');
+    expect(q<HTMLButtonElement>('save')!.disabled).toBe(true);
   });
 
   it('lets the default for all teams be saved unchanged while it needs repair', async () => {
