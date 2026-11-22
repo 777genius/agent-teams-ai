@@ -515,6 +515,20 @@ const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
   `catalog-${index}-request-start`, `catalog-${index}-custody-start`, `catalog-${index}-custody-returned`,
   `catalog-${index}-request-admitted`, `catalog-${index}-lease-released`,
 ]);
+const currentnessPhases = ['identity-currentness-summary', 'catalog-1-currentness-summary',
+  'catalog-2-currentness-summary', 'catalog-3-currentness-summary'];
+function assertCurrentnessSummaries(records: OpenCodeProbeDiagnostic[], expected: string[]) {
+  const summaries = records.filter(record => currentnessPhases.includes(record.phase));
+  expect(summaries.map(record => record.phase)).toEqual(expected);
+  for (const record of summaries) {
+    expect(Number.isSafeInteger(record.currentCalls)).toBe(true);
+    expect(record.currentCalls).toBeGreaterThan(0); expect(record.currentCalls).toBeLessThanOrEqual(1_000_000);
+    expect(Number.isSafeInteger(record.currentElapsedMs)).toBe(true);
+    expect(record.currentElapsedMs).toBeGreaterThanOrEqual(0);
+    expect(record.currentElapsedMs).toBeLessThanOrEqual(3_600_000);
+    expect(record.sequence).toBe(records[records.indexOf(record) - 1]!.sequence);
+  }
+}
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', 'credential-returned', 'attestation', ...catalogPhases, 'catalog-read-returned', 'catalog-current-returned',
@@ -531,12 +545,18 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         teamModelProbeProfile(runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root))));
       const controller = new AbortController(), failure = new Error('TEST original catalog failure');
       const records: OpenCodeProbeDiagnostic[] = [], routes: string[] = [];
+      const windowStarts = new Map<string, number>(), originalCalls = new Map<string, number>();
       let guards = 0, custody = 0, passwordReads = 0, stops = 0, providers = 0;
       let admission: Parameters<ReturnType<typeof originalCredential>['prepare']>[0]['beforeRequest'];
       const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
         .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
           : originalDiagnostic(selected, command, digest, line => {
-            records.push(JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic);
+            const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+            records.push(record);
+            if (/^(identity|catalog-[123])-request-start$/.test(record.phase))
+              windowStarts.set(record.phase.replace('request-start', 'currentness-summary'), guards);
+            if (currentnessPhases.includes(record.phase))
+              originalCalls.set(record.phase, guards - windowStarts.get(record.phase)!);
             if (sink === 'throws') throw new Error('TEST diagnostic sink failure');
           }));
       const credential = vi.spyOn(sessionCredential, 'captureOpenCodeV2SessionCredential').mockImplementation((...args) => {
@@ -578,10 +598,14 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         else await expect(running).rejects.toMatchObject({ code: 'transport_failure' });
         const before = { guards, custody, passwordReads, routes: [...routes] };
         baseline ??= before; expect(before).toEqual(baseline);
-        const observed = records.map(record => record.phase).filter(phase => /^catalog-[123]-/.test(phase));
+        const observed = records.map(record => record.phase).filter(phase => catalogPhases.includes(phase));
         const second = fault === 'custody' ? [0, 1, 4] : fault === 'mismatch' ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
         expect(observed).toEqual(sink === 'absent' ? [] : fault === 'complete' ? catalogPhases
           : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
+        assertCurrentnessSummaries(records, sink === 'absent' ? [] : fault === 'complete'
+          ? currentnessPhases : currentnessPhases.slice(0, 3));
+        for (const record of records.filter(record => currentnessPhases.includes(record.phase)))
+          expect(record.currentCalls).toBe(originalCalls.get(record.phase));
         expect(records.map(record => record.phase).filter(phase =>
           ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'].includes(phase)))
           .toEqual(sink !== 'absent' && fault === 'complete'
@@ -650,8 +674,13 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
       baseline ??= before;
       expect(before).toEqual(baseline);
       expect(before).toMatchObject({ nativeCreations: 1, sessionCreates: 1, logReads: 1, promptPosts: 0 });
-      expect(records.map(record => record.phase)).toEqual(phases);
-      expect(records.map(record => record.sequence)).toEqual(phases.map((_phase, index) => index + 1));
+      const originals = records.filter(record => !currentnessPhases.includes(record.phase));
+      expect(originals.map(record => record.phase)).toEqual(phases);
+      expect(originals.map(record => record.sequence)).toEqual(phases.map((_phase, index) => index + 1));
+      expect(records.map(record => record.phase)).toEqual(phases.flatMap(phase =>
+        /^(identity|catalog-[123])-request-admitted$/.test(phase)
+          ? [phase, phase.replace('request-admitted', 'currentness-summary')] : [phase]));
+      assertCurrentnessSummaries(records, currentnessPhases);
       expect(records.every(record => record.probeDigest === records[0]!.probeDigest)).toBe(true);
       expect(records.every(record => /^[a-f0-9]{64}$/.test(record.probeDigest))).toBe(true);
       // first-submit only observes entry: the original D queue still blocks the native prompt POST.
@@ -661,7 +690,7 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
       await expect(f.probe.close()).resolves.toBe(true);
       expect(f.counts().requests).toBe(before.requests);
       expect(f.counts().passwordReads).toBe(before.passwordReads);
-      expect(records).toHaveLength(phases.length);
+      expect(records).toHaveLength(phases.length + currentnessPhases.length);
       f.assertClosed(); expect(f.observations).toEqual([]);
     } finally { diagnostic.mockRestore(); await f?.dispose(); }
   }

@@ -21,6 +21,8 @@ import { mixedDesktopTeamName, readMixedLiveMembershipIdentity } from './desktop
 import type { DesktopLiveMemberSelection, DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { readDesktopFiniteMembershipPeers, desktopFiniteMembershipProcesses } from './desktop-live-membership-controlled.ts';
 import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
+import { assertDesktopMembershipCensus, captureDesktopMembershipCensus, captureDesktopMembershipRuntimes } from './desktop-live-membership-census.ts';
+import type { DesktopMembershipCensus, DesktopMembershipRuntimeSelection } from './desktop-live-membership-census.ts';
 import { createDesktopLinuxMetadataBirthReader, createDesktopMetadataBirthCensus } from './desktop-metadata-birth-census.ts';
 import type { DesktopMetadataBirthCensus } from './desktop-metadata-birth-census.ts';
 import { readDesktopMetadataSourceFile } from './desktop-metadata-witness.ts';
@@ -213,6 +215,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     return result;
   };
   const epochs: Row[] = []; proof.physicalEpochs = epochs;
+  const physicalCensuses: DesktopMembershipCensus[] = []; proof.originalPhysicalCensuses = physicalCensuses;
+  let epochCensuses: { snapshot: DesktopMembershipCensus; runtimes: readonly DesktopMembershipRuntimeSelection[] }[] = [];
   let host: ProcessFact | undefined, lineage: DesktopSourceMetadataLineage | undefined, metadataBirths: ProcessFact[] = [];
   const v1MetadataCommand = v2 ? '' : text(openCodeExecutable.path) + ' serve --hostname 127.0.0.1 --port ' +
     new URL(text(metadataProfile.endpoint)).port;
@@ -241,10 +245,13 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       assert.ok(metadataBirths.length <= 128);
     }
     const natives = children.filter(row => !metadata.some(birth => birth.pid === row.pid));
+    const snapshot = finite && v2 ? captureDesktopMembershipCensus({ host, children, sources, lineage: lineage!, providers }) : undefined;
+    if (snapshot) { assert.ok(physicalCensuses.length < 128); physicalCensuses.push(snapshot); }
     const peerEffects = finite ? (await readDesktopFiniteMembershipPeers(finite)).effects : undefined;
     proof.lastPhysicalObservation = { expectedProviders: providers, host, metadata,
       nativeCount: natives.length, natives: natives.slice(0, 129), truncated: natives.length > 129 };
-    assert.equal(natives.length, providers.length, 'every remaining original Host child is one expected Runtime');
+    // Pending metadata keeps its original physical facts; the complete equality is checked after original Quit.
+    if (!snapshot) assert.equal(natives.length, providers.length, 'every remaining original Host child is one expected Runtime');
     const selected = new Map<Provider, ProcessFact>();
     for (const provider of providers) {
       const executable = text(record(recipe(provider).executable).path);
@@ -264,19 +271,29 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     }
     assert.equal(new Set([...selected.values()].map(row => row.pid)).size, providers.length);
     assert.deepEqual(await sourceProfiles(), sources);
+    if (snapshot) epochCensuses.push({ snapshot, runtimes: captureDesktopMembershipRuntimes(selected) });
     proof.currentPhysical = { host, metadata, natives, sources };
     return selected;
   };
   const releasedEpoch = async () => {
     assert.ok(host); const table = finite ? await physical() : processFacts(); assert.ok(!table.some(row => row.pid === host!.pid));
+    let reconciled: ReturnType<typeof assertDesktopMembershipCensus>[] | undefined;
     if (v2) {
       assert.ok(lineage);
+      const sources = await sourceProfiles(), birthWitness = metadataCensus?.witness();
       lineage = captureDesktopSourceMetadataLineage({ root: fixture.root, host,
-        profileHashes: (await sourceProfiles()).profileHashes, observed: table,
+        profileHashes: sources.profileHashes, observed: table,
         executable: text(openCodeExecutable.path), original: lineage, released: true,
-        ...(metadataCensus ? { birthWitness: metadataCensus.witness() } : {}) });
+        ...(birthWitness ? { birthWitness } : {}) });
+      if (finite) {
+        assert.ok(birthWitness && epochCensuses.length > 0);
+        reconciled = epochCensuses.map(({ snapshot, runtimes }) => assertDesktopMembershipCensus(snapshot, {
+          sources, lineage: lineage!, observed: table, executable: text(openCodeExecutable.path), birthWitness, runtimes,
+        }));
+      }
     } else for (const row of metadataBirths) assert.ok(!table.some(live => live.pid === row.pid));
-    epochs.push({ host, ...(lineage ? { lineage } : { metadataBirths: [...metadataBirths] }), released: true });
+    epochs.push({ host, ...(lineage ? { lineage } : { metadataBirths: [...metadataBirths] }),
+      ...(reconciled ? { censuses: reconciled } : {}), released: true });
     await pins();
   };
   const censusClosures: ReturnType<DesktopMetadataBirthCensus['close']>[] = [];
@@ -605,7 +622,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       proof.originalProbeLedgerAfterQuit = afterQuitProbes;
       metadataCensus?.assertHealthy();
       disposeReadObservations();
-      host = undefined; lineage = undefined; metadataBirths = [];
+      host = undefined; lineage = undefined; metadataBirths = []; epochCensuses = [];
       armMetadataCensus(options.capturedGroup()); // Armed before original spawnNext, without an old renderer guard.
     });
     assert.ok(afterQuitProbes);

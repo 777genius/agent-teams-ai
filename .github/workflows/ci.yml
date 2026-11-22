@@ -1183,6 +1183,9 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-4-failure.json
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-5-failure.json
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/sentinel-invocations.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/tmp/claude-team-preflight-debug.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.1.ndjson
 
   codex-login-desktop:
     name: Codex login Desktop (Linux x64)

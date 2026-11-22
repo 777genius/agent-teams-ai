@@ -20,6 +20,7 @@ import { createDesktopMetadataWitness, readDesktopMetadataSourceFile } from './d
 import { createDesktopLinuxMetadataBirthReader, createDesktopMetadataBirthCensus } from './desktop-metadata-birth-census.ts';
 import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
+import './desktop-live-membership-census.test.ts';
 
 async function retainedEvidence() {
   const bytes = await readFile(new URL('./fixtures/c226-opencode-v2-management.json', import.meta.url));

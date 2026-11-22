@@ -1,6 +1,79 @@
 # Завершение Host / frontend parity
 
-Обновлено: **21 ноября 2026**. Единственный текущий рабочий план.
+Обновлено: **22 ноября 2026**. Единственный текущий рабочий план.
+
+## Восстановление продолжения `cd18a49d`, 22 ноября
+
+Живой GitHub подтверждает Draft #1192 на `cd18a49d58dfa4afe09d53f8af27edfc75bead0e`,
+base #1186 на `8d46f13fe87b4a25156b6be8331119eb8d0f790e`. Все шесть исходных
+attempt-1 семейств завершены: 47 SUCCESS / 11 FAILURE / 11 SKIPPED, 69 jobs,
+51 артефакт. Восемь первичных отказов и три производных gate failures сохранены.
+Все 43 review threads закрыты; это не квалифицирует ещё не опубликованные изменения.
+
+Предыдущая сессия сообщила о проверенном кандидате из 29 файлов и итоговом
+пакете из 44 файлов, но остановилась при загрузке Git blobs. Новый commit/ref
+не появился. Точные неопубликованные байты и upload ledger в доступных
+сохранённых материалах не найдены. Следующие правки восстанавливаются заново
+на опубликованном baseline; тождество прежнему кандидату и его review не заявляется.
+
+План перед изменениями:
+
+| Участок | Узкое изменение и проверка | Бюджет; сложность / надёжность / уверенность |
+| --- | --- | --- |
+| Process, Teams, Windows TEST | Импорты до исходного handshake; ручное расписание без пересечения с автоматическим cron; ограниченный retry удаления частной TEST-директории. Сроки и исходные assertions прежние | ≤80 строк; 2 / 9 / 9 |
+| Darwin readers | Только повторное использование результата чистого декодирования полностью совпавших свежепрочитанных байтов. Все filesystem/currentness/close guards и observedDigest сохраняются; изолированные копии результатов, ограниченная память, invalidation при отказе | ≤160 production + ≤240 regression строк; 4 / 9 / 7 |
+| Darwin diagnostic | Пассивно измерить существующий `isCurrent()` на исходных identity/трёх catalog admission. Callback identities, вызовы и исходные 61 phase сохраняются; четыре дополнительные закрытые summary с count/time. Вложенность не удваивает время, ошибки часов/лога не влияют на результат | ≤220 source + ≤180 test строк; 4 / 9 / 8 |
+| Cold TeamDetail | Отложенные закрытые диалоги с прежними условиями, props и обработчиками. Проверить открытие, закрытие во время загрузки и ошибки | ≤200 production + ≤220 test строк; 3 / 9 / 8 |
+| Membership TEST | Сохранить исходный физический census; связать позднюю metadata-role с теми же PID и birth time до cold restart. Неизвестные и повторно использованные PID остаются отказами | ≤220 TEST + ≤250 regression строк; 5 / 9 / 8 |
+| Retained donor | Сохранить три уже существующих очищенных diagnostic logs. Immutable donor `4a0e062` и исходные 30 секунд не менять; причина preflight остаётся UNKNOWN до новых данных | 3 workflow строки; 1 / 10 / 10 |
+| Qualification | Независимое ревью восстановленного diff, целевые проверки, затем один synchronize на существующую ветку. После его terminal результатов — `ci:full` на Draft для полного workspace. Отдельный donor proof обязателен: full-label lane его пропускает | Без новых workflows и обходов gates |
+
+Дополнение до правки MCP: прямой запуск закреплённого TS7 обнаружил отсутствие
+явных Node types в `mcp-server/tsconfig.json`; штатные два MCP typecheck scripts
+по-прежнему выбирают `tsc` 5.9.3. Для соблюдения выбранного TS7 ≥7.0.2 планируется
+тот же локальный alias `@typescript/native: npm:typescript@7.0.2`, явные команды
+compiler и `types: ["node"]`. Бюджет — четыре небольших config/script/manifest
+изменения, без product code и обновления версий других packages; сложность 1/10,
+надёжность 9/10, уверенность 9/10. Проверка — frozen install и оба штатных MCP
+typecheck на закреплённом TS7. Зависимость 5.9 для существующего JS tooling API
+не исполняется как compiler этой проверки и не удаляется побочным обновлением.
+
+Настоящие Claude/Codex, Ready-переход, main/release/default Host/Stage 2 остаются
+за существующей границей разрешений. Маршрут доставки #1192 → #1186 → #982
+сохраняется. Очередь, SKIPPED, локальные регрессии и старые PASS не заменяют
+исходный E2E на новом SHA. Ручных rerun/dispatch/cancellation не выполнялось.
+
+### Локальный результат восстановленного кандидата
+
+Root и два независимых исполнителя проверили итоговые readers, UI, fixtures,
+membership, diagnostic и MCP slices: блокирующих замечаний нет. Последний
+source manifest сохраняет прежний порядок и включает 2003 уникальных
+существующих пути, в том числе все 31 изменённые source/config/workflow inputs.
+Telemetry helper — 72 строки; исходные 61 phase и их sequence slots не изменены.
+Регрессии telemetry потребовали 281 добавленную строку вместо предварительных
+180: включены строгие wire negatives и адаптация существующей VM fixture,
+исполняющей извлечённый production body. Production-бюджет не превышен.
+
+| Локальная проверка | Результат и предел доказательства |
+| --- | --- |
+| Captured Host transport | 44/44 PASS; исправлена только подготовка UUID TEST fixture |
+| Reader integrity / publication | 38/38 и 21/21 PASS; группы пересекаются, итоговые 14 новых regressions включают exact-byte rollback после публикации |
+| Currentness diagnostic | Exact Node24.21 helper 14/14; lifecycle/decoder/transport 78/78 PASS, исходные errors, calls и leases сохранены |
+| Membership | 73/73 PASS, 0 SKIPPED; 18 новых случаев, включая unknown-child refusal до cold spawn |
+| Cold UI | 126/126 PASS в восьми suites, включая 20 новых lazy/graph случаев |
+| Packaged TEST inputs | Exact Node24.21: 21 PASS / 1 Windows-only SKIP / 0 FAIL; Windows ARM64 EBUSY fix ещё требует original CI |
+| TypeScript7.0.2 | Host build, Host TEST, TEST scripts, 13 изменённых Main/UI файлов с пятью штатными ambient declarations и оба штатных MCP typecheck PASS |
+| MCP build / manifest | Build PASS, существующий manifest suite 7/7 PASS; frozen install PASS, lockfile изменён только новым importer alias |
+| Lint / guards | Fast lint 27 файлов: 0 errors / 2 прежних warnings; manifest lint, source-size, architecture и runtime-artifact guards PASS; CI policy 17/17 PASS |
+| Полный workspace / typed lint | Локальный root `pnpm typecheck` и отдельный typed ESLint завершились SIGKILL/137 без code diagnostics. Это НЕ PASS; квалификация полного workspace должна прийти от CI на новом source |
+
+Неудачные первые TEST attempts и неполные проверки сохранены в
+[evidence index](evidence/continuation-cd18-20261122.json) и его компактном архиве.
+В частности, сохранены начальные reader fixture failures, прерванный diagnostic
+VM attempt, неполные full checks, scoped-config setup errors и offline install
+без registry metadata. Успешные локальные regressions не квалифицируют Darwin
+timing, retained donor, packaged Windows или весь новый E2E. Причина retained
+preflight остаётся UNKNOWN; следующие original logs должны её уточнить.
 
 ## Доставка архива после восстановления сессии
 

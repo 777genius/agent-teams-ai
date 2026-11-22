@@ -803,6 +803,9 @@ importers:
       '@types/node':
         specifier: ^24.12.4
         version: 24.12.4
+      '@typescript/native':
+        specifier: npm:typescript@7.0.2
+        version: typescript@7.0.2
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(@swc/core@1.15.33)(jiti@2.7.0)(postcss@8.5.28)(supports-color@10.2.2)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.0)

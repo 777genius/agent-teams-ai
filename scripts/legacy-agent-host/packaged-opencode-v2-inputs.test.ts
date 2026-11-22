@@ -27,7 +27,9 @@ function peHeader(arch: 'ia32' | 'x64' | 'arm64'): Buffer {
 /** Unrunnable TEST Node/Bun/CLI; only the real captured graph validator is imported. */
 async function fixture(t: TestContext) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST packaged V2 capture ')));
-  t.after(() => rm(root, { recursive: true, force: true }));
+  // Windows may briefly retain the copied TEST executable after the child has exited.
+  t.after(() => rm(root, { recursive: true, force: true,
+    maxRetries: process.platform === 'win32' ? 3 : 0, retryDelay: 100 }));
   const resourcesRoot = join(root, 'App Bundle', 'resources', 'legacy-agent-host');
   const hostPackage = 'host/packages/0000';
   const platform = `${process.platform}-${process.arch}`;

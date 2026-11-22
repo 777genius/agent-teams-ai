@@ -268,6 +268,82 @@ test.each(startupFailurePhases)('probe decoder retains only the existing startup
   assert.ok(records.every(Object.isFrozen));
 });
 
+const currentnessPhases = ['identity-currentness-summary', 'catalog-1-currentness-summary',
+  'catalog-2-currentness-summary', 'catalog-3-currentness-summary'] as const;
+
+test('four currentness summaries preserve the original phase fields and sequence slots', () => {
+  const lines: string[] = [], records: OpenCodeProbeDiagnostic[] = [];
+  let clock = 10;
+  const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+    'TEST-command', 'a'.repeat(64), line => lines.push(line), () => clock);
+  observe('run');
+  for (const [index, phase] of currentnessPhases.entries()) {
+    clock += 10;
+    observe(phase, { currentCalls: index, currentElapsedMs: index * 10 });
+    observe(phase, { currentCalls: 999, currentElapsedMs: 999 });
+  }
+  observe('graph-start');
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { records.push(value); });
+  for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
+  assert.equal(records.length, 6); assert.ok(records.every(Object.isFrozen));
+  assert.deepEqual(records.map(record => record.sequence), [1, 1, 1, 1, 1, 2]);
+  for (const record of [records[0]!, records[5]!]) assert.deepEqual(Object.keys(record).sort(),
+    ['commandHash', 'elapsedMs', 'phase', 'probeDigest', 'profileHash', 'sequence']);
+  assert.deepEqual(records.slice(1, 5).map(({ phase, currentCalls, currentElapsedMs }) =>
+    ({ phase, currentCalls, currentElapsedMs })), currentnessPhases.map((phase, index) =>
+    ({ phase, currentCalls: index, currentElapsedMs: index * 10 })));
+});
+
+test('summary writer accepts only fixed numeric own fields without invoking getters or serializers', () => {
+  const lines: string[] = [];
+  let reads = 0, clockReads = 0;
+  const stats = { currentCalls: 1, currentElapsedMs: 5 };
+  const getter = Object.defineProperty({ ...stats }, 'currentCalls', {
+    get() { reads++; throw Error('TEST-private-getter'); }, enumerable: true,
+  });
+  const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+    'TEST-command', 'a'.repeat(64), line => lines.push(line), () => { clockReads++; return 100; });
+  observe('identity-currentness-summary', stats);
+  assert.equal(clockReads, 0, 'a summary cannot start the original run clock');
+  observe('run');
+  for (const invalid of [undefined, null, [], {}, getter, { ...stats, extra: 'TEST-private' },
+    { ...stats, [Symbol('TEST-private')]: true }, { ...stats, toJSON() { reads++; return stats; } },
+    Object.assign(Object.create({ currentCalls: 1 }), { currentElapsedMs: 5 }),
+    { ...stats, currentCalls: -1 }, { ...stats, currentCalls: 1.5 }, { ...stats, currentCalls: 1_000_001 },
+    { ...stats, currentCalls: NaN }, { ...stats, currentElapsedMs: Infinity },
+    { ...stats, currentElapsedMs: -1 }, { ...stats, currentElapsedMs: 3_600_001 },
+    new Proxy({}, { ownKeys() { throw Error('TEST-private-proxy'); } }),
+  ]) assert.doesNotThrow(() => observe('identity-currentness-summary', invalid as typeof stats));
+  observe('graph-start', stats);
+  assert.equal(reads, 0); assert.equal(clockReads, 1); assert.equal(lines.length, 1);
+  observe('identity-currentness-summary', stats);
+  assert.equal(lines.length, 2, 'invalid diagnostic inputs do not consume a valid summary');
+});
+
+test('summary decoder rejects missing, extra, nonfinite, unbounded or authority-like fields', () => {
+  const valid = { profileHash: 'a'.repeat(64), commandHash: 'b'.repeat(64), probeDigest: 'c'.repeat(64),
+    phase: 'identity-currentness-summary', sequence: 1, elapsedMs: 0, currentCalls: 0, currentElapsedMs: 0 };
+  const values: unknown[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { values.push(value); });
+  const frame = (value: unknown) => Buffer.from(probePrefix + JSON.stringify(value) + '\n');
+  for (const unsafe of [
+    { ...valid, currentCalls: undefined }, { ...valid, currentElapsedMs: undefined },
+    { ...valid, currentCalls: -1 }, { ...valid, currentCalls: 1.5 }, { ...valid, currentCalls: '1' },
+    { ...valid, currentCalls: 1_000_001 }, { ...valid, currentCalls: NaN },
+    { ...valid, currentElapsedMs: -1 }, { ...valid, currentElapsedMs: 0.5 },
+    { ...valid, currentElapsedMs: 3_600_001 }, { ...valid, currentElapsedMs: Infinity },
+    { ...valid, currentElapsedMs: null }, { ...valid, pid: 31 }, { ...valid, ready: true },
+    { ...valid, phase: 'catalog-4-currentness-summary' }, { ...valid, phase: 'identity-currentness-summary-extra' },
+    { ...valid, phase: 'run' }, { ...valid, sequence: 62 },
+  ]) decode(frame(unsafe));
+  assert.deepEqual(values, []);
+  decode(frame(valid));
+  const maximum = { ...valid, phase: 'catalog-3-currentness-summary', sequence: 61,
+    elapsedMs: 3_600_000, currentCalls: 1_000_000, currentElapsedMs: 3_600_000 };
+  decode(frame(maximum));
+  assert.deepEqual(values, [valid, maximum]);
+});
+
 test('probe diagnostics cannot replace clock, write or sink failures with authority', async () => {
   const selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
   const secret = 'TEST-private-diagnostic-error', lines: string[] = [];

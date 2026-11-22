@@ -22,6 +22,7 @@ import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 import { createOpenCodeProbeCloseDiagnostic, createOpenCodeProbeDiagnostic } from './createClaudeCloseDiagnostic.js';
+import { createOpenCodeCurrentnessTiming } from './OpenCodeCurrentnessTiming.js';
 
 import type { NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
@@ -62,6 +63,7 @@ export function createOpenCodeV2ModelProbe(
     ...(options.readiness ? { readinessPhase: options.coordination ? 'coordination' : 'ordinary' } : {}) });
   const observePhase = options.coordination ? undefined
     : createOpenCodeProbeDiagnostic(profile, input.commandId, captured);
+  const currentnessTiming = createOpenCodeCurrentnessTiming(observePhase);
   const observeCloseFailure = options.coordination ? undefined
     : createOpenCodeProbeCloseDiagnostic(profile, input.commandId, captured);
   const purposeBound = options.coordination || options.readiness !== undefined;
@@ -125,7 +127,10 @@ export function createOpenCodeV2ModelProbe(
     )
       return false;
     try {
-      if (!isCurrent()) return false;
+      const finishCurrent = currentnessTiming.enter();
+      let originalCurrent: boolean;
+      try { originalCurrent = isCurrent(); } finally { finishCurrent(); }
+      if (!originalCurrent) return false;
       for (const [directory, identity] of directories) {
         const stat = lstatSync(directory, { bigint: true });
         if (
@@ -175,40 +180,44 @@ export function createOpenCodeV2ModelProbe(
       ? ++attestationRequests as 1 | 2 | 3 : undefined;
     observeIdentity?.('identity-request-start');
     if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-start`);
-    assertCurrent(signal);
-    // Reserve before the asynchronous native measurement. Shutdown fences new
-    // admissions and drains these leases before aborting the Session transport.
-    const settled = Promise.withResolvers<void>();
-    requests.add(settled.promise);
-    const release = () => {
-      if (requests.delete(settled.promise)) {
-        settled.resolve();
-        // This is only lease settlement, including refused requests, never HTTP success.
-        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-lease-released`);
-      }
-    };
+    const finishCurrentness = currentnessTiming.begin(observeIdentity ? 'identity'
+      : catalogIndex ? `catalog-${catalogIndex}` : undefined);
     try {
-      observeIdentity?.('identity-custody-start');
-      if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-start`);
-      const custody = await server?.readNativeCustody(AbortSignal.any([signal, abort.signal]));
-      if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-returned`);
-      observeIdentity?.('identity-custody-returned');
       assertCurrent(signal);
-      if (
-        !custody ||
-        !ready ||
-        custody.pid !== ready.pid ||
-        custody.startIdentity !== ready.startIdentity ||
-        custody.version !== '2.1.4'
-      )
-        unavailable();
-      observeIdentity?.('identity-request-admitted');
-      if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-admitted`);
-      return release;
-    } catch (error) {
-      release();
-      throw error;
-    }
+      // Reserve before the asynchronous native measurement. Shutdown fences new
+      // admissions and drains these leases before aborting the Session transport.
+      const settled = Promise.withResolvers<void>();
+      requests.add(settled.promise);
+      const release = () => {
+        if (requests.delete(settled.promise)) {
+          settled.resolve();
+          // This is only lease settlement, including refused requests, never HTTP success.
+          if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-lease-released`);
+        }
+      };
+      try {
+        observeIdentity?.('identity-custody-start');
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-start`);
+        const custody = await server?.readNativeCustody(AbortSignal.any([signal, abort.signal]));
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-returned`);
+        observeIdentity?.('identity-custody-returned');
+        assertCurrent(signal);
+        if (
+          !custody ||
+          !ready ||
+          custody.pid !== ready.pid ||
+          custody.startIdentity !== ready.startIdentity ||
+          custody.version !== '2.1.4'
+        )
+          unavailable();
+        observeIdentity?.('identity-request-admitted');
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-admitted`);
+        return release;
+      } catch (error) {
+        release();
+        throw error;
+      }
+    } finally { finishCurrentness(); }
   }
   const readPassword = () => {
     assertCurrent();

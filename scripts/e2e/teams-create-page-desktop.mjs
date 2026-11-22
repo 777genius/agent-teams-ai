@@ -1008,6 +1008,12 @@ async function setBrowserWindowZoom(inspector, factor) {
 
 async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
   const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  // This scenario exercises Run now; an automatic occurrence must not race its single click.
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 2);
+  const cronDate = `${futureDate.getDate()} ${futureDate.getMonth() + 1} *`;
+  const initialCron = `0 9 ${cronDate}`;
+  const editedCron = `0 10 ${cronDate}`;
   log('reject invalid cron and timezone at the actual native IPC boundary');
   for (const { timing, expectedError } of [
     { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },
@@ -1060,7 +1066,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     false, 'Invalid cron was persisted before Save'
   );
 
-  await client.fill('input[placeholder="0 9 * * 1-5"]', '*/30 * * * *');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', initialCron);
   await client.click("document.querySelector('#schedule-saved-prompt-reviewed')");
   await client.waitFor("(" + saveButton + ")?.disabled === false",
     'valid schedule and reviewed old prompt allow Save', 45_000);
@@ -1085,7 +1091,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     'Native IPC rejected invalid edit for the wrong reason: ' + invalidEditResult);
   const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
-  assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
+  assert.equal(afterRejectedEdit?.cronExpression, initialCron,
     'Rejected timing edit corrupted the saved active schedule');
   assert.equal(afterRejectedEdit?.status, 'active',
     'Rejected timing edit deactivated the saved schedule');
@@ -1166,14 +1172,14 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.click(createButtonExpression('Edit'));
   await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
     'existing schedule editor loaded', 45_000);
-  await client.fill('input[placeholder="0 9 * * 1-5"]', '0 * * * *');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', editedCron);
   await client.waitFor(createButtonExpression('Save Changes'), 'edited schedule can save');
   await captureScreenshot(client, fixture, 'schedules-edit');
   await client.click(createButtonExpression('Save Changes'));
   await client.waitFor("!document.querySelector('[role=dialog]')", 'schedule edit persisted');
   const afterEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
-  assert.equal(afterEdit?.cronExpression, '0 * * * *');
+  assert.equal(afterEdit?.cronExpression, editedCron);
   assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
 
   log('pause and resume the schedule through the real actions menu');

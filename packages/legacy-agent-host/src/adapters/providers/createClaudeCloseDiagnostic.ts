@@ -3,6 +3,7 @@ import { ManagementCommandError } from '../../management/commandRecords.js';
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
 import type { OpenCodeV2GraphPhase } from './OpenCodeV2EmbeddedGraph.js';
+import type { OpenCodeCurrentnessPhase, OpenCodeCurrentnessStats } from './OpenCodeCurrentnessTiming.js';
 
 const prefix = 'legacy-agent-host: claude-close ';
 let stderrObserved = false;
@@ -147,7 +148,7 @@ export function createOpenCodeMetadataDiagnostic(
   });
 }
 
-export type OpenCodeProbePhase = OpenCodeV2GraphPhase | 'run' | 'graph-start' | 'graph-done' | 'native-launch'
+export type OpenCodeProbePhase = OpenCodeV2GraphPhase | OpenCodeCurrentnessPhase | 'run' | 'graph-start' | 'graph-done' | 'native-launch'
   | 'native-launch-returned' | 'native-endpoint-resolved' | 'startup-timer-aborted'
   | 'startup-parent-aborted' | 'startup-lifecycle-aborted' | 'startup-failed'
   | 'identity-start' | 'identity-request-start' | 'identity-custody-start' | 'identity-custody-returned' | 'identity-request-admitted'
@@ -171,6 +172,20 @@ const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-do
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
   'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
+const currentnessPhases = new Set<OpenCodeProbePhase>(['identity-currentness-summary',
+  'catalog-1-currentness-summary', 'catalog-2-currentness-summary', 'catalog-3-currentness-summary']);
+
+function currentnessStats(value: unknown): OpenCodeCurrentnessStats | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const fields = Object.getOwnPropertyDescriptors(value);
+  if (Reflect.ownKeys(fields).length !== 2 || !Object.hasOwn(fields, 'currentCalls') ||
+      !Object.hasOwn(fields, 'currentElapsedMs') || !fields.currentCalls || !fields.currentElapsedMs ||
+      !('value' in fields.currentCalls) || !('value' in fields.currentElapsedMs)) return;
+  const calls: unknown = fields.currentCalls.value, elapsed: unknown = fields.currentElapsedMs.value;
+  if (typeof calls !== 'number' || !Number.isSafeInteger(calls) || calls < 0 || calls > 1_000_000 ||
+      typeof elapsed !== 'number' || !Number.isSafeInteger(elapsed) || elapsed < 0 || elapsed > 3_600_000) return;
+  return { currentCalls: calls, currentElapsedMs: elapsed };
+}
 
 /** Last observed phase only: no readiness, failure, process identity or release authority. */
 export function createOpenCodeProbeDiagnostic(
@@ -179,16 +194,30 @@ export function createOpenCodeProbeDiagnostic(
   probeDigest: string,
   write: (line: string) => void = writeDiagnostic,
   now: () => number = () => performance.now()
-): (phase: OpenCodeProbePhase) => void {
+): (phase: OpenCodeProbePhase, currentness?: OpenCodeCurrentnessStats) => void {
   try {
     const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
     const identity = Object.freeze({ profileHash: hash([selected.profileId, selected.configRevision]),
       commandHash: hash(commandId), probeDigest });
     const valid = typeof probeDigest === 'string' && /^[a-f0-9]{64}$/.test(probeDigest);
     const observed = new Set<OpenCodeProbePhase>();
+    const summaries = new Set<OpenCodeProbePhase>();
     let started: number | undefined, count = 0;
-    return phase => {
+    return (phase, currentness) => {
       try {
+        if (currentnessPhases.has(phase)) {
+          const stats = currentnessStats(currentness);
+          if (!valid || started === undefined || !stats || summaries.has(phase)) return;
+          summaries.add(phase);
+          const at = now(), elapsedMs = Math.round(at - started);
+          if (!Number.isFinite(at) || at < 0 || !Number.isSafeInteger(elapsedMs) ||
+              elapsedMs < 0 || elapsedMs > 3_600_000) return;
+          // Reference the last original phase; summaries never consume its sequence slots.
+          write('legacy-agent-host: opencode-probe ' + JSON.stringify({ ...identity,
+            phase, sequence: count, elapsedMs, ...stats }) + '\n');
+          return;
+        }
+        if (currentness !== undefined) return;
         if (!valid || count >= probePhases.size || !probePhases.has(phase) || observed.has(phase)) return;
         observed.add(phase); count++;
         if (count > 1 && started === undefined) return;

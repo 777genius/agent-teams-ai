@@ -76,6 +76,8 @@ const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch'
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
   'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
+const currentnessPhases = new Set(['identity-currentness-summary', 'catalog-1-currentness-summary',
+  'catalog-2-currentness-summary', 'catalog-3-currentness-summary']);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
   readonly commandHash: string;
@@ -83,6 +85,8 @@ export interface OpenCodeProbeDiagnostic {
   readonly phase: string;
   readonly sequence: number;
   readonly elapsedMs: number;
+  readonly currentCalls?: number;
+  readonly currentElapsedMs?: number;
 }
 interface OpenCodeMetadataIdentity {
   readonly profileHash: string;
@@ -258,16 +262,24 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(probePrefix)) {
         if (!retainProbe) return;
         const value: unknown = JSON.parse(text.slice(probePrefix.length));
-        if (!exact(value, ['profileHash', 'commandHash', 'probeDigest', 'phase', 'sequence', 'elapsedMs']) ||
+        const keys = ['profileHash', 'commandHash', 'probeDigest', 'phase', 'sequence', 'elapsedMs'];
+        if (!exact(value, keys) && !exact(value, [...keys, 'currentCalls', 'currentElapsedMs'])) return;
+        const summary = typeof value.phase === 'string' && currentnessPhases.has(value.phase);
+        if (summary !== Object.hasOwn(value, 'currentCalls') ||
             !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
-            typeof value.phase !== 'string' || !probePhases.has(value.phase) ||
+            typeof value.phase !== 'string' || !(probePhases.has(value.phase) || summary) ||
             typeof value.sequence !== 'number' || !Number.isSafeInteger(value.sequence) ||
             value.sequence < 1 || value.sequence > probePhases.size ||
             typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
             value.elapsedMs < 0 || value.elapsedMs > 3_600_000) return;
+        if (summary && (typeof value.currentCalls !== 'number' || !Number.isSafeInteger(value.currentCalls) ||
+            value.currentCalls < 0 || value.currentCalls > 1_000_000 ||
+            typeof value.currentElapsedMs !== 'number' || !Number.isSafeInteger(value.currentElapsedMs) ||
+            value.currentElapsedMs < 0 || value.currentElapsedMs > 3_600_000)) return;
         const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({
           profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
           phase: value.phase, sequence: value.sequence, elapsedMs: value.elapsedMs,
+          ...(summary ? { currentCalls: value.currentCalls as number, currentElapsedMs: value.currentElapsedMs as number } : {}),
         });
         void Promise.resolve(retainProbe(diagnostic)).catch(() => {
           /* Missing observations cannot settle the original probe or its cleanup. */

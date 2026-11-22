@@ -156,17 +156,18 @@ it('correlates the original captured catalog UUID across real TEST stdio without
   });
   try {
     const transport = client(await fixture(`
-      'management.catalog': { lane: 'work', async handle(params, context) {
-        const { createOpenCodeCatalogDiagnostic } = await import(${JSON.stringify(new URL('./adapters/providers/createClaudeCloseDiagnostic.js', serverUrl).href)});
-        const { createProviderManagementMethods } = await import(${JSON.stringify(new URL('./composition/createProviderManagementMethods.js', serverUrl).href)});
-        const methods = createProviderManagementMethods({ assertTargetAvailable() {}, catalog(raw, requestId) {
-          const observe = createOpenCodeCatalogDiagnostic(requestId, raw);
-          for (const phase of ['queued', 'started', 'returned']) observe(phase);
-          return { requestId, params: raw };
-        } }, () => false);
-        return methods['management.catalog'].handle(params, context);
-      } },
-    `));
+      import { createHostServer } from ${JSON.stringify(serverUrl)};
+      import { createOpenCodeCatalogDiagnostic } from ${JSON.stringify(new URL('./adapters/providers/createClaudeCloseDiagnostic.js', serverUrl).href)};
+      import { createProviderManagementMethods } from ${JSON.stringify(new URL('./composition/createProviderManagementMethods.js', serverUrl).href)};
+      const methods = createProviderManagementMethods({ assertTargetAvailable() {}, catalog(raw, requestId) {
+        const observe = createOpenCodeCatalogDiagnostic(requestId, raw);
+        for (const phase of ['queued', 'started', 'returned']) observe(phase);
+        return { requestId, params: raw };
+      } }, () => false);
+      const server = createHostServer({ input: process.stdin, output: process.stdout,
+        buildId: 'TEST-host-v1', methods: { 'management.catalog': methods['management.catalog'] } });
+      void server.closed.then(() => process.exit(0));
+    `, 'raw'));
     const target = captureProviderManagement({ targetId: 'TEST-target', profileId: 'TEST-captured-source',
       configRevision: 'TEST-captured-revision', client: transport, start: () => transport.start(),
       ownerAvailable: () => true, foregroundCurrent: () => true });

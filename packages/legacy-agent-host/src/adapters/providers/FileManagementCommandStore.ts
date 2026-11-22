@@ -38,11 +38,14 @@ function sameRecordFile(before: BigIntStats, after: BigIntStats): boolean {
 const ordinaryReceiptBytes = 64 * 1024;
 // The source snapshot retains up to 256 original descriptor scopes; JSON string escaping can double it.
 const sourceReceiptBytes = 4 * 1024 * 1024 + ordinaryReceiptBytes;
+type DecodedCommand = { path: string; bytes: Buffer; value: StoredManagementCommand };
 
 /** One profile writer lease owns these atomic, private receipts. No auth values or native URLs. */
 export class FileManagementCommandStore implements ManagementCommandStore {
   private readonly directory: string;
   private readonly identity: { dev: number; ino: number };
+  // Keep at most one bounded receipt; this is never a cache of filesystem authority.
+  private decoded: DecodedCommand | undefined;
 
   constructor(root: string, private readonly readOnly = false) {
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root)
@@ -156,6 +159,9 @@ export class FileManagementCommandStore implements ManagementCommandStore {
     return join(this.directory, managementDigest(commandId) + '.json');
   }
   private parse(path: string): StoredManagementCommand {
+    const previous = this.decoded;
+    this.decoded = undefined;
+    let completed: DecodedCommand | undefined;
     let fd: number | undefined;
     let observed = false;
     try {
@@ -183,19 +189,28 @@ export class FileManagementCommandStore implements ManagementCommandStore {
       )
         throw new ManagementCommandError('held');
       this.checkDirectory();
-      const raw = JSON.parse(
-        new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, length))
-      ) as Record<string, unknown>;
-      const { digest, ...body } = raw;
-      if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
-        throw new ManagementCommandError('held');
-      if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
-      return storedManagementCommandSchema.parse(body);
+      const bytes = buffer.subarray(0, length);
+      let decoded = previous?.path === path && previous.bytes.equals(bytes) ? previous : undefined;
+      if (!decoded) {
+        const raw = JSON.parse(
+          new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+        ) as Record<string, unknown>;
+        const { digest, ...body } = raw;
+        if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
+          throw new ManagementCommandError('held');
+        if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
+        decoded = { path, bytes, value: storedManagementCommandSchema.parse(body) };
+      }
+      const result = structuredClone(decoded.value);
+      completed = decoded;
+      return result;
     } catch (error) {
       if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
       throw new ManagementCommandError('held');
     } finally {
+      this.decoded = undefined;
       if (fd !== undefined) closeSync(fd);
+      this.decoded = completed;
     }
   }
   private checkDirectory(): void {

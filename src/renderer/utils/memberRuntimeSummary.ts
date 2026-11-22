@@ -1,4 +1,4 @@
-import { formatTeamModelSummary } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { formatTeamModelSummary } from '@renderer/components/team/dialogs/teamModelSummary';
 import { formatBytes } from '@renderer/utils/formatters';
 import { formatTeamProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';

@@ -7,6 +7,7 @@ import { Script } from 'node:vm';
 import { it as test } from 'vitest';
 
 import { createOpenCodeProbeCloseDiagnostic, createOpenCodeProbeDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
+import { createOpenCodeCurrentnessTiming } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeCurrentnessTiming';
 import { createPassiveNativeDiagnosticCapture } from '../../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics';
 import { decodeClaudeCloseDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
@@ -186,9 +187,14 @@ function identitySubject(options: {
     decode(Buffer.from(line));
     if (options.brokenSink) throw new Error('TEST-private-diagnostic-sink');
   }, () => now);
+  const currentnessTiming = createOpenCodeCurrentnessTiming(observePhase, () => now);
+  const originals = () => records.filter(record => record.phase !== 'identity-currentness-summary');
   const subject = originalIdentity.runInNewContext({
-    current: () => { checks++; return current; }, Date: { now: () => now }, deadline: 1000,
-    unavailable: () => { throw held; }, abort, AbortSignal, requests, ready, observePhase,
+    current: () => {
+      const finishCurrent = currentnessTiming.enter();
+      try { checks++; return current; } finally { finishCurrent(); }
+    }, Date: { now: () => now }, deadline: 1000,
+    unavailable: () => { throw held; }, abort, AbortSignal, requests, ready, observePhase, currentnessTiming,
     server: { async readNativeCustody(signal: AbortSignal) {
       custody++; assert.equal(signal.aborted, false); entered.resolve(); return native.promise;
     } },
@@ -206,20 +212,28 @@ function identitySubject(options: {
   return { subject, parent, abort, native, response, entered, fetching, requests, records, ready, held,
     clientFailure, clientSettled,
     start: () => subject.identity(parent.signal),
-    phases: () => records.map(record => record.phase),
+    originals, phases: () => originals().map(record => record.phase),
+    summaries: () => records.filter(record => record.phase === 'identity-currentness-summary'),
     counts: () => ({ checks, custody, http, leases: requests.size }),
     revoke: () => { current = false; }, advance: (at: number) => { now = at; },
   };
+}
+
+function assertIdentitySummary(f: ReturnType<typeof identitySubject>, calls: number, sequence: number, elapsedMs = 0) {
+  assert.deepEqual(f.summaries(), [{ ...f.originals()[0], phase: 'identity-currentness-summary',
+    sequence, elapsedMs, currentCalls: calls, currentElapsedMs: 0 }]);
 }
 
 test.each([false, true])('first identity observes the original custody and HTTP boundaries with sink failure=%s', async brokenSink => {
   const f = identitySubject({ brokenSink }), run = f.start();
   await f.entered.promise;
   assert.deepEqual(f.phases(), identityPhases.slice(0, 3));
+  assert.deepEqual(f.summaries(), []);
   assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 1 });
   f.advance(150); f.native.resolve(f.ready);
   await f.fetching.promise;
   assert.deepEqual(f.phases(), identityPhases.slice(0, 5));
+  assertIdentitySummary(f, 2, 5, 50);
   assert.deepEqual(f.counts(), { checks: 2, custody: 1, http: 1, leases: 1 });
   f.advance(175); f.response.resolve(f.ready);
   assert.equal(await run, f.ready);
@@ -230,8 +244,9 @@ test.each([false, true])('first identity observes the original custody and HTTP 
   assert.deepEqual(f.counts(), { checks: 4, custody: 2, http: 1, leases: 1 });
   laterRelease(); laterRelease();
   assert.equal(f.requests.size, 0, 'the original lease remains idempotent');
-  assert.deepEqual(f.records.map(record => record.elapsedMs), [0, 0, 0, 50, 50, 75]);
-  assert.ok(f.records.every(record => Object.keys(record).length === 6 && !Object.hasOwn(record, 'ready')));
+  assert.deepEqual(f.originals().map(record => record.elapsedMs), [0, 0, 0, 50, 50, 75]);
+  assert.ok(f.originals().every(record => Object.keys(record).length === 6 && !Object.hasOwn(record, 'ready')));
+  assertIdentitySummary(f, 2, 5, 50);
 });
 
 test.each(['current', 'deadline', 'aborted'] as const)('first identity cannot bypass original %s admission refusal', async kind => {
@@ -242,6 +257,7 @@ test.each(['current', 'deadline', 'aborted'] as const)('first identity cannot by
   await assert.rejects(f.start(), error => error === (kind === 'aborted' ? reason : f.held));
   assert.deepEqual(f.phases(), identityPhases.slice(0, 2));
   assert.deepEqual(f.counts(), { checks: kind === 'aborted' ? 0 : 1, custody: 0, http: 0, leases: 0 });
+  assertIdentitySummary(f, kind === 'aborted' ? 0 : 1, 2);
 });
 
 test.each(['missing', 'pid', 'startIdentity', 'version', 'current', 'deadline', 'aborted'] as const)(
@@ -261,6 +277,7 @@ test.each(['missing', 'pid', 'startIdentity', 'version', 'current', 'deadline', 
     await rejected;
     assert.deepEqual(f.phases(), identityPhases.slice(0, 4));
     assert.deepEqual(f.counts(), { checks: kind === 'aborted' ? 1 : 2, custody: 1, http: 0, leases: 0 });
+    assertIdentitySummary(f, kind === 'aborted' ? 1 : 2, 4, kind === 'deadline' ? 900 : 0);
   }
 );
 
@@ -272,6 +289,7 @@ test('first identity retains an original thrown custody error without reporting 
   await rejected;
   assert.deepEqual(f.phases(), identityPhases.slice(0, 3));
   assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 0 });
+  assertIdentitySummary(f, 1, 3);
 });
 
 test('late native return after identity rejection observes only the original continuation and releases its lease', async () => {
@@ -283,10 +301,12 @@ test('late native return after identity rejection observes only the original con
   await rejected;
   assert.deepEqual(f.phases(), identityPhases.slice(0, 3));
   assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 1 });
+  assert.deepEqual(f.summaries(), []);
   f.advance(250); f.native.resolve(f.ready);
   await f.clientSettled.promise;
   assert.deepEqual(f.phases(), identityPhases.slice(0, 4));
   assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 0 });
+  assertIdentitySummary(f, 1, 4, 150);
   await assert.rejects(run, error => error === failure);
 });
 
@@ -295,9 +315,11 @@ test('identity failure before beforeRequest clears observation scope for later c
   await assert.rejects(f.start(), error => error === failure);
   assert.deepEqual(f.phases(), ['identity-start']);
   assert.deepEqual(f.counts(), { checks: 0, custody: 0, http: 0, leases: 0 });
+  assert.deepEqual(f.summaries(), []);
   f.native.resolve(f.ready);
   const release = await f.subject.beforeRequest(f.parent.signal);
   release();
   assert.deepEqual(f.phases(), ['identity-start']);
   assert.deepEqual(f.counts(), { checks: 2, custody: 1, http: 0, leases: 0 });
+  assert.deepEqual(f.summaries(), []);
 });

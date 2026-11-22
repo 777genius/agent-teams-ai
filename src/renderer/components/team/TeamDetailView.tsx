@@ -111,16 +111,12 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { AddMemberDialog } from './dialogs/AddMemberDialog';
-import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
-import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { useStoppedTeamLaunchDialog } from './dialogs/useStoppedTeamLaunchDialog';
 import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
-import { TrashDialog } from './kanban/TrashDialog';
 import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
@@ -128,6 +124,7 @@ import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import { AddMemberDialog, EditTeamDialog, ReviewDialog, TrashDialog } from './TeamDetailLazyDialogs';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
 
