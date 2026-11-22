@@ -136,6 +136,15 @@ export const EditCustomTemplateDialog = ({
     }
   };
 
+  const handleAcceptRevisionConflict = (): void => {
+    acceptRevisionConflict();
+    // The hook has loaded a newer revision. Do not let the previously opened
+    // JSON document silently write its stale fields back on the next edit.
+    setJsonOpen(false);
+    setJsonText('');
+    setJsonError(null);
+  };
+
   if (!template) return null;
 
   const issueMessage = (issue: CustomTeamTemplateValidationIssue): string => {
@@ -266,7 +275,7 @@ export const EditCustomTemplateDialog = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={acceptRevisionConflict}
+                    onClick={handleAcceptRevisionConflict}
                   >
                     {t('customTemplates.edit.conflictReload')}
                   </Button>

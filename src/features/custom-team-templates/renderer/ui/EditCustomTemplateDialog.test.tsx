@@ -223,6 +223,72 @@ describe('EditCustomTemplateDialog', () => {
       })
     );
   });
+  it('reloads the JSON editor from the newer revision after a save conflict', async () => {
+    const current: CustomTeamTemplateV1 = {
+      ...template,
+      name: 'Concurrent edit',
+      description: 'Updated elsewhere',
+      teamPrompt: 'New server prompt',
+      members: [{ name: 'bob', role: 'writer' }],
+      revision: 6,
+    };
+    updateTemplate.mockResolvedValueOnce({
+      status: 'revisionConflict',
+      current,
+    } satisfies UpdateCustomTeamTemplateResult);
+
+    await render();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="template-edit-json"]')?.click();
+    });
+    await act(async () => {
+      setText(
+        '[aria-label="JSON"]',
+        JSON.stringify({
+          name: 'Stale draft',
+          description: 'Not the latest description',
+          teamPrompt: 'Old prompt',
+          members: [{ name: 'alice', role: 'reviewer' }],
+        })
+      );
+    });
+    await save();
+    expect(host.querySelector('[data-testid="edit-template-revision-conflict"]')).not.toBeNull();
+
+    const reload = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('customTemplates.edit.conflictReload')
+    );
+    expect(reload).toBeDefined();
+    await act(async () => {
+      reload?.click();
+    });
+
+    // Reload must discard the old JSON editor state, not just update hidden form fields.
+    expect(host.querySelector('[aria-label="JSON"]')).toBeNull();
+    expect(field('#edit-template-name').value).toBe(current.name);
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="template-edit-json"]')?.click();
+    });
+    expect(JSON.parse(field('[aria-label="JSON"]').value)).toEqual({
+      name: current.name,
+      description: current.description,
+      teamPrompt: current.teamPrompt,
+      members: current.members,
+    });
+
+    await save();
+    expect(updateTemplate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        expectedRevision: 6,
+        fields: expect.objectContaining({
+          name: current.name,
+          teamPrompt: current.teamPrompt,
+          members: current.members,
+        }),
+      })
+    );
+  });
+
   it('creates a new template using the same editor and portable validation', async () => {
     importTemplate.mockResolvedValueOnce({ status: 'imported', template });
     await act(async () => {
