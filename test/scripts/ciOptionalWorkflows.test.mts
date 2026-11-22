@@ -245,3 +245,31 @@ test('packaged policy selection and result gate free native Linux runner capacit
   }
   assert.match(source, /ready_for_review/);
 });
+
+test('updater contract-only PR jobs do not reserve native Linux E2E runners', () => {
+  for (const [name, job] of [
+    ['updater-windows', 'tooling-quality'],
+    ['updater-windows-ota', 'tooling-quality'],
+    ['updater-linux-packages', 'linux-package-tooling-quality'],
+  ] as const) {
+    const source = workflow(name);
+    const anchor = '\n  ' + job + ':\n';
+    const start = source.indexOf(anchor);
+    assert.ok(start >= 0, name + ': missing original PR contract check');
+    const after = source.slice(start + anchor.length);
+    const next = after.search(/\n  [a-z][\w-]*:\n/);
+    const body = next < 0 ? after : after.slice(0, next);
+    assert.match(body, /^    if: github\.event_name == 'pull_request'$/m);
+    assert.match(body, /^    runs-on: ubuntu-latest$/m);
+    assert.doesNotMatch(body, /vars\.CI_LINUX_RUNNER/);
+    assert.match(body, /pnpm typecheck/);
+    assert.match(body, /pnpm lint:ci:files/);
+    assert.match(source, /workflow_dispatch:/);
+    assert.doesNotMatch(body, /continue-on-error:\s*true/);
+  }
+  for (const name of ['updater-windows', 'updater-windows-ota']) {
+    assert.match(workflow(name), /  windows-predecessor:/);
+  }
+  assert.match(workflow('updater-windows-ota'), /  windows-ota:/);
+  assert.match(workflow('updater-linux-packages'), /  native:/);
+});
