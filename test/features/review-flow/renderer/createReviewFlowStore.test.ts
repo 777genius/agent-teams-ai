@@ -107,6 +107,20 @@ describe('review flow store', () => {
       unreadableTeams: [], projectTeams: { builders: { saved: true, settings: human, projects } } });
   });
 
+  it('keeps a project-listing error when a successful save cannot refresh the missing list', async () => {
+    const getOverview = vi.fn<ReviewFlowElectronApi['getOverview']>()
+      .mockResolvedValueOnce({ defaults: agent, overrides: {}, unreadableTeams: [],
+        projectTeams: { builders: { saved: false, settings: null, projects: [], projectsError: 'unreadable index' } } })
+      .mockRejectedValue(new Error('refresh failed'));
+    const api = createApi({ getOverview, setTeamOverride: vi.fn(async () => human) });
+    const store = createReviewFlowStore({ getApi: () => api });
+    await store.getState().load();
+    await store.getState().saveTeamOverride('builders', human);
+    expect(store.getState().projectTeams.builders).toMatchObject({
+      saved: true, settings: human, projects: [], projectsError: 'unreadable index',
+    });
+  });
+
   it('re-reads main and rethrows when a save is rejected', async () => {
     const api = createApi({
       setTeamOverride: vi.fn(() => Promise.reject(new Error('write failed'))),

@@ -133,11 +133,16 @@ export function createReviewFlowStore(
             if (saved) overrides[name] = saved;
             else delete overrides[name];
           }
+          // A successful write does not return the project list. Preserve a cached listing
+          // error until a refresh supplies the actual projects instead of claiming an empty list.
           const { unreadable: _unreadable, ...rest } = team;
           return {
             overrides,
             unreadableTeams: updated.unreadableTeams.filter((name) => !names.has(name)),
-            projectTeams: { ...state.projectTeams, [teamName]: { ...rest, saved: true, settings: saved } },
+            projectTeams: {
+              ...state.projectTeams,
+              [teamName]: { ...rest, saved: true, settings: saved },
+            },
           };
         });
         deps.onTeamOverrideChanged?.(teamName);

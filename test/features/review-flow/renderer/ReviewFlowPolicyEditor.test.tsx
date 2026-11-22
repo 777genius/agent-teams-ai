@@ -221,6 +221,9 @@ describe('ReviewFlowPolicyEditor', () => {
     expect(notice).toContain('"project":"app-one","flow":"reviewFlow.flows.human_approval.label"');
     // The instructions of a project are shown, so a save never replaces them unseen.
     expect(notice).toContain('reviewFlow.projects.prompt{"prompt":"Run e2e."}');
+    const prompt = [...host.querySelectorAll('p')].find((item) => item.textContent?.includes('Run e2e.'));
+    expect(prompt?.classList.contains('truncate')).toBe(false);
+    expect(prompt?.hasAttribute('title')).toBe(false);
     expect(notice).toContain('"project":"app-two","flow":"reviewFlow.projects.followsDefault"');
     // Nothing is kept by default: one click must not put the default on every project.
     expect(q<HTMLButtonElement>('save')!.disabled).toBe(true);

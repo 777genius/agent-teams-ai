@@ -68,7 +68,7 @@ export const ReviewFlowProjectsNotice = ({
                       })}
                     </p>
                     {setting && setting !== 'unreadable' && setting.reviewFlowPrompt ? (
-                      <p className="truncate" title={setting.reviewFlowPrompt}>
+                      <p className="whitespace-pre-wrap break-words">
                         {t('reviewFlow.projects.prompt', { prompt: setting.reviewFlowPrompt })}
                       </p>
                     ) : null}
