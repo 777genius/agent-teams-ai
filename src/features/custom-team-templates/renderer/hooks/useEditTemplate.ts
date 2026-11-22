@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES,
   type CustomTeamTemplateMemberV1,
   type CustomTeamTemplateV1,
   type CustomTeamTemplateValidationIssue,
@@ -304,14 +305,22 @@ export function useEditTemplate({
     setIssues([]);
 
     if (creating) {
+      const portable = {
+        format: 'agent-teams-custom-template' as const,
+        schemaVersion: 1 as const,
+        ...fields,
+      };
+      // Avoid dispatching an oversized browser request that Fastify will reject
+      // before the import handler. Its definitive HTTP 413 is also handled below.
+      const requestBytes = new TextEncoder().encode(JSON.stringify({ portable })).byteLength;
+      if (requestBytes > CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES) {
+        pendingUpdateRef.current = null;
+        setStatus('requestSizeValidationFailed');
+        setBusy(false);
+        return false;
+      }
       try {
-        const result = await api.customTeamTemplates.importTemplate({
-          portable: {
-            format: 'agent-teams-custom-template',
-            schemaVersion: 1,
-            ...fields,
-          },
-        });
+        const result = await api.customTeamTemplates.importTemplate({ portable });
         if (requestId !== requestIdRef.current) return false;
         if (result.status === 'imported') {
           pendingUpdateRef.current = null;
