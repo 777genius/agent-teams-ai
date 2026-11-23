@@ -25,6 +25,7 @@ let mainInspectorWebSocketUrl = null;
 let expectedMainInspectorPort = null;
 let cdp = null;
 let inputSelectAllDomFallbacks = 0;
+let inputNativeFocusFallbacks = 0;
 
 function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
@@ -437,7 +438,35 @@ class CdpClient {
       await new Promise((resolve) => setTimeout(resolve, 120));
       await this.click(expression);
     }
-    await this.waitFor(focused, `native focus for ${selector}`, 5_000);
+    if (!(await this.evaluate(focused))) {
+      // A cold macOS CI Electron window can receive CDP mouse events without
+      // acquiring native keyboard focus. Never bypass a covered/disabled field:
+      // a genuine user would not be able to click it either.
+      const unobstructed = await this.evaluate(`(() => {
+        const input = ${expression};
+        if (!input || input.disabled || input.readOnly) return false;
+        input.scrollIntoView({ block: 'center', inline: 'nearest' });
+        const rect = input.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2, rect.top + rect.height / 2
+        );
+        return rect.width > 0 && rect.height > 0 &&
+          (hit === input || input.contains(hit));
+      })()`);
+      assert(unobstructed, `Input is obscured after real CDP clicks: ${selector}`);
+      if (process.platform === 'darwin') {
+        // Fixture-only focus recovery, separately counted in the E2E receipt.
+        // This does not prove macOS native window activation or click-to-focus.
+        const recovered = await this.evaluate(`(() => {
+          const input = ${expression};
+          input.focus({ preventScroll: true });
+          return document.activeElement === input;
+        })()`);
+        assert(recovered, `Mac CDP input focus recovery failed: ${selector}`);
+        inputNativeFocusFallbacks++;
+      }
+    }
+    await this.waitFor(focused, `input focused for ${selector}`, 1_500);
     const mac = process.platform === 'darwin';
     const modifier = mac ? 4 : 2; // CDP: Meta or Control
     const modifierKey = mac ? 'Meta' : 'Control';
@@ -1043,10 +1072,35 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   if (await cdp.evaluate(`${solo}?.getAttribute('data-state') === 'checked'`))
     await cdp.click(solo);
   const add = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"新增成員\"]')";
-  await cdp.click(add);
   const row = '[data-testid=create-team-page] [data-role=member-row]';
-  await cdp.waitFor(`document.querySelector(${JSON.stringify(row)})`,
-    'member row created through translated UI');
+  const rowExists = `Boolean(document.querySelector(${JSON.stringify(row)}))`;
+  // In cold Windows Electron a CDP click can be dropped during the first
+  // post-locale-change roster render. Retry only while the row is absent:
+  // never create a second member, and require the real rendered row.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await cdp.evaluate(rowExists)) break;
+    await cdp.waitFor(`(() => {
+      const button = ${add};
+      if (!button || button.disabled) return false;
+      button.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const rect = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2, rect.top + rect.height / 2
+      );
+      return rect.width > 0 && rect.height > 0 &&
+        (hit === button || button.contains(hit));
+    })()`, 'unobstructed translated Add member button', 10_000);
+    await cdp.click(add);
+    try {
+      await cdp.waitFor(rowExists, 'member row created through translated UI', 4_000);
+      break;
+    } catch (error) {
+      if (attempt === 2) throw error;
+    }
+  }
+  assert.equal(await cdp.evaluate(
+    `document.querySelectorAll(${JSON.stringify(row)}).length`
+  ), 1, 'Translated Add member must create exactly one editable row');
   const mcpToggle = `Array.from(document.querySelectorAll(${JSON.stringify(row + ' button')}))
     .find(button => button.getAttribute('aria-label')?.includes('MCP')
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
@@ -2177,6 +2231,7 @@ async function main() {
       nativeElectronZoom200Rendered: true,
       splitPaneSingleEditor: true,
       macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
+      macInputFocusFallbackCount: inputNativeFocusFallbacks,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
