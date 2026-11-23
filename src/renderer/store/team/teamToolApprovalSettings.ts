@@ -5,6 +5,14 @@ import type { ToolApprovalSettings } from '@shared/types';
 const TOOL_APPROVAL_SETTINGS_PREFIX = 'team:toolApprovalSettings:';
 const LEGACY_TOOL_APPROVAL_SETTINGS_KEY = 'team:toolApprovalSettings';
 
+export function getLaunchToolApprovalSettings(
+  skipPermissions: boolean | undefined
+): ToolApprovalSettings {
+  return skipPermissions === false
+    ? DEFAULT_TOOL_APPROVAL_SETTINGS
+    : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+}
+
 interface ToolApprovalSettingsProjectionState {
   selectedTeamName: string | null;
   toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;

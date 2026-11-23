@@ -1,0 +1,207 @@
+{
+  "kind": "derived-original-gui-failure-evidence",
+  "qualification": "Derived bounded summary of the finalized original receipt and retained artifacts. Original INCOMPLETE is preserved; this is neither a full receipt nor a product root-cause or PASS claim.",
+  "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "sourceTree": "5aa78dff77bff0b47e07d103b0fafa3bf04f87ae",
+  "sourceAttribution": "Completed workflow job sourceHead and existing acceptance snapshot; raw receipt retains exact file/archive digests rather than a top-level sourceHead.",
+  "workflow": {
+    "runId": 44455698034,
+    "jobId": 135330056490,
+    "artifactId": 14501075844,
+    "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490",
+    "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/artifacts/14501075844"
+  },
+  "rawReceipt": {
+    "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/desktop-backend-receipt.json",
+    "bytes": 1084326,
+    "sha256": "3f2d970c49a0a8762383ea535accf58673691d283732ddbef69954504def4b37"
+  },
+  "archive": {
+    "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact-14501075844.zip",
+    "bytes": 1421182,
+    "sha256": "3518bf989f28d041c1b4295b15dda3ede12254729ad3a6787fbc85cff150200a"
+  },
+  "status": "INCOMPLETE",
+  "mode": "native-mixed-create-launch-ui",
+  "failure": "original add completes",
+  "failureSource": {
+    "kind": "assertion",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:106:14",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:391:21",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:497:19",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:489:92",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+    ]
+  },
+  "providerArchiveSha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+  "originalAction": {
+    "addClickCount": 1,
+    "addClickMonotonicMs": [
+      122640
+    ],
+    "liveCommandCount": 1,
+    "commandId": "6969fc65-4218-4a39-b0c9-e415fdb73222",
+    "targetMemberId": "fe8ca2e1-c08c-54e1-b776-f06c8970771e",
+    "ownerPhase": "held",
+    "launchPhase": "held",
+    "immutableCaptureRecorded": true,
+    "targetPublicationRecorded": false,
+    "targetMemberPublished": false,
+    "targetRuntimeSessionRetained": false,
+    "actionReplayed": false,
+    "absoluteRetainedCutoff": 1795064742613,
+    "probeExpiresAt": 1795064742613,
+    "harnessPollBudgetMs": 90000,
+    "budgetCaveat": "The harness poll and retained absolute action cutoff are separate original bounds; neither is increased or treated as acceptance."
+  },
+  "readinessProbe": {
+    "record": {
+      "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/hoststore/management-commands/e6ba5ce582b7c4afd73f9e55c528d6c9d1db5dbc761a77b2bddc93ab5ce1520c.json",
+      "bytes": 4841,
+      "sha256": "ca1a283a23020a3d53ce2137b3ff01a079d4bf0262d8ee9c22f859a74a2b16bc"
+    },
+    "commandId": "live-model-2365f41e2588e9d305a435d0defa84457a3828fda361daddd022390ce863aaf0",
+    "phase": "held",
+    "resourceHeld": true,
+    "readinessRetired": true,
+    "ok": false,
+    "ordinaryPhaseObservations": [
+      {
+        "mainLogTime": "2026-11-19T05:04:49.904Z",
+        "phase": "run",
+        "sequence": 1,
+        "elapsedMs": 0
+      },
+      {
+        "mainLogTime": "2026-11-19T05:04:53.410Z",
+        "phase": "graph-start",
+        "sequence": 2,
+        "elapsedMs": 3505
+      },
+      {
+        "mainLogTime": "2026-11-19T05:05:02.040Z",
+        "phase": "graph-done",
+        "sequence": 3,
+        "elapsedMs": 12136
+      },
+      {
+        "mainLogTime": "2026-11-19T05:05:02.066Z",
+        "phase": "native-launch",
+        "sequence": 4,
+        "elapsedMs": 12157
+      },
+      {
+        "mainLogTime": "2026-11-19T05:05:10.250Z",
+        "phase": "native-ready",
+        "sequence": 5,
+        "elapsedMs": 20346
+      },
+      {
+        "mainLogTime": "2026-11-19T05:05:16.821Z",
+        "phase": "credential",
+        "sequence": 6,
+        "elapsedMs": 26916
+      }
+    ],
+    "laterPhasesObserved": false,
+    "interpretation": "Preparation reached credential entry, then remained held before target publication. Retained resourceHeld does not identify which original close/authority branch failed. No model request or Session execution is proved by entry markers."
+  },
+  "sourceFacts": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+      "fact": "Original credential marker precedes credential.prepare; attestation/session/create/driver-open and first submit follow it. Existing failed close records runState, outcome, error class/code and first close stage only on a private diagnostics channel."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts",
+      "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+      "fact": "Credential preparation can inspect the original catalog/directory, connect the captured key and dispose the same client under original currentness/custody. Its exact failing substep is not retained here."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts",
+      "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+      "fact": "prepareModel precedes target publication and startMember; failed original probe release retains held outcome."
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+      "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+      "fact": "Existing Main bridge retains phase/metadata/runtime-open observations but not the private model-probe close-failure channel."
+    }
+  ],
+  "knownUnknowns": [
+    "Whether credential transport, currentness, original deadline or physical/request/client cleanup caused this refusal is not yet observed.",
+    "Native read-cut finalReason cannot distinguish this branch before Session readback exists.",
+    "Historical42a4 pre-Add3-versus2census failure is different; its finite counterexample does not explain this current post-Add refusal."
+  ],
+  "lateFailureCapture": {
+    "screenshot": {
+      "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/ui-failure.png",
+      "bytes": 96967,
+      "sha256": "11679baa65fdb8ffd4aeb27b066859dd48c3179f061d875c41b0b0bd2a1a12cb"
+    },
+    "visualInspection": "Add Members remains open with configured TEST models and existing lead/bob chats. This late frame does not expose the original failed credential substep.",
+    "domSnapshotContainsHoldUnknown": true
+  },
+  "cleanup": {
+    "processGroup": 16798,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "failureQuit": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "acknowledged",
+    "listenerAbsent": true
+  },
+  "retainedTeamSessionsAfterCleanup": [
+    {
+      "memberId": "09e00444-346c-5e69-b25c-bf6c6a64713a",
+      "phase": "closed",
+      "custody": "released",
+      "nativeReady": false,
+      "sealed": true,
+      "inputs": 0
+    },
+    {
+      "memberId": "809be63e-848a-5721-8059-e07528420f73",
+      "phase": "closed",
+      "custody": "released",
+      "nativeReady": false,
+      "sealed": true,
+      "inputs": 0
+    }
+  ],
+  "finitePeerCleanup": {
+    "remaining": [],
+    "absent": true,
+    "originalPidCount": 29
+  },
+  "cleanupCaveat": "Physical group empty, normal Quit and finite peer absence do not clear the retained model-probe resourceHeld debt or invent a separate Host exit receipt.",
+  "originalSourceArtifacts": [
+    {
+      "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/hoststore/teams/test-created-native-mixed/.host-owner/state.json",
+      "bytes": 7732,
+      "sha256": "93703b51f5c2e27182c6f8b0815f0217187793456bc1395de85b701411d9af40"
+    },
+    {
+      "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/hoststore/teams/test-created-native-mixed/.host-owner/launches/360b18f4f7ef44a62d68e4f9bb57f00ab4657027e925daef1f61b9afdee78047.json",
+      "bytes": 11761,
+      "sha256": "7ad6845d02417bbf3ff7853d1cd43c17414f917354c8f3ca618a7f6fe1199d56"
+    },
+    {
+      "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/userData/logs/app-errors.ndjson",
+      "bytes": 66446,
+      "sha256": "3b5b903f2ef9a237e54b086eb9bd7be7d19957d8b09601ec405bda2b601ba65c"
+    },
+    {
+      "path": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact/TEST-desktop-backend-Yk5rj8/desktop-app.log",
+      "bytes": 6406,
+      "sha256": "ed1caacade440f5a70799baece81388775e97a0f16a31a146f2f5599dda2c3b4"
+    }
+  ]
+}

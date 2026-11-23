@@ -9,7 +9,11 @@ import { clearOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRunti
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import { nativeReleaseDigest } from './LegacyNativeStopCensus';
-import { captureTrackedLegacyNativeStopPublication } from './LegacyNativeStopPublication';
+import {
+  type CaptureLegacyNativeStopSourceFence,
+  captureTrackedLegacyNativeStopPublication,
+  type LegacyNativeStopPublication,
+} from './LegacyNativeStopPublication';
 import { readLegacyNativeStopRelease } from './LegacyNativeStopRelease';
 import {
   cleanupProvisioningRun,
@@ -86,10 +90,9 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
 
-  private readonly liveRosterMutationLockContext = new AsyncLocalStorage<{
-    teamKey: string;
-    token: symbol;
-  }>();
+  private readonly liveRosterMutationLockContext = new AsyncLocalStorage<
+    ReadonlyMap<string, symbol>
+  >();
   private readonly activeLiveRosterMutationTokens = new Map<string, symbol>();
   private stopFlowBoundaryValue: TeamProvisioningStopFlowBoundary | null = null;
   private openCodeStoppedLaneCleanupBoundary: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary | null =
@@ -179,7 +182,9 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
       const token = Symbol(`live-roster-mutation:${teamKey}`);
       this.activeLiveRosterMutationTokens.set(teamKey, token);
       try {
-        await this.liveRosterMutationLockContext.run({ teamKey, token }, mutation);
+        const owned = new Map(this.liveRosterMutationLockContext.getStore());
+        owned.set(teamKey, token);
+        await this.liveRosterMutationLockContext.run(owned, mutation);
       } finally {
         if (this.activeLiveRosterMutationTokens.get(teamKey) === token) {
           this.activeLiveRosterMutationTokens.delete(teamKey);
@@ -191,10 +196,8 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   protected isLiveRosterMutationLockHeld(teamName: string): boolean {
     const context = this.liveRosterMutationLockContext.getStore();
     const teamKey = teamName.trim().toLowerCase();
-    return (
-      context?.teamKey === teamKey &&
-      this.activeLiveRosterMutationTokens.get(teamKey) === context.token
-    );
+    const token = context?.get(teamKey);
+    return token !== undefined && this.activeLiveRosterMutationTokens.get(teamKey) === token;
   }
 
   protected getStopTeamGeneration(teamName: string): number {
@@ -205,34 +208,70 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
    * Stop the running process for a team. No-op if team is not running.
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
-  async stopTeam(teamName: string): Promise<void> {
+  async stopTeam(
+    teamName: string,
+    captureSourceFence?: CaptureLegacyNativeStopSourceFence
+  ): Promise<void> {
+    return this.stopTeamWithSourceFence(teamName, captureSourceFence);
+  }
+
+  protected async stopTeamWithSourceFence(
+    teamName: string,
+    captureSourceFence?: CaptureLegacyNativeStopSourceFence
+  ): Promise<void> {
     const teamKey = teamName.trim().toLowerCase();
     this.stopTeamGenerationByTeam.set(teamKey, this.getStopTeamGeneration(teamName) + 1);
+    const generation = this.getStopTeamGeneration(teamName);
     const service = this.stopCleanupServiceHost;
-    await service.withTeamLock(teamName, () => {
-      const store = new TeamLaunchStateStore();
-      const teamsBasePath = getTeamsBasePath();
-      const publication = captureTrackedLegacyNativeStopPublication(teamName, {
-        getTeamsBasePath,
-        getTrackedRunId: (name) => service.runTracking.getTrackedRunId(name),
-        runs: service.runs,
-        hasOtherRuntimeOwner: (name) =>
-          service.runtimeAdapterRunByTeam.has(name) ||
-          service.getSecondaryRuntimeRuns(name).length > 0,
-        beginStop: (name) => store.beginStop(name),
-        publishStopped: async (name, authority, proof) => {
-          await store.markStopped(name, authority, proof);
-          const persisted = readLegacyNativeStopRelease(join(teamsBasePath, name), name);
-          return (
-            persisted !== null && nativeReleaseDigest(persisted) === nativeReleaseDigest(proof)
-          );
-        },
-        unavailable: () => logger.warn('Native Stop release publication remains unconfirmed'),
+    let publication: LegacyNativeStopPublication | null = null;
+    let finalize: (() => Promise<void>) | undefined;
+    try {
+      await service.withTeamLock(teamName, async () => {
+        if (generation !== this.getStopTeamGeneration(teamName))
+          throw new Error('Original native Stop request was replaced');
+        const store = new TeamLaunchStateStore();
+        const teamsBasePath = getTeamsBasePath();
+        publication = captureTrackedLegacyNativeStopPublication(teamName, {
+          ...(captureSourceFence ? { captureSourceFence } : {}),
+          isCurrentAttempt: () => generation === this.getStopTeamGeneration(teamName),
+          getTeamsBasePath,
+          getTrackedRunId: (name) => service.runTracking.getTrackedRunId(name),
+          runs: service.runs,
+          hasOtherRuntimeOwner: (name) =>
+            service.runtimeAdapterRunByTeam.has(name) ||
+            service.getSecondaryRuntimeRuns(name).length > 0,
+          beginStop: (name) => store.beginStop(name),
+          publishStopped: async (name, authority, proof) => {
+            await store.markStopped(name, authority, proof);
+            const persisted = readLegacyNativeStopRelease(join(teamsBasePath, name), name);
+            return (
+              persisted !== null && nativeReleaseDigest(persisted) === nativeReleaseDigest(proof)
+            );
+          },
+          onRefusal: (value) => logger.warn('Native Stop release refused ' +
+            JSON.stringify({ ...value, attempt: generation })),
+          unavailable: () => logger.warn('Native Stop release publication remains unconfirmed'),
+        });
+        if (publication?.drain) {
+          finalize = await this.stopFlowBoundary.prepareNativeStop(teamName, publication);
+        } else {
+          if (publication) await this.stopFlowBoundary.stopTeam(teamName, publication);
+          else await this.stopFlowBoundary.stopTeam(teamName);
+        }
       });
-      return publication
-        ? this.stopFlowBoundary.stopTeam(teamName, publication)
-        : this.stopFlowBoundary.stopTeam(teamName);
-    });
+      const original = publication as LegacyNativeStopPublication | null;
+      if (original?.drain && finalize) {
+        // Admitted WorkSync writes can need the team/identity/publication locks themselves.
+        await original.drain();
+        await service.withTeamLock(teamName, async () => {
+          if (generation !== this.getStopTeamGeneration(teamName))
+            throw new Error('Original native Stop request was replaced');
+          await finalize!();
+        });
+      }
+    } finally {
+      (publication as LegacyNativeStopPublication | null)?.release?.();
+    }
   }
 
   /**

@@ -1,4 +1,3 @@
-import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -10,11 +9,13 @@ import { InternalStorageWorkerCore } from '@features/internal-storage/main/infra
 import { createMemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main/composition/createMemberWorkSyncRestoreParticipant';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
+import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import {
   buildPendingReportIntentId,
   isMemberWorkSyncStoreSnapshot,
   JsonMemberWorkSyncStore,
 } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import { readFailureDetail } from '@features/member-work-sync/main/infrastructure/memberWorkSyncPreparationDiagnostics';
 import { MemberWorkSyncSqliteImporter } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncSqliteImporter';
 import { recordsToSnapshot, snapshotToRecords } from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { MemberWorkSyncStatusAuthority } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStatusAuthority';
@@ -68,7 +69,10 @@ afterEach(async () => {
   for (const core of cores.splice(0)) core.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
-async function setup(kind: 'json' | 'sqlite' = 'sqlite') {
+async function setup(
+  kind: 'json' | 'sqlite' = 'sqlite',
+  logger?: { warn: (message: string, metadata?: Record<string, unknown>) => void }
+) {
   const root = await mkdtemp(join(tmpdir(), 'mws-prepared-sandbox-'));
   roots.push(root);
   const paths = new MemberWorkSyncStorePaths(join(root, 'teams'));
@@ -98,15 +102,194 @@ async function setup(kind: 'json' | 'sqlite' = 'sqlite') {
     gateway,
     paths,
     fallbackRequiresReplica: false,
+    logger,
   });
   const replica = new InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>(
     (team) => paths.getSqliteFallbackReplicaPath(team),
     isMemberWorkSyncStoreSnapshot
   );
-  return { root, paths, gateway, json, sqlite, store, replica };
+  return { root, paths, gateway, selector, json, sqlite, store, replica };
 }
 
 describe('prepared backend production storage path', () => {
+  const emptyClaim = {
+    teamName: identity.teamName,
+    claimedBy: 'TEST-empty-dispatch',
+    nowIso: status().evaluatedAt,
+    limit: 10,
+  };
+  async function publishBoundStatus(h: Awaited<ReturnType<typeof setup>>) {
+    const nextStatus: MemberWorkSyncStatus = {
+      ...status(),
+      state: 'caught_up',
+      diagnostics: ['agenda_empty'],
+      shadow: { reconciledBy: 'queue', wouldNudge: false, fingerprintChanged: false },
+    };
+    const committed = await h.store.withPreparedBackend(
+      { ...identity, mutation: true },
+      (backend) =>
+        backend.compareAndWrite({
+          expectedRaw: null,
+          mutationId: 'TEST-startup-scan',
+          nextStatus,
+        })
+    );
+    expect(committed.committed).toBe(true);
+    return nextStatus;
+  }
+
+  it('retains the authority binding through the next empty dispatch claim and a cold metrics read', async () => {
+    const h = await setup();
+    // Production startup: dispatch, startup-scan reconcile, then another dispatch.
+    await expect(h.store.claimDue(emptyClaim)).resolves.toEqual([]);
+    const nextStatus = await publishBoundStatus(h);
+    await expect(h.store.claimDue(emptyClaim)).resolves.toEqual([]);
+    const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+    expect(JSON.parse(await readFile(path, 'utf8'))).toMatchObject({
+      state: 'clean',
+      incarnation: identity.incarnation,
+      snapshot: { statuses: [nextStatus] },
+    });
+    const restarted = new BackendSelectingMemberWorkSyncStore(h.selector, h.sqlite, h.json, {
+      gateway: h.gateway,
+      paths: h.paths,
+      fallbackRequiresReplica: false,
+    });
+    await restarted.readTeamMetrics(identity.teamName);
+    expect(JSON.parse(await readFile(path, 'utf8'))).toMatchObject({
+      state: 'clean',
+      incarnation: identity.incarnation,
+      snapshot: { statuses: [nextStatus] },
+    });
+  });
+
+  it('keeps an unbound public replica unbound even when a status carries an incarnation', async () => {
+    const h = await setup();
+    await h.replica.writeClean(identity.teamName, snapshot());
+    await h.store.claimDue(emptyClaim);
+    const envelope = JSON.parse(
+      await readFile(h.paths.getSqliteFallbackReplicaPath(identity.teamName), 'utf8')
+    );
+    expect(envelope).not.toHaveProperty('incarnation');
+    expect(envelope.snapshot.statuses[0].statusRevision.incarnation).toBe(identity.incarnation);
+  });
+
+  it.each(['dirty', 'malformed', 'foreign'] as const)(
+    'refuses a warm %s bound replica before a public claim overwrites its evidence',
+    async (kind) => {
+      const h = await setup();
+      await publishBoundStatus(h);
+      await h.store.readTeamMetrics(identity.teamName);
+      const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      const envelope = JSON.parse(await readFile(path, 'utf8'));
+      if (kind === 'dirty') envelope.state = 'dirty';
+      if (kind === 'malformed') envelope.snapshot.statuses = null;
+      if (kind === 'foreign') envelope.incarnation = 'foreign';
+      const before = JSON.stringify(envelope);
+      await writeFile(path, before);
+      const claim = vi.spyOn(h.sqlite, 'claimDue');
+      const dirty = vi.spyOn(InternalStorageJsonReplica.prototype, 'markDirty');
+      await expect(h.store.claimDue(emptyClaim)).rejects.toThrow();
+      expect(claim).not.toHaveBeenCalled();
+      expect(dirty).not.toHaveBeenCalled();
+      expect(await readFile(path, 'utf8')).toBe(before);
+    }
+  );
+
+  it('refuses a warm foreign canonical status before dirty publication or claim', async () => {
+    const h = await setup();
+    await publishBoundStatus(h);
+    await h.store.readTeamMetrics(identity.teamName);
+    const foreign = status();
+    foreign.statusRevision = { ...foreign.statusRevision!, incarnation: 'foreign' };
+    await h.gateway.importTeam(
+      identity.teamName,
+      snapshotToRecords(identity.teamName, snapshot(foreign))
+    );
+    const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+    const before = await readFile(path, 'utf8');
+    const dirty = vi.spyOn(InternalStorageJsonReplica.prototype, 'markDirty');
+    const claim = vi.spyOn(h.sqlite, 'claimDue');
+    await expect(h.store.claimDue(emptyClaim)).rejects.toThrow();
+    expect(dirty).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(await readFile(path, 'utf8')).toBe(before);
+  });
+
+  it.each(['replica', 'primary'] as const)(
+    'validates the actual cold %s merge input before import can normalize a foreign member',
+    async (source) => {
+      const h = await setup();
+      await publishBoundStatus(h);
+      const foreign = status();
+      foreign.memberName = 'foreign-member';
+      foreign.agenda = { ...foreign.agenda, memberName: foreign.memberName };
+      foreign.statusRevision = { ...foreign.statusRevision!, incarnation: 'foreign' };
+      const foreignSnapshot = snapshot(foreign);
+      if (source === 'replica') {
+        vi.spyOn(InternalStorageJsonReplica.prototype, 'readForPrimary').mockResolvedValueOnce(
+          foreignSnapshot
+        );
+      } else {
+        const canonical = await h.gateway.listTeamSnapshot(identity.teamName);
+        vi.spyOn(h.gateway, 'listTeamSnapshot')
+          .mockResolvedValueOnce(canonical)
+          .mockResolvedValueOnce(snapshotToRecords(identity.teamName, foreignSnapshot));
+      }
+      const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      const before = await readFile(path, 'utf8');
+      const imported = vi.spyOn(h.gateway, 'importTeam');
+      const dirty = vi.spyOn(InternalStorageJsonReplica.prototype, 'markDirty');
+      await expect(h.store.readTeamMetrics(identity.teamName)).rejects.toThrow();
+      expect(imported).not.toHaveBeenCalled();
+      expect(dirty).not.toHaveBeenCalled();
+      expect(await readFile(path, 'utf8')).toBe(before);
+    }
+  );
+
+  it('leaves a bound dirty fence when the public mutation produces foreign canonical ownership', async () => {
+    const warn = vi.fn();
+    const h = await setup('sqlite', { warn });
+    await publishBoundStatus(h);
+    await h.store.readTeamMetrics(identity.teamName);
+    vi.spyOn(h.sqlite, 'claimDue').mockImplementationOnce(async () => {
+      const foreign = status();
+      foreign.statusRevision = { ...foreign.statusRevision!, incarnation: 'foreign' };
+      await h.gateway.importTeam(
+        identity.teamName,
+        snapshotToRecords(identity.teamName, snapshot(foreign))
+      );
+      return [];
+    });
+    const clean = vi.spyOn(InternalStorageJsonReplica.prototype, 'writeClean');
+    await expect(h.store.claimDue(emptyClaim)).resolves.toEqual([]);
+    expect(clean).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      'member-work-sync fallback replica publication failed',
+      expect.any(Object)
+    );
+    expect(
+      JSON.parse(await readFile(h.paths.getSqliteFallbackReplicaPath(identity.teamName), 'utf8'))
+    ).toMatchObject({
+      state: 'dirty',
+      incarnation: identity.incarnation,
+    });
+    await expect(h.replica.readBoundClean(identity.teamName)).rejects.toThrow();
+  });
+
+  it('does not carry the previous bound incarnation through a legitimate team purge', async () => {
+    const h = await setup();
+    await publishBoundStatus(h);
+    await h.store.purgeTeam(identity.teamName);
+    await h.store.claimDue(emptyClaim);
+    const envelope = JSON.parse(
+      await readFile(h.paths.getSqliteFallbackReplicaPath(identity.teamName), 'utf8')
+    );
+    expect(envelope).not.toHaveProperty('incarnation');
+    expect(envelope.snapshot.statuses).toEqual([]);
+    expect(envelope.snapshot.outboxItems).toEqual([]);
+  });
+
   it('preserves bound journal metadata through SQLite and refuses legacy overwrites', async () => {
     const h = await setup('sqlite');
     const value = snapshot();
@@ -167,6 +350,7 @@ describe('prepared backend production storage path', () => {
     async (kind) => {
       const h = await setup(kind);
       const authority = new MemberWorkSyncStatusAuthority({
+        diagnosticDetail: readFailureDetail,
       interruption: internalStorageInterruption,
         identity: createTestWorkSyncIdentity(identity.incarnation),
         withPreparedBackend: (binding, operation) =>
@@ -1046,5 +1230,98 @@ describe('prepared backend production storage path', () => {
       h.store.withPreparedBackend({ ...identity, incarnation: 'new-incarnation' }, vi.fn())
     ).rejects.toThrow('incarnation mismatch');
     expect(source).toHaveBeenCalledTimes(2);
+  });
+  describe('incarnation mismatch diagnostics (fail-closed, nothing is deleted)', () => {
+    const stale = (): MemberWorkSyncStatus => ({
+      ...status(),
+      statusRevision: { ...status().statusRevision!, incarnation: 'old-inc' },
+    });
+    const logged = (warn: ReturnType<typeof vi.fn>) =>
+      warn.mock.calls.filter(([message]) => String(message).includes('another team identity'));
+    const authorityOf = (h: Awaited<ReturnType<typeof setup>>) =>
+      new MemberWorkSyncStatusAuthority({
+        diagnosticDetail: readFailureDetail,
+        identity: createTestWorkSyncIdentity(identity.incarnation),
+        withPreparedBackend: (binding, operation) =>
+          h.store.withPreparedBackend(binding, operation),
+      });
+
+    it('reports the source and foreign incarnation for stale SQLite rows and keeps every row', async () => {
+      const warn = vi.fn();
+      const h = await setup('sqlite', { warn });
+      const bob = { ...snapshot(stale()).statuses[0], memberName: 'bob', statusRevision: status().statusRevision };
+      await h.gateway.importTeam(identity.teamName, snapshotToRecords(identity.teamName, snapshot(stale())));
+      await h.json.write(bob as MemberWorkSyncStatus);
+      const primaryBefore = await h.gateway.listTeamSnapshot(identity.teamName);
+      const activeBefore = await h.json.readSnapshotForImport(identity.teamName);
+      const operation = vi.fn();
+      await expect(h.store.withPreparedBackend({ ...identity, mutation: true }, operation)).rejects.toMatchObject({
+        reason: 'incarnation_mismatch',
+        foreignIncarnation: 'old-inc',
+      });
+      expect(operation).not.toHaveBeenCalled();
+      expect(logged(warn)).toHaveLength(1);
+      expect(logged(warn)[0][1]).toMatchObject({
+        teamName: identity.teamName,
+        incarnation: identity.incarnation,
+        foreignIncarnation: 'old-inc',
+        source: 'primary',
+        detail: 'incarnation_mismatch',
+        hint: expect.stringContaining('Nothing was changed'),
+      });
+      expect(await h.gateway.listTeamSnapshot(identity.teamName)).toEqual(primaryBefore);
+      expect(await h.json.readSnapshotForImport(identity.teamName)).toEqual(activeBefore);
+      // The failure cache still applies: a repeat within the window is not re-logged.
+      await expect(h.store.withPreparedBackend({ ...identity, mutation: true }, operation)).rejects.toThrow();
+      expect(logged(warn)).toHaveLength(1);
+      // The public contract keeps `reason: corrupt` and only adds an optional detail.
+      const read = authorityOf(h).startRead(member);
+      await expect(read.result).resolves.toEqual({ ok: false, reason: 'corrupt', detail: 'incarnation_mismatch' });
+      await read.settled;
+    });
+
+    it('reports a stale status inside a JSON replica and leaves the replica file untouched', async () => {
+      const warn = vi.fn();
+      const h = await setup('json', { warn });
+      await h.replica.writeClean(identity.teamName, snapshot(stale()), identity.incarnation);
+      const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      const before = await readFile(path, 'utf8');
+      await expect(h.store.withPreparedBackend(identity, vi.fn())).rejects.toMatchObject({
+        reason: 'incarnation_mismatch',
+        foreignIncarnation: 'old-inc',
+      });
+      expect(logged(warn)[0][1]).toMatchObject({ source: 'replica', foreignIncarnation: 'old-inc' });
+      expect(await readFile(path, 'utf8')).toBe(before);
+    });
+
+    it('reports a replica written for another incarnation (wrapper) with its foreign incarnation', async () => {
+      const warn = vi.fn();
+      const h = await setup('json', { warn });
+      await h.replica.writeClean(identity.teamName, snapshot(), 'old-inc');
+      const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      const before = await readFile(path, 'utf8');
+      await expect(h.store.withPreparedBackend(identity, vi.fn())).rejects.toThrow('incarnation mismatch');
+      expect(logged(warn)[0][1]).toMatchObject({
+        source: 'replica_wrapper',
+        foreignIncarnation: 'old-inc',
+        detail: 'incarnation_mismatch',
+      });
+      expect(await readFile(path, 'utf8')).toBe(before);
+      const read = authorityOf(h).startRead(member);
+      await expect(read.result).resolves.toEqual({ ok: false, reason: 'unavailable', detail: 'incarnation_mismatch' });
+      await read.settled;
+    });
+
+    it('does not label unrelated preparation failures as an incarnation mismatch', async () => {
+      const warn = vi.fn();
+      const h = await setup('sqlite', { warn });
+      vi.spyOn(h.gateway, 'listTeamSnapshot').mockRejectedValueOnce(new Error('disk offline'));
+      await expect(h.store.withPreparedBackend(identity, vi.fn())).rejects.toThrow('disk offline');
+      expect(logged(warn)).toHaveLength(0);
+      const read = authorityOf(h).startRead(member);
+      const result = await read.result;
+      await read.settled;
+      expect(result).not.toHaveProperty('detail');
+    });
   });
 });

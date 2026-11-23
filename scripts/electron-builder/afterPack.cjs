@@ -189,14 +189,17 @@ async function pruneNodePtyArtifacts(appOutDir, platform, archLabel) {
   return removedPaths;
 }
 
-async function directoryExists(dirPath) {
+async function pathExistsWithType(filePath, type) {
   try {
-    const stat = await fs.promises.stat(dirPath);
-    return stat.isDirectory();
+    const stat = await fs.promises.stat(filePath);
+    return stat[type]();
   } catch {
     return false;
   }
 }
+
+const directoryExists = (dirPath) => pathExistsWithType(dirPath, 'isDirectory');
+const fileExists = (filePath) => pathExistsWithType(filePath, 'isFile');
 
 async function hasNodePtyTargetPrebuild(nodePtyRoot, platform, archLabel) {
   const prebuildsDir = path.join(nodePtyRoot, 'prebuilds');
@@ -219,15 +222,6 @@ async function hasNodePtyTargetPrebuild(nodePtyRoot, platform, archLabel) {
   }
 
   return false;
-}
-
-async function fileExists(filePath) {
-  try {
-    const stat = await fs.promises.stat(filePath);
-    return stat.isFile();
-  } catch {
-    return false;
-  }
 }
 
 async function containsIncompatibleNativeBinary(rootDir, targetPlatform, targetArch) {
@@ -411,6 +405,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
 // every Windows architecture and reads back as ia32 here. verifyBundle.cjs
 // inherits this allowance through validateNativeBinaries.
 const OPENCODE_CONSOLE_WRAPPER_PATH = 'resources/runtime/opencode-console/opencode.exe';
+const TEAMMATE_CONSOLE_WRAPPER_PATH = 'resources/runtime/teammate-console/teammate.exe';
 
 function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, clrManaged = false, targetArch = null) {
   const normalizedPath = relativePath.split(path.sep).join('/');
@@ -430,11 +425,16 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
     format === 'pe' && archs.size === 1 && archs.has('x64')
   ) return true;
 
+  // The exact wrapper path is an exception only for managed AnyCPU CLR images.
+  const isManagedWrapperPath = normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
+    normalizedPath === TEAMMATE_CONSOLE_WRAPPER_PATH;
+  if (targetPlatform === 'win32' && isManagedWrapperPath && clrManaged &&
+      format === 'pe' && archs.size === 1 && archs.has('ia32')) return true;
+
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
   const isAllowedIa32Path =
     normalizedPath === ssh2PageantPath ||
     normalizedPath.endsWith(`/${ssh2PageantPath}`) ||
-    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
     // Git for Windows contains this one 32-bit MSYS helper even in 64-bit archives.
     normalizedPath === 'resources/git/usr/libexec/getprocaddr32.exe';
 
@@ -514,10 +514,6 @@ function parseMachO(buffer) {
   const archs = new Set();
 
   if (magicHex === 'cafebabe' || magicHex === 'cafebabf') {
-    if (buffer.length < 8) {
-      return null;
-    }
-
     const archCount = buffer.readUInt32BE(4);
     const stride = magicHex === 'cafebabf' ? 32 : 20;
     let offset = 8;
@@ -784,6 +780,7 @@ async function afterPack(context) {
 module.exports = afterPack;
 module.exports._internal = {
   OPENCODE_CONSOLE_WRAPPER_PATH,
+  TEAMMATE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   getArchLabel,
   getKnownPrunableNativeArtifactRoot,

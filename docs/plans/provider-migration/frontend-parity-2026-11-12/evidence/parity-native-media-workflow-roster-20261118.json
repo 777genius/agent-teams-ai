@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-media-workflow-receipt-roster-followup",
+  "sourceManifest": {
+    "kind": "exact-one-line-workflow-receipt-roster-fix",
+    "sourceHead": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "originalReceiptSource": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+    "pins": [
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+        "bytes": 36309,
+        "lines": 630
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "gitBlob": "b836af9bbae19ac541a367e9fc247f6f2637bfa3",
+        "sha256": "832f743b8d3faed7fc43ebf84a0477ff5d81c9df10ffbd26c9dc82fd44c52528",
+        "bytes": 33488,
+        "lines": 501
+      }
+    ],
+    "postimage": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "25aa41fbcad0d5758e1e6a697f602d15a05468af",
+      "sha256": "01a7b3829567d0be7d83bb2dad81e25d7523d4ce54bcf891a45f05b12caa5cc1",
+      "bytes": 36406,
+      "lines": 631
+    },
+    "change": "Insert exactly the existing unconditional media proof marker between PNG and checkpoint. All other workflow bytes unchanged.",
+    "producerUnchanged": true
+  },
+  "finiteVerifier": {
+    "schemaVersion": 1,
+    "kind": "finite-actual-workflow-verifier-original-receipt-replay",
+    "checkedAt": "2026-11-18T21:54:24.050Z",
+    "nativeReceiptHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+    "workflowSourceHead": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "runtime": {
+      "nodeVersion": "v24.22.3",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "explicitVerifierContext": {
+      "platform": "win32",
+      "arch": "x64",
+      "environment": {
+        "OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED": "1",
+        "OPENCODE_V2_EMBEDDED_HOST_RECEIPT": "opencode-v2-embedded-host.json",
+        "OPENCODE_V2_TEST_SOURCE_HEAD": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+        "OPENCODE_V2_TEST_PLATFORM": "win32-x64",
+        "OPENCODE_V2_EMBEDDED_BUN_SHA256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "OPENCODE_V2_EMBEDDED_MANIFEST_SHA256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+      }
+    },
+    "contextQualification": "Offline VM evaluation of exact inline JavaScript body with a two-file read-only receipt port and original Windows branch inputs. No native, Host, app or workflow execution.",
+    "artifact": {
+      "id": 14473682433,
+      "zipSha256": "4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613",
+      "files": {
+        "opencode-v2-embedded-host.json": "bd682bbbb2ad463dfcc20a1c2bfd704a633f1db9384b27f4b6ce31a65f4986f8",
+        "opencode-v2-embedded-host-auto.json": "b6202512a9eef253f248a82d9475fbcb5dd4063356578a9b51e5d3d128592055",
+        "opencode-v2-embedded-inputs.json": "f91e4902cc2e8ba6ad629332115039f6b0df4b8a299fed195d6b2be41f2f99f4",
+        "opencode-v2-windows-custody.json": "354c1c12164d6dee53488e52ec56893cd85cef54b98afdaa0e2eca53b3219cc0"
+      },
+      "originalFilesUnchangedBeforeAfter": true
+    },
+    "scripts": {
+      "beforeSha256": "8d6f8f21b66ba47cbeea8cf649b484b07c1c556e245446fedb5200eae24e4943",
+      "afterSha256": "097b8ad9187cf9dc685be65ace382fd5df2304d15de51c4dc2194801f51baa59",
+      "oneLineOnly": true,
+      "runnerSha256": "873410e73dd521d6dc6f46264a8156b233b4bee9384d27d151b4b03867eda1a0"
+    },
+    "summary": {
+      "originalRefusalReproduced": 1,
+      "fullVerifierPassed": 1,
+      "originalReceiptsFullyChecked": 2,
+      "exactStepNegativeRefusals": 3
+    },
+    "results": [
+      {
+        "label": "original-verifier-original-receipts",
+        "outcome": "EXPECTED_REFUSAL",
+        "reads": [
+          "opencode-v2-embedded-host.json"
+        ],
+        "failure": {
+          "name": "AssertionError",
+          "code": "ERR_ASSERTION",
+          "operator": "deepStrictEqual",
+          "actual": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "expected": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ]
+        }
+      },
+      {
+        "label": "one-line-fix-original-manual-and-auto-receipts",
+        "outcome": "PASS",
+        "reads": [
+          "opencode-v2-embedded-host.json",
+          "opencode-v2-embedded-host-auto.json"
+        ],
+        "failure": null
+      },
+      {
+        "label": "missing-media-proof-refused",
+        "outcome": "EXPECTED_REFUSAL",
+        "reads": [
+          "opencode-v2-embedded-host.json"
+        ],
+        "failure": {
+          "name": "AssertionError",
+          "code": "ERR_ASSERTION",
+          "operator": "deepStrictEqual",
+          "actual": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "expected": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ]
+        }
+      },
+      {
+        "label": "extra-auto-step-refused",
+        "outcome": "EXPECTED_REFUSAL",
+        "reads": [
+          "opencode-v2-embedded-host.json",
+          "opencode-v2-embedded-host-auto.json"
+        ],
+        "failure": {
+          "name": "AssertionError",
+          "code": "ERR_ASSERTION",
+          "operator": "deepStrictEqual",
+          "actual": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay",
+            "TEST-unexpected-step"
+          ],
+          "expected": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ]
+        }
+      },
+      {
+        "label": "reordered-auto-media-proof-refused",
+        "outcome": "EXPECTED_REFUSAL",
+        "reads": [
+          "opencode-v2-embedded-host.json",
+          "opencode-v2-embedded-host-auto.json"
+        ],
+        "failure": {
+          "name": "AssertionError",
+          "code": "ERR_ASSERTION",
+          "operator": "deepStrictEqual",
+          "actual": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "expected": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ]
+        }
+      }
+    ],
+    "qualification": "The historical native jobs and their conclusion are unchanged; this is a finite verifier RED-to-GREEN proof. Fresh current-head original CI remains required. All existing post-roster qualification and Windows-shell assertions ran for both original receipts."
+  },
+  "artifactManifest": {
+    "artifactId": 14473682433,
+    "zipPath": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-native-win32-x64-823.zip",
+    "bytes": 13580,
+    "sha256": "4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613",
+    "fileId": "file_00000000777081f486492e3cbd51cc59",
+    "apiDigestMatches": true,
+    "members": [
+      {
+        "name": "opencode-v2-embedded-host.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-host.json",
+        "bytes": 91886,
+        "sha256": "bd682bbbb2ad463dfcc20a1c2bfd704a633f1db9384b27f4b6ce31a65f4986f8",
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "approvalMode": "manual",
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+      },
+      {
+        "name": "opencode-v2-embedded-inputs.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-inputs.json",
+        "bytes": 780,
+        "sha256": "f91e4902cc2e8ba6ad629332115039f6b0df4b8a299fed195d6b2be41f2f99f4",
+        "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+        "status": "READY",
+        "approvalMode": null,
+        "steps": null,
+        "cleanup": null,
+        "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+      },
+      {
+        "name": "opencode-v2-windows-custody.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-windows-custody.json",
+        "bytes": 907,
+        "sha256": "354c1c12164d6dee53488e52ec56893cd85cef54b98afdaa0e2eca53b3219cc0",
+        "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+        "status": "PASS",
+        "approvalMode": null,
+        "steps": null,
+        "cleanup": true,
+        "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+      },
+      {
+        "name": "opencode-v2-embedded-host-auto.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433/opencode-v2-embedded-host-auto.json",
+        "bytes": 96755,
+        "sha256": "b6202512a9eef253f248a82d9475fbcb5dd4063356578a9b51e5d3d128592055",
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "approvalMode": "auto",
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27"
+      }
+    ],
+    "githubDownloadEndpointPermanentlyRetired": true,
+    "materializedAt": "2026-11-18T21:50:43.280722+00:00"
+  },
+  "inlineScripts": {
+    "before": "\n            import assert from 'node:assert/strict';\n            import fs from 'node:fs';\n            assert.equal(process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED, '1',\n              'HOLD: candidate custody evidence is available; qualify only this exact tuple and rerun the unmodified product path');\n            const receipts = [[process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, 'manual']];\n            if (process.platform === 'win32') receipts.push(['opencode-v2-embedded-host-auto.json', 'auto']);\n            for (const [path, mode] of receipts) {\n            const r = JSON.parse(fs.readFileSync(path, 'utf8'));\n            assert.equal(r.kind, 'TEST_NATIVE_V2_EMBEDDED_HOST');\n            assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);\n            assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);\n            assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);\n            assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');\n            assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 11);\n            assert.deepEqual(r.modelSelection,\n              { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' });\n            assert.deepEqual(r.configurationSelection,\n              { scope: 'project', original: 'project-A', later: 'project-B' });\n            assert.deepEqual(r.preferencesSelection,\n              { nativeDefault: 'TEST-local/TEST-model', appDefault: 'TEST-local/TEST-model-B' });\n            assert.deepEqual(r.modelFailures, []);\n            assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);\n            assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);\n            const coordination = process.platform === 'linux' && process.arch === 'x64';\n            if (coordination) {\n              assert.equal(r.coordination.status, 'PASS'); assert.equal(r.coordination.cleanup, true);\n            }\n            assert.deepEqual(r.steps, [\n              ...(coordination ? ['original_native_coordination_and_cleanup_before_business_host'] : []),\n              'original_host_embedded_native_and_mcp_ready',\n              'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',\n              'changed_project_config_did_not_retarget_running_native_session',\n              'original_uploaded_PNG_native_image_inference_and_public_readback',\n              'checkpoint_and_original_host_native_cleanup_confirmed',\n              'cold_host_restored_native_history_without_model_or_tool_replay',\n            ]);\n            assert.equal(r.vendorAuthQualified, false);\n            assert.equal(r.desktopQualified, false); assert.equal(r.releaseQualified, false);\n            if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);\n            }\n",
+    "after": "\n            import assert from 'node:assert/strict';\n            import fs from 'node:fs';\n            assert.equal(process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED, '1',\n              'HOLD: candidate custody evidence is available; qualify only this exact tuple and rerun the unmodified product path');\n            const receipts = [[process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, 'manual']];\n            if (process.platform === 'win32') receipts.push(['opencode-v2-embedded-host-auto.json', 'auto']);\n            for (const [path, mode] of receipts) {\n            const r = JSON.parse(fs.readFileSync(path, 'utf8'));\n            assert.equal(r.kind, 'TEST_NATIVE_V2_EMBEDDED_HOST');\n            assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);\n            assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);\n            assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);\n            assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');\n            assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 11);\n            assert.deepEqual(r.modelSelection,\n              { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' });\n            assert.deepEqual(r.configurationSelection,\n              { scope: 'project', original: 'project-A', later: 'project-B' });\n            assert.deepEqual(r.preferencesSelection,\n              { nativeDefault: 'TEST-local/TEST-model', appDefault: 'TEST-local/TEST-model-B' });\n            assert.deepEqual(r.modelFailures, []);\n            assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);\n            assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);\n            const coordination = process.platform === 'linux' && process.arch === 'x64';\n            if (coordination) {\n              assert.equal(r.coordination.status, 'PASS'); assert.equal(r.coordination.cleanup, true);\n            }\n            assert.deepEqual(r.steps, [\n              ...(coordination ? ['original_native_coordination_and_cleanup_before_business_host'] : []),\n              'original_host_embedded_native_and_mcp_ready',\n              'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',\n              'changed_project_config_did_not_retarget_running_native_session',\n              'original_uploaded_PNG_native_image_inference_and_public_readback',\n              'all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback',\n              'checkpoint_and_original_host_native_cleanup_confirmed',\n              'cold_host_restored_native_history_without_model_or_tool_replay',\n            ]);\n            assert.equal(r.vendorAuthQualified, false);\n            assert.equal(r.desktopQualified, false); assert.equal(r.releaseQualified, false);\n            if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);\n            }\n"
+  },
+  "finiteRunner": {
+    "text": "import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nimport path from 'node:path';\nimport crypto from 'node:crypto';\nimport vm from 'node:vm';\n\nconst root = import.meta.dirname;\nconst artifact = '/workspace/scratch/c714f5bce554/ci-current-823/artifact-14473682433';\nconst hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');\nconst files = {\n  'opencode-v2-embedded-host.json': 'bd682bbbb2ad463dfcc20a1c2bfd704a633f1db9384b27f4b6ce31a65f4986f8',\n  'opencode-v2-embedded-host-auto.json': 'b6202512a9eef253f248a82d9475fbcb5dd4063356578a9b51e5d3d128592055',\n  'opencode-v2-embedded-inputs.json': 'f91e4902cc2e8ba6ad629332115039f6b0df4b8a299fed195d6b2be41f2f99f4',\n  'opencode-v2-windows-custody.json': '354c1c12164d6dee53488e52ec56893cd85cef54b98afdaa0e2eca53b3219cc0',\n};\nconst exact = new Map();\nfor (const [name, expected] of Object.entries(files)) {\n  const bytes = fs.readFileSync(path.join(artifact, name));\n  assert.equal(hash(bytes), expected);\n  exact.set(name, bytes.toString('utf8'));\n}\nconst zipName = 'opencode-v2-embedded-native-win32-x64-823.zip';\nassert.equal(hash(fs.readFileSync(path.join(artifact, zipName))),\n  '4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613');\nconst inputs = JSON.parse(exact.get('opencode-v2-embedded-inputs.json'));\nconst custody = JSON.parse(exact.get('opencode-v2-windows-custody.json'));\nassert.equal(inputs.sourceHead, '823ef00a5cd081ccc3efdad85faf41e1cd888a27');\nassert.equal(inputs.platform, 'win32-x64');\nassert.equal(custody.status, 'PASS');\nassert.equal(custody.cleanup, true);\nconst environment = Object.freeze({\n  OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: '1',\n  OPENCODE_V2_EMBEDDED_HOST_RECEIPT: 'opencode-v2-embedded-host.json',\n  OPENCODE_V2_TEST_SOURCE_HEAD: inputs.sourceHead,\n  OPENCODE_V2_TEST_PLATFORM: inputs.platform,\n  OPENCODE_V2_EMBEDDED_BUN_SHA256: inputs.bun.sha256,\n  OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: inputs.manifestSha256,\n});\nconst before = fs.readFileSync(path.join(root, 'before-verifier.mjs'), 'utf8');\nconst after = fs.readFileSync(path.join(root, 'after-verifier.mjs'), 'utf8');\nconst marker = 'all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback';\nassert.equal(after.replace(\"              '\" + marker + \"',\\n\", ''), before);\nconst results = [];\n\nasync function check(label, script, change, expectedPass, expectedReads) {\n  const selected = new Map(exact);\n  if (change) change(selected);\n  const reads = [];\n  const readPort = Object.freeze({\n    readFileSync(name, encoding) {\n      assert.ok(name === 'opencode-v2-embedded-host.json' || name === 'opencode-v2-embedded-host-auto.json');\n      assert.equal(encoding, 'utf8');\n      reads.push(name);\n      return selected.get(name);\n    },\n  });\n  const context = vm.createContext({ process: Object.freeze({ platform: 'win32', arch: 'x64', env: environment }) });\n  const module = new vm.SourceTextModule(script, { context, identifier: label });\n  await module.link(specifier => {\n    assert.ok(specifier === 'node:assert/strict' || specifier === 'node:fs');\n    const exported = specifier === 'node:assert/strict' ? assert : readPort;\n    return new vm.SyntheticModule(['default'], function () { this.setExport('default', exported); }, { context });\n  });\n  let failure = null;\n  try { await module.evaluate({ timeout: 1000 }); }\n  catch (error) {\n    failure = { name: error.name, code: error.code, operator: error.operator,\n      actual: Array.isArray(error.actual) ? [...error.actual] : error.actual,\n      expected: Array.isArray(error.expected) ? [...error.expected] : error.expected };\n  }\n  assert.equal(failure === null, expectedPass, label);\n  assert.equal(reads.length, expectedReads, label);\n  if (!expectedPass) {\n    assert.equal(failure.code, 'ERR_ASSERTION', label);\n    assert.equal(failure.operator, 'deepStrictEqual', label);\n  }\n  results.push({ label, outcome: failure === null ? 'PASS' : 'EXPECTED_REFUSAL', reads, failure });\n}\n\nconst mutate = (name, fn) => selected => {\n  const receipt = JSON.parse(selected.get(name));\n  fn(receipt);\n  selected.set(name, JSON.stringify(receipt));\n};\nawait check('original-verifier-original-receipts', before, null, false, 1);\nawait check('one-line-fix-original-manual-and-auto-receipts', after, null, true, 2);\nawait check('missing-media-proof-refused', after,\n  mutate('opencode-v2-embedded-host.json', r => { r.steps.splice(r.steps.indexOf(marker), 1); }), false, 1);\nawait check('extra-auto-step-refused', after,\n  mutate('opencode-v2-embedded-host-auto.json', r => { r.steps.push('TEST-unexpected-step'); }), false, 2);\nawait check('reordered-auto-media-proof-refused', after,\n  mutate('opencode-v2-embedded-host-auto.json', r => {\n    const at = r.steps.indexOf(marker); [r.steps[at - 1], r.steps[at]] = [r.steps[at], r.steps[at - 1]];\n  }), false, 2);\n\nfor (const [name, expected] of Object.entries(files))\n  assert.equal(hash(fs.readFileSync(path.join(artifact, name))), expected);\nconst receipt = {\n  schemaVersion: 1,\n  kind: 'finite-actual-workflow-verifier-original-receipt-replay',\n  checkedAt: new Date().toISOString(),\n  nativeReceiptHead: inputs.sourceHead,\n  workflowSourceHead: '547e603c555be471394e9c6e4b6a53092a33a6d7',\n  runtime: { nodeVersion: process.version, platform: process.platform, arch: process.arch },\n  explicitVerifierContext: { platform: 'win32', arch: 'x64', environment },\n  contextQualification: 'Offline VM evaluation of exact inline JavaScript body with a two-file read-only receipt port and original Windows branch inputs. No native, Host, app or workflow execution.',\n  artifact: { id: 14473682433, zipSha256: '4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613', files, originalFilesUnchangedBeforeAfter: true },\n  scripts: { beforeSha256: hash(before), afterSha256: hash(after), oneLineOnly: true, runnerSha256: hash(fs.readFileSync(import.meta.filename)) },\n  summary: { originalRefusalReproduced: 1, fullVerifierPassed: 1, originalReceiptsFullyChecked: 2, exactStepNegativeRefusals: 3 },\n  results,\n  qualification: 'The historical native jobs and their conclusion are unchanged; this is a finite verifier RED-to-GREEN proof. Fresh current-head original CI remains required. All existing post-roster qualification and Windows-shell assertions ran for both original receipts.',\n};\nfs.writeFileSync(path.join(root, 'verifier-evidence.json'), JSON.stringify(receipt, null, 2) + '\\n');\nconsole.log(JSON.stringify({ ...receipt.summary, result: 'PASS', originalBytesPreserved: true }));\n",
+    "sha256": "873410e73dd521d6dc6f46264a8156b233b4bee9384d27d151b4b03867eda1a0"
+  },
+  "terminal": {
+    "exitCode": 0,
+    "stdout": "{\"originalRefusalReproduced\":1,\"fullVerifierPassed\":1,\"originalReceiptsFullyChecked\":2,\"exactStepNegativeRefusals\":3,\"result\":\"PASS\",\"originalBytesPreserved\":true}\n",
+    "stderrQualification": "Node experimental VM Modules warning only; no runtime error",
+    "scope": "One actual finite verifier execution, no application/native/CI replay"
+  }
+}

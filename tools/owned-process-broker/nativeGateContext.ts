@@ -26,6 +26,37 @@ export function timeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
     );
   });
 }
+
+/** Gate-owned neighbor stays alive until original parent EOF, inside the fixed outer Job deadline. */
+export function capturedGateSentinel(fixture: string) {
+  const child = spawn(fixture, ['source-sentinel'], {
+    stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+  });
+  const exited = new Promise<number | null>((resolveExit, reject) => {
+    child.once('exit', resolveExit); child.once('error', reject);
+  });
+  const closed = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolveClose, reject) => {
+    child.once('close', (code, signal) => resolveClose({ code, signal })); child.once('error', reject);
+  });
+  const ready = new Promise<void>((resolveReady, reject) => {
+    child.stdout.once('data', () => resolveReady()); child.once('error', reject);
+    child.once('exit', () => reject(new Error('Original gate sentinel exited before readiness')));
+  });
+  for (const pending of [exited, closed, ready]) void pending.catch(() => undefined);
+  let closing: Promise<void> | undefined;
+  return { process: child, ready, close() {
+    closing ??= (async () => {
+      const liveBeforeEof = child.exitCode === null && child.signalCode === null;
+      child.stdin.end();
+      // One original cleanup budget includes both child exit and stdio close.
+      const [code, close] = await timeout(Promise.all([exited, closed]));
+      assert.equal(liveBeforeEof, true, 'Original gate sentinel remains alive until owned EOF');
+      assert.equal(code, 0); assert.deepEqual(close, { code: 0, signal: null });
+    })();
+    return closing;
+  } };
+}
+
 export async function waitFor(
   check: () => boolean,
   ms = 10000,

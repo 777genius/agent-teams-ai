@@ -1331,12 +1331,6 @@ a[href],
   }
 }
 
-/* Optional field label — muted text for non-required form fields */
-
-.label-optional {
-  color: var(--color-text-muted);
-}
-
 /* Checkerboard background for transparent image previews */
 
 .checkerboard-bg {

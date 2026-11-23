@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -45,6 +48,112 @@ function createPorts(
 }
 
 describe('native teammate message helpers', () => {
+  it('ignores the exact echoed Main hydration rather than promoting its Alice example', () => {
+    // Pin the exact Main-built LF hydration across checkout line endings.
+    const prompt = readFileSync(
+      'tools/owned-process-broker/fixtures/retainedLegacyHydrationPrompt.txt',
+      'utf8'
+    ).replace(/\r\n/g, '\n');
+    expect(createHash('sha256').update(prompt).digest('hex')).toBe(
+      '6bd919e892140dc3665f6c517d10b21b9e43ce65607f84210c3af4ec4dc6f0dc'
+    );
+    const ports = createPorts();
+    handleNativeTeammateUserMessage(
+      createRun(),
+      {
+        type: 'user',
+        message: { role: 'user', content: prompt },
+      },
+      ports
+    );
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+    expect(ports.rememberSameTeamNativeFingerprints).not.toHaveBeenCalled();
+    expect(ports.reconcileSameTeamNativeDeliveries).not.toHaveBeenCalled();
+  });
+
+  const native = teammateMessage('worker', 'Ready for tasks');
+  const result = { type: 'tool_result', tool_use_id: 'TEST-tool', content: native };
+  it.each<[string, Record<string, unknown>]>([
+    ['inline example', { content: `Example: ${native}` }],
+    ['quoted code', { content: `\`\`\`xml\n${native}\n\`\`\`` }],
+    [
+      'top quote over nested protocol',
+      { content: `Example: ${native}`, message: { content: native } },
+    ],
+    ['nested tool result with top protocol', { content: native, message: { content: [result] } }],
+    ['top tool result without text', { content: [result], message: { content: native } }],
+    ['mixed top tool result and text', { content: [result, { type: 'text', text: native }] }],
+    ['explicit tool-result source', { content: native, sourceToolUseID: 'TEST-tool' }],
+    [
+      'tool results beat explicit protocol',
+      { content: native, protocolKind: 'teammate-message', toolResults: [result] },
+    ],
+    ['coordinator provenance', { content: native, origin: { kind: 'coordinator' } }],
+    ['compact summary', { content: native, isCompactSummary: true }],
+    ['empty top string', { content: '', message: { content: native } }],
+  ])('ignores %s without native delivery effects', (_label, message) => {
+    const ports = createPorts();
+    handleNativeTeammateUserMessage(createRun(), message, ports);
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+    expect(ports.handleTeammatePermissionRequest).not.toHaveBeenCalled();
+    expect(ports.rememberSameTeamNativeFingerprints).not.toHaveBeenCalled();
+    expect(ports.reconcileSameTeamNativeDeliveries).not.toHaveBeenCalled();
+    expect(ports.matchCrossTeamLeadInboxMessages).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['whitespace', { content: ` \n${native}` }],
+    ['Human prefix', { content: `Human: ${native}` }],
+    ['User prefix', { content: `User: ${native}` }],
+    [
+      'top protocol over nested quote',
+      { content: native, message: { content: `Example: ${native}` } },
+    ],
+    ['nested protocol', { message: { content: native } }],
+    ['empty top array fallback', { content: [], message: { content: native } }],
+    ['invalid top fallback', { content: { text: native }, message: { content: native } }],
+    [
+      'blank top text fallback',
+      { content: [{ type: 'text', text: ' ' }], message: { content: native } },
+    ],
+    ['protocol provenance', { content: `Delivery: ${native}`, protocolKind: 'teammate-message' }],
+    ['teammate origin', { content: `Delivery: ${native}`, origin: { kind: 'teammate' } }],
+    [
+      'Markdown body',
+      { content: teammateMessage('worker', 'Ready\n```js\nconst value = 1;\n```') },
+    ],
+  ])('preserves genuine native %s', (_label, message) => {
+    const run = createRun(),
+      ports = createPorts();
+    handleNativeTeammateUserMessage(run, message, ports);
+    expect(ports.setMemberSpawnStatus).toHaveBeenCalledExactlyOnceWith(
+      run,
+      'worker',
+      'online',
+      undefined,
+      'heartbeat'
+    );
+    expect(ports.rememberSameTeamNativeFingerprints).toHaveBeenCalledOnce();
+    expect(ports.reconcileSameTeamNativeDeliveries).toHaveBeenCalledOnce();
+  });
+
+  it('preserves multiple envelopes and dynamic teammate names', () => {
+    const run = createRun(),
+      ports = createPorts();
+    handleNativeTeammateUserMessage(
+      run,
+      {
+        content: `${native}\n${teammateMessage('dynamic-worker', 'Ready')}`,
+      },
+      ports
+    );
+    expect(vi.mocked(ports.setMemberSpawnStatus).mock.calls.map((call) => call[1])).toEqual([
+      'worker',
+      'dynamic-worker',
+    ]);
+    expect(ports.rememberSameTeamNativeFingerprints).toHaveBeenCalledOnce();
+  });
+
   it('intercepts teammate permission requests from native user messages', () => {
     const run = createRun();
     const ports = createPorts();

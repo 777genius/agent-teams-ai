@@ -167,6 +167,34 @@ describe('shared task view policy', () => {
     expect([...statusIds]).toEqual(['todo']);
   });
 
+  it('includes verified project histories when filtering by the visible logical team', () => {
+    const source = [
+      task('shared', { teamName: 'builders' }),
+      task('a-1', { teamName: 'ptc-a' }),
+      task('b-1', { teamName: 'ptc-b' }),
+      task('foreign', { teamName: 'ptc-foreign' }),
+    ];
+    const teamCatalog = [{
+      teamName: 'builders', displayName: 'Builders', description: '',
+      memberCount: 0, taskCount: 0, lastActivity: null,
+      projectHistoryContexts: [
+        { executionTeamName: 'ptc-a', projectPath: '/work/alpha' },
+        { executionTeamName: 'ptc-b', projectPath: '/work/beta' },
+      ],
+    }];
+    const policy = {
+      contextId,
+      filters: filters({ teamName: 'builders' }),
+      searchQuery: '',
+      archiveMode: 'all' as const,
+      teamCatalog,
+    };
+    expect(filterGlobalTasks(source, policy, getSnapshot()).map((item) => item.id))
+      .toEqual(['shared', 'a-1', 'b-1']);
+    expect(filterGlobalTasks(source, { ...policy, teamCatalog: [] }, getSnapshot())
+      .map((item) => item.id)).toEqual(['shared']);
+  });
+
   it('matches existing time team-freshness and unread tie ordering', () => {
     const olderTeamTask = task('older-team', {
       teamName: 'old',

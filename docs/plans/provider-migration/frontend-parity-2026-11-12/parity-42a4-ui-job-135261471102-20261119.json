@@ -1,0 +1,938 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-v2-settings-pass-membership-pre-add-failure",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "job": {
+    "id": 135261471102,
+    "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-19T03:08:38Z",
+    "completed_at": "2026-11-19T03:19:45Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261471102",
+    "runner_name": "GitHub Actions 1000396461"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261471102,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-19 03:22:00 UTC",
+    "bytes": 228403,
+    "sha256": "4b1924ce6b918d675c3455dd42be07afc0df1e903f85b1948942227189fd7a1d",
+    "computedGitBlobSha": "f85c0b6605e1e59b6529aac1572734b537f28b93",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471102-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471102-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "f85c0b6605e1e59b6529aac1572734b537f28b93",
+    "exactReadback": true
+  },
+  "artifact": {
+    "phase": "permanently-retired",
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "jobId": 135261471102,
+    "artifactId": 14495182584,
+    "bytes": 1403653,
+    "sha256": "7ecbce41d7e32014fd778f67ecdcab380a577ace488b990ab87195b3ec768a9e",
+    "file": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/42a4-v2-management-14495182584.zip",
+    "originalUploadPinsMatch": true,
+    "endpointRetired": true,
+    "rawResponsePersistedBeforeDecode": true,
+    "rawDownloadResponseLocalOnly": true,
+    "members": 74
+  },
+  "originalScenarioSteps": [
+    {
+      "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 30,
+      "started_at": "2026-11-19T03:11:49Z",
+      "completed_at": "2026-11-19T03:17:56Z"
+    },
+    {
+      "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 31,
+      "started_at": "2026-11-19T03:17:56Z",
+      "completed_at": "2026-11-19T03:18:00Z"
+    },
+    {
+      "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 32,
+      "started_at": "2026-11-19T03:18:00Z",
+      "completed_at": "2026-11-19T03:19:36Z"
+    },
+    {
+      "name": "Verify original V2 membership receipts and physical cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 33,
+      "started_at": "2026-11-19T03:19:36Z",
+      "completed_at": "2026-11-19T03:19:37Z"
+    }
+  ],
+  "originalReceipts": {
+    "settings": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/TEST-desktop-backend-JSBn9x/desktop-backend-receipt.json",
+      "bytes": 899787,
+      "sha256": "def887eee20aaf19cab5f8178032102cdfb64bc74df4cc9cc9046655d8b40ed1",
+      "computedGitBlobSha": "5bd7836d8fda2f23d89470f0eddc0c5a36cdb7b5"
+    },
+    "membership": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/TEST-desktop-backend-d7uKpu/desktop-backend-receipt.json",
+      "bytes": 1073914,
+      "sha256": "99284cc54946be84b9ad0b4d49777c27afdf64184904ff75343de0e449738331",
+      "computedGitBlobSha": "7008c9c285983c6a84020b9f7e45383301ced3cc"
+    }
+  },
+  "originalTextLogs": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/TEST-desktop-backend-JSBn9x/desktop-backend-app.log",
+      "bytes": 14982,
+      "sha256": "d85e7f3afe77e852ac550e3925d03fd13e622adbe49e1ad61149b5969958d5f1",
+      "computedGitBlobSha": "b367013d28912404d6bbe1154952531c6ef81fe6"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/TEST-desktop-backend-JSBn9x/userData/logs/app-errors.ndjson",
+      "bytes": 106003,
+      "sha256": "3d475700fbbeb38ed170be63778d1cc4889c3c1440b097a243107f9131a3bc4a",
+      "computedGitBlobSha": "7f42399c99813f8eaf85911317ab516c328c931a"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/TEST-desktop-backend-d7uKpu/desktop-app.log",
+      "bytes": 6244,
+      "sha256": "e1d35b0938a8f68edd27511d3a8101897445ea1b1ee38516f1ab7feda98f95ce",
+      "computedGitBlobSha": "34452cf583fe61443035259c04d1a256a8363842"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/TEST-desktop-backend-d7uKpu/userData/logs/app-errors.ndjson",
+      "bytes": 63882,
+      "sha256": "321dfb18237ff922e2b4ab956ebb22268cba2cf32a650fb508998e762eeaace5",
+      "computedGitBlobSha": "ddb9bf0b55354eee643473c8282cd3121c238e8c"
+    }
+  ],
+  "settings": {
+    "status": "PASS",
+    "proofStatus": "PASS",
+    "scope": "Original Electron V2 API-key rejection/replacement, model test, global/project defaults, inheritance and renderer reload",
+    "excluded": [
+      "Claude/Codex execution",
+      "vendor authentication/inference",
+      "native V2 OAuth/forget",
+      "release qualification"
+    ],
+    "effects": [
+      {
+        "step": "reject-key",
+        "kind": "credential.set",
+        "phase": "held",
+        "resourceHeld": false
+      },
+      {
+        "step": "connect-key",
+        "kind": "credential.set",
+        "phase": "completed",
+        "resourceHeld": false
+      },
+      {
+        "step": "global-default",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false
+      },
+      {
+        "step": "project-default",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false
+      },
+      {
+        "step": "project-test",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false
+      }
+    ],
+    "modelRequests": [
+      {
+        "step": "reject-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "refused"
+      },
+      {
+        "step": "connect-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "global-default",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-default",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-test",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      }
+    ],
+    "credentials": {
+      "authSha256": "ec9a5ca72560031c0361d3b27c3c208ba5c1bc31a33bb78085a80d47ea40393a",
+      "rejectedKeyRetainedUntilExplicitReplacement": true,
+      "successfulReplacementVerified": true
+    },
+    "preferences": [
+      {
+        "scope": "global",
+        "sha256": "481d2df9be472d2e92d0ce51d4798c2a382d1a86983d4cf39203f2586664ebcd",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "scope": "project",
+        "sha256": "fc1efba9c2ff62d07667a6e9e99b8bef2ca21695d3ac9511e25ae27175169cf3",
+        "defaultModelId": null
+      },
+      {
+        "scope": "other",
+        "sha256": null,
+        "defaultModelId": null
+      }
+    ],
+    "sourcePublicationCount": 7,
+    "originalVerified": {
+      "mode": "opencode-v2-management-ui",
+      "status": "PASS",
+      "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-JSBn9x/desktop-backend-receipt.json",
+      "receiptSha256": "def887eee20aaf19cab5f8178032102cdfb64bc74df4cc9cc9046655d8b40ed1",
+      "modelRequests": 5,
+      "originalProbeProcesses": 5,
+      "screenshots": 5,
+      "nativeRemaining": 0
+    },
+    "originalVerifiedPin": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14495182584/host-emulated-opencode-v2-management-ui-verified.json",
+      "bytes": 402,
+      "sha256": "8fb6ea03e0ef3a4b2f3715e9fc71c21aa3449410e1a372e59e339a936d955de2",
+      "computedGitBlobSha": "045ad383a85466752c7ee54bf02d9eddad4367bb"
+    },
+    "sourceFreeze": {
+      "beforeRecords": 1911,
+      "afterRecords": 1911,
+      "beforeEqualsAfter": true
+    },
+    "cleanup": {
+      "originalRequestedQuitExit": {
+        "initialExitCode": 0,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "beforeHarnessCleanup": [],
+      "cleanup": {
+        "remaining": [],
+        "capturedHostAbsent": true,
+        "hostPid": 4973
+      },
+      "nativeRemaining": [],
+      "modelServerClosed": true
+    },
+    "visualInspection": false
+  },
+  "membership": {
+    "status": "INCOMPLETE",
+    "failure": "every remaining original Host child is one expected Runtime\n\n3 !== 2\n",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:243:12",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:493:77",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:489:92",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "firstBusinessBoundaryNotCompleted": "Original live Add submission after selecting configured TEST-model. Assertion493 runs before membership.advance(add)494 and physical Add496. Remove/Restore/Stop/cold history are downstream and not entered.",
+    "sourceAssertion": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "observed": "natives.length=3 after excluding qualified metadata children",
+      "expected": "providers.length=2 (finite Claude/Codex original peers)",
+      "assertionLine": 243,
+      "callLine": 493,
+      "localImmutableSource": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/exact42a4-desktop-live-membership-ui-smoke.ts",
+        "bytes": 51125,
+        "sha256": "229391d41cd79b523674c967de4b01c66760bc2f013e01037f9309f577bf6f81",
+        "computedGitBlobSha": "44a8cb5c3814b6401ca3c433b9714d9c282d9ffb"
+      }
+    },
+    "proofMarkers": {
+      "kind": "mixed-live-membership",
+      "openCodeGeneration": "v2",
+      "initialPeers": "finite-initial-peers-native-v2",
+      "fullMixedNativeQualification": false,
+      "stepCount": 55,
+      "recordedSteps": [
+        {
+          "monotonicMs": 50948,
+          "action": "mouseMoved",
+          "label": "hover open original application menu",
+          "state": null
+        },
+        {
+          "monotonicMs": 51410,
+          "action": "mouseClick",
+          "label": "open original application menu",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 51532,
+          "action": "mouseMoved",
+          "label": "hover open original Teams list",
+          "state": null
+        },
+        {
+          "monotonicMs": 52071,
+          "action": "mouseClick",
+          "label": "open original Teams list",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 53644,
+          "action": "mouseMoved",
+          "label": "hover open original Create Team dialog",
+          "state": null
+        },
+        {
+          "monotonicMs": 54205,
+          "action": "mouseClick",
+          "label": "open original Create Team dialog",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 56060,
+          "action": "mouseMoved",
+          "label": "hover focus original team name",
+          "state": null
+        },
+        {
+          "monotonicMs": 56682,
+          "action": "mouseClick",
+          "label": "focus original team name",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 57206,
+          "action": "mouseMoved",
+          "label": "hover choose original custom project mode",
+          "state": null
+        },
+        {
+          "monotonicMs": 57778,
+          "action": "mouseClick",
+          "label": "choose original custom project mode",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 58187,
+          "action": "mouseMoved",
+          "label": "hover type TEST workspace",
+          "state": null
+        },
+        {
+          "monotonicMs": 58754,
+          "action": "mouseClick",
+          "label": "type TEST workspace",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 59332,
+          "action": "mouseMoved",
+          "label": "hover [data-testid=\"create-team-page\"] #sync-models-with-lead",
+          "state": null
+        },
+        {
+          "monotonicMs": 60307,
+          "action": "mouseClick",
+          "label": "[data-testid=\"create-team-page\"] #sync-models-with-lead",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 61168,
+          "action": "mouseMoved",
+          "label": "hover expand original lead model",
+          "state": null
+        },
+        {
+          "monotonicMs": 61745,
+          "action": "mouseClick",
+          "label": "expand original lead model",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 62436,
+          "action": "mouseMoved",
+          "label": "hover select finite initial Sonnet",
+          "state": null
+        },
+        {
+          "monotonicMs": 63138,
+          "action": "mouseClick",
+          "label": "select finite initial Sonnet",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 63537,
+          "action": "mouseMoved",
+          "label": "hover select original Medium effort",
+          "state": null
+        },
+        {
+          "monotonicMs": 64219,
+          "action": "mouseClick",
+          "label": "select original Medium effort",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 64576,
+          "action": "mouseMoved",
+          "label": "hover collapse original configured lead model",
+          "state": null
+        },
+        {
+          "monotonicMs": 65139,
+          "action": "mouseClick",
+          "label": "collapse original configured lead model",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 65393,
+          "action": "mouseMoved",
+          "label": "hover expand original optional launch settings",
+          "state": null
+        },
+        {
+          "monotonicMs": 65931,
+          "action": "mouseClick",
+          "label": "expand original optional launch settings",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 66545,
+          "action": "mouseMoved",
+          "label": "hover empty original launch prompt",
+          "state": null
+        },
+        {
+          "monotonicMs": 67153,
+          "action": "mouseClick",
+          "label": "empty original launch prompt",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 67483,
+          "action": "mouseMoved",
+          "label": "hover [data-testid=\"create-team-page\"] #launch-team",
+          "state": null
+        },
+        {
+          "monotonicMs": 68000,
+          "action": "mouseClick",
+          "label": "[data-testid=\"create-team-page\"] #launch-team",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 68369,
+          "action": "mouseMoved",
+          "label": "hover open original member JSON editor",
+          "state": null
+        },
+        {
+          "monotonicMs": 68878,
+          "action": "mouseClick",
+          "label": "open original member JSON editor",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 69186,
+          "action": "mouseMoved",
+          "label": "hover focus original member JSON input",
+          "state": null
+        },
+        {
+          "monotonicMs": 69729,
+          "action": "mouseClick",
+          "label": "focus original member JSON input",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 70364,
+          "action": "mouseMoved",
+          "label": "hover save original two-member roster once",
+          "state": null
+        },
+        {
+          "monotonicMs": 70823,
+          "action": "mouseClick",
+          "label": "save original two-member roster once",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 71580,
+          "action": "mouseMoved",
+          "label": "hover original application menu",
+          "state": null
+        },
+        {
+          "monotonicMs": 72376,
+          "action": "mouseClick",
+          "label": "original application menu",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 72604,
+          "action": "mouseMoved",
+          "label": "hover original Teams list",
+          "state": null
+        },
+        {
+          "monotonicMs": 73309,
+          "action": "mouseClick",
+          "label": "original Teams list",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 73872,
+          "action": "mouseMoved",
+          "label": "hover open exact original Team",
+          "state": null
+        },
+        {
+          "monotonicMs": 74658,
+          "action": "mouseClick",
+          "label": "open exact original Team",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 78588,
+          "action": "mouseMoved",
+          "label": "hover open original Launch dialog once",
+          "state": null
+        },
+        {
+          "monotonicMs": 79198,
+          "action": "mouseClick",
+          "label": "open original Launch dialog once",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 84249,
+          "action": "mouseMoved",
+          "label": "hover one original empty-prompt Launch",
+          "state": null
+        },
+        {
+          "monotonicMs": 84761,
+          "action": "mouseClick",
+          "label": "one original empty-prompt Launch",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 88277,
+          "action": "mouseMoved",
+          "label": "hover open original Add Members dialog",
+          "state": null
+        },
+        {
+          "monotonicMs": 88841,
+          "action": "mouseClick",
+          "label": "open original Add Members dialog",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 89255,
+          "action": "mouseMoved",
+          "label": "hover exact new member name",
+          "state": null
+        },
+        {
+          "monotonicMs": 89805,
+          "action": "mouseClick",
+          "label": "exact new member name",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 90137,
+          "action": "mouseMoved",
+          "label": "hover expand original new member model selector",
+          "state": null
+        },
+        {
+          "monotonicMs": 90771,
+          "action": "mouseClick",
+          "label": "expand original new member model selector",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 91196,
+          "action": "mouseMoved",
+          "label": "hover select original Local models",
+          "state": null
+        },
+        {
+          "monotonicMs": 91761,
+          "action": "mouseClick",
+          "label": "select original Local models",
+          "state": "attempted"
+        },
+        {
+          "monotonicMs": 92070,
+          "action": "mouseWheel",
+          "label": "original configured keyed TEST-model",
+          "state": null
+        },
+        {
+          "monotonicMs": 92505,
+          "action": "mouseMoved",
+          "label": "hover select original configured TEST-model",
+          "state": null
+        },
+        {
+          "monotonicMs": 93058,
+          "action": "mouseClick",
+          "label": "select original configured TEST-model",
+          "state": "attempted"
+        }
+      ],
+      "addedPresent": false,
+      "removedPresent": false,
+      "restoredPresent": false,
+      "stopPresent": false,
+      "physicalEpochs": [],
+      "metadataCensusClosures": [
+        {
+          "closed": true,
+          "samples": 927,
+          "failed": false,
+          "hostObserved": true,
+          "originalExitObserved": false,
+          "unobservedPids": [
+            15482,
+            16448,
+            16467,
+            16578,
+            16612,
+            16639
+          ]
+        }
+      ]
+    },
+    "lastSuccessfulPhysical": {
+      "host": {
+        "pid": 14715,
+        "parentPid": 14499,
+        "groupId": 14377,
+        "birth": "linux-starttime:66713",
+        "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+      },
+      "metadata": [
+        {
+          "pid": 15915,
+          "parentPid": 14715,
+          "groupId": 15915,
+          "birth": "linux-starttime:70631",
+          "command": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+        },
+        {
+          "pid": 16412,
+          "parentPid": 14715,
+          "groupId": 16412,
+          "birth": "linux-starttime:72026",
+          "command": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+        }
+      ],
+      "natives": [
+        {
+          "pid": 16584,
+          "parentPid": 14715,
+          "groupId": 16584,
+          "birth": "linux-starttime:72513",
+          "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+        },
+        {
+          "pid": 16599,
+          "parentPid": 14715,
+          "groupId": 16599,
+          "birth": "linux-starttime:72520",
+          "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+        }
+      ]
+    },
+    "physicalCaptureLimit": "currentPhysical was recorded by an earlier successful observe call. The failing3-child census was not retained in this proof; its third child identity is unknown from this snapshot. It must not be treated as atomic with the assertion.",
+    "initial": {
+      "peers": [
+        {
+          "provider": "claude",
+          "physical": {
+            "pid": 16584,
+            "parentPid": 14715,
+            "groupId": 16584,
+            "birth": "linux-starttime:72513",
+            "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+          }
+        },
+        {
+          "provider": "codex",
+          "physical": {
+            "pid": 16599,
+            "parentPid": 14715,
+            "groupId": 16599,
+            "birth": "linux-starttime:72520",
+            "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+          }
+        }
+      ],
+      "sessions": [
+        {
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "sessionRef": "575b0723-0593-5a3d-9c01-f9ef6d5ea7f8"
+        },
+        {
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "sessionRef": "c671340d-2027-50b7-9f5d-6ad92be75fec"
+        }
+      ],
+      "probeCounts": [
+        3,
+        1
+      ]
+    },
+    "finiteInitialPeers": {
+      "kind": "finite-initial-peers-native-v2",
+      "sources": [
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "sha256": "3d109c1ae3e1ab2553b8fc7befc96d90558edd5b76a54d928f1af84ec231d6e2"
+        },
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerPeer.mjs",
+          "sha256": "6434d3246aaee59b4c3c485e2a943be344006120327f9731f1afe8be7673b4b9"
+        },
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+          "sha256": "685245ef96356ed46b3915420b8ae78b460de322200fd473e6763fa81a7a6db4"
+        }
+      ],
+      "peers": [
+        {
+          "provider": "claude",
+          "root": "/home/runner/work/_temp/TEST-desktop-backend-d7uKpu/TEST-peer-claude-scope",
+          "executable": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-d7uKpu/bin/TEST-p11-claude",
+            "sha256": "30cbbc9f39c92cecdf99be3648bbff6ad5b44ac1d0c1016db7b37338dcb2d058"
+          }
+        },
+        {
+          "provider": "codex",
+          "root": "/home/runner/work/_temp/TEST-desktop-backend-d7uKpu/TEST-peer-codex-scope",
+          "executable": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-d7uKpu/bin/TEST-p11-codex.mjs",
+            "sha256": "18c6d72d7906be39c62bfa0f500d37f3ba36851aca43ac049e9fbab3803e3f30"
+          }
+        }
+      ],
+      "businessInputs": 0,
+      "linuxIdentity": "captured ps plus exact proc executable/argv/starttime",
+      "nativeQualification": false
+    },
+    "mixedModels": {
+      "schemaVersion": 1,
+      "phase": "before-model-close",
+      "root": "/home/runner/work/_temp/TEST-desktop-backend-d7uKpu",
+      "providers": {
+        "claude": {
+          "observations": [],
+          "notificationObservations": [],
+          "probes": [],
+          "failures": [],
+          "unexpectedNoToolsRequests": []
+        },
+        "codex": {
+          "observations": [],
+          "notificationObservations": [],
+          "probes": [],
+          "failures": []
+        },
+        "opencode": {
+          "observations": [],
+          "probes": [],
+          "failures": []
+        }
+      }
+    },
+    "finitePeerEffectsSummary": {
+      "countsByProviderRoleEvent": {
+        "claude/management/launch": 6,
+        "claude/management/started": 3,
+        "claude/management/initialized": 3,
+        "claude/management/auth-status": 3,
+        "claude/management/exited": 3,
+        "claude/runtime/launch": 4,
+        "claude/runtime/started": 4,
+        "claude/runtime/initialized": 4,
+        "claude/runtime/input": 3,
+        "claude/runtime/terminal": 3,
+        "claude/runtime/mcp-connected": 1,
+        "codex/management/launch": 10,
+        "codex/management/exit": 10,
+        "codex/runtime/launch": 7,
+        "codex/runtime/input": 1,
+        "codex/runtime/terminal": 1,
+        "codex/runtime/exit": 2,
+        "codex/runtime/mcp-catalog": 5,
+        "codex/runtime/managed-configuration-read": 3,
+        "codex/runtime/connected": 1
+      },
+      "inputs": [
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 15766,
+          "event": "input",
+          "marker": "TEST_MODEL_PROBE"
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 15841,
+          "event": "input",
+          "marker": "TEST_MODEL_PROBE"
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 16467,
+          "event": "input",
+          "marker": "TEST_MODEL_PROBE"
+        },
+        {
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 16399,
+          "event": "input",
+          "marker": "TEST_MODEL_PROBE"
+        }
+      ]
+    },
+    "sourceFreeze": {
+      "beforeRecords": 1899,
+      "afterRecords": 1899,
+      "beforeEqualsAfter": true
+    },
+    "operations": [],
+    "failureCleanup": {
+      "failureQuit": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "quitRequested": true,
+      "originalRequestedQuitExit": {
+        "initialExitCode": 0,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "beforeHarnessCleanup": [],
+      "cleanup": {
+        "processGroup": 14377,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": false,
+        "capturedHostAbsent": null,
+        "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+      }
+    },
+    "finiteInitialPeersAfterCleanup": {
+      "probeCounts": [
+        3,
+        1
+      ],
+      "originalPids": [
+        15334,
+        15396,
+        15453,
+        15537,
+        15766,
+        15841,
+        16352,
+        16448,
+        16467,
+        16584,
+        15340,
+        15470,
+        15482,
+        16061,
+        16247,
+        16367,
+        16376,
+        16387,
+        16399,
+        16563,
+        16578,
+        16591,
+        16599,
+        16612,
+        16632,
+        16639,
+        16823
+      ],
+      "remaining": [],
+      "absent": true
+    },
+    "cleanupLimit": "Finite peers absent and generic wrapper exit/remaining census are observed. Generic capturedHostObserved=false and capturedHostAbsent=null do not qualify absence of the separately observed Host/metadata. Metadata closure observations are retained exactly and are not reinterpreted as a leak or cause."
+  },
+  "qualification": "Settings is an original selected PASS with verified receipt/source/physical cleanup. The same job failed before Add; full mixed native membership and business cleanup qualification is INCOMPLETE. Initial Claude/Codex were pinned finite peers, not real vendor processes. No real vendor inference/authentication qualification or screenshot visual audit.",
+  "jobLogEndpointRetired": true,
+  "artifactDownloadEndpointRetired": true
+}

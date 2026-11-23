@@ -5,6 +5,7 @@ const HISTORICAL_BOARD_LIFECYCLE_TOOL_NAMES = new Set([
   'task_set_status',
   'task_start',
   'review_approve',
+  'review_complete',
   'review_request_changes',
   'review_start',
 ]);

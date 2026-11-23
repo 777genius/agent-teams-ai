@@ -1,17 +1,26 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contracts';
+import {
+  HOST_TEAM_HISTORY_MODE_MESSAGE,
+  hostTeamSelectionKey,
+  TeamCreationRefusal,
+} from '../../../src/features/agent-backend/contracts';
 import {
   BackendOperationsFacade,
   DesktopBackendFeature,
 } from '../../../src/features/agent-backend/main';
+import { prepareCreatedHostTeam } from '../../../src/features/agent-backend/main/application/createdHostTeam';
 import {
+  createDesktopCapturedTeam,
+  createDesktopCapturedTeamConfiguration,
   prepareDesktopCapturedTeam,
+  prepareDesktopCreatedTeam,
   registerDesktopAgentBackend,
   removeDesktopAgentBackendHandlers,
   shutdownDesktopAgentBackend,
 } from '../../../src/main/ipc/agentBackend';
+import { createdTeamSelectionSignature } from '../../../src/shared/utils/createdTeamReadiness';
 
 import type {
   BackendLaunchConfigurationView,
@@ -19,6 +28,7 @@ import type {
 } from '../../../src/features/agent-backend/contracts/launch';
 import type { BackendOperationRequest } from '../../../src/features/agent-backend/contracts/operations';
 import type { CapturedTeamModelRequest } from '../../../src/features/agent-backend/main';
+import type { CapturedTeamCreationPort } from '../../../src/features/agent-backend/main/application/createdHostTeam';
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron';
 
 afterEach(async () => {
@@ -128,6 +138,92 @@ function fixture() {
 }
 
 describe('existing preparation captured shell port', () => {
+  it('surfaces the exact unsupported history correction through prepare, create and save without effects', async () => {
+    const f = fixture();
+    const target: CapturedTeamCreationPort = { prepare: vi.fn(), submit: vi.fn() };
+    vi.spyOn(DesktopBackendFeature.prototype, 'captureTeamCreation').mockResolvedValue(target);
+    vi.spyOn(DesktopBackendFeature.prototype, 'prepareCreatedTeam').mockImplementation(
+      (contextId, preparationId, draft, guard) =>
+        prepareCreatedHostTeam({ target, contextId, preparationId, draft, guard })
+    );
+    const save = vi.spyOn(DesktopBackendFeature.prototype, 'createConfiguredTeam');
+    const draft = {
+      teamName: 'TEST-shared',
+      cwd: '/TEST/workspace',
+      members: [],
+      projectContextMode: 'per_project' as const,
+    };
+    const command = { commandId: 'TEST-shared-original', idempotencyKey: 'TEST-shared-original' };
+    expect(
+      await prepareDesktopCreatedTeam(
+        f.event,
+        {
+          kind: 'create',
+          preparationId: 'TEST-preparation',
+          draft,
+        },
+        draft.cwd
+      )
+    ).toEqual({ ready: false, message: HOST_TEAM_HISTORY_MODE_MESSAGE });
+    await expect(
+      createDesktopCapturedTeamConfiguration(f.event, { ...draft, command })
+    ).rejects.toMatchObject({
+      code: 'invalid',
+      outcome: 'not-dispatched',
+      message: HOST_TEAM_HISTORY_MODE_MESSAGE,
+    });
+    await expect(
+      createDesktopCapturedTeam(f.event, {
+        ...draft,
+        command,
+        createdTeamReadiness: {
+          preparationId: 'TEST-preparation',
+          selectionSignature: createdTeamSelectionSignature(draft),
+          draftDigest: 'a'.repeat(64),
+          expiresAt: Date.now() + 60_000,
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'invalid',
+      outcome: 'not-dispatched',
+      message: HOST_TEAM_HISTORY_MODE_MESSAGE,
+    });
+    expect(target.prepare).not.toHaveBeenCalled();
+    expect(target.submit).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it.each(['plain-error', 'different-message', 'rejected'] as const)(
+    'does not expose arbitrary preparation text resembling a history refusal (%s)',
+    async (kind) => {
+      const f = fixture();
+      const error =
+        kind === 'plain-error'
+          ? new Error(HOST_TEAM_HISTORY_MODE_MESSAGE)
+          : new TeamCreationRefusal('invalid', kind === 'rejected' ? 'rejected' : 'not-dispatched');
+      error.message =
+        kind === 'different-message'
+          ? 'TEST-private-owner-details'
+          : HOST_TEAM_HISTORY_MODE_MESSAGE;
+      vi.spyOn(DesktopBackendFeature.prototype, 'prepareCreatedTeam').mockRejectedValue(error);
+      expect(
+        await prepareDesktopCreatedTeam(
+          f.event,
+          {
+            kind: 'create',
+            preparationId: 'TEST-preparation',
+            draft: { teamName: 'TEST-shared', cwd: '/TEST/workspace', members: [] },
+          },
+          '/TEST/workspace'
+        )
+      ).toEqual({
+        ready: false,
+        message:
+          'Captured Host creation check unavailable. Refresh the unchanged form; no legacy checks were run.',
+      });
+    }
+  );
+
   it('supersedes an in-flight selection and awaits original cleanup before admitting only the latest draft', async () => {
     const f = fixture();
     const normal = f.invoke.getMockImplementation()!;

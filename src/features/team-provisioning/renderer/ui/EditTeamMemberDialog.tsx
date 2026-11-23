@@ -26,6 +26,7 @@ import {
   fingerprintResolvedMember,
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
+import { MEMBER_SETTINGS_REFUSAL_KEYS } from '../utils/memberSettingsRefusal';
 
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
@@ -43,6 +44,7 @@ export interface EditTeamMemberDialogProps {
   member: ResolvedTeamMember;
   isTeamAlive: boolean;
   isTeamProvisioning: boolean;
+  projectDefinition?: boolean;
   isMixedTeam: boolean;
   leadProviderId?: TeamProviderId;
   leadProviderBackendId?: TeamProviderBackendId;
@@ -85,6 +87,7 @@ export const EditTeamMemberDialog = ({
   member,
   isTeamAlive,
   isTeamProvisioning,
+  projectDefinition = false,
   isMixedTeam,
   leadProviderId,
   leadProviderBackendId,
@@ -236,6 +239,12 @@ export const EditTeamMemberDialog = ({
       setError(t('editTeam.errors.saveFailed'));
       return;
     }
+    if (result.outcome === 'refused') {
+      // Nothing was written; the main process said why with a code.
+      resetIdentity();
+      setError(t(MEMBER_SETTINGS_REFUSAL_KEYS[result.reason]));
+      return;
+    }
     if (result.outcome === 'target_conflict') {
       resetIdentity();
       setAcceptRefreshedTarget(true);
@@ -259,7 +268,13 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'recovery_required') {
-      setError(t('editTeam.errors.saveFailed'));
+      setError(
+        t(
+          projectDefinition
+            ? 'detail.tooltips.editUnavailableRunningProject'
+            : 'editTeam.errors.saveFailed'
+        )
+      );
       return;
     }
     if (result.effect === 'lead_restart_rolled_back') {

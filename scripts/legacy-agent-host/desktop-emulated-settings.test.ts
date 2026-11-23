@@ -331,3 +331,242 @@ test('receipt summaries retain only the original nested mixed Settings owner', (
   assert.equal('mixedSettingsFailure' in projectDesktopProofReceiptSummary(
     evidence, { ...options, mixedMode: false }), false);
 });
+
+type RuntimeReadinessProcessFactory = import('../../packages/legacy-agent-host/dist/adapters/providers/capturedNativeProcessFactory.js').CapturedNativeProcessFactory;
+
+async function runtimeReadinessFixture(t: TestContext, createProcess?: RuntimeReadinessProcessFactory, importLifecycle = false) {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-runtime-readiness-')));
+  const closeOwners: Array<() => Promise<void | boolean>> = [];
+  const own = <T extends { close(): Promise<void | boolean> }>(owner: T): T => {
+    closeOwners.push(() => owner.close());
+    return owner;
+  };
+  t.after(async () => {
+    const failures: unknown[] = [];
+    for (const close of closeOwners.reverse()) {
+      try { assert.notEqual(await close(), false, 'original finite owner must confirm close'); }
+      catch (error) { failures.push(error); }
+    }
+    assert.deepEqual(failures, [], 'all original owners must close before deleting their TEST namespace');
+    await rm(root, { recursive: true, force: true });
+  });
+  const peerRoot = join(root, 'TEST-peer-claude-scope');
+  for (const directory of [peerRoot, join(root, 'workspace'), join(root, 'hoststore'),
+    ...['home', 'config', 'tmp'].map(name => join(peerRoot, name))]) await mkdir(directory, { mode: 0o700 });
+  const node = await realpath(process.execPath);
+  const source = await realpath(join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'));
+  const sourceSha256 = await fileDigest(source);
+  const wrapper = desktopNodeScriptHeader(node) + "import assert from 'node:assert/strict';\n" +
+    "import{createHash}from'node:crypto';import{readFileSync,realpathSync}from'node:fs';\n" +
+    'assert.equal(realpathSync(' + JSON.stringify(source) + '),' + JSON.stringify(source) + ');\n' +
+    "assert.equal(createHash('sha256').update(readFileSync(" + JSON.stringify(source) +
+    ")).digest('hex')," + JSON.stringify(sourceSha256) + ');\n' +
+    'await import(' + JSON.stringify(pathToFileURL(source).href) + ');\n';
+  const executable = { path: join(root, 'TEST-selected-runtime-cli'), sha256: digest(wrapper) };
+  await writeFile(executable.path, wrapper, { mode: 0o700, flag: 'wx' });
+  const effectsPath = join(peerRoot, 'effects.ndjson');
+  const profile: ClaudeManagementProfile = claudeManagementProfileSchema.parse({
+    provider: 'claude', profileId: 'TEST-runtime-readiness', configRevision: 'TEST-runtime-readiness-v1',
+    sdkRevision: '0.3.305', configNamespace: 'custom-directory', accountBinding: 'TEST-no-vendor-account',
+    executable, cwd: join(root, 'workspace'), settingSources: ['user', 'project', 'local'],
+    timeoutMs: 5000, modelProbeTimeoutMs: 5000,
+    environment: { HOME: join(peerRoot, 'home'), CLAUDE_CONFIG_DIR: join(peerRoot, 'config'),
+      TMPDIR: join(peerRoot, 'tmp'), PATH: dirname(node) + ':/usr/bin:/bin', SHELL: '/bin/sh',
+      TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude',
+      TEST_PEER_ROLE: 'management', TEST_DESKTOP_PEER_ROOT: peerRoot,
+      TEST_DESKTOP_PEER_WORKSPACE: join(root, 'workspace'), TEST_PEER_EFFECTS: effectsPath,
+      ...(importLifecycle ? { TEST_DESKTOP_IMPORT_LIFECYCLE: 'current-solo-v1' } : {}) },
+  });
+  const sentinels = ['.credentials.json', 'settings.json'].map(name => ({
+    path: join(peerRoot, 'config', name), bytes: JSON.stringify({ TEST_neighbor: name, unchanged: true }) + '\n',
+  }));
+  for (const sentinel of sentinels) await writeFile(sentinel.path, sentinel.bytes, { mode: 0o600, flag: 'wx' });
+  const assertSentinels = async () => {
+    for (const sentinel of sentinels) assert.equal(await readFile(sentinel.path, 'utf8'), sentinel.bytes);
+  };
+  const effects = async (): Promise<Row[]> => {
+    let bytes: string;
+    try { bytes = await readFile(effectsPath, 'utf8'); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+    return bytes.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+  };
+  const store = new FileManagementCommandStore(join(root, 'hoststore'));
+  const management = own(new ClaudeManagementCoordinator([profile], () => {}, createProcess));
+  return { root, peerRoot, profile, wrapper, store, management, effects, own, assertSentinels };
+}
+
+test('shared finite runtime peer answers the original Host auth status and closes its original child', { timeout: 15000 }, async t => {
+  const f = await runtimeReadinessFixture(t);
+  const identity = { profileId: f.profile.profileId, configRevision: f.profile.configRevision };
+  const auth = f.own(new ClaudeAuthenticationCoordinator([f.profile],
+    (id, revision) => f.management.target(id, revision), () => {}));
+  assert.deepEqual(await auth.read(identity), {
+    ...identity, loggedIn: true, authMethod: 'api_key', canLogin: false, canLogout: false,
+  });
+  await auth.close();
+  const rows = await f.effects();
+  assert.deepEqual(rows.map(row => row.event), ['launch', 'auth-status', 'exited']);
+  const launched = rows[0]!;
+  assert.equal(launched.role, 'management');
+  assert.equal(launched.parentPid, process.pid);
+  assert.ok(Number.isInteger(launched.pid) && (launched.pid as number) > 0);
+  assert.ok(rows.every(row => row.provider === 'claude' && row.role === 'management' && row.pid === launched.pid));
+  assert.deepEqual(launched.command, ['auth', 'status', '--json']);
+  assert.deepEqual(rows[1]!.command, launched.command);
+  assert.equal(rows[2]!.code, 0);
+  assert.deepEqual([...f.store.list()], [], 'auth status cannot write a Host mutation or probe receipt');
+  await f.assertSentinels();
+});
+
+test('shared finite runtime auth refuses other argv, roles, namespaces and a changed captured executable', { timeout: 30000 }, async t => {
+  const f = await runtimeReadinessFixture(t);
+  const wrongHome = join(f.peerRoot, 'TEST-other-home'), wrongConfig = join(f.peerRoot, 'TEST-other-config');
+  await mkdir(wrongHome, { mode: 0o700 });
+  await mkdir(wrongConfig, { mode: 0o700 });
+  const cases = [
+    { args: ['auth', 'login', '--claudeai'], environment: {}, reason: 'argv' },
+    { args: ['auth', 'logout'], environment: {}, reason: 'argv' },
+    { args: ['auth', 'status'], environment: {}, reason: 'argv' },
+    { args: ['auth', 'status', '--json', '--extra'], environment: {}, reason: 'argv' },
+    { args: ['--version'], environment: {}, reason: 'argv' },
+    { args: ['auth', 'status', '--json'], environment: { TEST_PEER_ROLE: 'runtime' }, reason: 'argv' },
+    { args: ['auth', 'status', '--json'], environment: { CLAUDE_CONFIG_DIR: wrongConfig }, reason: 'environment' },
+    { args: ['auth', 'status', '--json'], environment: { HOME: wrongHome }, reason: 'environment' },
+  ];
+  assert.equal(cases.length, 8);
+  for (const selected of cases) {
+    const result = spawnSync(f.profile.executable.path, selected.args, { cwd: f.profile.cwd,
+      env: { ...f.profile.environment, ...selected.environment }, timeout: 3000, maxBuffer: 65536, encoding: 'utf8' });
+    assert.equal(result.error, undefined, 'spawn, timeout and buffer errors are not valid refusals');
+    assert.equal(result.signal, null, 'signal termination is not a valid refusal');
+    assert.equal(result.status, 1, JSON.stringify(selected));
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /AssertionError/);
+    assert.ok(result.stderr.includes(selected.reason), 'the selected finite guard must refuse');
+  }
+  assert.deepEqual(await f.effects(), [], 'refused argv cannot enter auth or SDK input handling');
+  const auth = f.own(new ClaudeAuthConversation(f.profile, () => true));
+  try {
+    await writeFile(f.profile.executable.path, f.wrapper + '// TEST changed after capture\n');
+    await assert.rejects(auth.read(new AbortController().signal), { message: 'Native executable unavailable' });
+    assert.equal(await auth.close(), true, 'the actual captured owner closes without allocating a replacement');
+  } finally {
+    await writeFile(f.profile.executable.path, f.wrapper);
+  }
+  assert.deepEqual(await f.effects(), []);
+  assert.deepEqual([...f.store.list()], []);
+  await f.assertSentinels();
+});
+
+for (const selectedModel of ['TEST-claude-sonnet', 'claude-sonnet-4-6'])
+test('shared finite SDK metadata and one resolved model probe preserve effort, context and original custody: ' + selectedModel, { timeout: 15000 }, async t => {
+  const { CapturedProcess } = await import('../../packages/legacy-agent-host/dist/adapters/providers/CapturedProcess.js');
+  const launches: Array<{ role: string | undefined; command: string; args: string[]; cwd: string | undefined }> = [];
+  const stops: Array<{ role: string | undefined; clean: boolean }> = [];
+  const createProcess: RuntimeReadinessProcessFactory = (profile, current, custody) => {
+    const original = new CapturedProcess(profile, current, custody);
+    return {
+      launch: request => {
+        assert.ok(launches.length < 2 && request.args.length <= 64 &&
+          Buffer.byteLength(JSON.stringify(request.args)) <= 128 * 1024, 'bounded actual launch observation');
+        launches.push({ role: profile.environment.TEST_PEER_ROLE, command: request.command,
+          args: [...request.args], cwd: request.cwd });
+        return original.launch(request);
+      },
+      seal: () => original.seal(),
+      isRunning: () => original.isRunning(),
+      confirmStopped: async () => {
+        const clean = await original.confirmStopped();
+        stops.push({ role: profile.environment.TEST_PEER_ROLE, clean });
+        return clean;
+      },
+    };
+  };
+  const f = await runtimeReadinessFixture(t, createProcess, selectedModel === 'claude-sonnet-4-6');
+  const metadata = await f.management.read({ profileId: f.profile.profileId, configRevision: f.profile.configRevision });
+  assert.equal(metadata.models.length, 1);
+  assert.equal(metadata.models[0]!.modelId, selectedModel === 'claude-sonnet-4-6' ? selectedModel : 'sonnet');
+  assert.equal(metadata.models[0]!.resolvedModel, selectedModel);
+  assert.deepEqual(metadata.models[0]!.supportedEffortLevels, ['low', 'medium', 'high']);
+  assert.equal((await f.effects()).filter(row => row.event === 'input').length, 0);
+  assert.deepEqual([...f.store.list()], [], 'metadata does not establish model execution');
+  const derived = teamModelProbeProfile(runtimeMemberProfileSchema.parse({
+    provider: 'claude', teamId: 'TEST-team', memberId: 'TEST-member', principalId: 'TEST-principal',
+    sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-runtime-readiness-selection',
+    executable: f.profile.executable, cwd: f.profile.cwd, accountBinding: f.profile.accountBinding,
+    environment: { ...f.profile.environment, TEST_PEER_ROLE: 'runtime' },
+    model: selectedModel, configNamespace: 'custom-directory', nativeTools: [], autoAllowedTools: [],
+    nativeOptions: { settingSources: [...f.profile.settingSources!], effort: 'low', context: 'one-million' },
+    limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 32,
+      pendingInteractions: 1, timeoutMs: 5000 },
+  }));
+  assert.equal(derived.provider, 'claude');
+  if (derived.provider !== 'claude') throw new Error('Original Claude probe required');
+  // This new finite fixture uses a five-second bound; production profile derivation stays unchanged.
+  const probeProfile = claudeManagementProfileSchema.parse({ ...derived, modelProbeTimeoutMs: 5000 });
+  assert.equal(probeProfile.timeoutMs, 5000);
+  assert.equal(probeProfile.environment.TEST_PEER_ROLE, 'runtime');
+  assert.deepEqual(probeProfile.executable, f.profile.executable);
+  assert.deepEqual(probeProfile.settingSources, f.profile.settingSources);
+  f.management.admitProbeProfile(probeProfile);
+  const probes = f.own(new ModelProbeOwner({ store: f.store, fence: new ManagementResourceFence(f.store.list()),
+    assertWriter: () => {}, select: (id, revision) => f.management.target(id, revision),
+    prepare: (input, current) => f.management.prepareProbe(input, current) }));
+  const input = { profileId: probeProfile.profileId, configRevision: probeProfile.configRevision,
+    commandId: 'TEST-resolved-runtime-probe', providerId: 'anthropic', modelId: selectedModel,
+    effort: 'low', modelContext: 'one-million' as const };
+  const identity = { profileId: input.profileId, configRevision: input.configRevision, commandId: input.commandId };
+  probes.start(input);
+  const deadline = performance.now() + 7000;
+  while (probes.read(identity)?.phase === 'running' && performance.now() < deadline)
+    await new Promise(resolve => setTimeout(resolve, 20));
+  const receipt = probes.read(identity);
+  assert.equal(receipt?.phase, 'completed', JSON.stringify({ receipt, effects: await f.effects() }));
+  assert.equal(receipt.ok, true, JSON.stringify({ receipt, effects: await f.effects() }));
+  assert.equal(receipt.modelId, input.modelId);
+  assert.equal(receipt.effort, input.effort);
+  assert.equal(receipt.modelContext, input.modelContext);
+  const records = [...f.store.list()];
+  assert.equal(records.length, 1);
+  const stored = records[0]!;
+  assert.equal(stored.kind, 'model.probe');
+  if (stored.kind !== 'model.probe') throw new Error('Original model probe receipt required');
+  assert.equal(stored.phase, 'completed');
+  assert.equal(stored.ok, true);
+  assert.equal(stored.resourceHeld, false);
+  assert.equal(stored.commandId, input.commandId);
+  assert.equal(stored.modelId, input.modelId);
+  assert.equal(stored.effort, input.effort);
+  assert.equal(stored.modelContext, input.modelContext);
+  assert.deepEqual(new FileManagementCommandStore(join(f.root, 'hoststore')).read(input.commandId), stored);
+  assert.deepEqual(probes.read(identity), receipt);
+  assert.deepEqual(probes.start(input), receipt, 'same command cannot admit another native input');
+  await probes.close();
+  await f.management.close();
+  const rows = await f.effects(), inputs = rows.filter(row => row.event === 'input');
+  const terminals = rows.filter(row => row.event === 'terminal');
+  assert.equal(inputs.length, 1);
+  assert.equal(inputs[0]!.marker, 'TEST_MODEL_PROBE');
+  assert.equal(inputs[0]!.role, 'runtime');
+  assert.equal(terminals.length, 1);
+  assert.equal(terminals[0]!.pid, inputs[0]!.pid);
+  assert.equal(terminals[0]!.inputId, inputs[0]!.inputId);
+  assert.equal(rows.some(row => row.event === 'auth-status' || row.event === 'failure'), false);
+  assert.deepEqual(launches.map(row => row.role), ['management', 'runtime']);
+  assert.ok(launches.every(row => row.command === f.profile.executable.path && row.cwd === f.profile.cwd));
+  const value = (args: string[], name: string) => {
+    const matches = args.flatMap((arg, index) => arg === name ? [args[index + 1]]
+      : arg.startsWith(name + '=') ? [arg.slice(name.length + 1)] : []);
+    assert.equal(matches.length, 1, 'one original SDK option: ' + name);
+    return matches[0];
+  };
+  assert.equal(value(launches[1]!.args, '--model'), input.modelId);
+  assert.equal(value(launches[1]!.args, '--effort'), input.effort);
+  assert.equal(value(launches[1]!.args, '--betas'), 'context-1m-2025-08-07');
+  assert.deepEqual(stops, [{ role: 'management', clean: true }, { role: 'runtime', clean: true }]);
+  assert.deepEqual([...f.store.list()], [stored], 'original durable result survives close without replay');
+  await f.assertSentinels();
+});

@@ -39,7 +39,8 @@ interface Controller {
 export function createTeamController(
   root: string,
   teamName: string,
-  allowUserMessageSender = false
+  allowUserMessageSender = false,
+  reviewFlowDefaultsDirectory = root
 ): Controller {
   const api = require('agent-teams-controller') as {
     createController(options: {
@@ -47,6 +48,7 @@ export function createTeamController(
       teamName: string;
       allowUserMessageSender: boolean;
       boundTaskTools: boolean;
+      reviewFlowDefaultsDirectory: string;
     }): Controller;
   };
   return api.createController({
@@ -54,6 +56,7 @@ export function createTeamController(
     teamName,
     allowUserMessageSender,
     boundTaskTools: true,
+    reviewFlowDefaultsDirectory,
   });
 }
 
@@ -79,11 +82,11 @@ const messageStore = require('agent-teams-controller/src/internal/messageStore.j
 export const withTeamFileFence = lock.withFileLockSync;
 export const writeTeamJson = atomic.writeJsonFileSync;
 
-export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort {
+export function createTeamPolicy(root: string, teamName: string, reviewFlowDefaultsDirectory = root): TeamPolicyPort {
   // Query policy uses the same captured root and board lock as product reads.
   const boardRead = <T>(action: (board: Controller['taskBoard']) => T): T =>
     boardLock.withTeamBoardLock({ teamDir: join(root, 'teams', teamName) }, () =>
-      action(createTeamController(root, teamName).taskBoard)
+      action(createTeamController(root, teamName, false, reviewFlowDefaultsDirectory).taskBoard)
     );
   return {
     reads: {
@@ -101,11 +104,12 @@ export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort
           })
         ),
       getKanbanState: (options) => boardRead((board) => board.getKanbanState(options)),
+      getReviewFlowSettings: () => boardRead((board) => board.getReviewFlowSettings()),
       listReviewers: () => boardRead((board) => board.listReviewers()),
     },
     processes: createControllerProcessPolicy(join(root, 'teams', teamName, 'processes.json')),
     taskBoard: (actor) => {
-      const controller = createTeamController(root, teamName, actor === 'user');
+      const controller = createTeamController(root, teamName, actor === 'user', reviewFlowDefaultsDirectory);
       const board = controller.taskBoard;
       // Prepared Task publication bypasses controller write caches; the canonical
       // board lock supplies a fresh scan context for every owner read.
@@ -127,7 +131,7 @@ export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort
       };
     },
     sendMessage: (actor, flags) =>
-      createTeamController(root, teamName, actor === 'user').messages.sendMessage(flags),
+      createTeamController(root, teamName, actor === 'user', reviewFlowDefaultsDirectory).messages.sendMessage(flags),
     sendGroupMessage(flags) {
       const { member, ...row } = flags;
       if (typeof member !== 'string' || typeof row.messageId !== 'string')
@@ -154,9 +158,9 @@ export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort
       });
     },
     sendCrossTeamMessage: (flags) =>
-      messageStore.sendInboxMessage(createTeamController(root, teamName).context.paths, flags),
+      messageStore.sendInboxMessage(createTeamController(root, teamName, false, reviewFlowDefaultsDirectory).context.paths, flags),
     appendSentMessage: (flags) =>
-      createTeamController(root, teamName).messages.appendSentMessage(flags),
+      createTeamController(root, teamName, false, reviewFlowDefaultsDirectory).messages.appendSentMessage(flags),
     readSentMessages() {
       try {
         const value: unknown = JSON.parse(

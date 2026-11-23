@@ -52,6 +52,8 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'setLaunchAdmissionGuard',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
+  // Existing Stop entrypoint forwards the captured WorkSync owner through the normal Stop chain.
+  'stopTeam',
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
@@ -99,6 +101,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'hasTrackedRuntimeObligations',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
+  'isProvisioningLaunchActive',
   'isTeamAlive',
   'isTeamManagedByThisProfile',
   'isTeamManagedByThisProfileSync',
@@ -270,6 +273,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     name: 'memberGatewayRuntimeSeams',
     readonly: false,
     type: 'MemberGatewayRuntimeSeams | null',
+  },
+  {
+    accessibility: 'private',
+    defaultNew: null,
+    name: 'captureNativeStopSourceFence',
+    readonly: true,
+    type: 'CaptureLegacyNativeStopSourceFence',
   },
 ] as const;
 

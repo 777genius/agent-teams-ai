@@ -1,3 +1,6 @@
+import { channel } from 'node:diagnostics_channel';
+import { performance } from 'node:perf_hooks';
+import { managementDigest } from '../../management/identity.js';
 import { NATIVE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { qualifiedCodexProtocolRevision } from '../../composition/runtimeSourceQualification.js';
@@ -23,6 +26,9 @@ import type { DriverFactory, Session } from '@agent-teams/provider-session-contr
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { CodexMemberProfile } from '../../composition/runtimeProfile.js';
+
+type ReadinessOperation = 'open' | 'catalog' | 'readiness';
+type ReadinessPhase = 'before-await' | 'after-await' | 'returned' | 'threw';
 
 /** Captured native flags only. RPC, native configuration acceptance and discovery belong to D. */
 export function codexLaunchArguments(context: MemberProviderContext): string[] {
@@ -80,9 +86,64 @@ export function createCodexMemberProvider(
 ): MemberProvider {
   const { profile } = context;
   const evidence = context.codexEvidence;
+  const readinessObservation = (() => {
+    let diagnostic: ReturnType<typeof channel> | undefined;
+    let identity: { schemaVersion: 2; bindingDigest: string; sourceId: string; sourceRevision: string } | undefined;
+    let sequence = 0, invocations = 0, disabled = false;
+    let started = 0;
+    // Fixed buckets: isCurrent, canAllocate, MCP source; count, total ms, maximum ms.
+    // Emit integer tenths of a millisecond only. Bounds keep the 64-event ledger below 8192 bytes.
+    const guards = Array.from({ length: 3 }, () => ({ count: 0, total: 0, max: 0 }));
+    try {
+      diagnostic = channel('agent-teams.legacy-host.codex-readiness');
+      const origin = context.processOrigin, binding = context.endpoint.binding;
+      const sourceId = origin?.sourceId, sourceRevision = origin?.revision;
+      if (origin?.origin.kind === 'runtime' && typeof sourceId === 'string' && /^[a-f0-9]{64}$/.test(sourceId) &&
+          typeof sourceRevision === 'string' && /^[a-f0-9]{64}$/.test(sourceRevision)) {
+        const { backendId, teamId, runId, memberId, generation } = binding;
+        if ([backendId, teamId, runId, memberId, generation].every(value => typeof value === 'string'))
+          identity = { schemaVersion: 2, bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }), sourceId, sourceRevision };
+      }
+      started = performance.now();
+    } catch { disabled = true; }
+    const limit = (): void => { try {
+      if (!identity || disabled) return; disabled = true;
+      if (diagnostic?.hasSubscribers) diagnostic.publish({ ...identity, limit: true });
+    } catch { disabled = true; } };
+    const publish = (invocation: number | undefined, operation: ReadinessOperation, phase: ReadinessPhase, result: boolean | null = null): void => { try {
+      if (!identity || disabled || invocation === undefined) return;
+      if (sequence >= 64) { limit(); return; }
+      const timing = [Math.floor((performance.now() - started) * 10),
+        ...guards.flatMap(value => [value.count, Math.floor(value.total * 10), Math.floor(value.max * 10)])];
+      if (timing.some(value => !Number.isSafeInteger(value) || value < 0 || value > 999999)) { limit(); return; }
+      sequence++;
+      if (diagnostic?.hasSubscribers) diagnostic.publish({ ...identity, sequence, invocation, operation, phase, result, timing });
+    } catch { disabled = true; } };
+    const begin = (operation: ReadinessOperation): number | undefined => { try {
+      if (!identity || disabled) return undefined;
+      if (invocations >= 16) { limit(); return undefined; }
+      const invocation = ++invocations; publish(invocation, operation, 'before-await'); return invocation;
+    } catch { disabled = true; return undefined; } };
+    const measure = (index: 0 | 1 | 2, guard: () => boolean): boolean => {
+      let before: number | undefined;
+      try { if (identity && !disabled && diagnostic?.hasSubscribers) before = performance.now(); }
+      catch { disabled = true; }
+      try { return guard(); }
+      finally { if (before !== undefined) try {
+        const elapsed = performance.now() - before, value = guards[index]!;
+        if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 99999.9 || value.count >= 4096 ||
+            value.total + elapsed > 99999.9) limit();
+        else { value.count++; value.total += elapsed; value.max = Math.max(value.max, elapsed); }
+      } catch { disabled = true; } }
+    };
+    return { begin, publish, measure };
+  })();
+  const isCurrent = () => readinessObservation.measure(0, () => context.isCurrent());
+  const allocationCurrent = () => readinessObservation.measure(1, () => context.canAllocate());
+  const mcpSourceCurrent = () => readinessObservation.measure(2, () => capturedMcpSourceCurrent(profile));
   if (profile.provider !== 'codex') throw new Error('Invalid Codex profile');
   qualifiedCodexProtocolRevision(profile.protocolRevision);
-  if (!capturedMcpSourceCurrent(profile)) throw new Error('Captured MCP source changed');
+  if (!mcpSourceCurrent()) throw new Error('Captured MCP source changed');
   const extraArgs = captureCodexExtraArgs(profile.extraArgs);
   const policy = codexMcpPolicy(
     profile,
@@ -96,10 +157,10 @@ export function createCodexMemberProvider(
     ...(extraArgs.length ? { extraArgs: [...extraArgs] } : {}),
     environment: buildCodexMemberEnvironment(profile.environment, context.endpoint.bearerToken),
   };
-  const canAllocate = () => context.canAllocate() && capturedMcpSourceCurrent(profile);
+  const canAllocate = () => allocationCurrent() && mcpSourceCurrent();
   const canCapture = () =>
-    (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
-    capturedMcpSourceCurrent(profile);
+    (context.canCaptureRegisteredProcess?.() ?? allocationCurrent()) &&
+    mcpSourceCurrent();
   const custody = (
     options.createProcess ??
     ((selected, canAllocate) =>
@@ -116,24 +177,30 @@ export function createCodexMemberProvider(
   let ready = false;
   let allocated = false;
   const current = () =>
-    !sealed && context.isCurrent() && custody.isRunning() && capturedMcpSourceCurrent(profile);
+    !sealed && isCurrent() && custody.isRunning() && mcpSourceCurrent();
   const verifyCatalog = async (signal?: AbortSignal): Promise<boolean> => {
     if (!policy) return true;
+    let invocation: number | undefined;
     const assertCurrent = () => {
-      if (sealed || !context.isCurrent() || !capturedMcpSourceCurrent(profile))
+      if (sealed || !isCurrent() || !mcpSourceCurrent())
         throw new Error('Captured MCP authority changed');
     };
     try {
       assertCurrent();
+      invocation = readinessObservation.begin('catalog');
       const actual = await (options.readCatalog ?? readCodexMcpCatalog)(
         profile,
         assertCurrent,
         signal,
         capturedNativeProcessFactory(context.retainedWindowsLaunch, context.processOrigin)
       );
+      readinessObservation.publish(invocation, 'catalog', 'after-await');
       assertCurrent();
-      return actual.digest === policy.catalog.digest;
+      const matches = actual.digest === policy.catalog.digest;
+      readinessObservation.publish(invocation, 'catalog', 'returned', matches);
+      return matches;
     } catch {
+      readinessObservation.publish(invocation, 'catalog', 'threw');
       return false;
     }
   };
@@ -146,13 +213,13 @@ export function createCodexMemberProvider(
       if (
         allocated ||
         sealed ||
-        !context.isCurrent() ||
-        !context.canAllocate() ||
+        !isCurrent() ||
+        !allocationCurrent() ||
         JSON.stringify(request) !== JSON.stringify(context.request)
       )
         return undefined;
-      if (!capturedMcpSourceCurrent(profile) || !(await verifyCatalog())) return undefined;
-      if (sealed || !context.isCurrent() || !context.canAllocate()) return undefined;
+      if (!mcpSourceCurrent() || !(await verifyCatalog())) return undefined;
+      if (sealed || !isCurrent() || !allocationCurrent()) return undefined;
       allocated = true;
       const args = codexLaunchArguments({ ...context, profile: captured });
       const child = custody.launch({
@@ -212,8 +279,11 @@ export function createCodexMemberProvider(
   });
   const factory: DriverFactory = {
     async open(request) {
+      let invocation: number | undefined;
       try {
+        invocation = readinessObservation.begin('open');
         const opened = await native.open(request);
+        readinessObservation.publish(invocation, 'open', 'after-await');
         const source = opened.driver;
         const driver: Session = {
           sessionRef: source.sessionRef,
@@ -227,9 +297,17 @@ export function createCodexMemberProvider(
           respondToInteraction: (reference, reply) => source.respondToInteraction(reference, reply),
           interrupt: (operation) => source.interrupt(operation),
           async checkReadiness() {
-            const proof = await source.checkReadiness();
-            ready = proof.ok && current();
-            return proof;
+            const invocation = readinessObservation.begin('readiness');
+            try {
+              const proof = await source.checkReadiness();
+              readinessObservation.publish(invocation, 'readiness', 'after-await');
+              ready = proof.ok && current();
+              readinessObservation.publish(invocation, 'readiness', 'returned', ready);
+              return proof;
+            } catch (error) {
+              readinessObservation.publish(invocation, 'readiness', 'threw');
+              throw error;
+            }
           },
           checkpoint: () => source.checkpoint(),
           async close() {
@@ -240,6 +318,7 @@ export function createCodexMemberProvider(
         };
         return { ...opened, driver };
       } catch {
+        readinessObservation.publish(invocation, 'open', 'threw');
         // D may reject a checkpoint/configuration after transport allocation. Always clean up our handles.
         sealed = true;
         ready = false;

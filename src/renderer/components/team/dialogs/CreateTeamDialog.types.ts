@@ -4,6 +4,7 @@ import type { TeamCreateRequest } from '@shared/types';
 export interface TeamCopyData extends Pick<
   TeamCreateRequest,
   | 'runtimeSelectionVersion'
+  | 'projectContextMode'
   | 'description'
   | 'color'
   | 'prompt'

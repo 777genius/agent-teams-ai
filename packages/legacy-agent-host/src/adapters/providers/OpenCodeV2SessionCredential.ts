@@ -27,7 +27,11 @@ export function captureOpenCodeV2SessionCredential(
   isCurrent: () => boolean,
   selectedKey?: CapturedOpenCodeV2Key,
   selectedFile?: DeferredOpenCodeV2FileKey,
+  observePhase?: (phase: `credential-${'catalog' | 'directory' | 'connect' | 'restore' | 'dispose'}-${'start' | 'returned'}`) => void,
 ) {
+  const observe = (phase: Parameters<NonNullable<typeof observePhase>>[0]) => {
+    try { observePhase?.(phase); } catch { /* Passive diagnostics cannot replace credential or cleanup results. */ }
+  };
   if (selectedKey !== undefined && !isOpenCodeV2ConfigurationKey(selectedKey, profile, providerId, isCurrent)) held();
   if (selectedFile !== undefined && (selectedKey !== undefined ||
       !isOpenCodeV2DeferredConfigurationKey(selectedFile, profile, providerId, isCurrent))) held();
@@ -44,11 +48,17 @@ export function captureOpenCodeV2SessionCredential(
       return undefined;
     }
     if (!selectedFile && restored && restored.credential?.scopeDigest !== captured!.digest) return held();
+    observe('credential-catalog-start');
     const catalog = await owner.readCatalog(providerId);
+    observe('credential-catalog-returned');
     check();
-    const integrationId = catalog.provider?.integrationId === undefined
-      ? (await owner.readDirectory()).integrations.find(row => row.id === providerId)?.id
-      : catalog.provider.integrationId;
+    let integrationId: string | undefined;
+    if (catalog.provider?.integrationId === undefined) {
+      observe('credential-directory-start');
+      const directory = await owner.readDirectory();
+      observe('credential-directory-returned');
+      integrationId = directory.integrations.find(row => row.id === providerId)?.id;
+    } else integrationId = catalog.provider.integrationId;
     if (!integrationId) return held();
     const source = selectedFile ? nativeFile?.(integrationId) : undefined;
     if (selectedFile && !source) return held();
@@ -61,24 +71,36 @@ export function captureOpenCodeV2SessionCredential(
     let witness: Witness, failure: unknown, failed = false;
     try {
       if (restored) {
+        observe('credential-restore-start');
         const observed = source ? await key.readSelectedSource(source.reference, acceptProof) : await key.read(), connection = observed.connections[0];
+        observe('credential-restore-returned');
         if (source && (!fileProof || fileProof.scopeDigest !== restored.credential?.scopeDigest)) return held();
         if (!observed.plainKey || observed.connections.length !== 1 || connection?.type !== 'credential' ||
             connection.method !== 'key' || connection.id !== restored.credential?.credentialId) return held();
         witness = restored.credential;
       } else {
+        observe('credential-connect-start');
         const connected = source ? await key.connectSelectedSource(source.reference, acceptProof) : await key.connectKey(captured!.readKey()!);
+        observe('credential-connect-returned');
         if (source && !fileProof) return held();
         witness = { scopeDigest: source ? fileProof!.scopeDigest : captured!.digest, credentialId: connected.credentialId };
       }
       check();
     } catch (error) { failed = true; failure = error; }
-    try { await key.dispose(); } catch (error) { failed = true; failure = error; }
+    try {
+      observe('credential-dispose-start');
+      await key.dispose();
+      observe('credential-dispose-returned');
+    } catch (error) { failed = true; failure = error; }
     if (failed) throw failure;
     check();
     return witness;
   }
   return Object.freeze({
+    isAbsent: () => {
+      try { return selectedFile === undefined && captured?.present === false && current(); }
+      catch { return false; }
+    },
     isCurrent: current,
     fileProof: () => fileProof,
     prepare: (config: CredentialTransport, owner: NativeClient,

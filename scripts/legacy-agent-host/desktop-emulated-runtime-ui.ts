@@ -6,19 +6,18 @@ import { readNativeHostCostProof } from '../../packages/legacy-agent-host/tests/
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
 import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
-import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
+import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture, type prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { sendDesktopNativeCommandFromComposer } from './desktop-native-commands-ui-proof.ts';
 import { json, record, rows } from './desktop-resume-records.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from './desktop-schedule-fixture.ts';
-import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
+import { createDesktopScheduleHistoryObservation } from './desktop-schedule-history-observation.ts';
+import { createDesktopUiControls, desktopJsLiteral as literal, type UiCdpPort } from './desktop-ui-controls.ts';
 import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.ts';
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopEmulatedCollaborationUi } from './desktop-emulated-collaboration-ui.ts';
 import { isDesktopEmulatedCollaborationFixture } from './desktop-emulated-collaboration-fixture.ts';
-import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
-import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 type Row = Record<string, unknown>;
 const array = (value: unknown): Row[] => { assert.ok(Array.isArray(value)); return value.map(record); };
@@ -162,13 +161,16 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     await ui.scrollTo(selector + ' [data-host-log-content] p', 'actual rich output', text, 12, { requireCenterHit: true });
     return record(await ui.waitRead(`(()=>{const e=document.querySelector(${literal(selector)});
       if(!e)return null;
+      const sourceTitle=${literal(sourceTitle ?? null)};
+      const sources=sourceTitle===null?[]:[...document.querySelectorAll(${literal(scope + ' button[aria-expanded="true"]')})]
+        .filter(button=>button.textContent.trim()===sourceTitle);
+      if(sourceTitle!==null&&(sources.length!==1||!sources[0].getClientRects().length||
+        document.querySelectorAll(${literal(selector)}).length!==1||e.dataset.hostLogEventId!==${literal(event.eventId)}||
+        e.dataset.hostLogSequence!==${literal(String(event.sequence))}||e.dataset.hostLogKind!==${literal(record(event.data).kind)}))return null;
       const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});
       if(bodies.length!==1||!bodies[0].getClientRects().length)return null;
-      ${sourceTitle === undefined ? '' : `const sources=[...document.querySelectorAll(${literal(scope + ' button[aria-expanded="true"]')})]
-        .filter(node=>node.textContent.trim()===${literal(sourceTitle)});
-      if(sources.length!==1)return null;
-      const source=sources[0].textContent.trim();`}
-      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()${sourceTitle === undefined ? '' : ',source'}}})()`,
+      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim(),
+        ...(sourceTitle===null?{}:{source:sources[0].textContent.trim()})}})()`,
       'actual retained output is visible inside Logs'));
   };
   const leadBinding = record((await session()).binding), leadSourceId = runtimeDigest(leadBinding);
@@ -450,8 +452,6 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.equal(stats.compactions, 1);
   }
   proof.stats = stats;
-  // Bring the original member card on screen before the one physical click.
-  // A hidden card does not justify replaying or bypassing the real UI action.
   await ui.scrollTo(
     'div[role="button"][tabindex="0"][class~="group/member"] span',
     'reveal original member detail name', 'alice', 12, { requireCenterHit: true }
@@ -646,7 +646,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original scheduled conversation list');
   await ui.click('button[aria-label="Back to chats"]', 'return to original chats before scheduled reply');
   await ui.scrollTo('button[aria-label^="alice,"]', 'original scheduled lead chat');
-  await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply'); await visible('TEST scheduled reply');
+  await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply', undefined, 'TEST scheduled '); await visible('TEST scheduled reply');
   await openSection();
   await ui.scrollTo(`${scheduleRow(edited)} button[aria-label=${literal(edited)}]`, 'original schedule history');
   await ui.click(`${scheduleRow(edited)} button[aria-label=${literal(edited)}]`, 'expand original schedule history');
@@ -675,8 +675,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.equal(armed.timezone, timezone); assert.equal(Date.parse(String(armed.nextRunAt)), scheduledAt);
   assert.ok(scheduledAt - Date.now() >= 10_000, 'the real cron occurrence is armed before its wall-clock deadline');
   assert.deepEqual(await history(scheduleId), runs, 'editing the cron does not create an occurrence');
-  const armedAt = new Date().toISOString();
-  const automaticRuns = await poll(() => history(scheduleId), values => values.length === 2 &&
+  const historyObservation = createDesktopScheduleHistoryObservation(proof, armed, runs[0]!.id);
+  const automaticRuns = await poll(async () => historyObservation.observe(await history(scheduleId)), values => values.length === 2 &&
     values.some(row => row.id !== runs[0]!.id && row.status === 'dispatched'), 'real automatic cron dispatch without Run now');
   const automaticRun = automaticRuns.find(row => row.id !== runs[0]!.id)!;
   assert.equal(automaticRun.scheduleId, scheduleId);
@@ -702,7 +702,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await poll(schedules, values => values.find(row => row.id === scheduleId)?.status === 'paused', 'pause after automatic occurrence');
   assert.equal((await history(scheduleId)).length, 2);
   proof.automaticSchedule = { scheduleId, runId: automaticRun.id, taskId: automaticTaskId,
-    cronExpression, timezone, armedAt, selectedNextRunAt: armed.nextRunAt,
+    cronExpression, timezone, armedAt: historyObservation.armedAt, selectedNextRunAt: armed.nextRunAt,
     scheduledFor: automaticRun.scheduledFor, startedAt: automaticRun.startedAt,
     status: automaticRun.status, trigger: 'real-cron-tick', runNowClicks: 0, taskCompleted: true,
     savedPromptNotReplayed: true, peerEffect: automaticEffects[0], paused: true,

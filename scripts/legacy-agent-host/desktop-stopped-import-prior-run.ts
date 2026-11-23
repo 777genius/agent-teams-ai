@@ -472,6 +472,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     }
     assert.ok(roots.includes(team) && roots.includes(taskRoot));
     const meta = await read(join(team, 'team.meta.json'));
+    assert.equal(meta.projectContextMode, 'shared');
     assert.equal(meta.cwd, join(fixture.root, 'workspace'));
     assert.equal(meta.prompt, CURRENT_LEGACY_SOURCE_PROMPT);
     assert.equal(meta.providerId, 'anthropic');

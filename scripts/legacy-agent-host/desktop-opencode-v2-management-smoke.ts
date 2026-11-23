@@ -80,7 +80,7 @@ async function main() {
     app.once('error', () => { spawnError = true; });
     app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
     const group = app.pid ?? 0, native = observeDesktopV2ManagementProcesses(group, fixture);
-    evidence.nativeProcesses = { children: native.children, probes: native.probes };
+    evidence.nativeProcesses = { children: native.children, probes: native.probes, unobservedCandidates: native.unobservedCandidates };
     const assertOwnedRenderer = () => { assertOwnedCdpListener(group); };
     const close = async (key: 'startupDiagnosticClose' | 'failureQuit') => {
       assert.ok(cdp);

@@ -115,7 +115,8 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
         const deadline = admissionDeadline = observed.expiresAt;
         assert.ok(deadline > Date.now() && deadline - Date.now() <= 90000);
         while (observed.phase === 'running' && Date.now() < deadline) {
-          await tick(); current();
+          await tick(); signal?.throwIfAborted();
+          // read synchronously invokes this fixture's full assertCurrent through assertWriter.
           const next = manager.probes.read(lookup); assert.ok(next); observed = next;
         }
         current();

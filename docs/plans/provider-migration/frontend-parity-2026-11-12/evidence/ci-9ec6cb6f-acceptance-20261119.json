@@ -1,0 +1,750 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-current-acceptance-snapshot",
+  "observedAt": "2026-11-19 10:46:15 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1192,
+  "head": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "merge": "ac918eb3d011fd62623ba1d84b34a6f4ded28a88",
+  "draft": true,
+  "mergeable": true,
+  "review": {
+    "threads": 43,
+    "resolved": 43,
+    "unresolved": 0,
+    "submissionStates": [
+      "COMMENTED"
+    ],
+    "qualification": "No approval review or branch-rule qualification is inferred."
+  },
+  "returnedPrWorkflowCounts": {
+    "success": 11,
+    "failure": 4,
+    "skipped": 14,
+    "pending": 0
+  },
+  "jobs": {
+    "main": [
+      {
+        "id": 135330063536,
+        "name": "plan",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135330063536",
+        "failedSteps": []
+      },
+      {
+        "id": 135330065086,
+        "name": "Stage 1 process tuple diagnostic (unqualified)",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135330065086",
+        "failedSteps": []
+      },
+      {
+        "id": 135330065145,
+        "name": "Stage 1 current-tuple process and packed qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135330065145",
+        "failedSteps": []
+      },
+      {
+        "id": 135330065272,
+        "name": "Stage 1 source Desktop (${{ matrix.label }})",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135330065272",
+        "failedSteps": []
+      },
+      {
+        "id": 135350275468,
+        "name": "Retained OpenCode V1 and Host V2 original Desktop",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468",
+        "failedSteps": [
+          "Exercise original retained V1 and new Host V2 controls once",
+          "Require original V2 source owners Repair member selection and cold history",
+          "Require original source publication active-session isolation and cold readback",
+          "Require complete same-source business, Stop, cold and cleanup evidence"
+        ]
+      },
+      {
+        "id": 135350275471,
+        "name": "Fast feedback",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275471",
+        "failedSteps": []
+      },
+      {
+        "id": 135350276761,
+        "name": "Focused documentation and asset validation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350276761",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277099,
+        "name": "Codex login Desktop (Linux x64)",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277099",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277143,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277143",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277293,
+        "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277293",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277326,
+        "name": "macOS DMG artwork end-to-end",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277326",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277333,
+        "name": "Renderer source validation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277333",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277370,
+        "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277370",
+        "failedSteps": []
+      },
+      {
+        "id": 135350277933,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350277933",
+        "failedSteps": []
+      },
+      {
+        "id": 135367702946,
+        "name": "Full qualification",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135367702946",
+        "failedSteps": [
+          "Require selected retained V1 and Host V2 native Desktop qualification"
+        ]
+      }
+    ],
+    "emulated": [
+      {
+        "id": 135330056014,
+        "name": "Offline frontend tests (3/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056014",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056312,
+        "name": "Offline frontend tests (2/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056312",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056338,
+        "name": "Offline frontend tests (1/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056338",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056351,
+        "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056351",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056388,
+        "name": "Offline Host Desktop (linux-x64, review)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056388",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056394,
+        "name": "Offline frontend tests (4/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056394",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056456,
+        "name": "Offline Host Desktop (linux-x64, collaboration)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056456",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056479,
+        "name": "Offline Host Desktop (linux-x64, cross-team)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056479",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056485,
+        "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056485",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056490,
+        "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490",
+        "failedSteps": [
+          "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+          "Verify original V2 membership receipts and physical cleanup"
+        ]
+      },
+      {
+        "id": 135330056495,
+        "name": "Offline Host Desktop (linux-x64, codex-login)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056495",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056514,
+        "name": "Offline Host Desktop (linux-x64, import)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056514",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056532,
+        "name": "Offline Host Desktop (linux-x64, processes)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056532",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056545,
+        "name": "Offline Host Desktop (linux-x64, taskboard)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056545",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056565,
+        "name": "Offline Host Desktop (linux-x64, selection)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056565",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056594,
+        "name": "Offline Host Desktop (linux-x64, opencode)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056594",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056601,
+        "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601",
+        "failedSteps": [
+          "Exercise original OpenCode V2 native Desktop journey",
+          "Verify original V2 journey receipts, source binding and cleanup"
+        ]
+      },
+      {
+        "id": 135330056634,
+        "name": "Offline Host Desktop (linux-x64, codex)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056634",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056644,
+        "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056644",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056653,
+        "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653",
+        "failedSteps": [
+          "Exercise original OpenCode V2 native Desktop journey",
+          "Verify original V2 journey receipts, source binding and cleanup"
+        ]
+      },
+      {
+        "id": 135330056657,
+        "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056657",
+        "failedSteps": [
+          "Exercise original collaboration, Extensions and import controls through finite peers",
+          "Verify exact source, original screenshots, receipts and cleanup"
+        ]
+      },
+      {
+        "id": 135330056665,
+        "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056665",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056667,
+        "name": "Offline Host Desktop (linux-x64, extensions)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056667",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056693,
+        "name": "Offline Host Desktop (linux-x64, claude)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056693",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056704,
+        "name": "Offline Host Desktop (linux-x64, management)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056704",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056762,
+        "name": "Offline Host Desktop (darwin-arm64, installer)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056762",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056793,
+        "name": "Offline Host Desktop (linux-x64, retained-original)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793",
+        "failedSteps": [
+          "Exercise original collaboration, Extensions and import controls through finite peers",
+          "Verify exact source, original screenshots, receipts and cleanup"
+        ]
+      },
+      {
+        "id": 135330056829,
+        "name": "Offline Host Desktop (linux-x64, skills)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056829",
+        "failedSteps": []
+      },
+      {
+        "id": 135330056859,
+        "name": "Offline Host Desktop (linux-x64, team)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056859",
+        "failedSteps": []
+      },
+      {
+        "id": 135374840277,
+        "name": "Offline Host Desktop",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135374840277",
+        "failedSteps": [
+          "Require every original UI lane and safe frontend shard to pass"
+        ]
+      }
+    ],
+    "nativeV2": [
+      {
+        "id": 135330057538,
+        "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057538",
+        "failedSteps": []
+      },
+      {
+        "id": 135330057777,
+        "name": "Static V01 source test (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057777",
+        "failedSteps": []
+      },
+      {
+        "id": 135330057856,
+        "name": "Embedded V2.1.4 original Host (darwin-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057856",
+        "failedSteps": [
+          "Observe POSIX original-path exec and explicit mutation counterexamples"
+        ]
+      },
+      {
+        "id": 135330057867,
+        "name": "Static V01 source test (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057867",
+        "failedSteps": []
+      },
+      {
+        "id": 135330057971,
+        "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057971",
+        "failedSteps": []
+      },
+      {
+        "id": 135330057990,
+        "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057990",
+        "failedSteps": [
+          "Observe POSIX original-path exec and explicit mutation counterexamples"
+        ]
+      },
+      {
+        "id": 135330058047,
+        "name": "Embedded V2.1.4 original Host (win32-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330058047",
+        "failedSteps": []
+      },
+      {
+        "id": 135330058113,
+        "name": "Embedded V2.1.4 original Host (linux-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330058113",
+        "failedSteps": []
+      },
+      {
+        "id": 135330058149,
+        "name": "Embedded V2.1.4 original Host (win32-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330058149",
+        "failedSteps": []
+      }
+    ],
+    "process": [
+      {
+        "id": 135330054256,
+        "name": "Host process fixtures (linux-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054256",
+        "failedSteps": []
+      },
+      {
+        "id": 135330054519,
+        "name": "Host process fixtures (darwin-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054519",
+        "failedSteps": []
+      },
+      {
+        "id": 135330054589,
+        "name": "Host process fixtures (win32-arm64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589",
+        "failedSteps": [
+          "Qualify original codex source A B with TEST peer"
+        ]
+      },
+      {
+        "id": 135330054598,
+        "name": "Host process fixtures (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054598",
+        "failedSteps": []
+      },
+      {
+        "id": 135330054744,
+        "name": "Host process fixtures (win32-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744",
+        "failedSteps": [
+          "Qualify original opencode source A B with TEST peer"
+        ]
+      }
+    ],
+    "packaged": [
+      {
+        "id": 135330061615,
+        "name": "classify packaged smoke",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135330061615",
+        "failedSteps": []
+      },
+      {
+        "id": 135348595759,
+        "name": "packaged smoke (win32-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135348595759",
+        "failedSteps": []
+      },
+      {
+        "id": 135348595771,
+        "name": "packaged smoke (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135348595771",
+        "failedSteps": []
+      },
+      {
+        "id": 135348595800,
+        "name": "packaged smoke (win32-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135348595800",
+        "failedSteps": []
+      },
+      {
+        "id": 135348595819,
+        "name": "packaged smoke (linux-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135348595819",
+        "failedSteps": []
+      },
+      {
+        "id": 135348595835,
+        "name": "packaged smoke (darwin-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135348595835",
+        "failedSteps": []
+      },
+      {
+        "id": 135383187603,
+        "name": "packaged full gate",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698083/job/135383187603",
+        "failedSteps": []
+      }
+    ]
+  },
+  "remainingFailures": [
+    {
+      "jobId": 135330056657,
+      "runId": 44455698034,
+      "scope": "import-lifecycle",
+      "cause": "Producer advanced past launch publication; phase=stop, original Main Stop release incomplete.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056657",
+      "decodedLfNormalizedLog": "job-135330056657.log"
+    },
+    {
+      "jobId": 135330056793,
+      "runId": 44455698034,
+      "scope": "retained-original",
+      "cause": "UI wait refused at desktop-retained-original-ui.ts:97 via desktop-ui-controls.ts:264; exact inner receipt required for cause.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793",
+      "decodedLfNormalizedLog": "job-135330056793.log"
+    },
+    {
+      "jobId": 135330056490,
+      "runId": 44455698034,
+      "scope": "linux V2 management",
+      "cause": "original add completes assertion at desktop-live-membership-ui-smoke.ts:106/391/497.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490",
+      "decodedLfNormalizedLog": "job-135330056490.log"
+    },
+    {
+      "jobId": 135330056601,
+      "runId": 44455698034,
+      "scope": "Darwin ARM V2 review",
+      "cause": "Original V2 preflight observation deadline expired; no Review journey qualification.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601",
+      "decodedLfNormalizedLog": "job-135330056601.log"
+    },
+    {
+      "jobId": 135330056653,
+      "runId": 44455698034,
+      "scope": "Darwin ARM V2 resume",
+      "cause": "one fresh Team capture assertion at desktop-launch-ui-smoke.ts:472/574.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653",
+      "decodedLfNormalizedLog": "job-135330056653.log"
+    },
+    {
+      "jobId": 135350275468,
+      "runId": 44455698135,
+      "scope": "Main retained V1/V2",
+      "cause": "Original runtime open failed: not-eligible / not-dispatched; downstream source selection receipts absent.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468",
+      "decodedLfNormalizedLog": "job-135350275468.log"
+    },
+    {
+      "jobId": 135330057856,
+      "runId": 44455698117,
+      "scope": "Darwin x64 POSIX image counterexamples",
+      "cause": "compiler-default baseline kernel image validity errno13/codeSigningError -67062; after-check/writer-open markers also executed.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057856",
+      "decodedLfNormalizedLog": "job-135330057856.log"
+    },
+    {
+      "jobId": 135330057990,
+      "runId": 44455698117,
+      "scope": "Darwin ARM POSIX image counterexamples",
+      "cause": "after-check/writer-open byte mutation still allowed LIB/BIN:A/MAIN:A markers; native functional scenario earlier passed, job remains failure.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698117/job/135330057990",
+      "decodedLfNormalizedLog": "job-135330057990.log"
+    },
+    {
+      "jobId": 135330054589,
+      "runId": 44455697852,
+      "scope": "Windows ARM Codex source A/B",
+      "cause": "Original source Team readiness assertion in nativeEmulatedSourceScenario.ts:58/480.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589",
+      "decodedLfNormalizedLog": "job-135330054589.log"
+    },
+    {
+      "jobId": 135330054744,
+      "runId": 44455697852,
+      "scope": "Windows x64 OpenCode source A/B",
+      "cause": "Original source Team readiness assertion in nativeEmulatedSourceScenario.ts:58/480.",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744",
+      "decodedLfNormalizedLog": "job-135330054744.log"
+    }
+  ],
+  "predecessor42a4": {
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "mainRun": 44434982410,
+    "emulatedRun": 44434982606,
+    "supersededConcreteFailures": [
+      "Fast feedback Typecheck workspace failed at42a4; actual9ec Typecheck workspace and Fast lint steps passed.",
+      "Team UI typed validation failed at42a4; actual9ec team UI job135330056859 passed.",
+      "Darwin ARM active Quit failed at42a4; actual9ec active Quit job135330056485 passed."
+    ],
+    "currentFailuresNotReplacedByHistoricalPass": true
+  },
+  "historicalFullReviewFlow": {
+    "source": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "clean": true,
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-review-flow-final-receipt.json.gz",
+    "compressedSha256": "4c78095a0abc9c87c49c4c2749ac560b7c92ccc4cbfe838054c3b2218755c083",
+    "uncompressedSha256": "ed994cbd73c010eb4050785a58ddf230d02d4215a755522453d85860b9d88674",
+    "status": "PASS",
+    "taskBoard": "PASS",
+    "reviewCycle": "PASS",
+    "reviewFlow": "PASS",
+    "restoredDefault": "agent_approval",
+    "inheritedAfterReload": true,
+    "beforeAfterFrozenSourcePinsEqual": 1883,
+    "epochs": [
+      {
+        "phase": "default-b",
+        "status": "PASS",
+        "hostsAbsent": true,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null
+      },
+      {
+        "phase": "unavailable-a",
+        "status": "PASS",
+        "hostsAbsent": true,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null
+      },
+      {
+        "phase": "rollback-a",
+        "status": "PASS",
+        "hostsAbsent": true,
+        "remaining": [],
+        "appExitCode": null,
+        "appSignalCode": "SIGTERM"
+      }
+    ],
+    "mainCleanup": {
+      "remaining": [],
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "qualification": "Complete original TEST UI and three owner-routing epochs, with guarded SIGTERM in rollback-a; not universal natural exit, real vendor, or a relabeled9ec receipt."
+  },
+  "currentFullUiJob": {
+    "runId": 44455698034,
+    "jobId": 135330056479,
+    "lane": "cross-team",
+    "mode": "task-board-cross-team-ui",
+    "status": "success",
+    "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056479",
+    "qualification": "Exact PR head checkout per existing workflow; checks original three owner-routing epochs. Current taskboard135330056545 is narrower task-board-ui and is not used as substitute."
+  },
+  "actionsPerformed": "Read metadata, existing source and completed logs only. No rerun, cancellation, GUI, build, source change or Git mutation."
+}

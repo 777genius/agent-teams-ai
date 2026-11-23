@@ -1,13 +1,12 @@
-import { createHash } from 'node:crypto';
 import {
   closeSync,
   constants,
   fstatSync,
   lstatSync,
   openSync,
-  readFileSync,
   realpathSync,
 } from 'node:fs';
+import { digestOpenExecutable } from './digestOpenExecutable.js';
 import { loadProcessNativeArtifact } from './loadProcessNativeArtifact.js';
 import { isQualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
 import type { QualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
@@ -185,7 +184,7 @@ export function createQualifiedDarwinProcessApi(artifact: {
         const opened = fstatSync(file);
         if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino)
           return hold();
-        digest = createHash('sha256').update(readFileSync(file)).digest('hex');
+        digest = digestOpenExecutable(file);
       } finally {
         closeSync(file);
       }

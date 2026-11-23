@@ -1,0 +1,384 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_CLASSIFIED_CAUSE_UNRESOLVED",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "headTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "sourceParent": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+  "sourceBinding": "Each Git object equals parent547 and local bytes; independently reviewed complete030 delta preserves each listed source tuple.",
+  "ci": {
+    "runId": 44407826474,
+    "jobId": 135167682766,
+    "artifactId": 14479602395,
+    "lane": "darwin-arm64/opencode-v2-review-ui",
+    "lookup": "cached original evidence only; no endpoint requests"
+  },
+  "firstRefusal": {
+    "failure": "UI read timed out: original captured V2 readiness permits Launch; no mutation retry",
+    "frames": [
+      "desktop-ui-controls.ts:264",
+      "desktop-opencode-v2-review-ui-smoke.ts:94"
+    ],
+    "launchDisabled": true,
+    "intendedReviewExecutionReached": false
+  },
+  "durableRecord": {
+    "entry": "TEST-desktop-backend-d4h81S/hoststore/management-commands/56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96.json",
+    "commandId": "team-preflight-1ffb2b7fbc244f5d2fdb19698dfaa67a56b9f1757e0b5ebe2e159c4a1b316e5b",
+    "purpose": "native-local-readiness-v1",
+    "providerId": "test-local",
+    "phase": "held",
+    "ok": false,
+    "resourceHeld": true,
+    "expiresAt": 1795042376719,
+    "expiresAtUTC": "2026-11-18T22:52:56.719000+00:00",
+    "preparationExpiresAt": 1795042386632,
+    "scopeCutoff": 1795042386632,
+    "readinessEvidencePresent": false
+  },
+  "originalProbePhases": [
+    {
+      "time": "2026-11-18T22:51:27.534Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "run",
+      "sequence": 1,
+      "elapsedMs": 0,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:51:28.224Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "graph-start",
+      "sequence": 2,
+      "elapsedMs": 686,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:51:49.301Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "graph-done",
+      "sequence": 3,
+      "elapsedMs": 21769,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:51:49.304Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "native-launch",
+      "sequence": 4,
+      "elapsedMs": 21772,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:51:58.877Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "native-ready",
+      "sequence": 5,
+      "elapsedMs": 31344,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:52:01.621Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "credential",
+      "sequence": 6,
+      "elapsedMs": 34088,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:52:01.770Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "attestation",
+      "sequence": 7,
+      "elapsedMs": 34237,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:52:17.077Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "session-create",
+      "sequence": 8,
+      "elapsedMs": 49545,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:52:19.747Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "driver-open",
+      "sequence": 9,
+      "elapsedMs": 52215,
+      "hostPid": 10010
+    },
+    {
+      "time": "2026-11-18T22:52:29.244Z",
+      "profileHash": "9727b464fcc05e6abb101dc5774dbcd4dc0ad4a6e573b8142e5a7704c30f2152",
+      "commandHash": "56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96",
+      "probeDigest": "eb09f98c572ef30292eb8bb7f1b7c5fc15e8c0695ff3c3326471a745f31a387a",
+      "phase": "first-submit",
+      "sequence": 10,
+      "elapsedMs": 61712,
+      "hostPid": 10010
+    }
+  ],
+  "observations": {
+    "modelProbes": [
+      {
+        "model": "TEST-model",
+        "tools": 0
+      }
+    ],
+    "modelObservations": [],
+    "modelFailures": [],
+    "cleanup": {
+      "appExitCode": 0,
+      "remaining": [],
+      "capturedHostAbsent": true
+    },
+    "atomicWithProbeCompletion": false
+  },
+  "sourceFindings": [
+    {
+      "boundary": "admission and original budget",
+      "source": "ModelProbeOwner.ts:320-403",
+      "finding": "Durable running/resourceHeld is written before native.run. ExpiresAt is the minimum of admittedAt plus original native timeout, preparation anchor and scope cutoff; the timer calls finish(cancelled,false) at the same expiry."
+    },
+    {
+      "boundary": "ordinary versus coordination",
+      "source": "ProviderModelProbePreparation.ts:37-57; OpenCodeLocalModelReadiness.ts:113-155,348-398",
+      "finding": "native-local-readiness purpose creates the existing wrapper, which first executes ordinary V2 probe. Coordination can be allocated only after confirmed ordinary result, confirmed ordinary close, observed effective provider and applicable local policy. This record has provider test-local outside configuredIds and no selected Main policy, so selectedUrl/applicable are absent/false. It follows the ordinary-only not-applicable route if ordinary run and close succeed. The invalid Main selector alone does not reject this provider or authorize private access."
+    },
+    {
+      "boundary": "last original phase",
+      "source": "OpenCodeV2ModelProbe.ts:268-395; createClaudeCloseDiagnostic.ts:129-165",
+      "finding": "first-submit is emitted after native ready, credential preparation, attestation, observeProvider, session creation and driver open; before driver.submit. The diagnostic phase vocabulary ends at first-submit intentionally. Its absence after that point is not evidence of a hang or successful execution."
+    },
+    {
+      "boundary": "held and cleanup debt",
+      "source": "ModelProbeOwner.ts:502-602",
+      "finding": "finish is one-shot, retires entry before abort/close, and writes phase held/resourceHeld true if native.close does not confirm true. A rejected run with clean close would instead write held/resourceHeld false. Snapshot-only running-to-held conversion does not explain a durable held record. A later store/authority failure can retain in-memory debt but by itself cannot turn the original on-disk running record into this on-disk held record."
+    },
+    {
+      "boundary": "wrapper close",
+      "source": "OpenCodeLocalModelReadiness.ts:355-398",
+      "finding": "Wrapper awaits ordinary result, then ordinary clean close, before readiness evidence. Its own close aborts, waits for running to settle, then closes started children. The same original deadline bounds all these stages. A synthetic adapter that never reacts to cancellation would not prove the behavior of the actual native path."
+    },
+    {
+      "boundary": "deadline and physical cleanup",
+      "source": "OpenCodeCoordinationEndpoint.ts:259-275; OpenCodeV2ModelProbe.ts:438-525",
+      "finding": "Deadline helper returns false after the original cutoff even for a late successful cleanup; work may finish afterward. V2 close drains original requests, closes driver, stops server and removes verified namespaces. Clean app exit/process absence later does not supply timely native cleanup evidence or clear the management debt."
+    },
+    {
+      "boundary": "cancellation linkage",
+      "source": "OpenCodeV2ModelProbe.ts:308-315; pinned provider driver-session.js:208-338,365-387",
+      "finding": "Probe abort propagates to admitted HTTP through fetchImpl. Session queue/poll transport errors seal a terminal unknown event; the pinned loop has its original timeout. These source links do not prove a run/close dependency cycle in the observed run. No new finite execution was performed."
+    },
+    {
+      "boundary": "failure diagnostics coverage",
+      "source": "OpenCodeV2ModelProbe.ts:508-523; createCapturedHostDiagnostics.ts",
+      "finding": "V2 has an optional diagnostics_channel failed-close publisher, but this Desktop capture retains the fixed stderr phase vocabulary and supplies no failed-close stage/run outcome. Native-host test subscriptions are a separate observation surface."
+    }
+  ],
+  "unproven": [
+    "Exact native result (success/rejection/unknown) after the single model request.",
+    "Whether ordinary close was entered before expiry and its first failing stage.",
+    "Whether original budget expired versus earlier close failure or source/custody refusal.",
+    "A narrow source defect explaining this original CI failure.",
+    "Any causal performance inference from phase durations or concurrently sampled metadata."
+  ],
+  "decision": "Keep this original UI lane INCOMPLETE. No timeout, guard, HOME/policy, replay or native execution change is justified by this evidence. Need original run/result/close boundary evidence to narrow further; do not treat other metadata releases or later process absence as acceptance.",
+  "validation": {
+    "sourceAuditOnly": true,
+    "newTestsRun": 0,
+    "nativeOrAppRuns": 0,
+    "buildsOrInstalls": 0,
+    "sourceChanges": 0,
+    "ciRequests": 0,
+    "existingTestsReadOnly": [
+      "management-model-probe.test.ts:420-455 original deadline and no late renewal",
+      "management-model-probe.test.ts:730-850 ordinary close ordering and negatives",
+      "opencode-configuration-source.test.ts:700-762 selector refusal, private refusal and generic public ordinary route"
+    ]
+  },
+  "sources": [
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "bytes": 30721,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "gitBlob": "e55795dcfd065139c0e798fa4e062f4e3ffcc6c6",
+      "sha256": "299bc0e774ab00d38271c652ad04e76843ac8886c0ac256fadd793aef7f4d137",
+      "bytes": 8891,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+      "bytes": 36898,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeLocalModelReadiness.ts",
+      "gitBlob": "7dbf688520e735df192d7294d17e5db8685830ab",
+      "sha256": "fbee08ad638234c735816b419e2dcd94610cc978f28dfda3351ffdf9947efaeb",
+      "bytes": 24922,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "gitBlob": "3d10f88783c9187bfcd273af766c03ec0e238af3",
+      "sha256": "8bba637526af85f6fe1df8eda76df7afb92fceca2c746c341a3440169ab21d5f",
+      "bytes": 23840,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationEndpoint.ts",
+      "gitBlob": "80f2d9a32b149614b2f0ee28edec86f0e216a963",
+      "sha256": "c43f1980f0628ca0b61fb961f5774e24b0c835ee8cec6a4884be34809754d902",
+      "bytes": 13040,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts",
+      "gitBlob": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa",
+      "sha256": "4a69730c64df215c36666ee529af93067baaf8e369caee333e688b343c71b8e6",
+      "bytes": 15156,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "gitBlob": "64e42e92db7119a81681219c1f13fc04229aae36",
+      "sha256": "7ce55390821516370c231d160b19dc64979466a7dfa55e2d05878c6cc5d2907c",
+      "bytes": 9588,
+      "unchanged547To030": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+      "gitBlob": "c27d121a94a9e4e4b403c9478d6ba071fceec01c",
+      "sha256": "2391db2fb9f90a265bd82c10ea3c2a0db080270319fd19b85bedad0d88e6f315",
+      "bytes": 1456,
+      "unchanged547To030": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "gitBlob": "6c0b5186f8f4c2aabab97cb76319c7f637e21e94",
+      "sha256": "d31349999f215639a0ea7d43981ec52629825ad32ec708d196fb0a5f59fe8e8d",
+      "bytes": 13809,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "gitBlob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89",
+      "bytes": 47440,
+      "unchanged547To030": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "gitBlob": "e9186d8dd8afa6c23c4e5474e62a6de2bed48dec",
+      "sha256": "5d5898ce75d7bf79bd3afeb7df8e3d1fe6a36b1a8e628162cf98ed4af2fc24ca",
+      "bytes": 56746,
+      "unchanged547To030": true
+    },
+    {
+      "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+      "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3",
+      "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+      "bytes": 191145,
+      "unchanged547To030": true
+    }
+  ],
+  "vendorMembersReadOnly": [
+    {
+      "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.js",
+      "gitBlob": "f3b38e368d1392c10a7cfd526900bf409ff6f0ab",
+      "sha256": "1d5a74bfdc4a62a468c267ce1b5406cd851782ee9f9c625d0734c8cef64634ad",
+      "bytes": 1002
+    },
+    {
+      "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+      "gitBlob": "a19af1d05b387c3588bdae7aa9cb0827bbdc1b9b",
+      "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3",
+      "bytes": 4496
+    },
+    {
+      "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-output.js",
+      "gitBlob": "b21c6f83f09b406c953b7675a2091ba091ab0092",
+      "sha256": "5d44d9596042625d446b474f3272136ee41ef7a0f2d02d9920e775b48bc4d6cb",
+      "bytes": 2325
+    },
+    {
+      "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+      "gitBlob": "1a0cdb0a9c7a7a390907eae2cf1903d6d104aadc",
+      "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+      "bytes": 18264
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682766-final-receipt.json",
+      "gitBlob": "945a3caa19d178be78dcf2179ee31467b2b5f71f",
+      "sha256": "787db5cacb26470637980fa8aaec7316b408b7fedc44754a19189d0671590161",
+      "bytes": 869852
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682766-terminal.log",
+      "gitBlob": "11ae8989bfff4c6ab8db0e218813cf208777b426",
+      "sha256": "e0276b385fb8844632de606d2bfa80ee0b600c2d1c64cb93c85a5ce850d927be",
+      "bytes": 241910
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-opencode-review-darwin-arm64-14479602395.zip",
+      "gitBlob": "21dd2a478e5174eba50bc84475493d025ef96e0e",
+      "sha256": "0ada06b179fb068903132a9603ac09db8f4490450a90efb0bac46f1fcde8ea33",
+      "bytes": 303969
+    }
+  ],
+  "zipEntries": [
+    {
+      "path": "TEST-desktop-backend-d4h81S/desktop-app.log",
+      "gitBlob": "c6327ebe21e64cf636f9cfcf8a1cefb21b58b54f",
+      "sha256": "f0aad651ac813eab612f3fd1c9d1cc9775816df9dc7e865241acf7149e26cd7d",
+      "bytes": 26189
+    },
+    {
+      "path": "TEST-desktop-backend-d4h81S/hoststore/management-commands/56c4d3a318e8188da196668d4a83aceb4e3b942fa303d65e1127235e88d94c96.json",
+      "gitBlob": "cbbf77a3829c17701c2abf8b196b02a9a77c6c49",
+      "sha256": "2986d9deea66e1ce33626ec30a3e628e3b0d2a1c70dc839e0b9e3156a2068ce2",
+      "bytes": 5411
+    },
+    {
+      "path": "TEST-desktop-backend-d4h81S/userData/logs/app-errors.ndjson",
+      "gitBlob": "5fd9623397ba4ca30951c8245aaece5946294380",
+      "sha256": "e41fb74aa27122ce4ec876dd32ef2f3252d89d879f2feaccfbc4962ffa7dc57e",
+      "bytes": 55642
+    },
+    {
+      "path": "host-emulated-opencode-v2-review-ui.log",
+      "gitBlob": "e0527cba47844b486007288ac6ce7826e0f1c8c3",
+      "sha256": "f3e84b740a8991a9ac22f7a9b95b3131665257882c418ea59ccbc78c18c62829",
+      "bytes": 2501
+    }
+  ]
+}

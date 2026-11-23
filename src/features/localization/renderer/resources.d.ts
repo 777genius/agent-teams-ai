@@ -2803,11 +2803,6 @@ export default interface Resources {
           "label": "Show dock icon"
         },
         "title": "Startup"
-      },
-      "nativeNextPrompt": {
-        "description": "Uses extra Claude or Codex model requests. Applies to new teammate sessions after restarting Agent Teams.",
-        "label": "Suggest a next message",
-        "title": "Next-message suggestions"
       }
     },
     "notificationTriggers": {
@@ -3380,6 +3375,11 @@ export default interface Resources {
         "title": "Fast mode default",
         "unavailableForRuntime": "Fast mode is currently unavailable for this Anthropic runtime."
       },
+      "nativeNextPrompt": {
+        "description": "Suggests a next message in the composer after this provider's teammates reply. Uses extra model requests on your account. On by default; turn it off here. Applies to new teammate sessions after restarting Agent Teams.",
+        "error": "Could not save the setting.",
+        "title": "Next-message suggestions"
+      },
       "progress": {
         "applyingConnectionChanges": "Applying connection changes...",
         "refreshingProviderStatus": "Refreshing provider status...",
@@ -3593,6 +3593,10 @@ export default interface Resources {
       "notifications": {
         "description": "Control when and how you get notified about agent activity, task completions, and errors.",
         "label": "Notifications"
+      },
+      "reviewFlow": {
+        "description": "Choose who gives final approval after AI review, for all teams or for individual ones.",
+        "label": "Review flow"
       }
     },
     "view": {
@@ -3995,8 +3999,10 @@ export default interface Resources {
       "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort.",
       "onDisk": "On disk:",
       "optional": {
-        "launchSettingsDescription": "Prompt, safety, and CLI overrides live here when you need them.",
+        "historyOnlyDescription": "Choose how this team keeps its tasks and chats.",
+        "launchSettingsDescription": "Team history, prompt, safety, and CLI overrides live here when you need them.",
         "launchSettingsTitle": "Optional launch settings",
+        "settingsTitle": "Optional settings",
         "summary": {
           "anthropicLimitedContext": "Anthropic limited to 200K context",
           "autoApproveTools": "Auto-approve tools",
@@ -4006,6 +4012,8 @@ export default interface Resources {
           "fastDefault": "Fast default",
           "fastDisabled": "Fast disabled",
           "fastMode": "Fast mode",
+          "historyPerProject": "Per-project history",
+          "historyShared": "Shared history",
           "leadPrompt": "Lead prompt",
           "worktree": "Worktree: {{name}}"
         },
@@ -4052,6 +4060,12 @@ export default interface Resources {
         "someProvidersNeedAttention": "Some selected providers need attention.",
         "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app."
       },
+      "projectContextMode": {
+        "description": "This can't be changed after the team is created.",
+        "label": "Team history",
+        "perProject": "Separate tasks and chats for each project (default)",
+        "shared": "Shared across projects"
+      },
       "saved": "Saved",
       "solo": {
         "description": "Only the team lead (main process) will be started - no teammates will be spawned. Works like a regular agent session in your chosen runtime (Claude Code, Codex, OpenCode, Gemini) but with access to the task board for planning. Saves tokens by avoiding teammate coordination overhead. You can add members later from the team settings.",
@@ -4073,6 +4087,240 @@ export default interface Resources {
         "selectWorkingDirectory": "Select working directory (cwd)",
         "teamLaunching": "Team is currently launching",
         "teamNameExists": "Team name already exists"
+      }
+    },
+    "customTemplates": {
+      "actions": {
+        "addMember": "Add member",
+        "copyToMyTemplates": "Copy to My Templates",
+        "delete": "Delete",
+        "duplicate": "Duplicate",
+        "edit": "Edit",
+        "export": "Export",
+        "myTemplates": "My Templates",
+        "recheck": "Re-check outcome",
+        "removeMember": "Remove member",
+        "retry": "Retry",
+        "save": "Save template",
+        "saveAsTemplate": "Save as Template",
+        "templates": "Templates"
+      },
+      "copyBuiltin": {
+        "action": "Copy to My Templates",
+        "copying": "Copying…",
+        "description": "Create an independent copy of a built-in template in My Templates.",
+        "membersCount_few": "{{count}} members",
+        "membersCount_many": "{{count}} members",
+        "membersCount_one": "{{count}} member",
+        "membersCount_other": "{{count}} members",
+        "nameFieldLabel": "Template name",
+        "readOnlySource": "Built-in template (read-only source)",
+        "selectTemplate": "Select a template",
+        "title": "Copy built-in template"
+      },
+      "createFromTemplate": {
+        "builtinGroup": "Built-in templates",
+        "customGroup": "My templates",
+        "description": "Apply a built-in or saved custom template to prefill the team prompt and members. You can still edit everything before creating the team.",
+        "membersCount_few": "{{count}} members",
+        "membersCount_many": "{{count}} members",
+        "membersCount_one": "{{count}} member",
+        "membersCount_other": "{{count}} members",
+        "noneHint": "Create a blank team with the usual settings.",
+        "noneLabel": "No template",
+        "readOnlySource": "Built-in template (read-only source)",
+        "sourceCustom": "Custom template (read-only source)",
+        "staleWarning": "The selected custom template no longer exists. The form keeps the previously applied values — choose another template to replace them, or continue with the current values.",
+        "title": "Start from a template (optional)"
+      },
+      "delete": {
+        "confirm": "Delete this template?",
+        "conflictBody": "This template changed since you opened it. Reload and try again.",
+        "conflictTitle": "Template changed",
+        "deleting": "Deleting…",
+        "description": "Delete this saved template. This cannot be undone.",
+        "title": "Delete template"
+      },
+      "duplicate": {
+        "action": "Duplicate",
+        "defaultName": "{{name}} (copy)",
+        "description": "Create an independent copy of this template.",
+        "duplicating": "Duplicating…",
+        "nameFieldLabel": "Template name",
+        "title": "Duplicate template"
+      },
+      "edit": {
+        "conflictBody": "This template changed since you opened it. Reload and try again.",
+        "conflictOverwrite": "Overwrite with your changes",
+        "conflictReload": "Reload latest version",
+        "conflictTitle": "Template changed",
+        "description": "Edit this saved template.",
+        "descriptionLabel": "Description",
+        "memberHeader": "Members",
+        "memberNameLabel": "Member name",
+        "memberNamePlaceholder": "Member name",
+        "memberRoleLabel": "Role",
+        "memberRolePlaceholder": "Role",
+        "memberWorkflowLabel": "Workflow",
+        "memberWorkflowPlaceholder": "Workflow",
+        "membersEmpty": "No members recorded.",
+        "membersLabel": "Members",
+        "nameFieldLabel": "Template name",
+        "promptLabel": "Team prompt",
+        "promptPlaceholder": "Team prompt",
+        "save": "Save changes",
+        "saved": "Template saved",
+        "savedBody": "“{{name}}” was updated.",
+        "saving": "Saving…",
+        "title": "Edit template"
+      },
+      "errors": {
+        "builtinNotFound": "Built-in template not found.",
+        "issues": {
+          "duplicateMemberName": "A member with this name already exists.",
+          "invalidContent": "The team content cannot be saved as a template.",
+          "memberNameInvalid": "Member name is invalid.",
+          "memberNameRequired": "Member name is required.",
+          "memberRoleTooLong": "Member role is too long.",
+          "memberWorkflowTooLong": "Member workflow is too long.",
+          "previewTokenExpired": "This preview expired. Review the refreshed preview before saving.",
+          "previewTokenInvalid": "This preview is no longer valid. Review the refreshed preview before saving.",
+          "teamPromptInvalidType": "The team prompt must be a text value.",
+          "teamPromptTooLong": "Team prompt is too long.",
+          "templateDescriptionTooLong": "The description is too long.",
+          "templateNameInvalidCharacters": "The template name contains unsupported characters.",
+          "templateNameRequired": "A template name is required.",
+          "templateNameTooLong": "The template name is too long.",
+          "tooManyMembers": "Too many members.",
+          "unexpectedProperty": "The file contains an unexpected property “{{property}}”."
+        },
+        "nameConflict": "A template with this name already exists. Change the name — existing templates are never overwritten.",
+        "notFound": "Template not found.",
+        "requestFailed": "The request failed. Try again.",
+        "rosterUnreadable": "Team member information could not be read, so this team cannot be saved as a template.",
+        "saveOutcomeUnknown": "The save request failed, so its outcome is unknown. Re-check before saving again.",
+        "sourceNotFound": "Source template not found.",
+        "sourceUnavailable": "This team's saved configuration is no longer available.",
+        "sourceUnreadable": "Source template could not be read.",
+        "storageUnavailable": "The template library is unavailable. Nothing was saved.",
+        "storageUnavailableRecheck": "The template library is unavailable, so the outcome could not be checked.",
+        "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
+        "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten.",
+        "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
+      },
+      "export": {
+        "action": "Export",
+        "description": "Export “{{name}}” as a portable JSON file.",
+        "errors": {
+          "downloadFailed": "The download could not be started. Try again.",
+          "transportFailed": "The export request could not be completed. Try again.",
+          "filePickerFailed": "The file picker could not be opened.",
+          "fileWriteFailed": "The file could not be written. Try again.",
+          "invalidRequest": "The export request was invalid."
+        },
+        "exporting": "Exporting…",
+        "success": "Export successful",
+        "successBody": "“{{name}}” has been exported as a JSON file.",
+        "title": "Export Template"
+      },
+      "import": {
+        "action": "Import Template",
+        "confirmImport": "Confirm import",
+        "description": "Import a portable team template from a JSON file.",
+        "errors": {
+          "fileChanged": "The file changed while it was being read.",
+          "filePickerFailed": "The file picker could not be opened.",
+          "fileReadFailed": "The file could not be read.",
+          "fileTooLarge": "The file is too large to import.",
+          "invalidEncoding": "The file is not valid UTF-8.",
+          "invalidJson": "The file is not valid JSON.",
+          "storageUnavailable": "The template library is unavailable. Nothing was imported.",
+          "transportFailed": "The import request could not be completed. Try again.",
+          "unsupportedFormat": "The file format is not supported.",
+          "unsupportedVersion": "The template schema version is not supported.",
+          "validationFailed": "The template content failed validation."
+        },
+        "fileHint": "Choose a .json file exported from Agent Teams.",
+        "importing": "Importing…",
+        "nameConflictBody": "A template named “{{name}}” already exists. Choose a different name to import as a new template.",
+        "nameConflictTitle": "Template already exists",
+        "platformBrowser": "Browser file import",
+        "platformElectron": "Native file picker",
+        "platformUnavailable": "File import is not available in this environment.",
+        "renameNameFieldLabel": "Template name",
+        "selectFileLabel": "Select JSON file",
+        "success": "Import successful",
+        "successBody": "The template has been imported into My Templates.",
+        "title": "Import Template"
+      },
+      "library": {
+        "builtInDescription": "Ready-made team setups with roles and responsibilities.",
+        "createdAt": "Saved {{date}}",
+        "description": "Browse ready-made team setups and your saved templates.",
+        "empty": "No saved templates yet",
+        "emptyDescription": "Open a team and choose Save as Template to create one.",
+        "loadFailed": "The template library could not be loaded.",
+        "loading": "Loading templates…",
+        "memberNames": "Members: {{names}}",
+        "noDescription": "No description",
+        "noMembers": "Prompt-only template — no members recorded",
+        "storageUnavailable": "The template library is unavailable right now.",
+        "tabs": {
+          "builtIn": "Built-in",
+          "myTemplates": "My Templates"
+        },
+        "title": "Templates",
+        "unreadableRecords_few": "{{count}} stored templates could not be read and are missing from this list.",
+        "unreadableRecords_many": "{{count}} stored templates could not be read and are missing from this list.",
+        "unreadableRecords_one": "{{count}} stored template could not be read and is missing from this list.",
+        "unreadableRecords_other": "{{count}} stored templates could not be read and are missing from this list."
+      },
+      "preview": {
+        "membersEmpty": "No members recorded — a prompt-only template",
+        "membersLabel": "Members",
+        "prompt": "Team prompt",
+        "promptEmpty": "No team prompt recorded — this template keeps an empty prompt",
+        "roleLabel": "Role",
+        "roleMissing": "No role",
+        "sourceTeam": "Source team",
+        "title": "Template preview",
+        "warningsLabel": "Preview warnings",
+        "workflowLabel": "Workflow",
+        "workflowMissing": "No workflow"
+      },
+      "save": {
+        "description": "Review exactly what will be saved. Only the name and description can be changed.",
+        "descriptionLabel": "Description",
+        "nameFieldLabel": "Template name",
+        "title": "Save as Template"
+      },
+      "states": {
+        "loading": "Loading…",
+        "notSaved": "Confirmed: this template was not saved. You can save it again.",
+        "preparing": "Preparing preview…",
+        "previewExpired": "This preview is no longer valid. Review the refreshed preview before saving.",
+        "rechecking": "Re-checking the save outcome…",
+        "saved": "Template saved",
+        "savedAlready": "This template was already saved.",
+        "savedBody": "“{{name}}” is now in My Templates.",
+        "saving": "Saving…",
+        "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
+        "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+        "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+        "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported.",
+        "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
+        "unresolvedTitle": "Outcome not confirmed"
+      },
+      "warnings": {
+        "emptyRoster": "The roster was read successfully and is empty. A prompt-only template is valid.",
+        "missingMemberRole": "{{member}} has no recorded role.",
+        "missingMemberWorkflow": "{{member}} has no recorded workflow.",
+        "missingTeamPrompt": "The team has no prompt; the saved template keeps an empty prompt.",
+        "noRecordedRoster": "No roster was recorded for this team. A prompt-only template is valid.",
+        "removedMembersExcluded_few": "{{count}} removed team members were excluded.",
+        "removedMembersExcluded_many": "{{count}} removed team members were excluded.",
+        "removedMembersExcluded_one": "{{count}} removed team member was excluded.",
+        "removedMembersExcluded_other": "{{count}} removed team members were excluded."
       }
     },
     "detail": {
@@ -4115,6 +4363,11 @@ export default interface Resources {
         "member_other": "members",
         "title": "Team not launched yet"
       },
+      "editDefinition": {
+        "loadFailed": "Could not load the team settings",
+        "memberNotFound": "This member is no longer in the team settings. Reopen the team to see its current members.",
+        "notFound": "The team settings could not be found"
+      },
       "invalidTab": "Invalid team tab",
       "kanbanSafeData": "Failed to fully load kanban. Displaying safe data.",
       "loadFailed": "Failed to load team",
@@ -4156,6 +4409,7 @@ export default interface Resources {
         "deleteTeam": "Delete team",
         "editTeam": "Edit team",
         "editUnavailableProvisioning": "Edit team is unavailable while provisioning is still in progress",
+        "editUnavailableRunningProject": "Stop this team in every project to edit it",
         "openBuiltInEditor": "Open project in built-in editor",
         "openTeamGraph": "Open team graph",
         "openTeamUsage": "Open usage dashboard",
@@ -4194,6 +4448,9 @@ export default interface Resources {
         "memberNamesUnique": "Member names must be unique before saving",
         "newLiveTeammates": "Add new teammates from the dedicated Add member dialog while the team is live. Edit Team only supports updating existing teammates.",
         "provisioning": "Team settings cannot be edited while provisioning is still in progress. Wait for launch to finish, then try again.",
+        "refusedProjectCopy": "This is a project copy of a team. Change its settings in the team itself.",
+        "refusedProjectUnreconciled": "A project of this team is still being prepared, or its last start was interrupted. Launch the team in that project again, then edit it.",
+        "refusedTeamUnreadable": "The saved settings of this team cannot be read, so nothing was changed.",
         "restartFailedMany": "Team saved, but failed to restart these teammates: {{failures}}",
         "restartFailedOne": "Team saved, but failed to restart this teammate: {{failures}}",
         "saveFailed": "Failed to save",
@@ -4207,8 +4464,10 @@ export default interface Resources {
       "fields": {
         "colorOptional": "Color (optional)",
         "description": "Description",
+        "leadPrompt": "Lead instructions (optional)",
         "name": "Name"
       },
+      "leadPromptHint": "Used the next time the team starts in any project. A prompt typed in the launch dialog applies to that start only; afterwards the team goes back to these saved instructions (or to none, if this field is empty).",
       "leadRestartWarning": "Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.",
       "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
       "notices": {
@@ -4221,6 +4480,7 @@ export default interface Resources {
       },
       "placeholders": {
         "description": "Team description (optional)",
+        "leadPrompt": "Saved instructions for the team lead",
         "teamName": "Team name"
       },
       "teamLead": {
@@ -4628,6 +4888,7 @@ export default interface Resources {
         "someProvidersNeedAttention": "Some selected providers need attention.",
         "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app."
       },
+      "projectScopedRosterReadOnly": "The team roster is shared across projects and cannot be edited while launching this project.",
       "prompt": {
         "label": "Prompt",
         "oneShotPrefix": "This prompt will be passed to",
@@ -5196,6 +5457,11 @@ export default interface Resources {
         "reusedCrossTeamRequest": "Reused recent cross-team request",
         "teamOffline": "offline"
       },
+      "suggestions": {
+        "dismiss": "Dismiss suggestion",
+        "insert": "Insert",
+        "tab": "Tab"
+      },
       "teamSelector": {
         "current": "current",
         "offline": "offline",
@@ -5203,11 +5469,6 @@ export default interface Resources {
         "online": "online",
         "onlineTitle": "Online",
         "thisTeam": "This team"
-      },
-      "suggestions": {
-        "dismiss": "Dismiss suggestion",
-        "insert": "Insert",
-        "tab": "Tab"
       }
     },
     "messages": {
@@ -5893,6 +6154,15 @@ export default interface Resources {
       "stoppedAgo": "stopped {{time}} ago",
       "title": "CLI Processes"
     },
+    "projectContextView": {
+      "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",
+      "emptyTitle": "Not launched in this project yet",
+      "loading": "Loading team project history…",
+      "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
+      "projectMissing": "This history belongs to a project that is no longer in your project list.",
+      "retry": "Retry",
+      "selectProject": "Open a project to see this team's tasks and chats."
+    },
     "projectPath": {
       "browse": "Browse",
       "createAutomatically": "If the directory does not exist, it will be created automatically.",
@@ -6428,6 +6698,95 @@ export default interface Resources {
       "submit": "Submit",
       "title": "Request Changes"
     },
+    "reviewFlow": {
+      "badges": {
+        "custom": "Custom",
+        "default": "Default",
+        "differ": "Differs by project",
+        "repair": "Needs repair"
+      },
+      "broken": {
+        "defaults": "The saved default for all teams can't be read, so review actions are paused in every team until you save a new default.",
+        "defaultsHint": "The form shows the built-in values. Save them, or change them first, to repair the default.",
+        "details": "Details: {{message}}",
+        "fixDefaults": "Fix the default",
+        "teamHint": "This team's saved settings can't be read, so review actions are paused here. Save new settings, or choose the default and save, to repair it."
+      },
+      "cancel": "Cancel",
+      "discard": "Discard changes",
+      "editor": {
+        "defaultHeading": "Default for all teams",
+        "followingTeams": "Teams following the default: {{count}}",
+        "teamHeading": "This team"
+      },
+      "feedback": {
+        "error": "Could not save: {{message}}",
+        "notApplied": "Saved for the team, but not applied yet in every project: they are listed above. Save again to apply it there.",
+        "saved": "Saved",
+        "saving": "Saving…"
+      },
+      "flowLegend": "Who gives final approval",
+      "flows": {
+        "agent_approval": {
+          "description": "The reviewer approves and the task moves to Approved.",
+          "label": "Agents approve"
+        },
+        "human_approval": {
+          "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
+          "label": "I give final approval"
+        },
+        "lead_then_human": {
+          "description": "After the reviewer, the team lead signs off in a second review. Then the task waits in Done for you. Only you move it to Approved.",
+          "label": "Lead signs off, then I approve"
+        }
+      },
+      "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",
+      "intro": "After a reviewer checks a task, it either goes straight to Approved or waits in Done for you. Set the default for all teams here, and give individual teams their own settings when they need them.",
+      "loadError": "Could not load review flow settings. {{message}}",
+      "loading": "Loading review flow settings…",
+      "overrides": {
+        "empty": "All teams follow the default.",
+        "heading": "Teams with custom settings ({{count}})",
+        "reset": "Reset to default",
+        "resetLabel": "Reset {{team}} to the default"
+      },
+      "popover": {
+        "openSettings": "Change the default for all teams…"
+      },
+      "projects": {
+        "differ": "The projects of this team use different review flows. Saving applies the settings below to all of them:",
+        "followsDefault": "the default",
+        "item": "{{project}}: {{flow}}",
+        "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
+        "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project.",
+        "prompt": "Instructions: \"{{prompt}}\"",
+        "scope": "One review flow for every project of this team.",
+        "unreadable": "settings that can't be read",
+        "unreadableProjects": "The projects of this team cannot be read, so its review flow cannot be shown or changed: {{message}}",
+        "use": "Use these settings"
+      },
+      "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+      "promptLabel": "Instructions for agents (optional)",
+      "promptPlaceholder": "For example: run the e2e tests before deciding.",
+      "retry": "Retry",
+      "save": "Save",
+      "scope": {
+        "defaultOption": "All teams (default)",
+        "empty": "No teams found.",
+        "label": "Settings for",
+        "searchPlaceholder": "Search teams"
+      },
+      "title": "Review flow",
+      "unavailable": "Settings for {{count}} team or owner could not be read. Retry before editing those teams.",
+      "unreadable": {
+        "heading": "Teams with unreadable settings ({{count}})"
+      },
+      "useDefault": {
+        "custom": "This team has its own review flow.",
+        "following": "Following the default: {{flow}}",
+        "label": "Use the default settings"
+      }
+    },
     "roleSelect": {
       "customRole": "Custom role...",
       "empty": "No roles found.",
@@ -6699,6 +7058,10 @@ export default interface Resources {
         "edit": "Edit description",
         "placeholder": "Task description (supports markdown)"
       },
+      "leadSignoff": {
+        "badge": "Lead sign-off",
+        "hint": "The team lead signs off on this task before it reaches Done."
+      },
       "loading": {
         "fetchingTeamData": "Fetching team data",
         "title": "Loading task..."
@@ -6729,7 +7092,8 @@ export default interface Resources {
       "reviewStates": {
         "approved": "Approved",
         "inReview": "In review",
-        "needsFix": "Needs fix"
+        "needsFix": "Needs fix",
+        "reviewed": "Reviewed"
       },
       "sections": {
         "attachments": "Attachments",
@@ -6752,9 +7116,12 @@ export default interface Resources {
         "createdAs": "Created as",
         "currentImplementationInterval": "Current implementation interval",
         "empty": "No workflow history recorded",
+        "humanApproved": "Approved by user",
         "implementationIntervalEnded": "Implementation interval ended at this transition",
+        "leadSignoffRequested": "Lead sign-off requested",
         "ownerChanged": "Owner changed",
         "reassigned": "Reassigned",
+        "reviewCompleted": "AI review completed",
         "reviewRequested": "Review requested",
         "reviewStarted": "Review started",
         "runningPrefix": "running ",

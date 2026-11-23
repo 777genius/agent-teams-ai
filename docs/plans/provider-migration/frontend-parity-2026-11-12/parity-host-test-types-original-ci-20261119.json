@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "runAttempt": 1,
+  "workflowId": 44434982536,
+  "job": {
+    "id": 135261468433,
+    "run_id": 44434982536,
+    "workflow_name": "Host process fixture acceptance",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44434982536",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAffjY3EQ",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135261468433",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982536/job/135261468433",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-19T01:11:27Z",
+    "started_at": "2026-11-19T01:12:51Z",
+    "completed_at": "2026-11-19T01:21:30Z",
+    "name": "Host process fixtures (win32-arm64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-19T01:12:52Z",
+        "completed_at": "2026-11-19T01:12:54Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-19T01:12:54Z",
+        "completed_at": "2026-11-19T01:12:55Z"
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-19T01:12:55Z",
+        "completed_at": "2026-11-19T01:13:32Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-19T01:13:32Z",
+        "completed_at": "2026-11-19T01:13:47Z"
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-19T01:13:47Z",
+        "completed_at": "2026-11-19T01:13:58Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-19T01:13:58Z",
+        "completed_at": "2026-11-19T01:14:00Z"
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-19T01:14:00Z",
+        "completed_at": "2026-11-19T01:14:01Z"
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-19T01:14:01Z",
+        "completed_at": "2026-11-19T01:21:15Z"
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 9,
+        "started_at": "2026-11-19T01:21:15Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:23Z"
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-19T01:21:23Z",
+        "completed_at": "2026-11-19T01:21:24Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 46,
+        "started_at": "2026-11-19T01:21:24Z",
+        "completed_at": "2026-11-19T01:21:24Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 47,
+        "started_at": "2026-11-19T01:21:24Z",
+        "completed_at": "2026-11-19T01:21:24Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48,
+        "started_at": "2026-11-19T01:21:24Z",
+        "completed_at": "2026-11-19T01:21:28Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49,
+        "started_at": "2026-11-19T01:21:28Z",
+        "completed_at": "2026-11-19T01:21:28Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135261468433",
+    "labels": [
+      "windows-11-arm"
+    ],
+    "runner_id": 1000395922,
+    "runner_name": "GitHub Actions 1000395922",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "canonicalTerminalJobPage": {
+    "path": "ci-current-42a4/poll-03-jobs.json",
+    "bytes": 76257,
+    "sha256": "7cf785c82605c960c78d5c979c93031bd14cfe98909b798acde8ac8140471018",
+    "gitBlob": "0689db90436f8ab30ecf6e31c27f61222e057fd5"
+  },
+  "rawLog": {
+    "path": "ci-current-42a4/job-135261468433-terminal.log",
+    "bytes": 78426,
+    "sha256": "bee500849f8eaf557716b2475fe00e56dd40a50f6f406bd3c5271ccb58ad7182",
+    "gitBlob": "2abdaefbafbefdc86d9fb78dc2be1ebfe1d0bd9d"
+  },
+  "rawToolResponse": {
+    "path": "ci-current-42a4/job-135261468433-raw-tool-response.json",
+    "bytes": 81549,
+    "sha256": "051babfcb5c27a240f29196c72bb3b2402dc379dbdbaf7cd5720d0088107531c",
+    "gitBlob": "c0f6513e6645ab46c466e9d83818452b1999cd0f"
+  },
+  "excerpts": [
+    {
+      "line": 245,
+      "text": "2026-11-19T01:13:27.9269005Z HEAD is now at 42a4ee2 fix(host): repair parity races and preserve solo launch state"
+    },
+    {
+      "line": 851,
+      "text": "2026-11-19T01:21:15.5265507Z \u001b[36;1mnode node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json\u001b[0m"
+    },
+    {
+      "line": 860,
+      "text": "2026-11-19T01:21:22.8895524Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'."
+    },
+    {
+      "line": 861,
+      "text": "2026-11-19T01:21:22.8906219Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'."
+    },
+    {
+      "line": 894,
+      "text": "2026-11-19T01:21:24.0840007Z Artifact host-process-fixtures-win32-arm64-42a4ee210aff6ffa310025d024fd55cfbdbcd277.zip successfully finalized. Artifact ID 14488862114"
+    },
+    {
+      "line": 895,
+      "text": "2026-11-19T01:21:24.0841251Z Artifact host-process-fixtures-win32-arm64-42a4ee210aff6ffa310025d024fd55cfbdbcd277 has been successfully uploaded! Final size is 300 bytes. Artifact ID is 14488862114"
+    }
+  ],
+  "classification": "TEST compilation regression: strict assert.deepEqual narrows loads to never[] before inferred open() return; native runtime acceptance steps did not execute",
+  "sourcePreimage": {
+    "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/before/packages/legacy-agent-host/tests/native-host-close.test.ts",
+    "bytes": 52804,
+    "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+    "gitBlob": "1e4522ba6e600545535c116e59a53a95f6120b37"
+  },
+  "limits": [
+    "No claim about native readiness, cleanup, bundled attachment resolution or product E2E from a test compilation failure.",
+    "Only this original job terminal log is retired; workflow remains live while other jobs are queued/running.",
+    "Artifact metadata shown in log is an upload result; no ZIP content was downloaded for this compile-only failure."
+  ],
+  "endpointRetirement": {
+    "jobLog": 135261468433,
+    "status": "captured once and permanently retired",
+    "rawResponseSavedBeforeDecode": true
+  }
+}

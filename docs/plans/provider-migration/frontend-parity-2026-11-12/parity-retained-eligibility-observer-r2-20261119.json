@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-retained-eligibility-observer-source-and-finite-review",
+  "reviewer": "composition_review_030",
+  "reviewedAt": "2026-11-19T01:03:30.575705+00:00",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "verdict": "PASS_SOURCE_AND_FINITE_SCOPE",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/manifest.json",
+    "bytes": 5811,
+    "sha256": "f6d7fb4a1d6ce391300c4b1b5e340b7ca97629d0c49949ea3dbca35dd409795a",
+    "gitBlob": "15f9cec259b074ca5a073d6b9d6d571a13ddea7c"
+  },
+  "candidatePatch": {
+    "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/candidate.patch",
+    "bytes": 14754,
+    "sha256": "a234628a2d445ed6d623a8351ac348a18997dc6136641cdc816b735abccf86e7",
+    "gitBlob": "cd9c8e828bab9cd7d6b730b5e067ce8471487b59"
+  },
+  "changes": [
+    {
+      "path": "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "preimage": {
+        "bytes": 4399,
+        "sha256": "46d7684927485c4124c07147c384644a849df7134a74edfff30f0af2481c2e9a",
+        "gitBlob": "5531bed60214eae761028dd534a05ee3a6db67e2"
+      },
+      "postimage": {
+        "bytes": 4875,
+        "sha256": "9022504401848b9ec452fcb59e696a3c3e6c70410a68a88c5766a44e9678c4fc",
+        "gitBlob": "48601395b8993858c5c03dc391f32620bff6d6cf"
+      }
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "preimage": {
+        "bytes": 13120,
+        "sha256": "884a2de9e9bdb6e42f80579b65d5ddfe6e60e2b3d0c921d41cea686671fc7939",
+        "gitBlob": "0387d24830f45fa722b2e71765fdfde4c9a98f0d"
+      },
+      "postimage": {
+        "bytes": 13306,
+        "sha256": "9d84942df095ebe4350ad9336031e896885275165e1558ba0b349f4cfbe18a87",
+        "gitBlob": "fbcf8cef5d9c9258418bd4aa98c4a6b15cd5a547"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyEligibilityDiagnostics.test.ts",
+      "preimage": null,
+      "postimage": {
+        "bytes": 11154,
+        "sha256": "11bae932d7b9bb2a6d73bbbd2cfb4c1841bc14a715fd925f7b42faf368154144",
+        "gitBlob": "5db9d3cde4be97705bdd1218037dffc7d7771acf"
+      }
+    }
+  ],
+  "provenance": {
+    "allOriginalPreimagesMatchImmutable030": true,
+    "newRegressionAbsentFromOriginalSource": true,
+    "allFinalCandidateBytesMatchVerifyAfter": true,
+    "sameRegressionUsedAgainstOriginalBefore": true,
+    "reviewerExecutedTestsOrRuntime": false,
+    "externalGitWorktreeOrRefMutations": false
+  },
+  "causalInformationLoss": [
+    "Original readEligibility catches the stopped-source fenced/describe exception after currentness, returning other except for native-custody-unverified.",
+    "Coordinator converts other to not-eligible and disposes the candidate. The existing outer observer sees only the reduced result, whose reason does not recover the original typed owner/source category.",
+    "Optional trusted callback now receives the original rejected-other exception and immediately feeds existing remember(coordinator-admission). This corrects information loss only."
+  ],
+  "controlFlowReview": [
+    "The same post-catch current() executes before the new observation; source-changed/currentness failure still takes precedence.",
+    "Accepted stopped and native-custody-unverified outcomes do not call the observer. Eligibility choices, runtime dispatch, import absence, source owner checks, deadlines, scope lifetime, coordinator queues and cleanup are unchanged.",
+    "Observer invocation is never awaited. A surrounding try and Promise.resolve(...).catch contain synchronous throws, rejected promises and throwing then getters. A pending observer promise does not delay the original refusal or cleanup.",
+    "Main supplies a synchronous bounded remember callback; raw exceptions are neither exposed over IPC nor retained in the diagnostic record.",
+    "Existing normalization uses own data reason/code/name and a closed category mapping, preserving unknown for generic untyped fence errors. No exception text, stack, project/team identifier, token or arbitrary fields are serialized.",
+    "Existing remember retains the first bounded phase/category. finish emits at most one private six-field observation after the original public result, including after candidate cleanup; cleanup uncertainty remains outcome=unknown.",
+    "The only other source changes are formatting wraps of two existing Main lines."
+  ],
+  "callSiteCompatibility": "The new scope option is optional and trusted-composition-only; no existing constructor/caller must provide it. The one Main capture wiring forwards to the existing per-open observer; other request kinds retain undefined observation.",
+  "finiteVerification": {
+    "method": "Read and hash author-produced actual Vitest/fastlint receipts; no reviewer rerun.",
+    "before": {
+      "counts": {
+        "numTotalTests": 70,
+        "numPassedTests": 62,
+        "numFailedTests": 8,
+        "numPendingTests": 0,
+        "success": false
+      },
+      "receipt": {
+        "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/receipts/before-result.json",
+        "bytes": 31790,
+        "sha256": "48ff5ce69ae8acfb7d1d93e7fa36ea246873ed2ba3f7e0cc90ffc4e45814f151",
+        "gitBlob": "753dc4f0464ce9fad2c42a0913dc9b2330d358c7"
+      },
+      "tests": [
+        {
+          "file": "retainedLegacyEligibilityDiagnostics.test.ts",
+          "total": 13,
+          "passed": 5,
+          "failed": 8
+        },
+        {
+          "file": "retainedLegacyLaunchCoordinator.test.ts",
+          "total": 38,
+          "passed": 38,
+          "failed": 0
+        },
+        {
+          "file": "retainedLegacyOpenDiagnostics.test.ts",
+          "total": 19,
+          "passed": 19,
+          "failed": 0
+        }
+      ]
+    },
+    "after": {
+      "counts": {
+        "numTotalTests": 70,
+        "numPassedTests": 70,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "success": true
+      },
+      "receipt": {
+        "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/receipts/after-result.json",
+        "bytes": 27298,
+        "sha256": "648418fab2daebfe208a7c55a7e2bd1dfee4519f1af23b128e14ed4696804e2a",
+        "gitBlob": "cf1763329c1f7f64c5de09389b6237ab792599ab"
+      },
+      "tests": [
+        {
+          "file": "retainedLegacyEligibilityDiagnostics.test.ts",
+          "total": 13,
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "retainedLegacyLaunchCoordinator.test.ts",
+          "total": 38,
+          "passed": 38,
+          "failed": 0
+        },
+        {
+          "file": "retainedLegacyOpenDiagnostics.test.ts",
+          "total": 19,
+          "passed": 19,
+          "failed": 0
+        }
+      ]
+    },
+    "meaningfulRed": "All8 failures are in the new regression: six missing observer invocations and two Main retained typed-category mismatches. Existing coordinator38 and projection19 tests passed on original. Generic unknown, accepted branches and currentness behavior did not become false RED.",
+    "coverage": [
+      "actual stopped-source parser and physical source identity with finite owner ports",
+      "typed owner-active and identical generic fence exception handoff",
+      "observer throw, rejection, pending promise and throwing then getter",
+      "accepted stopped/native-custody branches and absent callback",
+      "currentness precedence after fence failure",
+      "actual Main/coordinator/existing private log projection",
+      "observation occurs after original awaited candidate cleanup",
+      "unchanged unknown outcome and retained debt on cleanup failure",
+      "zero runtime or model dispatch"
+    ],
+    "fastLint": {
+      "files": 3,
+      "errors": 0,
+      "warnings": 0,
+      "receipt": {
+        "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/receipts/after-fastlint.json",
+        "bytes": 1013,
+        "sha256": "2f7f6069bea859484c05380e50cb431a486430d0b45e068579e5f42aaf248be2",
+        "gitBlob": "f6bd275ec67f2bff9d13350a0ecd90b8c702083c"
+      }
+    },
+    "initialHarnessFailures": "Separate loader-only setup failures are retained under *incomplete-harness* names and excluded from semantic RED.",
+    "qualification": "Prepared Node 24.22.3/Vitest3.2.6 dependencies read from existing workspace; exact030 source/static assets isolated in verify-before/after, with local Vite cache. Two initial loader-only setup failures preserved separately, not counted as semantic RED. No app/native/build/install or external checkout edit."
+  },
+  "sourceFreeze": {
+    "requiredFinitePaths": [
+      "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts"
+    ],
+    "proposal": {
+      "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/reviewer-source-freeze-proposal.json",
+      "bytes": 4857,
+      "sha256": "5931e9e0d4c91ddf0a56a0cd52e8947b89fb0ed4fbee908f72abd44594378fd1",
+      "gitBlob": "77c592c113b0e570179aabf5ae14e9add0fc769e"
+    },
+    "centralAmendment": {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/source-freeze-publication-amendment.json",
+      "bytes": 2906,
+      "sha256": "80e15b8e6e33a1da9b0e2569841ed31a0075038b366d3b8166b5700a324c53b9",
+      "gitBlob": "839c16b7396094fd6dc92e1538910f207565e986"
+    },
+    "targetPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "targetArray": "desktopProofSupplementarySources",
+    "historicalFinal22Blob": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+    "publicationBlob": "566b24275d634a213d732564fc3319631f2de0d1",
+    "linesBefore": 397,
+    "linesAfter": 403,
+    "exactSixLiteralOnlyDeltaVerified": true,
+    "historicalFinal22FileUntouched": true,
+    "regressionSelectedByExistingVitestGlob": true,
+    "workflowChange": false
+  },
+  "backgroundSourcePins": [
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+      "bytes": 3984,
+      "sha256": "1d61d048cb4f384e8d46f86fb5a0a5cd0e7dcc902b131cbc7d5974f18a7c21ad",
+      "gitBlob": "423e94b0099241ca557442180f551c1c1a0d199e",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+      "bytes": 1476,
+      "sha256": "7918e41e7692d4f9c2440488f4ccde5e195929948df41686ec59ed8b5602239b",
+      "gitBlob": "26eb1e9e513fe2db6a9d39ce2b20ed47f7e2678b",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "bytes": 4761,
+      "sha256": "d0743a080503a79ab8726abefa69cf665284cd7b2247bf36a0f4a7775d2df0cf",
+      "gitBlob": "91c3ad1a90cbdc1da7e08bdf9d9d63121548f50d",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    },
+    {
+      "path": "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts",
+      "bytes": 3766,
+      "sha256": "b340227f25dce9f0525e96115b9c15d81233368288de4a71b007017628f3d03c",
+      "gitBlob": "7b7c5b47985841b7a838806cfe7ae86c57bd9a8a",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    },
+    {
+      "path": "src/features/agent-backend/core/application/RetainedLegacyLaunchCoordinator.ts",
+      "bytes": 21231,
+      "sha256": "da9c9f2a3fb1efbcfa60e6abe2d586423591330017d799ac3bc8e29dc622b0d0",
+      "gitBlob": "c41278e50b5970ff8181784de3583bac904b16c0",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+      "bytes": 13314,
+      "sha256": "57557c18e1cc5f85ef54cc2153f2cd76f50b91af52e7a60f2cd04849e2b84057",
+      "gitBlob": "0ff536466708c00778ab23d93bbcb18c01bf1704",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "source": "immutable547, unchanged in exact547to030 delta"
+    }
+  ],
+  "limits": [
+    "The original retained V1 failure remains FAIL/INCOMPLETE; this change does not repair or rerun its behavior.",
+    "Generic fence errors without a recognized own-data code/reason remain unknown; no atomic historical cause is inferred from separate diagnostics.",
+    "Finite tests use actual Main/scope/coordinator/diagnostic code and temporary files with finite owner/runtime ports; no application, native provider, vendor CLI, Host process or physical native cleanup was run.",
+    "Full repository typecheck, original runtime acceptance, final25 source-size composition and final Git tree are separate publication gates."
+  ]
+}

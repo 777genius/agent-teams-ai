@@ -1,4 +1,4 @@
-import { captureCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
+import { captureCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/captured-configuration';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
 import { z } from 'zod';

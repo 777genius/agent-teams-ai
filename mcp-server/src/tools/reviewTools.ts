@@ -86,18 +86,48 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
     },
   });
 
+
+  server.addTool({
+    name: 'review_complete',
+    description:
+      'Complete AI review to Done without human approval (requires the original cycle ID). With reviewFlow lead_then_human a non-lead reviewer instead hands the task to the Lead sign-off stage (returns stage "lead_signoff", handedOffTo and leadSignoffRequestId, the NEW id for the Lead; reviewRequestId stays the cycle you completed; the task stays in Review); the Lead completes that cycle with its own review_complete. With lead_then_human, from is REQUIRED on review_complete and review_request_changes. When stage 2 is skipped the result carries leadSignoffSkipped.',
+    parameters: z.object({
+      ...toolContextSchema,
+      taskId: z.string().min(1),
+      expectedReviewRequestId: z.string().min(1),
+      from: z.string().optional(),
+      note: z.string().optional(),
+      leadSessionId: z.string().optional(),
+    }),
+    execute: async ({ teamName, claudeDir, taskId, expectedReviewRequestId, from, note, leadSessionId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          getController(teamName, claudeDir).taskBoard.completeReview(taskId, {
+            expectedReviewRequestId,
+            ...(from ? { from } : {}),
+            ...(note ? { note } : {}),
+            ...(leadSessionId ? { leadSessionId } : {}),
+          }) as Record<string, unknown>
+        )
+      );
+    },
+  });
+
   server.addTool({
     name: 'review_request_changes',
-    description: 'Request changes on a task under review',
+    description:
+      'Request changes on a task under review. With reviewFlow lead_then_human (or for an open Lead sign-off cycle) from is REQUIRED and expectedReviewRequestId must be the current cycle id.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
       from: z.string().optional(),
       comment: z.string().optional(),
+      expectedReviewRequestId: z.string().optional(),
       leadSessionId: z.string().optional(),
       taskRefs: z.array(taskRefSchema).optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from, comment, leadSessionId, taskRefs }) => {
+    execute: async ({ teamName, claudeDir, taskId, from, comment, expectedReviewRequestId, leadSessionId, taskRefs }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -105,6 +135,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
             getController(teamName, claudeDir).taskBoard.requestChanges(taskId, {
               ...(from ? { from } : {}),
               ...(comment ? { comment } : {}),
+              ...(expectedReviewRequestId ? { expectedReviewRequestId } : {}),
               ...(leadSessionId ? { leadSessionId } : {}),
               ...(taskRefs?.length ? { taskRefs } : {}),
             }) as Record<string, unknown>

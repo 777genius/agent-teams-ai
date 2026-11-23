@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
@@ -440,9 +441,11 @@ export function useOpenCodeProviderModelCatalog(input: {
   refreshRevision?: number;
   passiveProviderStatus: CliProviderStatus | null | undefined;
 }): OpenCodeProviderModelCatalogResult {
+  const retained = useRetainedLegacyLaunch();
+  const management = retained?.management;
   const sourceProviderId = normalizeSourceProviderId(input.sourceProviderId);
   const projectPath = input.projectPath?.trim() || null;
-  const scopeKey = sourceProviderId ? JSON.stringify([projectPath, sourceProviderId]) : null;
+  const scopeKey = sourceProviderId ? JSON.stringify([projectPath, sourceProviderId, ...(retained ? [retained.choice.scopeId] : [])]) : null;
   const requestSequenceRef = useRef(0);
   const requestGroupIdRef = useRef(`team-model-selector-catalog:${++nextRequestGroupNumber}`);
   const [refreshSequence, setRefreshSequence] = useState(0);
@@ -478,7 +481,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       return;
     }
     const cancelModelLoad = isElectronMode()
-      ? api.runtimeProviderManagement?.cancelModelLoad?.bind(api.runtimeProviderManagement)
+      ? (management ?? api.runtimeProviderManagement)?.cancelModelLoad?.bind(management ?? api.runtimeProviderManagement)
       : undefined;
 
     setState((current) =>
@@ -504,7 +507,7 @@ export function useOpenCodeProviderModelCatalog(input: {
         sourceProviderId,
         projectPath,
         requestGroupId,
-        isCurrentRequest
+        isCurrentRequest, true, (request) => (management ?? api.runtimeProviderManagement).loadModels(request)
       );
       if (!isCurrentRequest()) return;
       setState({
@@ -534,6 +537,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       }
     };
   }, [
+    management,
     input.enabled,
     input.refreshRevision,
     projectPath,

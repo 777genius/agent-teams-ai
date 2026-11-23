@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-native-host-test-type-capture-review",
+  "reviewer": "/root/composition_review_030",
+  "reviewedAt": "2026-11-19T01:30:43.763236+00:00",
+  "verdict": "PASS_TYPE_ONLY_SOURCE_AND_FOCUSED_SCOPE",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "candidateManifestPin": {
+    "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/candidate-manifest.json",
+    "bytes": 1107,
+    "sha256": "54ed710405256cf64199e91cfab5c540edaa3f1737b213ee2365727ef8d025dc",
+    "gitBlob": "ab34fa4e08c365dba324e062aa62b2b4695a3eec"
+  },
+  "verificationPin": {
+    "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verification.json",
+    "bytes": 17280,
+    "sha256": "6d6eb69d87863a9b72cc07c9d8f9cf044c2543f5fce473068c47b90fa4764941",
+    "gitBlob": "bc1759cba496c59c519fafbc7c4c38fba2751ea9"
+  },
+  "patchPin": {
+    "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/candidate.patch",
+    "bytes": 1017,
+    "sha256": "06931113a12bfc7f8258085aeac20ac5b8da3bcd60a174782201d6da4f6c1738",
+    "gitBlob": "b9614152548b846349b52ca91a4bffab6b749a19"
+  },
+  "sourceChanges": [
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "1e4522ba6e600545535c116e59a53a95f6120b37",
+        "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+        "bytes": 52804,
+        "lines": 744
+      },
+      "after": {
+        "gitBlob": "4a64e6228f2b44f42ec9f3d24cca63272915291e",
+        "sha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "bytes": 52832,
+        "lines": 744
+      }
+    }
+  ],
+  "originalFailure": {
+    "jobId": 135261468433,
+    "platform": "win32-arm64",
+    "rawLogPin": {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/job-135261468433-terminal.log",
+      "bytes": 78426,
+      "sha256": "bee500849f8eaf557716b2475fe00e56dd40a50f6f406bd3c5271ccb58ad7182",
+      "gitBlob": "2abdaefbafbefdc86d9fb78dc2be1ebfe1d0bd9d"
+    },
+    "failure": "The original Host test-compilation gate reports exactly TS2339 at native-host-close.test.ts(107,42) base and (107,65) specifier on never, before native acceptance.",
+    "sourceBinding": "The before bytes independently match published42a4 source-rows-publication.json blob1e4522ba6e600545535c116e59a53a95f6120b37, which is bound by approved tree06ddfb2e88ee1e049f14a9c6c11290004d16dda2."
+  },
+  "independentChecks": [
+    "Hashed before/candidate and both verify-root test copies; each pair is byte-identical and matches its manifest.",
+    "Removing exactly the two added <typeof loads> type arguments from candidate reconstructs the entire52804byte original source byte-for-byte; no other edit exists.",
+    "Read actual @types/node24.12.4 generic deepStrictEqual declaration and focused TS7.0.2 logs. The strict alias asserts actual is inferred expected type; [] otherwise narrows loads to never[], although the injected loader callback later appends records.",
+    "Both focused tsconfig objects are equal; their compilerOptions equal the merged Host production and test options, with only broad test inclusion replaced by the one exact existing test file.",
+    "Verified32 recorded file pins covering toolchain, source/config inputs, prepared compiled contract inputs, original failure proof, manifest, patch and execution receipts. No compiler or runtime was rerun by reviewer."
+  ],
+  "findings": {
+    "typeCorrection": "Both existing deepEqual calls now explicitly use the already-declared loads array type. No any, suppression, cast, rewritten callback, broadened loader result or changed expected value was introduced.",
+    "runtimeOracle": "Both pre-use empty-load/lazy-loader assertions and the final per-load base===captured entry and specifier===./attachments/contracts.js assertion remain byte-identical. Missing-captured-contract refusal, request/response schema checks, spawn count, transport cleanup and captured-entry-only resolution are untouched.",
+    "erasure": "Author receipt records complete transform-mode JavaScript byte identity74665bytes SHA256bb6e1ef9341667a35b58c99b68f77494d405084febc35eb4d15fb3b8becde722; whitespace-preserving strip differs only by two erased14-column type-argument spans. Reviewer independently established the exact type-only source delta without rerunning transformation.",
+    "typecheck": "Actual focused TS7 run on original source exits1 with precisely the two original107 TS2339 errors; candidate exits0 with empty diagnostic output. Transitive fixture/source imports remain included and all effective existing compiler flags are preserved.",
+    "finiteRegression": "Author ran exactly the two existing relocated-loader and attachment-frame regressions using in-memory child transport and prepared pure compiled schemas:2PASS0FAIL0SKIP. Raw log and input hashes were read and verified; reviewer did not rerun.",
+    "receiptAccuracy": "The author corrected an initial receipt wrapper expectation of diagnostic exit2 to actual TS7 exit1 after both recorded runs; no compiler rerun. Reviewer also requested correcting the package provenance sentence: both roots use the full prepared Host package.json, not a type-only stub. Final receipt binds that correction; candidate and execution receipts are unchanged.",
+    "productionScope": "Only an existing test file changes. Production/provider source, loader authority, fixture implementation, source rosters, timeouts, cleanup contracts and CI admission rules remain unchanged."
+  },
+  "limits": [
+    "Focused Linux prepared-toolchain compilation and two selected finite regressions are not a full project typecheck/build, Windows native execution, or E2E acceptance.",
+    "Prepared compiled declarations, pure JS schema files and dependency links were reused read-only; their hashes are pinned, not claimed to be a fresh42a4 build.",
+    "Original winARM CI remains failed. No retry, dispatch, endpoint fetch, native/app/provider execution, dependency install, source edit or external checkout mutation was performed by reviewer.",
+    "Root owns publication and the current original-job gate; this review does not authorize bypassing that gate."
+  ]
+}

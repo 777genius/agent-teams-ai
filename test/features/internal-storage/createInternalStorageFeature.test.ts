@@ -193,6 +193,13 @@ describe('createInternalStorageFeature', () => {
     );
     expect(feature.memberWorkSyncBackend).not.toBeNull();
 
+    // Both worker-backed backends must agree on worker availability: custom
+    // team templates deliberately have no JSON fallback, so they are only
+    // exposed when the worker bundle exists at all.
+    expect(feature.customTeamTemplatesBackend === null).toBe(
+      feature.applicationCommandLedgerBackend === null
+    );
+
     await feature.dispose();
   });
 });

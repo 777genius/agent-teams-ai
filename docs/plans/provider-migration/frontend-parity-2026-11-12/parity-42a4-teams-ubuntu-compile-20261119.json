@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-ui-application-typecheck-failure",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982317,
+  "job": {
+    "id": 135261468624,
+    "name": "Creation page (ubuntu-latest)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982317,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-19T01:39:10Z",
+    "completed_at": "2026-11-19T01:40:42Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982317/job/135261468624",
+    "runner_name": "GitHub Actions 1000396051"
+  },
+  "canonicalTerminalMetadata": "lint-review-ui-ci-42a4/job-135261468624-terminal-metadata.json",
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261468624,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982317,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-19 01:41:37 UTC",
+    "bytes": 47766,
+    "sha256": "75a164af8d1bfe4e595cbcd51dc1621d01442fb140a6549d005934a55b9d5deb",
+    "computedGitBlobSha": "5d7fa81fd328ca91d682480b0d37ea1464021620",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261468624-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261468624-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "5d7fa81fd328ca91d682480b0d37ea1464021620",
+    "exactReadback": true
+  },
+  "failedStep": {
+    "name": "Typecheck application before Electron startup",
+    "status": "completed",
+    "conclusion": "failure",
+    "number": 9,
+    "started_at": "2026-11-19T01:40:09Z",
+    "completed_at": "2026-11-19T01:40:39Z"
+  },
+  "originalCommand": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
+  "originalErrorLines": [
+    "2026-11-19T01:40:38.9371028Z ##[error]src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts(607,15): error TS2540: Cannot assign to 'exitCode' because it is a read-only property.",
+    "2026-11-19T01:40:39.4319703Z ##[error]Process completed with exit code 1."
+  ],
+  "successfulPrerequisite": [
+    {
+      "name": "Build isolated Host before Electron startup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-19T01:40:06Z",
+      "completed_at": "2026-11-19T01:40:09Z"
+    }
+  ],
+  "skippedRuntimeSteps": [
+    {
+      "name": "Stage pinned terminal-platform runtime before Electron startup",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 10,
+      "started_at": "2026-11-19T01:40:39Z",
+      "completed_at": "2026-11-19T01:40:39Z"
+    },
+    {
+      "name": "Ensure Electron binary before UI E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 11,
+      "started_at": "2026-11-19T01:40:39Z",
+      "completed_at": "2026-11-19T01:40:39Z"
+    },
+    {
+      "name": "Verify owned Windows process census and fail-closed teardown invariants",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 12,
+      "started_at": "2026-11-19T01:40:39Z",
+      "completed_at": "2026-11-19T01:40:39Z"
+    },
+    {
+      "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 13,
+      "started_at": "2026-11-19T01:40:39Z",
+      "completed_at": "2026-11-19T01:40:39Z"
+    }
+  ],
+  "artifactUploadStep": {
+    "name": "Upload sanitized evidence",
+    "status": "completed",
+    "conclusion": "success",
+    "number": 14,
+    "started_at": "2026-11-19T01:40:39Z",
+    "completed_at": "2026-11-19T01:40:39Z"
+  },
+  "originalNoArtifactLines": [
+    "2026-11-19T01:40:39.5837914Z ##[warning]No files were found with the provided path: /home/runner/work/_temp/teams-create-page-evidence/*.png",
+    "/home/runner/work/_temp/teams-create-page-evidence/*.json. No artifacts will be uploaded."
+  ],
+  "artifactInventoryRequest": "Deferred until entire Teams workflow is terminal; no artifact download requested",
+  "uiRuntimeExecuted": false,
+  "uiAcceptanceQualified": false,
+  "scope": "Original root application typecheck stopped this Ubuntu Teams lane before Electron startup. Isolated Host build succeeded. No original Create/Back/Resume/Copy/Launch run, UI screenshots, receipts or physical runtime cleanup can be claimed. Error is the recorded TS2540 test fixture write; no inference from a different native Host TS2339 failure.",
+  "jobLogEndpointRetired": true
+}

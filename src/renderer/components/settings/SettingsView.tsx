@@ -78,6 +78,7 @@ function isSettingsSection(value: string | undefined): value is SettingsSection 
     value === 'gatewayProviders' ||
     value === 'externalAgentConnection' ||
     value === 'notifications' ||
+    value === 'reviewFlow' ||
     value === 'advanced'
   );
 }

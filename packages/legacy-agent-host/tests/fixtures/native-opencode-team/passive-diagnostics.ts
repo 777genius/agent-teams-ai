@@ -6,17 +6,21 @@ import { fileURLToPath } from 'node:url';
 import type { ChildProcess } from 'node:child_process';
 
 const prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
+const runtimeOpenPrefix = 'legacy-agent-host: runtime-open ';
 const maximum = 256;
 const maximumTraceBytes = 64 * 1024, maximumLineBytes = 512, reservedLineBytes = maximumLineBytes + 1;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed', 'trace-limit'] as const;
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed', 'driver-close-failed',
+  'readiness-refused', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
 const stages = ['input', 'executable', 'profile', 'graph', 'configuration', 'effect', 'runtime', 'scope', 'server', 'address', 'unknown'] as const;
 const codes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
   'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'unknown'] as const;
+const probeCloseCodes = [...codes, 'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch',
+  'transport_failure', 'http_failure', 'invalid_response', 'disposed'] as const;
 const signals = ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGABRT', 'SIGSEGV', 'SIGBUS', 'unknown'] as const;
 const contentEncodings = ['none', 'gzip', 'deflate', 'br', 'other'] as const;
 const record = (value: unknown): Record<string, unknown> =>
@@ -32,6 +36,7 @@ const readCutReasons = ['deadline', 'cleanup_unknown', 'native_read_cleanup_unkn
   'invalid_native_model', 'invalid_native_position', 'invalid_native_identity', 'incomplete_native_log',
   'incomplete_native_transcript', 'native_cut_byte_budget', 'frame_limit', 'body_limit', 'transport_failure',
   'authority_mismatch', 'disposed', 'media_type', 'http_failure', 'unknown'] as const;
+const readCutFinalReasons = [...readCutReasons, 'mutable_native_readback'] as const;
 
 /** The private D channel carries only fixed data; never execute a diagnostic getter. */
 function projectReadCutFailure(value: unknown) {
@@ -43,9 +48,12 @@ function projectReadCutFailure(value: unknown) {
     };
     const stage = choice(own('stage'), readCutStages), reason = choice(own('reason'), readCutReasons);
     const elapsedMs = integer(own('elapsedMs'), 60_000), deadlineExpired = own('deadlineExpired'), aborted = own('aborted');
-    if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' || typeof aborted !== 'boolean')
+    const finalField = Object.getOwnPropertyDescriptor(value, 'finalReason');
+    const finalReason = finalField && 'value' in finalField ? choice(finalField.value, readCutFinalReasons) : null;
+    if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' || typeof aborted !== 'boolean' ||
+      finalField && !finalReason)
       return undefined;
-    return { stage, reason, elapsedMs, deadlineExpired, aborted };
+    return { stage, reason, elapsedMs, deadlineExpired, aborted, ...(finalReason ? { finalReason } : {}) };
   } catch { return undefined; }
 }
 
@@ -72,6 +80,23 @@ function projectMetadataReadFailure(value: unknown) {
   } catch { return undefined; }
 }
 
+/** Existing D close failure only; the opaque binding identifies an observation, never a grant. */
+function projectDriverCloseFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    const trustedBinding = own('trustedBinding');
+    const stage = choice(own('stage'), ['original-work', 'protocol-dispose', 'confirm-stopped']);
+    const outcome = choice(own('outcome'), ['threw', 'unconfirmed']);
+    if (typeof trustedBinding !== 'string' || !/^[a-f0-9]{64}$/.test(trustedBinding) || !stage || !outcome)
+      return undefined;
+    return { trustedBinding, stage, outcome };
+  } catch { return undefined; }
+}
+
 /** Host observation only: no raw D error, authority read or inferred final outcome. */
 function projectHostProbeCloseFailure(value: unknown) {
   try {
@@ -87,14 +112,73 @@ function projectHostProbeCloseFailure(value: unknown) {
     const reason = choice(own('reason'), ['unconfirmed', 'threw', 'identity']);
     if (typeof probeDigest !== 'string' || !/^[a-f0-9]{64}$/.test(probeDigest) ||
         !runState || !outcome || !errorClass || !stage || !reason) return undefined;
-    return { probeDigest, runState, outcome, errorClass, stage, reason };
+    // Optional opaque error metadata must never discard a valid original close observation.
+    const runCodes: { runErrorCode?: string | null; runCauseCode?: string | null } = {};
+    for (const key of ['runErrorCode', 'runCauseCode'] as const) {
+      try {
+        const field = Object.getOwnPropertyDescriptor(value, key);
+        if (field) {
+          const selected = choice('value' in field ? field.value : undefined, probeCloseCodes);
+          runCodes[key] = selected === 'unknown' ? null : selected;
+        }
+      } catch { runCodes[key] = null; }
+    }
+    return { probeDigest, runState, outcome, errorClass, stage, reason, ...runCodes };
+  } catch { return undefined; }
+}
+
+const runtimeOpenPhases = {
+  factory: ['selection', 'authority', 'worktree', 'model-readiness', 'bindings', 'endpoint',
+    'provider-prepare', 'provider-create', 'interactions', 'driver-open', 'driver-wrap'],
+  runtime: ['authority', 'driver-open', 'session-ref', 'publish', 'observe', 'sealed-close',
+    'readiness', 'readiness-publish'],
+} as const;
+
+/** Existing private stderr observation only; hashes and error payloads are not retained. */
+function projectRuntimeOpenFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    const source = choice(own('source'), ['factory', 'runtime']);
+    const phase = source && choice(own('phase'), runtimeOpenPhases[source]);
+    const category = choice(own('category'), ['invalid', 'conflict', 'forbidden', 'held', 'busy',
+      'aborted', 'deadline', 'unknown']);
+    const observedAtMs = integer(own('observedAtMs'), Number.MAX_SAFE_INTEGER);
+    if (!source || !phase || !category || observedAtMs === null) return undefined;
+    return { source, phase, category, observedAtMs };
+  } catch { return undefined; }
+}
+
+/** Observe the original consumer's first refusal without reading authority or invoking getters. */
+function projectReadinessRefusal(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    if (own('kind') !== 'consumer') return undefined;
+    const phase = choice(own('phase'), ['initial-authority', 'read-consumer', 'identity', 'continuation',
+      'requirements', 'cutoff', 'reference', 'equality', 'final-authority']);
+    const reason = choice(own('reason'), ['held', 'threw']);
+    const rawCutoff = own('cutoff'), rawObservedAt = own('observedAt');
+    const cutoff = integer(rawCutoff, Number.MAX_SAFE_INTEGER);
+    const observedAt = integer(rawObservedAt, Number.MAX_SAFE_INTEGER);
+    if (!phase || !reason || !(rawCutoff === null && rawObservedAt === null ||
+      cutoff !== null && observedAt !== null)) return undefined;
+    return { kind: 'consumer' as const, phase, reason, cutoff, observedAt,
+      expired: cutoff === null || observedAt === null ? null : observedAt >= cutoff };
   } catch { return undefined; }
 }
 
 /** Project again at the receipt boundary; native text/IDs/credentials are never retained. */
 export function createPassiveNativeDiagnosticCapture() {
   const entries: Record<string, unknown>[] = [];
-  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false, closeObserved = false, limitObserved = false, limited = false;
+  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false,
+    closeObserved = false, driverCloseObserved = false, readinessObserved = false, runtimeOpenObserved = false, limitObserved = false, limited = false;
   // These counters belong to this one original capture, including all of its Host epochs.
   return {
     entries,
@@ -104,18 +188,27 @@ export function createPassiveNativeDiagnosticCapture() {
       pending += chunk.toString('utf8');
       for (let end = pending.indexOf('\n'); end >= 0; end = pending.indexOf('\n')) {
         const line = pending.slice(0, end); pending = pending.slice(end + 1);
-        if (!line.startsWith(prefix) || Buffer.byteLength(line) > maximumLineBytes) continue;
+        const runtimeOpen = line.startsWith(runtimeOpenPrefix);
+        if ((!runtimeOpen && !line.startsWith(prefix)) || Buffer.byteLength(line) > maximumLineBytes) continue;
         try {
-          const value = record(JSON.parse(line.slice(prefix.length)) as unknown);
-          const event = choice(value.event, events), atMs = integer(value.atMs);
-          if (!event || atMs === null) continue;
+          const value = record(JSON.parse(line.slice(runtimeOpen ? runtimeOpenPrefix.length : prefix.length)) as unknown);
+          const failedRuntimeOpen = runtimeOpen ? projectRuntimeOpenFailure(value) : undefined;
+          const event = runtimeOpen ? (failedRuntimeOpen ? 'runtime-open-failed' : null) : choice(value.event, events);
+          const atMs = integer(value.atMs);
+          if (!event || !runtimeOpen && atMs === null) continue;
           const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
           const failedMetadata = event === 'metadata-read-failed' ? projectMetadataReadFailure(value) : undefined;
           const failedClose = event === 'host-probe-close-failed' ? projectHostProbeCloseFailure(value) : undefined;
+          const failedDriverClose = event === 'driver-close-failed' ? projectDriverCloseFailure(value) : undefined;
+          const refusedReadiness = event === 'readiness-refused' ? projectReadinessRefusal(value) : undefined;
           if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata ||
-              event === 'host-probe-close-failed' && !failedClose) continue;
+              event === 'host-probe-close-failed' && !failedClose || event === 'driver-close-failed' && !failedDriverClose ||
+              event === 'readiness-refused' && !refusedReadiness) continue;
           const failure = failedMetadata ?? failedCut;
-          const entry = { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
+          const entry = failedRuntimeOpen ? { epoch, event, ...failedRuntimeOpen }
+            : failedDriverClose ? { epoch, event, atMs, ...failedDriverClose }
+            : refusedReadiness ? { epoch, event, atMs, ...refusedReadiness }
+            : { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
             durationMs: failure?.elapsedMs ?? integer(value.durationMs), status: integer(value.status, 599),
             contentEncoding: choice(value.contentEncoding, contentEncodings),
@@ -123,13 +216,27 @@ export function createPassiveNativeDiagnosticCapture() {
             code: failedClose?.reason ?? failure?.reason ?? choice(value.code, codes),
             exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
             ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}),
+            ...(failedCut?.finalReason ? { finalReason: failedCut.finalReason } : {}),
             ...(failedClose ? { probeDigest: failedClose.probeDigest, runState: failedClose.runState,
-              outcome: failedClose.outcome, errorClass: failedClose.errorClass } : {}) };
+              outcome: failedClose.outcome, errorClass: failedClose.errorClass,
+              ...('runErrorCode' in failedClose ? { runErrorCode: failedClose.runErrorCode } : {}),
+              ...('runCauseCode' in failedClose ? { runCauseCode: failedClose.runCauseCode } : {}) } : {}) };
           const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
           if (size > reservedLineBytes) continue;
           const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
-            (closeObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
-          if (failedClose) {
+            (closeObserved ? 0 : reservedLineBytes) + (readinessObserved ? 0 : reservedLineBytes) +
+            (runtimeOpenObserved ? 0 : reservedLineBytes) + (driverCloseObserved ? 0 : reservedLineBytes) +
+            (limitObserved ? 0 : reservedLineBytes);
+          if (failedRuntimeOpen) {
+            if (runtimeOpenObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            runtimeOpenObserved = true;
+          } else if (failedDriverClose) {
+            if (driverCloseObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            driverCloseObserved = true;
+          } else if (refusedReadiness) {
+            if (readinessObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            readinessObserved = true;
+          } else if (failedClose) {
             if (closeObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             closeObserved = true;
           } else if (failedMetadata) {
@@ -142,8 +249,8 @@ export function createPassiveNativeDiagnosticCapture() {
             if (limitObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             limitObserved = true; limited = true;
           } else {
-            // Reserve all three failure observations within the original 257-row ceiling.
-            if (ordinary >= maximum - 3 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
+            // Reserve all six failure observations within the original 257-row ceiling.
+            if (ordinary >= maximum - 6 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
             ordinary++;
           }
           bytes += size;
@@ -155,7 +262,7 @@ export function createPassiveNativeDiagnosticCapture() {
 }
 
 const cpuCategories = ['configuration-read', 'credential-read', 'team-writer-authority',
-  'custody-image', 'provider-transport', 'other', 'idle'] as const;
+  'custody-image', 'provider-transport', 'other', 'idle', 'v8-garbage-collector', 'v8-program'] as const;
 type CpuCategory = typeof cpuCategories[number];
 const cpuWriterFamilies = ['namespace-fence', 'team-state', 'team-state-validation',
   'launch-binding-read', 'launch-binding-current', 'launch-binding-clone', 'other-writer'] as const;
@@ -209,6 +316,9 @@ function cpuCategory(frame: Record<string, unknown>): number | undefined {
       /\/adapters\/providers\/OpenCodeV2EmbeddedMemberProvider\.[jt]s$/.test(path) && frame.functionName === 'attest') return 3;
   if (/\/features\/provider-session-implementation\/adapters\/opencode-protocol\/[^/]+\.js$/.test(path)) return 4;
   if (frame.functionName === '(idle)') return 6;
+  // Exact URL-free VM frames only; program is unattributed execution, not request or wait time.
+  if (path === '' && frame.functionName === '(garbage collector)') return 7;
+  if (path === '' && frame.functionName === '(program)') return 8;
   return undefined;
 }
 
@@ -426,7 +536,8 @@ function responseContentEncoding(headers: unknown): typeof contentEncodings[numb
 
 function observeOriginalHost(): void {
   const started = performance.now();
-  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false, metadataObserved = false, closeObserved = false, limited = false;
+  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false,
+    metadataObserved = false, closeObserved = false, driverCloseObserved = false, readinessObserved = false, limited = false;
   const elapsed = () => Math.max(0, Math.round(performance.now() - started));
   const line = (value: Record<string, unknown>) => prefix + JSON.stringify({ atMs: elapsed(), ...value }) + '\n';
   const write = (value: string) => { emittedBytes += Buffer.byteLength(value); process.stderr.write(value); };
@@ -434,7 +545,16 @@ function observeOriginalHost(): void {
     const frame = line(value), size = Buffer.byteLength(frame);
     if (size > reservedLineBytes) return;
     const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
-      (closeObserved ? 0 : reservedLineBytes) + (limited ? 0 : reservedLineBytes);
+      (closeObserved ? 0 : reservedLineBytes) + (readinessObserved ? 0 : reservedLineBytes) +
+      (driverCloseObserved ? 0 : reservedLineBytes) + (limited ? 0 : reservedLineBytes);
+    if (value.event === 'readiness-refused') {
+      if (readinessObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
+      readinessObserved = true; write(frame); return;
+    }
+    if (value.event === 'driver-close-failed') {
+      if (driverCloseObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
+      driverCloseObserved = true; write(frame); return;
+    }
     if (value.event === 'host-probe-close-failed') {
       if (closeObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
       closeObserved = true; write(frame); return;
@@ -448,7 +568,7 @@ function observeOriginalHost(): void {
       readObserved = true; write(frame); return;
     }
     if (limited) return;
-    if (ordinary >= maximum - 3 || emittedBytes + size > maximumTraceBytes - reserve) {
+    if (ordinary >= maximum - 5 || emittedBytes + size > maximumTraceBytes - reserve) {
       limited = true; write(line({ event: 'trace-limit' })); return;
     }
     ordinary++; write(frame);
@@ -466,11 +586,23 @@ function observeOriginalHost(): void {
       if (failure) emit({ event: 'metadata-read-failed', ...failure });
     } catch { /* A passive TEST subscriber cannot replace original metadata failure/cleanup. */ }
   });
+  channel('agent-teams:opencode-v2:driver-close-failed').subscribe(message => {
+    try {
+      const failure = projectDriverCloseFailure(message);
+      if (failure) emit({ event: 'driver-close-failed', ...failure });
+    } catch { /* Passive observation cannot change original driver cleanup. */ }
+  });
   channel('agent-teams:opencode-v2:host-probe-close-failed').subscribe(message => {
     try {
       const failure = projectHostProbeCloseFailure(message);
       if (failure) emit({ event: 'host-probe-close-failed', ...failure });
     } catch { /* A passive TEST observation cannot change the original close result. */ }
+  });
+  channel('agent-teams.legacy-host.first-refusal').subscribe(message => {
+    try {
+      const failure = projectReadinessRefusal(message);
+      if (failure) emit({ event: 'readiness-refused', ...failure });
+    } catch { /* A passive TEST observation cannot replace the original refusal. */ }
   });
   const childEntry = fileURLToPath(new URL('../../../dist/adapters/providers/OpenCodeV2EmbeddedChild.js', import.meta.url));
   channel('child_process').subscribe(message => {
@@ -536,11 +668,11 @@ function observeOriginalHost(): void {
     emit({ event, request: value.request, route: value.route, method: value.method,
       durationMs: Math.max(0, Math.round(performance.now() - value.started)) });
   });
-  // Headers alone do not show when a finite native log body finishes arriving.
-  // Observe only log trailers: no native bytes, header values or new requests.
+  // Headers alone do not show when a finite native log or instruction body finishes arriving.
+  // Observe only these trailers: no native bytes, header values or new requests.
   channel('undici:request:trailers').subscribe(message => {
     const value = pending.get(record(record(message).request));
-    if (value?.route !== 'log') return;
+    if (!value || value.route !== 'log' && value.route !== 'instructions') return;
     emit({ event: 'response-end', request: value.request, route: value.route, method: value.method,
       durationMs: Math.max(0, Math.round(performance.now() - value.started)) });
   });

@@ -20,6 +20,7 @@ const fetchCliProviderStatus = vi.fn<
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
+const retainedAccountControls = vi.hoisted(() => ({ fast: false, models: false }));
 const projectPathSelectorMock = vi.hoisted(() => ({
   onSelect: (_path: string) => {},
   lastProps: null as any,
@@ -342,7 +343,10 @@ vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
           )
         : null,
       'team-roster-editor',
-      props.headerBottom
+      props.headerBottom,
+      retainedAccountControls.models
+        ? React.createElement(RetainedModelProviderProbe, { providerId: props.providerId, projectPath: props.projectPath })
+        : null
     );
   },
 }));
@@ -357,7 +361,15 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDi
 }));
 
 vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
-  SkipPermissionsCheckbox: () => React.createElement('div', null, 'skip-permissions'),
+  SkipPermissionsCheckbox: ({ checked }: { checked: boolean }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'skip-permissions',
+        'data-checked': String(checked),
+      },
+      'skip-permissions'
+    ),
 }));
 
 vi.mock('@renderer/components/team/dialogs/AdvancedCliSection', () => ({
@@ -742,15 +754,12 @@ vi.mock('@renderer/components/team/dialogs/AnthropicFastModeSelector', () => ({
     ),
 }));
 
-vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
-  CodexFastModeSelector: ({
-    value,
-    onValueChange,
-  }: {
-    value: string;
-    onValueChange: (value: 'inherit' | 'on' | 'off') => void;
-  }) =>
-    React.createElement(
+vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@renderer/components/team/dialogs/CodexFastModeSelector')>();
+  return { CodexFastModeSelector: (props: React.ComponentProps<typeof actual.CodexFastModeSelector>) => {
+    if (retainedAccountControls.fast) return React.createElement(actual.CodexFastModeSelector, props);
+    const { value, onValueChange } = props;
+    return React.createElement(
       'div',
       { 'data-testid': 'codex-fast-mode-selector' },
       React.createElement('span', null, `codex-fast:${value}`),
@@ -762,9 +771,11 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
         },
         'set codex fast on'
       )
-    ),
-}));
+    );
+  } };
+});
 
+import { createRetainedLegacyLaunchClient } from '@features/agent-backend/renderer';
 import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
@@ -772,6 +783,7 @@ import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDi
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { computeEffectiveTeamModel as computeModelMock } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { computeEffectiveTeamModel } from '@renderer/components/team/dialogs/teamModelSummary';
+import { useTeamModelProviderStatus } from '@renderer/components/team/dialogs/useTeamModelProviderStatus';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
 import {
@@ -798,6 +810,15 @@ async function flush(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
+}
+
+function RetainedModelProviderProbe({ providerId, projectPath }: {
+  providerId: TeamProviderId;
+  projectPath: string | null;
+}) {
+  // This is the actual provider hook called by TeamModelSelector, inside the roster render boundary.
+  useTeamModelProviderStatus(providerId, projectPath, true);
+  return React.createElement('span', { 'data-testid': 'retained-model-provider-probe' });
 }
 
 async function flushCustomFolderProbe(): Promise<void> {
@@ -875,6 +896,146 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  describe('retained Codex account admission', () => {
+    let sequence = 0;
+    const snapshot = () => ({
+      preferredAuthMode: 'api_key' as const, effectiveAuthMode: 'api_key' as const,
+      launchAllowed: true, launchIssueMessage: null, launchReadinessState: 'ready_api_key' as const,
+      appServerState: 'healthy' as const, appServerStatusMessage: null, managedAccount: null,
+      apiKey: { available: true, source: 'environment' as const, sourceLabel: 'TEST original account' },
+      requiresOpenaiAuth: false, login: { status: 'idle' as const, error: null, startedAt: null },
+      rateLimits: null, updatedAt: new Date().toISOString(),
+    });
+    function fixture(retained = true, controls: 'none' | 'fast' | 'models' | 'both' = 'none') {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      retainedAccountControls.fast = controls === 'fast' || controls === 'both';
+      retainedAccountControls.models = controls === 'models' || controls === 'both';
+      localStorage.setItem('team:lastSelectedProvider', 'codex');
+      const id = ++sequence;
+      const teamName = `TEST-retained-account-${id}`;
+      const choice = retained ? { scopeId: `TEST-retained-account-scope-${id}`, teamName,
+        mode: 'original-runtime' as const, expiresAt: Date.now() + 60_000, projectPath: '/tmp/project' } : undefined;
+      let resolve!: (value: TeamCreateRequest) => void;
+      const saved = new Promise<TeamCreateRequest>(yes => { resolve = yes; });
+      const accountRead = vi.fn(async () => snapshot());
+      if (choice) createRetainedLegacyLaunchClient(choice, async request => {
+        if (request.action === 'read') return { ok: true, action: 'read', value: await saved };
+        if (request.action === 'status') return { ok: true, action: 'status', value: storeState.cliStatus as CliInstallationStatus };
+        if (request.action === 'account') return { ok: true, action: 'account', value: await accountRead() };
+        if (request.action === 'close') return { ok: true, action: 'close', value: null };
+        return { ok: false, reason: 'unavailable', outcome: 'not-dispatched' };
+      });
+      vi.mocked(api.getCodexAccountSnapshot).mockResolvedValue(snapshot());
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      return {
+        accountRead, host,
+        async render(open = true) {
+          await act(async () => {
+            root.render(React.createElement(LaunchTeamDialog, {
+              mode: 'launch', open, teamName, retainedLegacyLaunch: choice, members: [],
+              defaultProjectPath: '/tmp/project', provisioningError: null, clearProvisioningError: vi.fn(),
+              activeTeams: [], onClose: vi.fn(), onLaunch: vi.fn(async () => {}),
+            }));
+            await flush();
+          });
+        },
+        async hydrate(providerId: TeamProviderId, teammate = false, syncModelsWithLead = false, cwd = '/tmp/project') {
+          await act(async () => {
+            resolve({ teamName, savedSettingsFingerprint: 'b'.repeat(64), cwd,
+              providerId, model: providerId === 'codex' ? 'gpt-5.4' : providerId === 'opencode' ? 'opencode/big-pickle' : 'opus',
+              syncModelsWithLead, members: teammate ? [{ name: 'bob', ...(syncModelsWithLead ? {} : { providerId: 'codex' as const, model: 'gpt-5.4' }) }] : [] });
+            await flush();
+            await flush();
+          });
+        },
+        async unmount() { await act(async () => root.unmount()); host.remove(); },
+      };
+    }
+
+    it.each([
+      { label: 'Anthropic lead', providerId: 'anthropic', memberCodex: false, sync: false, reads: 0 },
+      { label: 'OpenCode lead', providerId: 'opencode', memberCodex: false, sync: false, reads: 0 },
+      { label: 'Codex lead', providerId: 'codex', memberCodex: false, sync: false, reads: 1 },
+      { label: 'explicit Codex teammate', providerId: 'anthropic', memberCodex: true, sync: false, reads: 1 },
+      { label: 'teammate inheriting Anthropic', providerId: 'anthropic', memberCodex: true, sync: true, reads: 0 },
+    ] as const)('admits account only after saved provider hydration ($label)', async ({ providerId, memberCodex, sync, reads }) => {
+      const view = fixture();
+      try {
+        await view.render();
+        expect(view.host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(true);
+        expect(view.accountRead).not.toHaveBeenCalled();
+        await view.hydrate(providerId, memberCodex, sync);
+        expect(teamRosterEditorSectionMock.lastProps.providerId).toBe(providerId);
+        expect(view.accountRead).toHaveBeenCalledTimes(reads);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('loads the captured account on Anthropic to Codex selection and retains it when switching back', async () => {
+      const view = fixture();
+      try {
+        await view.render();
+        await view.hydrate('anthropic');
+        expect(view.accountRead).not.toHaveBeenCalled();
+        await act(async () => { teamRosterEditorSectionMock.lastProps.onProviderChange('codex'); await flush(); });
+        expect(view.accountRead).toHaveBeenCalledTimes(1);
+        await act(async () => { teamRosterEditorSectionMock.lastProps.onProviderChange('anthropic'); await flush(); });
+        expect(view.accountRead).toHaveBeenCalledTimes(1);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('does not read account while the retained dialog is closed', async () => {
+      const view = fixture();
+      try {
+        await view.render(false);
+        await view.hydrate('codex');
+        expect(view.accountRead).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('preserves the existing nonretained account admission', async () => {
+      const view = fixture(false);
+      try {
+        await view.render(false);
+        expect(api.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+        expect(view.accountRead).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it.each(['fast', 'models'] as const)('holds the actual %s child account hook until retained provider controls are ready', async controls => {
+      const view = fixture(true, controls);
+      try {
+        await view.render();
+        expect(view.accountRead).not.toHaveBeenCalled();
+        expect(view.host.querySelector('[data-testid="original-runtime-project"]')).not.toBeNull();
+        expect(view.host.querySelector('[data-testid="retained-model-provider-probe"]')).toBeNull();
+        await view.hydrate('anthropic');
+        expect(view.accountRead).not.toHaveBeenCalled();
+        if (controls === 'models')
+          expect(view.host.querySelector('[data-testid="retained-model-provider-probe"]')).not.toBeNull();
+        await act(async () => { teamRosterEditorSectionMock.lastProps.onProviderChange('codex'); await flush(); });
+        expect(view.accountRead).toHaveBeenCalledTimes(1);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('holds both actual child hooks for missing cwd while keeping project repair visible', async () => {
+      const view = fixture(true, 'both');
+      try {
+        await view.render();
+        await view.hydrate('codex', false, false, '');
+        expect(view.accountRead).not.toHaveBeenCalled();
+        expect(view.host.querySelector('[data-testid="retained-model-provider-probe"]')).toBeNull();
+        expect(view.host.querySelector('[data-testid="original-runtime-project"]')).not.toBeNull();
+        expect(view.host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(false);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+  });
+
   it.each([
     'all-ready',
     'close',
@@ -1852,17 +2013,26 @@ describe('LaunchTeamDialog', () => {
     }
   );
 
-  it.each([false, true])(
-    'hydrates owner launch fields without overwriting user edits (%s)',
-    async (edited) => {
+  it.each([
+    { retained: false, edited: false }, { retained: false, edited: true },
+    { retained: true, edited: false }, { retained: true, edited: true },
+  ])(
+    'hydrates owner launch fields without overwriting user edits (retained=$retained, edited=$edited)',
+    async ({ retained, edited }) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      let resolveSaved: (value: any) => void = () => {};
-      vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveSaved = resolve;
-        })
-      );
-      const key = 'host-team:TEST-owner';
+      let resolveSaved!: (value: TeamCreateRequest) => void;
+      const saved = new Promise<TeamCreateRequest>((resolve) => { resolveSaved = resolve; });
+      const key = retained ? 'TEST-retained-owner' : 'host-team:TEST-owner';
+      const choice = retained ? { scopeId: `TEST-retained-hydration-${edited}`, teamName: key,
+        mode: 'original-runtime' as const, expiresAt: Date.now() + 60_000,
+        projectPath: '/tmp/TEST-owner' } : undefined;
+      if (choice) createRetainedLegacyLaunchClient(choice, async (request) => {
+        if (request.action === 'read') return { ok: true, action: 'read', value: await saved };
+        if (request.action === 'status') return { ok: true, action: 'status', value: storeState.cliStatus as CliInstallationStatus };
+        if (request.action === 'close') return { ok: true, action: 'close', value: null };
+        return { ok: false, reason: 'unavailable', outcome: 'not-dispatched' };
+      });
+      else vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(saved);
       localStorage.setItem(`team:lastCustomArgs:${key}`, 'WRONG-local-args');
       const host = document.createElement('div');
       document.body.appendChild(host);
@@ -1874,6 +2044,7 @@ describe('LaunchTeamDialog', () => {
               mode: 'launch',
               open: true,
               teamName: key,
+              retainedLegacyLaunch: choice,
               members: [],
               defaultProjectPath: '/tmp/project',
               provisioningError: null,
@@ -1885,6 +2056,7 @@ describe('LaunchTeamDialog', () => {
           );
           await flush();
         });
+        expect(host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(true);
         await act(async () => {
           resolveSaved({
             teamName: key,
@@ -1900,6 +2072,7 @@ describe('LaunchTeamDialog', () => {
           await flush();
           await flush();
         });
+        if (retained) expect(api.teams.getSavedRequest).not.toHaveBeenCalled();
         if (edited)
           await act(async () => {
             advancedCliMock.lastProps.onCustomArgsChange('--user-args');
@@ -2832,6 +3005,8 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    retainedAccountControls.fast = false;
+    retainedAccountControls.models = false;
     // Each case creates a fresh mock application; actual dialog unmounts within a case retain intent.
     __resetRetainedCreateSubmissionForTests();
     vi.mocked(api.agentBackend.getConnections)
@@ -3116,9 +3291,10 @@ describe('LaunchTeamDialog', () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
     });
-    const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
-      button.textContent?.toLowerCase().includes('create')
+    const createButton = Array.from(createHost.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Create'
     );
+    expect(createButton?.textContent).toBe('Create');
     expect(createButton?.disabled).toBe(false);
 
     vi.setSystemTime(baseTime + 100);
@@ -3129,6 +3305,10 @@ describe('LaunchTeamDialog', () => {
     expect(onCreate).not.toHaveBeenCalled();
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(createButton?.disabled).toBe(true);
+    expect(createButton?.getAttribute('aria-describedby')).toBe(
+      'create-team-launch-authority-blocker'
+    );
+    expect(createHost.textContent).toContain('verified model catalog is unavailable or stale');
     await act(async () => createDialogRoot.unmount());
   });
 
@@ -6083,6 +6263,228 @@ describe('LaunchTeamDialog', () => {
     }
   });
 
+  describe('schedules of a team with separate history per project', () => {
+    const perProjectTeam = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        // The folder the team was created in: only a default for a schedule.
+        projectPath: '/tmp/project-a',
+        projectContextMode: 'per_project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const savedFromCreationProject = {
+      teamName: 'team-alpha',
+      cwd: '/tmp/project-a',
+      providerId: 'anthropic',
+      members: [{ name: 'alice', role: 'Developer' }],
+    };
+
+    async function renderScheduleDialog(props: Record<string, unknown>) {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'schedule',
+            open: true,
+            teamName: 'team-alpha',
+            onClose: vi.fn(),
+            ...props,
+          } as any)
+        );
+        await flush();
+      });
+      return { host, unmount: async () => act(async () => root.unmount()) };
+    }
+    const click = async (host: HTMLElement, label: string) => {
+      const button = Array.from(host.querySelectorAll('button')).find(
+        (item) => item.textContent?.trim() === label
+      );
+      expect(button).toBeTruthy();
+      await act(async () => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flush();
+      });
+    };
+    const typePrompt = async (host: HTMLElement, text: string) => {
+      const prompt = host.querySelector('#dialog-prompt') as HTMLTextAreaElement;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          prompt, text
+        );
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+    };
+
+    it('keeps the project of an existing schedule when only its time changes (global page)', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = perProjectTeam;
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue(savedFromCreationProject as any);
+      // No projectScope: this is how the global Schedules page opens the dialog.
+      const dialog = await renderScheduleDialog({
+        schedule: {
+          id: 'schedule-b',
+          teamName: 'team-alpha',
+          executionMode: 'agent',
+          taskFirst: true,
+          cronExpression: '0 9 * * 1-5',
+          timezone: 'UTC',
+          status: 'active',
+          warmUpMinutes: 0,
+          maxConsecutiveFailures: 3,
+          consecutiveFailures: 0,
+          maxTurns: 50,
+          createdAt: '2026-11-20T00:00:00.000Z',
+          updatedAt: '2026-11-20T00:00:00.000Z',
+          launchConfig: { cwd: '/tmp/project-b', prompt: 'Check bugs', providerId: 'anthropic' },
+        },
+      });
+      try {
+        await flushCustomFolderProbe();
+        await click(dialog.host, 'Save Changes');
+        expect(updateSchedule).toHaveBeenCalledTimes(1);
+        expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
+          launchConfig: { cwd: '/tmp/project-b' },
+        });
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    it('creates the schedule for the chosen project, not for the project the team was created in', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = perProjectTeam;
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue(savedFromCreationProject as any);
+      const dialog = await renderScheduleDialog({ projectScope: { projectPath: '/tmp/project-b' } });
+      try {
+        await typePrompt(dialog.host, 'Check bugs');
+        await click(dialog.host, 'Create Schedule');
+        expect(createSchedule).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            teamName: 'team-alpha',
+            launchConfig: expect.objectContaining({ cwd: '/tmp/project-b' }),
+          })
+        );
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    const scheduleOfB = {
+      id: 'schedule-b',
+      teamName: 'team-alpha',
+      executionMode: 'agent',
+      taskFirst: true,
+      cronExpression: '0 9 * * 1-5',
+      timezone: 'UTC',
+      status: 'active',
+      warmUpMinutes: 0,
+      maxConsecutiveFailures: 3,
+      consecutiveFailures: 0,
+      maxTurns: 50,
+      createdAt: '2026-11-20T00:00:00.000Z',
+      updatedAt: '2026-11-20T00:00:00.000Z',
+      launchConfig: { cwd: '/tmp/project-b', prompt: 'Check bugs', providerId: 'anthropic' },
+    };
+
+    it('keeps the project of an existing schedule when the team list does not know the team', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      // Store not loaded yet (or metadata the list could not read): no mode at render time.
+      storeState.teamByName = {};
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+        ...savedFromCreationProject,
+        projectContextMode: 'per_project',
+      } as any);
+      const dialog = await renderScheduleDialog({ schedule: scheduleOfB });
+      try {
+        await flushCustomFolderProbe();
+        await click(dialog.host, 'Save Changes');
+        expect(updateSchedule).toHaveBeenCalledTimes(1);
+        expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
+          launchConfig: { cwd: '/tmp/project-b' },
+        });
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    it('does not guess a project for a new schedule when the team list does not know the team', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = {};
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+        ...savedFromCreationProject,
+        projectContextMode: 'per_project',
+      } as any);
+      const dialog = await renderScheduleDialog({});
+      try {
+        await typePrompt(dialog.host, 'Check bugs');
+        await click(dialog.host, 'Create Schedule');
+        expect(createSchedule).not.toHaveBeenCalled();
+        expect(dialog.host.textContent).toContain('separate history per project');
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    it('can still save an existing schedule whose project folder was deleted', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = perProjectTeam;
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue(savedFromCreationProject as any);
+      vi.mocked(api.projectFolder!.getState).mockResolvedValue({ state: 'missing' } as any);
+      const dialog = await renderScheduleDialog({ schedule: scheduleOfB });
+      try {
+        await flushCustomFolderProbe();
+        // The picker is hidden for an existing schedule, so a missing folder must not trap the form.
+        await click(dialog.host, 'Save Changes');
+        expect(updateSchedule).toHaveBeenCalledTimes(1);
+        expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
+          launchConfig: { cwd: '/tmp/project-b' },
+        });
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.projectFolder!.getState).mockResolvedValue({ state: 'exists' } as any);
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    it('uses the project picked in the dialog, never the saved team path, from the global page', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = {
+        'team-alpha': { ...perProjectTeam['team-alpha'], projectPath: undefined },
+      };
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue(savedFromCreationProject as any);
+      const dialog = await renderScheduleDialog({});
+      try {
+        await typePrompt(dialog.host, 'Check bugs');
+        await click(dialog.host, 'Create Schedule');
+        // The dialog's own project selection (the mocked project list), not the saved '/tmp/project-a'.
+        expect(createSchedule).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            launchConfig: expect.objectContaining({ cwd: '/tmp/project' }),
+          })
+        );
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+  });
+
   it('prevents editing a schedule with a removed recipient until one is reselected', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.teamByName = {
@@ -8457,4 +8859,223 @@ describe('LaunchTeamDialog', () => {
       }
     }
   );
+
+  it('launches a read-only project definition without replacing the displayed roster', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha', cwd: '/tmp/project', providerId: 'anthropic', model: 'opus',
+      members: [{ name: 'authored-member' }],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onLaunch = vi.fn(async () => {});
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'launch', open: true, teamName: 'team-alpha', rosterReadOnly: true,
+          projectPermissionTeamName: null, members: [], defaultProjectPath: '/tmp/project',
+          provisioningError: null, activeTeams: [], onClose: vi.fn(), onLaunch,
+        }));
+        await flush();
+      });
+      expect(host.querySelector('[data-testid="team-roster-editor"]')).toBeNull();
+      await confirmLaunchPreflight(host, 'Launch team');
+      await act(async () => {
+        Array.from(host.querySelectorAll('button'))
+          .find((button) => button.textContent === 'Launch team')!.click();
+        await flush();
+      });
+      expect(onLaunch).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        teamName: 'team-alpha', cwd: '/tmp/project', skipPermissions: false,
+      }));
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
+  it('ignores late permissions from the previous physical project alias', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    type SavedRequest = Awaited<ReturnType<typeof api.teams.getSavedRequest>>;
+    let resolveOriginal!: (value: SavedRequest) => void;
+    const original = new Promise<SavedRequest>((resolve) => { resolveOriginal = resolve; });
+    vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) =>
+      teamName === 'ptc-project-a' ? original : {
+        teamName, cwd: '/tmp/project', providerId: 'anthropic', model: 'opus',
+        members: [], skipPermissions: true,
+      }
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const props = {
+      mode: 'relaunch' as const, open: true, teamName: 'team-alpha', members: [],
+      defaultProjectPath: '/tmp/project', provisioningError: null, activeTeams: [],
+      onClose: vi.fn(), onRelaunch: vi.fn(async () => {}),
+    };
+    const checked = () => host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked');
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, { ...props, projectPermissionTeamName: 'ptc-project-a' }));
+        await flush();
+      });
+      expect(checked()).toBe('false');
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, { ...props, projectPermissionTeamName: 'ptc-project-b' }));
+        await flush();
+      });
+      expect(checked()).toBe('true');
+      await act(async () => {
+        resolveOriginal({ teamName: 'ptc-project-a', cwd: '/tmp/project', members: [], skipPermissions: false });
+        await flush();
+      });
+      expect(checked()).toBe('true');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
+  it.each([
+    { logical: true, project: false },
+    { logical: false, project: true },
+  ])(
+    'hydrates project relaunch permissions from the native runtime (logical $logical, project $project)',
+    async ({ logical, project }) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) => ({
+        teamName,
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        model: 'opus',
+        members: [],
+        skipPermissions: teamName === 'ptc-project-a' ? project : logical,
+      }));
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'relaunch',
+              open: true,
+              teamName: 'team-alpha',
+              projectPermissionTeamName: 'ptc-project-a',
+              members: [],
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              activeTeams: [],
+              onClose: vi.fn(),
+              onRelaunch: vi.fn(async () => {}),
+            })
+          );
+          await flush();
+        });
+        expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+        expect(api.teams.getSavedRequest).toHaveBeenCalledWith('ptc-project-a');
+        expect(
+          host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked')
+        ).toBe(String(project));
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+        vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+      }
+    }
+  );
+
+
+  it('fails closed to manual approval when a team-list project runtime is unverified', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      members: [],
+      skipPermissions: true,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'relaunch',
+            open: true,
+            teamName: 'team-alpha',
+            projectPermissionTeamName: null,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            activeTeams: [],
+            onClose: vi.fn(),
+            onRelaunch: vi.fn(async () => {}),
+          })
+        );
+        await flush();
+      });
+      expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+      expect(
+        host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked')
+      ).toBe('false');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
+  it('does not carry auto-approval from project A into another relaunch project', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) => ({
+      teamName,
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      members: [],
+      skipPermissions: true,
+    }));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const checkbox = () =>
+      host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked');
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'relaunch',
+            open: true,
+            teamName: 'team-alpha',
+            projectPermissionTeamName: 'ptc-project-a',
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            activeTeams: [],
+            onClose: vi.fn(),
+            onRelaunch: vi.fn(async () => {}),
+          })
+        );
+        await flush();
+      });
+      expect(checkbox()).toBe('true');
+      await act(async () => {
+        projectPathSelectorMock.onSelect('/tmp/different-project');
+        await flush();
+      });
+      expect(checkbox()).toBe('false');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
 });

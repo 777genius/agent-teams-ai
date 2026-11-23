@@ -45,6 +45,7 @@ function toTaskModel(task: OrgTaskCandidate): OrgTaskModel {
     status: task.status,
     updatedAt: task.updatedAt,
     kanbanColumn: task.kanbanColumn,
+    ...(task.executionTeamName ? { executionTeamName: task.executionTeamName } : {}),
   };
 }
 

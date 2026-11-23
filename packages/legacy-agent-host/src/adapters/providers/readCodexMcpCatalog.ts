@@ -1,4 +1,4 @@
-import { readCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
+import { readCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex-mcp-catalog';
 import { CapturedProcess } from './CapturedProcess.js';
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';

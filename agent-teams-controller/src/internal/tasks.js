@@ -115,7 +115,6 @@ function maybeNotifyPreviousOwnerOnReassignment(context, previousTask, updatedTa
     warnNonCritical(`[tasks] reassignment notification failed for task ${updatedTask.id}`, error);
   }
 }
-
 function buildTaskRef(context, task) {
   return {
     taskId: task.id,
@@ -323,7 +322,6 @@ function assertTaskCreationCommandScope(context, input) {
     throw new Error('Task creation command conflict: scope does not match team');
   }
 }
-
 function getTask(context, taskId) {
   return taskStore.readTask(context.paths, taskId, { includeDeleted: true });
 }
@@ -770,7 +768,6 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
     comment: result.comment,
   };
 }
-
 function addTaskComment(context, taskId, flags) {
   return addTaskCommentWithOptions(context, taskId, flags);
 }
@@ -1033,7 +1030,7 @@ async function memberBriefing(context, memberName, options = {}) {
     '',
     buildMemberFormattingProtocol(),
     '',
-    buildMemberTaskProtocol(context.teamName, messagingProtocol),
+    buildMemberTaskProtocol(context.teamName, messagingProtocol, kanbanStore.isHumanApprovalFlow(context.paths, context.teamName)),
     '',
     buildMemberProcessProtocol(context.teamName, messagingProtocol.boundTeamToolExample)
   );

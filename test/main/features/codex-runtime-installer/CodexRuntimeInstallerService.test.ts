@@ -412,11 +412,96 @@ describe('CodexRuntimeInstallerService resolver', () => {
       expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
         firstSnapshot
       );
+      const refreshed = await installer.getStatus(capture());
+      expect(refreshed).toEqual({
+        installed: true,
+        version: acceptedSource.cliVersion,
+        latestVersion: '1.0.0',
+        updateAvailable: false,
+        source: acceptedSource.sourceKind,
+        state: 'ready',
+        sourceRevision: acceptedSource.revision,
+      });
+      expect(await new CapturedCodexRuntimeInstaller(native).getStatus(capture())).toEqual(
+        refreshed
+      );
+      expect(await sources.current()).toEqual(acceptedSource);
       expect(sources.publish).toHaveBeenCalledTimes(2);
       expect(fourthFetch).toHaveBeenCalledTimes(3);
       expect(execCliMock).toHaveBeenCalledTimes(4);
     }
   );
+
+  it('does not borrow an unaccepted candidate version on subsequent warm or cold status reads', async () => {
+    const selected: RuntimeSourceSummary = {
+      sourceId: 'a'.repeat(64),
+      revision: 'b'.repeat(64),
+      sourceKind: 'captured',
+      profileId: 'TEST-original',
+      configRevision: 'TEST-original',
+      nativeExecutableDigest: runtimeSourceNativeExecutableDigest({
+        path: path.join(tempRoot!, 'TEST-original-codex'),
+        sha256: 'c'.repeat(64),
+      }),
+    };
+    const sources: CapturedRuntimeSources = {
+      current: vi.fn(async () => structuredClone(selected)),
+      retained: async () => [structuredClone(selected)],
+      recover: vi.fn(async () => null),
+      refreshConfiguration: async () => {
+        throw new Error('TEST wrong operation');
+      },
+      publish: vi.fn(async () => {
+        throw new Error('TEST Host did not accept the installed candidate');
+      }),
+      lookup: vi.fn(async () => null),
+    };
+    const resolver: CapturedCodexResolver = {
+      fingerprint: 'TEST-installed-candidate',
+      assertAuthority: () => {},
+      assertCurrent: () => {},
+      acceptAcquired: () => {},
+      resolve: async () => ({
+        selection: {
+          sourceKind: 'app-managed',
+          nativeCli: {
+            executable: {
+              path: path.join(tempRoot!, 'TEST-unaccepted-codex'),
+              sha256: 'd'.repeat(64),
+            },
+            version: '2.0.0',
+          },
+        },
+        assertCurrent: async () => {},
+      }),
+    };
+    const native = {
+      installCaptured: vi.fn(),
+      readLatestVersion: vi.fn(async () => '2.0.0'),
+      publishCapturedStatus: vi.fn(),
+    };
+    const installer = new CapturedCodexRuntimeInstaller(native);
+    const request = { sources: Promise.resolve(sources), resolver };
+    await expect(installer.selectInstalled(request)).rejects.toThrow(
+      'Codex selection could not be confirmed. The previous runtime is retained.'
+    );
+    const expected = {
+      installed: false,
+      latestVersion: '2.0.0',
+      updateAvailable: false,
+      source: 'captured-host',
+      state: 'idle',
+      sourceRevision: selected.revision,
+    };
+    expect(await installer.getStatus(request)).toEqual(expected);
+    expect(await new CapturedCodexRuntimeInstaller(native).getStatus(request)).toEqual(expected);
+    expect(await sources.current()).toEqual(selected);
+    expect(sources.publish).toHaveBeenCalledTimes(1);
+    expect(sources.lookup).toHaveBeenCalledTimes(1);
+    expect(sources.recover).toHaveBeenCalledTimes(1);
+    expect(native.installCaptured).not.toHaveBeenCalled();
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
 
   it('retains a superseding manifest written while the captured publication is staging', async () => {
     const firstPackage = createRuntimePackage('A');

@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "kind": "P09_ORIGINAL_UNSIGNED_BASELINE_CLASSIFICATION",
+  "reviewer": "review_ready_823",
+  "observedAt": "2026-11-18 21:49:02 UTC",
+  "sourceHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+  "verdict": "Selected signed-code witness refuses the original compiler-default baseline; no preserving implementation fix established by this bounded review. P09 remains open.",
+  "scope": "Read-only source and cached log classification, not a new native run and not an OS-wide impossibility result. This mapping was already documented historically in Report29; the captured4f/f60 witnesses are classified without changing their results.",
+  "appSourcePins": [
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+      "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "bytes": 21219,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/823ef00a5cd081ccc3efdad85faf41e1cd888a27/packages/legacy-agent-host/tests/fixtures/posix-exec-native.c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+      "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+      "bytes": 27709,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/823ef00a5cd081ccc3efdad85faf41e1cd888a27/packages/legacy-agent-host/tests/registered-process-executable.native.ts"
+    }
+  ],
+  "primaryAppleSource": {
+    "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+    "observedAt": "2026-11-18 21:47:54 UTC",
+    "sources": [
+      {
+        "path": "OSX/libsecurity_codesigning/lib/CSCommon.h",
+        "gitBlob": "e58b6a31731e225ed6a4f1c6a48077bdd7ed3e79",
+        "sha256": "f67ea0a42d5bb3fb9812206c421e0942ee54a002bd48a0659fee36a794cf4a4f",
+        "bytes": 22431,
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/CSCommon.h"
+      },
+      {
+        "path": "OSX/libsecurity_codesigning/lib/SecCode.h",
+        "gitBlob": "5fffd414abb4c44f0d4124adb3f3e6f2cb2af99a",
+        "sha256": "c9c43c0a0b21dc5bb0ee037b0d28aba2658d57c019eab4ce9a6fc09b43dc2b7d",
+        "bytes": 28321,
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/SecCode.h"
+      }
+    ]
+  },
+  "originalObservations": [
+    {
+      "headLabel": "4f",
+      "jobId": 135116127573,
+      "source": "Cached original terminal job log; no endpoint accessed",
+      "logPath": "/workspace/scratch/c714f5bce554/ci-current-4f/job-135116127573.raw.log",
+      "bytes": 43917,
+      "sha256": "bb05f6ddc49666ce690ba24beb48ef94836562ec729d991e9f73b3d345a5c015",
+      "witnesses": [
+        {
+          "line": 416,
+          "diagnostic": {
+            "kind": "TEST_POSIX_IMAGE_WITNESS_FAILURE",
+            "case": "compiler-default:baseline",
+            "stage": "kernel-image-validity",
+            "errno": 13,
+            "codeSigningError": -67062
+          }
+        }
+      ]
+    },
+    {
+      "headLabel": "f60",
+      "jobId": 135131765182,
+      "source": "Cached original terminal job log; no endpoint accessed",
+      "logPath": "/workspace/scratch/c714f5bce554/ci-current-f60/job-135131765182.raw.log",
+      "bytes": 119039,
+      "sha256": "39e1ac42f8a95b5fd8897c808ec133c9801d6f9623209a8e88941a0d529dcfb3",
+      "witnesses": [
+        {
+          "line": 1212,
+          "diagnostic": {
+            "kind": "TEST_POSIX_IMAGE_WITNESS_FAILURE",
+            "case": "compiler-default:baseline",
+            "stage": "kernel-image-validity",
+            "errno": 13,
+            "codeSigningError": -67062
+          }
+        }
+      ]
+    }
+  ],
+  "chain": [
+    {
+      "source": "C original_image",
+      "lines": "205-241",
+      "fact": "The function initializes error=EACCES. Audit-token path and guest acquisition precede stage kernel-image-validity. SecCodeCheckValidity uses kSecCSNoNetworkAccess with a NULL additional requirement; failure preserves its OSStatus and returns the preselected EACCES."
+    },
+    {
+      "source": "C consumer",
+      "lines": "359-388",
+      "fact": "plain mode bypasses the image gate. For baseline the image gate occurs before CopyPath completion, reopening/stat/hash, match decision, adversarial mutation or resume. The recorded stage identifies this validity refusal, not a writer mutation failure."
+    },
+    {
+      "source": "original TS test",
+      "lines": "353-396",
+      "fact": "compiler-default binaries are compiled without an explicit signing command. Darwin retains plain and baseline for this variant. Separate copied binaries are explicitly ad-hoc signed as adhoc-test-only and receive the additional mutation schedules."
+    },
+    {
+      "source": "original TS oracle",
+      "lines": "464-476",
+      "fact": "The plain case requires successful execution and original output. The non-plain baseline still requires errno=0; the passive witness diagnostic cannot replace that assertion."
+    },
+    {
+      "source": "Apple CSCommon.h",
+      "lines": "74",
+      "fact": "errSecCSUnsigned is -67062; this classifies the observed Security OSStatus as unsigned code."
+    },
+    {
+      "source": "Apple SecCode.h",
+      "lines": "217-238",
+      "fact": "CheckValidity validates the signature and dynamic code state. NULL removes additional requirement predicates; it does not disable signature validation."
+    },
+    {
+      "source": "Apple SecCode.h",
+      "lines": "289-302,332-350",
+      "fact": "CopyPath returns a disk location. CopySigningInformation can inspect unsigned code, but does not by itself replace successful validity checking or establish the same running-code/disk relationship."
+    }
+  ],
+  "narrowFixAssessment": {
+    "baselineOracleMistakeEstablished": false,
+    "nativeExecOrChmodFailureEstablished": false,
+    "writerMutationFailureEstablishedByThisWitness": false,
+    "unsignedAcceptanceSatisfied": false,
+    "preservingFixEstablished": false,
+    "rejectedAsUnjustified": [
+      "Ignoring errSecCSUnsigned or deleting CheckValidity removes an existing witness guard without an equivalent byte-consumption proof.",
+      "Explicitly signing compiler-default or skipping its baseline changes the original fixture/acceptance scope.",
+      "CopyPath or CopySigningInformation alone is not the same image proof.",
+      "This finding does not authorize rejecting existing unsigned/custom sources or scripts, trusting writers, silent copying, or changing permissions."
+    ]
+  },
+  "existingDecision": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/40-p09-source-writer-decision-2026-11-16.md",
+    "gitBlob": "f0daf649c8f1e1ec6c6a95ee7343af407e47d914",
+    "status": "Unchosen A/B contract alternatives remain separate; no implementation/acceptance change selected."
+  },
+  "execution": {
+    "testsRun": 0,
+    "nativeOrAppLaunched": false,
+    "buildOrInstall": false,
+    "sourceEdits": false,
+    "ciRequests": false,
+    "commitOrRefMutation": false,
+    "onlyNewRemoteReads": "Immutable Git source and official Apple source metadata/content; no retired CI endpoints."
+  }
+}

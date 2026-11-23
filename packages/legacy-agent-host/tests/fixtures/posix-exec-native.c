@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -268,6 +269,25 @@ static int rewrite(const char *path, const char *replacement) {
   (void)close(output);
   return error;
 }
+/* TEST counterexample: the original writable mapping predates exec. */
+static int rewrite_mapping(void *mapping, size_t length, const char *replacement) {
+  int source = open(replacement, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+  if (source < 0) return errno;
+  struct stat info;
+  int error = fstat(source, &info) || !S_ISREG(info.st_mode) ||
+    info.st_size <= 0 || (uint64_t)info.st_size != length || length > 2*1024*1024 ? EINVAL : 0;
+  char bytes[65536]; size_t offset = 0;
+  while (!error && offset < length) {
+    size_t wanted = length-offset < sizeof(bytes) ? length-offset : sizeof(bytes);
+    ssize_t count = read(source, bytes, wanted);
+    if (count <= 0) { error = EIO; break; }
+    memcpy((char *)mapping+offset, bytes, (size_t)count);
+    offset += (size_t)count;
+  }
+  if (!error && msync(mapping, length, MS_SYNC)) error = errno;
+  (void)close(source);
+  return error;
+}
 #ifdef __linux__
 static _Noreturn void report_exec_error(int fd, int code, int exit_code) {
   ssize_t count = write(fd, &code, sizeof(code));
@@ -287,13 +307,15 @@ static int read_exec_error(int fd, int *captured) {
 int main(int argc, char **argv) {
   if (argc != 8) return 2;
   const char *mode = argv[1], *selected = argv[2], *replacement = argv[3], *expected = argv[4], *marker_path = argv[5], *output_path = argv[6], *cwd = argv[7];
-  if (strcmp(mode,"baseline") && strcmp(mode,"rename") && strcmp(mode,"inplace") && strcmp(mode,"after-check") && strcmp(mode,"writer-open") && strcmp(mode,"script-negative") && strcmp(mode,"plain")) return 2;
+  if (strcmp(mode,"baseline") && strcmp(mode,"rename") && strcmp(mode,"inplace") && strcmp(mode,"after-check") && strcmp(mode,"writer-open") && strcmp(mode,"script-negative") && strcmp(mode,"script-mmap-negative") && strcmp(mode,"plain")) return 2;
   if (strlen(expected) != 64 || selected[0] != '/' || replacement[0] != '/' || marker_path[0] != '/' || output_path[0] != '/' || cwd[0] != '/') return 2;
   deadline = monotonic_ms() + 15000;
   struct sigaction action; memset(&action,0,sizeof(action)); action.sa_handler = cancelled;
   if (sigaction(SIGTERM,&action,NULL) || sigaction(SIGINT,&action,NULL)) return 2;
   const char *stage = "capture"; int error = 0, mutation_error = -1, exec_error = 0;
   int retained = -1, image_fd = -1, writer = -1, output = -1, errors[2] = {-1,-1};
+  void *writer_mapping = MAP_FAILED; size_t mapping_length = 0;
+  int mapping_opened = 0, mapping_released = 0;
   int spawned = 0, stopped = 0, resumed = 0, matched = 0, absent_before = 0, image_observed = 0;
   unsigned cs_flags = 0; int32_t code_signing_error = 0; pid_t original_pid = 0;
   char original_hash[65] = {0}, kernel_hash[65] = {0}, image_path[PATH_MAX] = {0};
@@ -305,6 +327,21 @@ int main(int argc, char **argv) {
   if (!strcmp(mode,"rename") && rename(replacement,selected)) { error=errno; goto finish; }
   if (!strcmp(mode,"inplace") && (error=rewrite(selected,replacement))) goto finish;
   if (!strcmp(mode,"writer-open")) { writer=open(selected,O_WRONLY|O_CLOEXEC|O_NOFOLLOW); if(writer<0){error=errno;goto finish;} }
+  if (!strcmp(mode,"script-mmap-negative")) {
+    writer = open(selected, O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+    if (writer < 0) { error=errno; goto finish; }
+    struct stat writer_stat;
+    if (fstat(writer, &writer_stat)) { error=errno; goto finish; }
+    if (!S_ISREG(writer_stat.st_mode) || writer_stat.st_size <= 0 ||
+        (uint64_t)writer_stat.st_size > 2*1024*1024 || writer_stat.st_dev != captured_stat.st_dev ||
+        writer_stat.st_ino != captured_stat.st_ino || writer_stat.st_size != captured_stat.st_size) {
+      error=ESTALE; goto finish;
+    }
+    mapping_length = (size_t)captured_stat.st_size;
+    writer_mapping = mmap(NULL, mapping_length, PROT_READ | PROT_WRITE, MAP_SHARED, writer, 0);
+    if (writer_mapping == MAP_FAILED) { error=errno; goto finish; }
+    mapping_opened = 1;
+  }
   output = open(output_path,O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC,0600);
   if(output<0 || pipe(errors)){error=errno;goto finish;}
   (void)fcntl(errors[1],F_SETFD,FD_CLOEXEC);
@@ -380,9 +417,10 @@ int main(int argc, char **argv) {
   if(memcmp(&before,&after,sizeof(before))){error=ESTALE;goto finish;}
   image_observed=1;
   matched=captured_stat.st_dev==image_stat.st_dev && captured_stat.st_ino==image_stat.st_ino && !strcmp(original_hash,kernel_hash);
-  if(!matched && strcmp(mode,"script-negative")){stage="rejected-image";goto finish;}
+  if(!matched && strcmp(mode,"script-negative") && strcmp(mode,"script-mmap-negative")){stage="rejected-image";goto finish;}
   if(!strcmp(mode,"after-check") || !strcmp(mode,"script-negative")) mutation_error=rewrite(selected,replacement);
   if(!strcmp(mode,"writer-open")) mutation_error=rewrite_fd(writer,replacement);
+  if(!strcmp(mode,"script-mmap-negative")) mutation_error=rewrite_mapping(writer_mapping,mapping_length,replacement);
   /* Deliberately no image/path recheck after this adversary: it tests byte stability. */
   stage="resume";
 #ifdef __APPLE__
@@ -396,6 +434,10 @@ finish:
   if(hash_pid){int code=finish_original(&hash_pid,&hash_status);if(!error)error=code;}
   if(target_pid){int code=finish_original(&target_pid,&target_status);if(!error)error=code;}
   if(spawned && target_pid==0)target_reaped=1;
+  if(writer_mapping != MAP_FAILED) {
+    if(munmap(writer_mapping,mapping_length)) { if(!error)error=errno; }
+    else { writer_mapping=MAP_FAILED; mapping_released=1; }
+  }
   if(writer>=0)(void)close(writer);
   if(image_fd>=0)(void)close(image_fd);
   if(retained>=0)(void)close(retained);
@@ -403,10 +445,10 @@ finish:
   if(errors[0]>=0)(void)close(errors[0]);
   if(errors[1]>=0)(void)close(errors[1]);
   int group_absent=original_pid>1 && kill(-original_pid,0)<0 && errno==ESRCH;
-  int cleanup=hash_pid==0 && target_pid==0 && (original_pid==0 || (target_reaped && group_absent));
-  printf("{\"stage\":\"%s\",\"errno\":%d,\"execErrno\":%d,\"stoppedBeforeUser\":%s,\"payloadMarkersAbsentBeforeGate\":%s,\"kernelImageObserved\":%s,\"imageMatched\":%s,\"resumed\":%s,\"mutationAfterCheckErrno\":%d,\"codeSigningFlags\":%u,\"codeSigningError\":%" PRId32 ",\"originalPid\":%d,\"originalBirth\":\"%" PRIu64 "\",\"originalDev\":\"%" PRIu64 "\",\"originalIno\":\"%" PRIu64 "\",\"kernelDev\":\"%" PRIu64 "\",\"kernelIno\":\"%" PRIu64 "\",\"originalSha256\":\"%s\",\"kernelSha256\":\"%s\",\"exitCode\":%d,\"exitSignal\":%d,\"originalReaped\":%s,\"originalGroupAbsent\":%s,\"cleanup\":%s}\n",
+  int cleanup=hash_pid==0 && target_pid==0 && writer_mapping==MAP_FAILED && (original_pid==0 || (target_reaped && group_absent));
+  printf("{\"stage\":\"%s\",\"errno\":%d,\"execErrno\":%d,\"stoppedBeforeUser\":%s,\"payloadMarkersAbsentBeforeGate\":%s,\"kernelImageObserved\":%s,\"imageMatched\":%s,\"resumed\":%s,\"mutationAfterCheckErrno\":%d,\"codeSigningFlags\":%u,\"codeSigningError\":%" PRId32 ",\"originalPid\":%d,\"originalBirth\":\"%" PRIu64 "\",\"originalDev\":\"%" PRIu64 "\",\"originalIno\":\"%" PRIu64 "\",\"kernelDev\":\"%" PRIu64 "\",\"kernelIno\":\"%" PRIu64 "\",\"originalSha256\":\"%s\",\"kernelSha256\":\"%s\",\"exitCode\":%d,\"exitSignal\":%d,\"originalReaped\":%s,\"originalGroupAbsent\":%s,\"cleanup\":%s,\"mappingOpened\":%s,\"mappingReleased\":%s}\n",
     stage,error,exec_error,stopped?"true":"false",absent_before?"true":"false",image_observed?"true":"false",matched?"true":"false",resumed?"true":"false",mutation_error,cs_flags,code_signing_error,(int)original_pid,before.birth,(uint64_t)captured_stat.st_dev,(uint64_t)captured_stat.st_ino,(uint64_t)image_stat.st_dev,(uint64_t)image_stat.st_ino,original_hash,kernel_hash,
-    target_reaped && WIFEXITED(target_status)?WEXITSTATUS(target_status):-1,target_reaped && WIFSIGNALED(target_status)?WTERMSIG(target_status):0,target_reaped?"true":"false",group_absent?"true":"false",cleanup?"true":"false");
+    target_reaped && WIFEXITED(target_status)?WEXITSTATUS(target_status):-1,target_reaped && WIFSIGNALED(target_status)?WTERMSIG(target_status):0,target_reaped?"true":"false",group_absent?"true":"false",cleanup?"true":"false",mapping_opened?"true":"false",mapping_released?"true":"false");
   return cleanup?0:3;
 }
 #endif

@@ -124,9 +124,12 @@
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
     "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
     "pretypecheck": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "test:real:suggestions": "node scripts/e2e/native-prompt-suggestions-real/run.mjs",
+    "test:real:suggestions:ui": "node scripts/e2e/native-prompt-suggestions-real/ui.ts",
     "test:legacy-agent-host": "pnpm --filter @agent-teams/legacy-agent-host test && pnpm exec vitest run test/features/agent-backend --maxWorkers=1",
     "stage:legacy-host-node": "node scripts/legacy-agent-host/stage-node.ts",
-    "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
+    "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
+    "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [

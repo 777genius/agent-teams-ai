@@ -21,6 +21,8 @@ import { captureCoordinationConfiguration, runNativeCoordination, readNativeCoor
 import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
+import { createOpenCodeProbeCloseDiagnostic, createOpenCodeProbeDiagnostic } from './createClaudeCloseDiagnostic.js';
+import { createOpenCodeCurrentnessTiming } from './OpenCodeCurrentnessTiming.js';
 
 import type { NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
@@ -59,6 +61,11 @@ export function createOpenCodeV2ModelProbe(
   const { embedded } = profile;
   const captured = managementDigest({ profile, commandId: input.commandId,
     ...(options.readiness ? { readinessPhase: options.coordination ? 'coordination' : 'ordinary' } : {}) });
+  const observePhase = options.coordination ? undefined
+    : createOpenCodeProbeDiagnostic(profile, input.commandId, captured);
+  const currentnessTiming = createOpenCodeCurrentnessTiming(observePhase);
+  const observeCloseFailure = options.coordination ? undefined
+    : createOpenCodeProbeCloseDiagnostic(profile, input.commandId, captured);
   const purposeBound = options.coordination || options.readiness !== undefined;
   const timeoutMs = purposeBound ? Math.min(profile.modelProbeTimeoutMs ?? 90000, 90000)
     : profile.modelProbeTimeoutMs ?? 90000;
@@ -91,6 +98,14 @@ export function createOpenCodeV2ModelProbe(
   let runState: 'not-started' | 'pending' | 'true' | 'false' | 'threw' = 'not-started';
   let outcome: 'unobserved' | 'succeeded' | 'failed' | 'cancelled' | 'unknown' = 'unobserved';
   let errorClass: 'none' | 'held' | 'invalid' | 'conflict' | 'busy' | 'unknown' = 'none';
+  const runErrorCodes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+    'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+    'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch', 'transport_failure',
+    'http_failure', 'invalid_response', 'disposed'] as const;
+  type RunErrorCode = typeof runErrorCodes[number];
+  let runErrorCode: RunErrorCode | null = null, runCauseCode: RunErrorCode | null = null;
+  const projectRunCode = (value: unknown): RunErrorCode | null =>
+    typeof value === 'string' && runErrorCodes.includes(value as RunErrorCode) ? value as RunErrorCode : null;
   type CloseStage = 'request-drain' | 'owner-client' | 'driver-close' | 'server-stop' | 'namespace' | 'close-result';
   let firstCloseFailure: { stage: CloseStage; reason: 'unconfirmed' | 'threw' | 'identity' } | undefined;
   const noteCloseFailure = (stage: CloseStage, reason: NonNullable<typeof firstCloseFailure>['reason']) => {
@@ -112,7 +127,10 @@ export function createOpenCodeV2ModelProbe(
     )
       return false;
     try {
-      if (!isCurrent()) return false;
+      const finishCurrent = currentnessTiming.enter();
+      let originalCurrent: boolean;
+      try { originalCurrent = isCurrent(); } finally { finishCurrent(); }
+      if (!originalCurrent) return false;
       for (const [directory, identity] of directories) {
         const stat = lstatSync(directory, { bigint: true });
         if (
@@ -144,7 +162,7 @@ export function createOpenCodeV2ModelProbe(
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    configuration.isCurrent, configuration.key, configuration.selectedFile);
+    configuration.isCurrent, configuration.key, configuration.selectedFile, observePhase);
   const current = coordinationSource
     ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
@@ -152,31 +170,54 @@ export function createOpenCodeV2ModelProbe(
     signal?.throwIfAborted();
     if (!current() || Date.now() >= deadline) unavailable();
   };
+  let identityRequestPending = false;
+  let attestationPending = false, attestationRequests = 0;
   async function beforeRequest(signal: AbortSignal): Promise<() => void> {
-    assertCurrent(signal);
-    // Reserve before the asynchronous native measurement. Shutdown fences new
-    // admissions and drains these leases before aborting the Session transport.
-    const settled = Promise.withResolvers<void>();
-    requests.add(settled.promise);
-    const release = () => {
-      if (requests.delete(settled.promise)) settled.resolve();
-    };
+    // The first identity keeps its observer even if native custody settles after abort.
+    const observeIdentity = identityRequestPending ? observePhase : undefined;
+    identityRequestPending = false;
+    const catalogIndex = attestationPending && attestationRequests < 3
+      ? ++attestationRequests as 1 | 2 | 3 : undefined;
+    observeIdentity?.('identity-request-start');
+    if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-start`);
+    const finishCurrentness = currentnessTiming.begin(observeIdentity ? 'identity'
+      : catalogIndex ? `catalog-${catalogIndex}` : undefined);
     try {
-      const custody = await server?.readNativeCustody(AbortSignal.any([signal, abort.signal]));
       assertCurrent(signal);
-      if (
-        !custody ||
-        !ready ||
-        custody.pid !== ready.pid ||
-        custody.startIdentity !== ready.startIdentity ||
-        custody.version !== '2.1.4'
-      )
-        unavailable();
-      return release;
-    } catch (error) {
-      release();
-      throw error;
-    }
+      // Reserve before the asynchronous native measurement. Shutdown fences new
+      // admissions and drains these leases before aborting the Session transport.
+      const settled = Promise.withResolvers<void>();
+      requests.add(settled.promise);
+      const release = () => {
+        if (requests.delete(settled.promise)) {
+          settled.resolve();
+          // This is only lease settlement, including refused requests, never HTTP success.
+          if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-lease-released`);
+        }
+      };
+      try {
+        observeIdentity?.('identity-custody-start');
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-start`);
+        const custody = await server?.readNativeCustody(AbortSignal.any([signal, abort.signal]));
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-returned`);
+        observeIdentity?.('identity-custody-returned');
+        assertCurrent(signal);
+        if (
+          !custody ||
+          !ready ||
+          custody.pid !== ready.pid ||
+          custody.startIdentity !== ready.startIdentity ||
+          custody.version !== '2.1.4'
+        )
+          unavailable();
+        observeIdentity?.('identity-request-admitted');
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-admitted`);
+        return release;
+      } catch (error) {
+        release();
+        throw error;
+      }
+    } finally { finishCurrentness(); }
   }
   const readPassword = () => {
     assertCurrent();
@@ -250,26 +291,44 @@ export function createOpenCodeV2ModelProbe(
       configDirectory,
       startupTimeoutMs: Math.min(profile.timeoutMs, purposeBound ? deadline - Date.now() : timeoutMs),
       canAllocate: current,
+      ...(observePhase ? { observeStartupPhase: observePhase } : {}),
       ...(options.processCustody ? { processCustody: options.processCustody } : {}),
       ...(configuration.selectedFile ? { selectedFile: { source: configuration.selectedFile, mode: 'fresh' as const } } : {}),
       config,
     });
     coordinationSource?.beforeAllocation();
     ready = await server.start(signal);
+    observePhase?.('native-ready');
     assertCurrent(signal);
     await withClient(signal, async (client, wire) => {
-      const identity = await client.identity();
+      let identity: Awaited<ReturnType<typeof client.identity>>;
+      try {
+        identityRequestPending = true;
+        observePhase?.('identity-start');
+        identity = await client.identity();
+      } finally { identityRequestPending = false; }
+      observePhase?.('credential');
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
       nativeCredential = await credential.prepare(wire, client, undefined,
         integrationId => server!.selectedFileKey(ready!, integrationId));
-      await attestOpenCodeV2ModelSelection(client, selection.model,
-        { signal, deadline, isCurrent: current });
+      observePhase?.('credential-returned');
+      observePhase?.('attestation');
+      try {
+        attestationPending = true;
+        await attestOpenCodeV2ModelSelection(client, selection.model,
+          { signal, deadline, isCurrent: current }, observePhase);
+      } finally { attestationPending = false; }
+      observePhase?.('attestation-returned');
       options.readiness?.observeProvider?.({
         ...observedProvider,
         ...(nativeCredential ? { credentialScopeDigest: nativeCredential.scopeDigest } : {}),
       }, credential.fileProof());
+      observePhase?.('attestation-observe-returned');
+      observePhase?.('session-create');
       assertCurrent(signal);
+      observePhase?.('session-current-returned');
       await client.createSession({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
+      observePhase?.('session-create-returned');
     });
     coordination?.bindSession(nativeSessionId);
     const binding = {
@@ -330,6 +389,7 @@ export function createOpenCodeV2ModelProbe(
         };
       },
     });
+    observePhase?.('driver-open');
     const opened = await factory.open({
       ...binding,
       configRevision: profile.configRevision,
@@ -345,8 +405,10 @@ export function createOpenCodeV2ModelProbe(
     const combined = AbortSignal.any([signal, abort.signal,
       AbortSignal.timeout(purposeBound ? Math.max(1, deadline - Date.now()) : timeoutMs)]);
     activeSignal = combined;
+    observePhase?.('run');
     starting = start(combined);
     await starting;
+    observePhase?.('first-submit');
     assertCurrent(combined);
     if (!driver) return unavailable();
     if (coordination) {
@@ -406,6 +468,13 @@ export function createOpenCodeV2ModelProbe(
             const field = Object.getOwnPropertyDescriptor(error, 'code');
             const code: unknown = field && 'value' in field ? field.value : undefined;
             if (code === 'held' || code === 'invalid' || code === 'conflict' || code === 'busy') errorClass = code;
+            runErrorCode = projectRunCode(code);
+            const causeField = Object.getOwnPropertyDescriptor(error, 'cause');
+            const cause: unknown = causeField && 'value' in causeField ? causeField.value : undefined;
+            if (cause && (typeof cause === 'object' || typeof cause === 'function')) {
+              const causeCodeField = Object.getOwnPropertyDescriptor(cause, 'code');
+              runCauseCode = projectRunCode(causeCodeField && 'value' in causeCodeField ? causeCodeField.value : undefined);
+            }
           }
         } catch { /* An opaque diagnostic cannot replace the original exception. */ }
         throw error;
@@ -486,10 +555,14 @@ export function createOpenCodeV2ModelProbe(
           released = clean;
           if (!clean && !coordination) {
             noteCloseFailure('close-result', 'unconfirmed');
+            const failure = { probeDigest: captured, runState, outcome,
+              errorClass, ...firstCloseFailure,
+              ...(runState === 'threw' ? { runErrorCode, runCauseCode } : {}) };
+            try { observeCloseFailure?.(failure); }
+            catch { /* Diagnostic sink failure cannot replace the original channel or cleanup. */ }
             try {
               const diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');
-              if (diagnostic.hasSubscribers) diagnostic.publish({ probeDigest: captured, runState, outcome,
-                errorClass, ...firstCloseFailure });
+              if (diagnostic.hasSubscribers) diagnostic.publish(failure);
             } catch { /* Failure-only observation cannot change the original cleanup result. */ }
           }
           return clean;

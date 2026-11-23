@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-provider-admission-and-lifecycle-consumer-adoption",
+  "recordedAt": "2026-11-19T22:18:52.189828+00:00",
+  "appBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+  "providerSource": "45a569bd70607480e650fb12be5c0cce6884f9da",
+  "providerTree": "cc428cf17e7cd9323135ef612331c659900970b4",
+  "status": "PASS_PRODUCER_CI_AND_CONTROLLED_CONSUMER_ORIGINAL_APP_CI_PENDING",
+  "implementation": {
+    "file": "agent-teams-provider-implementations-0.0.0.tgz",
+    "bytes": 191469,
+    "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4",
+    "integrity": "sha512-BB1ZtUjb9qVyhhETHCCrmXJFCjz9qdGCGUEE7V3iUdvh5Gs0MEHc9tMnRppLKlYNrulWgOMs+/XVzgh6mD8brg==",
+    "gitBlob": "dfb85b7e74f8cccad3db5b02aa7ca7035b08108d"
+  },
+  "sessionContracts": {
+    "existingPath": "../v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "bytes": 6230,
+    "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+    "byteIdentical": true
+  },
+  "archiveCompatibility": {
+    "files": 259,
+    "addedMembers": [],
+    "removedMembers": [],
+    "changedMembersFromPublishedAppConsumer": [
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.js",
+        "beforeSha256": "7d0ccaa0fe81a1438452d46fdbf349d61dedd68b95479f83207ea77edb68d9b7",
+        "afterSha256": "48748ad0f5ad0f4b3a9f0e981809db4c4515dd5d0254d2c3ef6759736cffcf32",
+        "bytes": 15476
+      },
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+        "beforeSha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+        "afterSha256": "8c0fbd3fa415424ec95c4ee62dae3fbce0c7ac06128d4244b7d4e7563c8bf61a",
+        "bytes": 20354
+      },
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.d.ts",
+        "beforeSha256": "1ec58a224a97d7633e62a0f12d3c5fe587a11c1accbc33a41d919efcbfba1bf9",
+        "afterSha256": "f9856d005e0557fbd944e6352f3136b47cc4b88189fc2f4d205a230de0afb398",
+        "bytes": 445
+      },
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+        "beforeSha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+        "afterSha256": "21a605364eeed78a7bb07501e7429c432bc87c266c2447f94f8ea9766213cb55",
+        "bytes": 3172
+      }
+    ],
+    "privateHelperDeclarationChanged": true,
+    "publicFacadeBytesSignaturesMetadataAndAllOtherMembersByteIdentical": true,
+    "typeGraphNote": "The changed private helper declaration is transitively reachable through the unchanged V2RequestAdmission type alias. The helper is not re-exported by any public entry; public signatures are unchanged. The whole transitive declaration graph is not claimed byte-identical."
+  },
+  "consumerInstallation": {
+    "status": "PASS_CONTROLLED_APP_CONSUMER",
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "installFlags": [
+      "--frozen-lockfile",
+      "--ignore-scripts",
+      "--prefer-offline"
+    ],
+    "installRecordSha256": "9f2aa29eff865834fed36197d97caa1ff69f5fac38779a03c7a0a0dd54410c21",
+    "installedImplementationFiles": 259,
+    "installedSessionContractFiles": 12,
+    "allFilesByteIdentical": true,
+    "installedCensusSha256": "c683b3be22b328eb3abe46e69f4275888fe1008073505e5354106393b0fd554d",
+    "lockSha256": "aff1db2f4c9ff64993cfabf3d2c892e94144df5eb89e2803264b48ea0e1b0dc7",
+    "lockDelta": "Exactly implementation directory and integrity; no unrelated dependency changes.",
+    "testFile": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+    "testSha256": "789c73dcec0a1621088614b34bd1a3ef7fa1c3cd8bf24aeeec94d98e1b89931d",
+    "testCases": 24,
+    "passed": 24,
+    "originalPendingCaseMs": 7078,
+    "originalPendingCaseTimeoutMs": 15000,
+    "canonicalScopedTs7": "PASS",
+    "focusedFastLint": "PASS",
+    "testAndProtectedBytesUnchanged": true,
+    "finalCheckRecordSha256": "c39b10be32f7c3a0cf8a6ad4b2ae57f8c652edf5b487e6072542307b6ee8a2f8",
+    "qualificationLimits": "Controlled finite original consumer only; original published-source native/GUI qualification remains separate."
+  },
+  "sourceReceipt": {
+    "path": "vendor/provider-migration/v2-admission-45a569bd/source-receipt.json",
+    "sha256": "abdb69a1e33c1c862eb2f2953dc532412c2244b79405ea97dcdd9afb1152ee2d"
+  },
+  "producerCI": {
+    "repo": "agent-teams-ai/old-provider-implementations",
+    "sourceHead": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "run": 44625513815,
+    "observedAt": "2026-11-19 22:13:10 UTC",
+    "checks": [
+      {
+        "job": 135918139547,
+        "nodeVersion": "24.21.0",
+        "pnpmVersion": "11.18.0",
+        "pnpmCheck": "PASS",
+        "tests": 601,
+        "pass": 601,
+        "fail": 0,
+        "packedConsumerPasses": 2,
+        "logPath": "/workspace/scratch/f45fed8e9067/audit1192/job-135918139547.log",
+        "logBytes": 113560,
+        "logSha256": "050d5f887b76f00da8749016cc90bd490dbd800cca67d1043152d1271e540066"
+      },
+      {
+        "job": 135918140409,
+        "nodeVersion": "26.11.1",
+        "pnpmVersion": "11.18.0",
+        "pnpmCheck": "PASS",
+        "tests": 601,
+        "pass": 601,
+        "fail": 0,
+        "packedConsumerPasses": 2,
+        "logPath": "/workspace/scratch/f45fed8e9067/audit1192/job-135918140409.log",
+        "logBytes": 108078,
+        "logSha256": "1d5807cdc1c0a44f810e9082d4649dbbe7bf7371afec2e716a9d1a62bc204497"
+      }
+    ],
+    "artifact": {
+      "id": 14579462714,
+      "bytes": 198613,
+      "sha256": "1ea130eea82bd3b973bd9219ac843931c992590993e5269b5de2feef13f7c1af",
+      "hashMatchesGitHub": true
+    },
+    "files": [
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14579462714/agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 191469,
+        "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14579462714/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14579462714/receipt.json",
+        "bytes": 597,
+        "sha256": "d44fce80655881de5bb3911349e193995cc3503af8dd1a091a7b8db05cce14e2"
+      }
+    ],
+    "producerReceipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "45a569bd70607480e650fb12be5c0cce6884f9da",
+      "packages": [
+        {
+          "file": "agent-teams-provider-implementations-0.0.0.tgz",
+          "bytes": 191469,
+          "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4"
+        },
+        {
+          "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+        }
+      ],
+      "qualification": "source-and-packed-consumer-only",
+      "nativeHostQualified": false,
+      "packagedElectronQualified": false
+    },
+    "qualificationLimits": [
+      "Source and packed-consumer qualification only.",
+      "Native matrix still running in separate source run.",
+      "Original app Host must qualify after exact45a adoption."
+    ]
+  },
+  "consumerChecks": {
+    "recordedAt": "2026-11-19T22:12:11.498054+00:00",
+    "status": "PASS",
+    "appBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+    "providerSource": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "sourceTests": 24,
+    "checks": [
+      {
+        "name": "vitest",
+        "command": [
+          "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "--maxWorkers=1"
+        ],
+        "startedAt": "2026-11-19T22:11:48.381068+00:00",
+        "exitCode": 0,
+        "seconds": 12.487,
+        "log": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-vitest.log",
+        "bytes": 34247,
+        "logSha256": "22dd1e591530e3da5ad84fcff239aa8a9f2e1b333ce447bb661179590b75f227"
+      },
+      {
+        "name": "types",
+        "command": [
+          "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+          "node_modules/@typescript/native/bin/tsc",
+          "--project",
+          "tsconfig.admission-adoption-scope.json"
+        ],
+        "startedAt": "2026-11-19T22:12:00.868355+00:00",
+        "exitCode": 0,
+        "seconds": 7.435,
+        "log": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-types.log",
+        "bytes": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint",
+        "command": [
+          "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+          "node_modules/eslint/bin/eslint.js",
+          "--config",
+          "eslint.fast.config.js",
+          "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+        ],
+        "startedAt": "2026-11-19T22:12:08.305755+00:00",
+        "exitCode": 0,
+        "seconds": 3.137,
+        "log": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-lint.log",
+        "bytes": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "diff-check",
+        "command": [
+          "git",
+          "diff",
+          "--check",
+          "--",
+          "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "packages/legacy-agent-host/package.json",
+          "pnpm-lock.yaml"
+        ],
+        "startedAt": "2026-11-19T22:12:11.443210+00:00",
+        "exitCode": 0,
+        "seconds": 0.037,
+        "log": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-diff-check.log",
+        "bytes": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "sourceBeforeAfter": {
+      "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts": "789c73dcec0a1621088614b34bd1a3ef7fa1c3cd8bf24aeeec94d98e1b89931d",
+      "packages/legacy-agent-host/package.json": "8cebd0439c09fec8e23306180a7dae7ca4d2be479b97561d0e39e3be7dcbf1d6",
+      "pnpm-lock.yaml": "aff1db2f4c9ff64993cfabf3d2c892e94144df5eb89e2803264b48ea0e1b0dc7",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+      "vitest.config.ts": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "test/features/agent-backend/tsconfig.json": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+      "tsconfig.json": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "eslint.fast.config.js": "fcc7d6aefb1413787842a1d66950b039d5206381c3c92b7f83e33533a8bb2c52"
+    },
+    "protectedFilesUnchanged": true,
+    "allInstalledArchiveFilesUnchanged": true,
+    "installedCensusSha256": "c683b3be22b328eb3abe46e69f4275888fe1008073505e5354106393b0fd554d",
+    "temporaryCanonicalScopeRemoved": true,
+    "scopeConfigSha256": "151f0207e556020a75bbac51ef99fd6364537888ef04db2ec0360bce47c24e20",
+    "compilerOptionsOverridden": false,
+    "node": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "limits": "Original finite ModelProbe consumer gate; native/new-source CI separate."
+  },
+  "independentR2": {
+    "kind": "independent-final-R2-corrected-provider-adoption",
+    "reviewer": "/root/task_detail_finish",
+    "author": "/root",
+    "recordedAt": "2026-11-19T22:16:29.948109+00:00",
+    "result": "PASS_SOURCE_AND_CONTROLLED_APP_CONSUMER_R2",
+    "findings": [],
+    "scope": "Published provider 45a569bd provenance, original checked archive and corrected app dependency adoption with unchanged 789c controlled consumer. Native/source CI/GUI/merge/release qualification is separate.",
+    "sourceBinding": {
+      "appBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "providerCommit": "45a569bd70607480e650fb12be5c0cce6884f9da",
+      "providerTree": "cc428cf17e7cd9323135ef612331c659900970b4",
+      "providerParent": "e458b7f5513a55122905205bd22bcb25977643b0",
+      "archive": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/vendor/provider-migration/v2-admission-45a569bd/agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 191469,
+        "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4"
+      },
+      "package": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/packages/legacy-agent-host/package.json",
+        "bytes": 12516,
+        "sha256": "8cebd0439c09fec8e23306180a7dae7ca4d2be479b97561d0e39e3be7dcbf1d6"
+      },
+      "lock": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/pnpm-lock.yaml",
+        "bytes": 956688,
+        "sha256": "aff1db2f4c9ff64993cfabf3d2c892e94144df5eb89e2803264b48ea0e1b0dc7"
+      },
+      "appTest": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "bytes": 43092,
+        "sha256": "789c73dcec0a1621088614b34bd1a3ef7fa1c3cd8bf24aeeec94d98e1b89931d"
+      },
+      "sourceReceipt": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/vendor/provider-migration/v2-admission-45a569bd/source-receipt.json",
+        "bytes": 6025,
+        "sha256": "abdb69a1e33c1c862eb2f2953dc532412c2244b79405ea97dcdd9afb1152ee2d"
+      }
+    },
+    "inputR2": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-final-r2-inputs.json",
+      "bytes": 13830,
+      "sha256": "b457c4db03e0d4688a0b9881fc63b0d2f1d634b8a805ba01488df30a8ef61d6f"
+    },
+    "installedAndExecutionR2": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-final-r2-installed.json",
+      "bytes": 10051,
+      "sha256": "d74905b7563fd4447b99f90a45eead65cf7388338c55aa06a045994d012fcfea"
+    },
+    "acceptance": {
+      "publishedProvenance": "PASS: independent remote commit/tree/parent and exact seven changed paths, with local published blob/content matching and protected-source hashes.",
+      "originalProducerGate": "PASS: exact original pnpm check with 601 source tests and 2 packed consumers; focused lifecycle regression gives 4 RED / 4 GREEN with identical test bytes.",
+      "archiveCustody": "PASS: adopted 191469-byte archive SHA256 ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4 exactly matches original packed-consumer retained input; no repack or installed-dist edit.",
+      "archiveDelta": "PASS: 259 implementation members, no added/removed members; exactly 3 implementation JavaScript files and 1 private helper declaration differ from e458 and cumulatively from b194.",
+      "publicCompatibility": "PASS: nine facade declarations, public exports map/signatures, V2RequestAdmission callback alias, metadata and Session SPI unchanged. Internal helper declaration is transitively reachable through that unchanged alias; entire transitive type graph is not described as byte-identical.",
+      "packageAndLock": "PASS: official pnpm 11.22 generation/frozen install, only one Host dependency pointer replacement plus five lock directory replacements and one integrity replacement; no unrelated resolution delta, including cumulative delta from published b194.",
+      "installedBytes": "PASS: independent actual installed census matches all 259 implementation and 12 SPI archive files, with no extra dist files; installed lock exactly equals generated workspace lock.",
+      "controlledConsumer": "PASS: unchanged 789c full 24-case file passed 24/24 with original pending-custody scenario 7078 ms under unchanged 15000 ms limit and unchanged gate-release order.",
+      "finalCutOracles": "PASS: admitted/pending/abort-responsive cleanup remains true/false/true; same HTTP/password counts and original cooperative event order abort \u2192 custody-return \u2192 cut-failure; pending UNKNOWN remains retained.",
+      "staticChecks": "PASS: canonical scoped TS7, focused fast ESLint and diff-check; no compiler options override, temporary scope removed, protected source and installed bytes unchanged.",
+      "finalReceipt": "PASS: frozen receipt matches exact install/census/final-check/test/archive/lock hashes and preserves explicit native/packagedElectron qualification limits."
+    },
+    "producerChecks": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/provider-admission-lifecycle-final-local-checks.json",
+      "bytes": 9966,
+      "sha256": "2855f9459a7d78ba2c5333ad7b3b8a14f47c1e0e67b22ec2d4189c5dab25d3d5"
+    },
+    "consumerChecks": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-final-checks.json",
+      "bytes": 4212,
+      "sha256": "c39b10be32f7c3a0cf8a6ad4b2ae57f8c652edf5b487e6072542307b6ee8a2f8"
+    },
+    "finalCutReceipts": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-final-cut-receipts.json",
+      "bytes": 3846,
+      "sha256": "8452a231a018708eb3056fcb9cf74f08acf365c0f702f24ba293ec1dc47a5ef0"
+    },
+    "finalReceiptDeltaFromInputReview": [
+      "Only consumerInstallation changed from PENDING to verified PASS_CONTROLLED_APP_CONSUMER with exact evidence hashes.",
+      "Precise public-vs-transitive-declaration wording was already present in the retained input snapshot and remains unchanged."
+    ],
+    "reviewValidationNote": "The first final-record wrapper expected declaration wording and consumerInstallation both to differ from the retained receipt. It stopped before writing because the snapshot already had the corrected wording. Readback proved only consumerInstallation changed; the assertion was corrected to that exact delta. No source, artifact, test or prior record changed.",
+    "regressionResolution": {
+      "id": "R2-E458-01",
+      "status": "RESOLVED_FOR_45A569BD_LOCAL_CONSUMER_ONLY",
+      "historicalE458Review": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-adoption-final-r2.json",
+        "bytes": 10596,
+        "sha256": "8da78fca3421ca41bad9463c85401f0ebd74d4aab6da4d3e4ae0b52b93bba958"
+      },
+      "historicalFailureKept": "The e458 23 PASS / 1 timeout at 15000 ms and CHANGES_REQUESTED record remain unchanged; its results are not rewritten or transferred.",
+      "unchangedNegativeBlockSha256": "a71dcd28a8e2bd1b29d1f2e67c1dfe05cf0e9fe6437fc127ed2c091c5dd4035a",
+      "newEvidence": "Same callback/gate, close identity, UNKNOWN retention and request counts are asserted by the same test bytes in the successful 24-case run."
+    },
+    "qualificationLimits": [
+      "Original new-source provider CI, native finite/source scenarios, packaged Electron/GUI, PR delivery and merge are not certified by this local adoption review.",
+      "No real Claude/Codex, release/default activation or Stage2 action was performed.",
+      "Static lint evidence here is the focused fast configuration; no full-app type-aware lint claim is made."
+    ],
+    "reviewerActions": "Read-only published source, local source/archive/pointer/lock/installed census and existing check-log review. No source/docs/ref edits and no tests/compiler/build/install/pack/CLI/native/CI executions. Only new scratch review records written."
+  },
+  "retainedFailures": {
+    "initialPublishedProvider": "e458b7f5513a55122905205bd22bcb25977643b0",
+    "consumerTests": {
+      "passed": 23,
+      "failed": 1,
+      "case": "pending original custody stays UNKNOWN after the existing drain bound and late release",
+      "originalTimeoutMs": 15000
+    },
+    "finding": "R2-E458-01",
+    "findingResolvedFor": "45a569bd controlled app consumer only",
+    "originalFailAndReviewUnchanged": true,
+    "producerCorrectionEvidenceUrl": "https://github.com/agent-teams-ai/old-provider-implementations/blob/45a569bd70607480e650fb12be5c0cce6884f9da/docs/plans/evidence/v2-admission-lifecycle-20261119.json"
+  },
+  "finalCutReceipts": {
+    "sourceHead": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "sourceTestSha256": "789c73dcec0a1621088614b34bd1a3ef7fa1c3cd8bf24aeeec94d98e1b89931d",
+    "originalLogSha256": "22dd1e591530e3da5ad84fcff239aa8a9f2e1b333ce447bb661179590b75f227",
+    "receipts": [
+      {
+        "sibling": "admitted",
+        "cleanup": true,
+        "counts": {
+          "requests": 22,
+          "passwordReads": 22,
+          "physicalStops": 1,
+          "nativeCreations": 1,
+          "logReads": 3,
+          "promptPosts": 1,
+          "custodyHeld": false,
+          "sessionCreates": 1
+        },
+        "cut": {
+          "messageReads": 2,
+          "finalCustodyCalls": 2,
+          "finalCustodyReturns": 2,
+          "finalRequests": [
+            1,
+            1
+          ],
+          "unfinishedClosed": [
+            true,
+            true
+          ],
+          "cutFailureCount": 1,
+          "driverFailureCount": 0
+        },
+        "readCut": [
+          {
+            "stage": "after-log",
+            "reason": "transport_failure",
+            "elapsedMs": 28,
+            "deadlineExpired": false,
+            "aborted": false,
+            "finalReason": "invalid_native_read_response"
+          }
+        ],
+        "driverClose": [],
+        "hostClose": []
+      },
+      {
+        "sibling": "pending",
+        "cleanup": false,
+        "counts": {
+          "requests": 21,
+          "passwordReads": 21,
+          "physicalStops": 1,
+          "nativeCreations": 1,
+          "logReads": 3,
+          "promptPosts": 1,
+          "custodyHeld": false,
+          "sessionCreates": 1
+        },
+        "cut": {
+          "messageReads": 2,
+          "finalCustodyCalls": 2,
+          "finalCustodyReturns": 2,
+          "finalRequests": [
+            1,
+            0
+          ],
+          "unfinishedClosed": [
+            true,
+            false
+          ],
+          "cutFailureCount": 1,
+          "driverFailureCount": 1
+        },
+        "readCut": [
+          {
+            "stage": "after-log",
+            "reason": "transport_failure",
+            "elapsedMs": 24,
+            "deadlineExpired": false,
+            "aborted": false,
+            "finalReason": "native_read_cleanup_unknown"
+          }
+        ],
+        "driverClose": [
+          {
+            "stage": "protocol-dispose",
+            "outcome": "threw",
+            "trustedBinding": "e20f01765c96b4e1f1e03f535c53fed0ee57e9dd836ee9884b4eee3d44defdf2"
+          }
+        ],
+        "hostClose": [
+          {
+            "probeDigest": "e20f01765c96b4e1f1e03f535c53fed0ee57e9dd836ee9884b4eee3d44defdf2",
+            "runState": "threw",
+            "outcome": "unobserved",
+            "errorClass": "unknown",
+            "stage": "driver-close",
+            "reason": "unconfirmed",
+            "runErrorCode": null,
+            "runCauseCode": null
+          }
+        ]
+      },
+      {
+        "sibling": "abort-responsive",
+        "cleanup": true,
+        "counts": {
+          "requests": 21,
+          "passwordReads": 21,
+          "physicalStops": 1,
+          "nativeCreations": 1,
+          "logReads": 3,
+          "promptPosts": 1,
+          "custodyHeld": false,
+          "sessionCreates": 1
+        },
+        "cut": {
+          "messageReads": 2,
+          "finalCustodyCalls": 2,
+          "finalCustodyReturns": 2,
+          "finalRequests": [
+            1,
+            0
+          ],
+          "unfinishedClosed": [
+            true,
+            false
+          ],
+          "cutFailureCount": 1,
+          "driverFailureCount": 0
+        },
+        "readCut": [
+          {
+            "stage": "after-log",
+            "reason": "transport_failure",
+            "elapsedMs": 22,
+            "deadlineExpired": false,
+            "aborted": false,
+            "finalReason": "invalid_native_read_response"
+          }
+        ],
+        "driverClose": [],
+        "hostClose": [],
+        "cooperative": {
+          "responses": 1,
+          "events": [
+            "abort",
+            "custody-return",
+            "cut-failure"
+          ],
+          "returnedAtFailure": [
+            2
+          ]
+        }
+      }
+    ]
+  },
+  "rawEvidence": {
+    "path": "provider-admission-adoption-checks-20261119.tar.gz",
+    "bytes": 111057,
+    "sha256": "bf27fd35537b251be746b8e984dbe6a00ce650fce84281bdcbb533d5f1616048",
+    "entries": 36
+  },
+  "limits": [
+    "All24 app cases use the original production ModelProbe and exact installed provider with finite controlled native setup. Actual published-source native/GUI CI remains separate.",
+    "Same test789c includes unchanged15000ms pending-custody limit, original5000ms Host drain, late gate release, unknown outcome and counts.",
+    "Only implementation file dependency/integrity changes; no Session SPI or unrelated resolution changes.",
+    "Changed internal declaration is reachable through unchanged public callback alias; no claim that the whole transitive declaration graph is byte-identical.",
+    "No installed-dist edit, repack, real Claude/Codex, manual CI action, default activation, release or Stage2."
+  ],
+  "producerTerminalCI": {
+    "auditPath": "provider-45a569b-ci-terminal-audit.json",
+    "auditSha256": "aa5adbc6bb9525fda15e3ba2c185b371e43086641fa0cad847127a042758ed73",
+    "sourceHead": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "sourceRun": 44625513815,
+    "nativeRun": 44625513891,
+    "sourceChecks": {
+      "nodeVersions": [
+        "24.21.0",
+        "26.11.1"
+      ],
+      "testsEach": 601,
+      "packedConsumersEach": 2,
+      "result": "PASS"
+    },
+    "nativeJobs": 53,
+    "nativePassed": 53,
+    "runAttempt": 1,
+    "result": "PASS",
+    "qualification": "Producer source and original permitted native jobs only; resulting app CI remains required."
+  }
+}

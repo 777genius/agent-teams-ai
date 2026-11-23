@@ -118,6 +118,22 @@ declare module 'agent-teams-controller' {
     unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
   }
 
+  export type ControllerReviewFlow = 'agent_approval' | 'human_approval' | 'lead_then_human';
+
+  export interface ControllerReviewFlowSettings {
+    reviewFlow: ControllerReviewFlow;
+    reviewFlowPrompt?: string;
+  }
+
+  /** Global review-flow default shared by teams without their own override. */
+  export interface ReviewFlowDefaultsApi {
+    read(claudeDir: string): { reviewFlow: ControllerReviewFlow; reviewFlowPrompt: string };
+    write(
+      claudeDir: string,
+      settings: ControllerReviewFlowSettings
+    ): { reviewFlow: ControllerReviewFlow; reviewFlowPrompt: string };
+  }
+
   export interface ControllerKanbanReadApi {
     getKanbanState(): unknown;
     listReviewers(): string[];
@@ -129,6 +145,8 @@ declare module 'agent-teams-controller' {
     addReviewer(reviewer: string): string[];
     removeReviewer(reviewer: string): string[];
     updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
+    /** A complete override unit, or `null` to follow the global default again. */
+    setReviewFlowSettings(settings: ControllerReviewFlowSettings | null): unknown;
   }
 
   export interface ControllerTaskBoardKanbanApi
@@ -151,6 +169,11 @@ declare module 'agent-teams-controller' {
     disapproveReview(taskId: string, flags: { from: 'user' }): unknown;
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    approveAsHuman(taskId: string): unknown;
+    approveReviewFromUser(taskId: string, flags?: Record<string, unknown>): unknown;
+    requestChangesFromUser(taskId: string, flags?: Record<string, unknown>): unknown;
+    requestChangesAsHuman(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }
@@ -195,8 +218,9 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerCrossTeamApi {
-    sendCrossTeamMessage(flags: Record<string, unknown>): unknown;
-    listCrossTeamTargets(flags?: Record<string, unknown>): unknown;
+    /** Routes `toTeam` through the app, then writes the message; the result names `toTeam`. */
+    sendCrossTeamMessage(flags: Record<string, unknown>): Promise<Record<string, unknown>>;
+    listCrossTeamTargets(flags?: Record<string, unknown>): Promise<unknown>;
     getCrossTeamOutbox(): unknown;
   }
 
@@ -221,6 +245,12 @@ declare module 'agent-teams-controller' {
     runtimeHeartbeat(flags: Record<string, unknown>): Promise<unknown>;
   }
 
+  /** What the app decides about a team name; `null` when the app cannot be reached. */
+  export interface ControllerAppRoutingApi {
+    /** The team holding this team's board in a project, as the app answers. */
+    getBoardTarget(projectPath?: string): Promise<Record<string, unknown> | null>;
+  }
+
   export interface AgentBlocksApi {
     AGENT_BLOCK_TAG: string;
     AGENT_BLOCK_OPEN: string;
@@ -240,6 +270,7 @@ declare module 'agent-teams-controller' {
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
+    appRouting: ControllerAppRoutingApi;
     groupChats: {
       createGroupChat(flags: {
         from: string;
@@ -320,12 +351,15 @@ declare module 'agent-teams-controller' {
   export interface AgentTeamsMcpToolGroup {
     id: AgentTeamsMcpToolGroupId;
     teammateOperational: boolean;
+    /** Its tools work on the board of one team and take the project of a per-project team. */
+    projectBoard: boolean;
     toolNames: readonly string[];
   }
 
   export function createController(options: ControllerContextOptions): AgentTeamsController;
 
   export const agentBlocks: AgentBlocksApi;
+  export const reviewFlowDefaults: ReviewFlowDefaultsApi;
 
   export const protocols: ProtocolsApi;
 
@@ -341,6 +375,7 @@ declare module 'agent-teams-controller' {
   export const AGENT_TEAMS_RUNTIME_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_MCP_TOOL_GROUPS: readonly AgentTeamsMcpToolGroup[];
   export const AGENT_TEAMS_REGISTERED_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_BOOTSTRAP_TOOL_NAMES: readonly string[];

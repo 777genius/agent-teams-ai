@@ -75,11 +75,11 @@ function isCatalogModelFree(
   });
 }
 
-function hasChildAfterRowLimit(container: HTMLElement, rowLimit: number): boolean {
+function getFirstChildAfterRowLimit(container: HTMLElement, rowLimit: number): number | null {
   const rowTops: number[] = [];
   const children = Array.from(container.children) as HTMLElement[];
 
-  for (const child of children) {
+  for (const [index, child] of children.entries()) {
     const top = child.offsetTop;
     let rowIndex = rowTops.findIndex((rowTop) => Math.abs(rowTop - top) <= 1);
     if (rowIndex < 0) {
@@ -87,11 +87,11 @@ function hasChildAfterRowLimit(container: HTMLElement, rowLimit: number): boolea
       rowIndex = rowTops.length - 1;
     }
     if (rowIndex >= rowLimit) {
-      return true;
+      return index;
     }
   }
 
-  return false;
+  return null;
 }
 
 export const ProviderModelBadges = ({
@@ -145,9 +145,34 @@ export const ProviderModelBadges = ({
     shouldCollapse && !expanded ? visibleModels.slice(0, collapsedLimit) : visibleModels;
   const hiddenCount = shouldCollapse ? visibleModels.length - displayedModels.length : 0;
 
+  // A provider refresh can replace arrays/objects without changing badge contents.
+  // Reset row measurements only when the rendered content or row constraints change.
+  const modelLayoutKey =
+    shouldCollapse && maxCollapsedRows && maxCollapsedRows > 0
+      ? JSON.stringify([
+          providerId,
+          collapseAfter,
+          maxCollapsedRows,
+          visibleModels.length,
+          t('list.moreCount', { count: visibleModels.length }),
+          visibleModels.slice(0, collapsedBaseLimit).map((model) => {
+            const catalogModel = providerStatus?.modelCatalog?.models.find(
+              (item) => item.launchModel === model || item.id === model
+            );
+            return [
+              model,
+              getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus),
+              isRecentlyReleasedModel(catalogModel),
+              isCatalogModelFree(model, providerStatus) ? t('providerModelBadges.free') : null,
+              getAvailabilityChip(getAvailabilityStatus(model, displayModelAvailability), t),
+            ];
+          }),
+        ])
+      : '';
+
   useLayoutEffect(() => {
     setCollapsedModelLimit(null);
-  }, [collapseAfter, maxCollapsedRows, models, providerStatus]);
+  }, [modelLayoutKey]);
 
   useLayoutEffect(() => {
     if (!shouldCollapse || expanded || !maxCollapsedRows || maxCollapsedRows < 1) {
@@ -159,29 +184,34 @@ export const ProviderModelBadges = ({
       return;
     }
 
-    if (!hasChildAfterRowLimit(container, maxCollapsedRows)) {
+    const firstOverflowIndex = getFirstChildAfterRowLimit(container, maxCollapsedRows);
+    if (firstOverflowIndex === null) {
       return;
     }
 
-    const nextLimit = Math.max(0, collapsedLimit - 1);
+    // Reserve one spot for the "more" button instead of removing one model
+    // per synchronous layout commit, which can exhaust React's update-depth budget.
+    const nextLimit = Math.max(0, Math.min(collapsedLimit - 1, firstOverflowIndex - 1));
     if (nextLimit !== collapsedLimit) {
       setCollapsedModelLimit(nextLimit);
     }
-  }, [collapsedLimit, expanded, maxCollapsedRows, measureTick, shouldCollapse]);
+  }, [collapsedLimit, expanded, maxCollapsedRows, measureTick, modelLayoutKey, shouldCollapse]);
 
   useLayoutEffect(() => {
     if (!shouldCollapse || expanded || !maxCollapsedRows || typeof ResizeObserver === 'undefined') {
       return;
     }
 
-    const container = listRef.current;
-    if (!container) {
+    // Observe the available width, not the list whose own width changes as
+    // badges are trimmed; otherwise the observer can repeatedly reset the trim.
+    const sizingContainer = listRef.current?.parentElement;
+    if (!sizingContainer) {
       return;
     }
 
-    let lastWidth = container.clientWidth;
+    let lastWidth = sizingContainer.clientWidth;
     const observer = new ResizeObserver((entries) => {
-      const width = Math.round(entries[0]?.contentRect.width ?? container.clientWidth);
+      const width = Math.round(entries[0]?.contentRect.width ?? sizingContainer.clientWidth);
       if (width === lastWidth) {
         return;
       }
@@ -190,7 +220,7 @@ export const ProviderModelBadges = ({
       setMeasureTick((value) => value + 1);
     });
 
-    observer.observe(container);
+    observer.observe(sizingContainer);
     return () => observer.disconnect();
   }, [expanded, maxCollapsedRows, shouldCollapse]);
 
@@ -258,7 +288,7 @@ export const ProviderModelBadges = ({
 
   return (
     <div className="flex flex-col items-start gap-1.5">
-      <div ref={listRef} className={listClassName}>
+      <div ref={listRef} className={cn(listClassName, 'w-full')}>
         {displayedModels.map(renderModelText)}
         {shouldCollapse && !expanded ? (
           <button type="button" className={buttonClassName} onClick={() => setExpanded(true)}>

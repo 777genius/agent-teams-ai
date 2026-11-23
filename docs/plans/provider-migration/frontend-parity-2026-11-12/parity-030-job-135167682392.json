@@ -1,0 +1,2062 @@
+{
+  "schema": "original-030-retained-original-first-failure-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826474,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "job": {
+    "id": 135167682392,
+    "name": "Offline Host Desktop (linux-x64, retained-original)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-18T23:34:03Z",
+    "completed_at": "2026-11-18T23:39:00Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682392",
+    "runner_name": "GitHub Actions 1000395421"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682392,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-18 23:43:31 UTC",
+    "bytes": 304214,
+    "sha256": "6bfc76229f3578d7c4f46d51b8a1f05bd99b8bcc87b4a8ff02f03da632fc8985",
+    "computedGitBlobSha": "7437f926f8efc3f99cdfe406b73480f759badff8",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682392-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "7437f926f8efc3f99cdfe406b73480f759badff8",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 33967.96977",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 245.463574",
+    "ℹ tests 18",
+    "ℹ pass 18",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 1842.552978"
+  ],
+  "consolePass": [],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14482243208,
+    "bytes": 668052,
+    "sha256": "d3a82113a9b83ab0ebbce7302987cc3a84f1b519f3adb8c07d2ed80acc5a7a97",
+    "downloaded": true,
+    "visualInspection": false
+  },
+  "scopeLimit": "Original source030 only. Common unit counts repeat across jobs and are not summed as unique tests. No forthcoming candidate qualification.",
+  "jobLogEndpointRetired": true,
+  "artifact": {
+    "artifactId": 14482243208,
+    "phase": "GitHub-download-endpoint-permanently-retired",
+    "fileId": "file_00000000dea081f4afec53a3894bf61c",
+    "bytes": 668052,
+    "sha256": "d3a82113a9b83ab0ebbce7302987cc3a84f1b519f3adb8c07d2ed80acc5a7a97",
+    "digestMatchesOriginalUploadLog": true,
+    "zipLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-retained-original-linux-x64-14482243208.zip"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682392-final-receipt.json",
+    "bytes": 809870,
+    "sha256": "6ea58f5751fd4d59e66bc2a8d437449eaaba046c7d11e373895e0467a556f364",
+    "computedGitBlobSha": "828d68020000281354496c1e768e6121de4b75db"
+  },
+  "firstFailure": {
+    "status": "INCOMPLETE",
+    "mode": "emulated-retained-original-ui",
+    "failure": "UI read timed out: visible explicit original runtime choice; no mutation retry",
+    "failureSource": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:264:13",
+        "scripts/legacy-agent-host/desktop-retained-original-ui.ts:97:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:415:69",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "originalReadWait": [
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "owner",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 0,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "predicate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 91000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 91000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "owner",
+          "cutoff": "none",
+          "firstCheckAtMs": 91000,
+          "lastCheckAtMs": 91000,
+          "ownerStarted": 1,
+          "ownerResolved": 0,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 121000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 50000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 50000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 50000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 1,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 50000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 31000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 3,
+          "ownerResolved": 3,
+          "preparationStarted": 2,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 1000,
+          "ownerStarted": 3,
+          "ownerResolved": 3,
+          "preparationStarted": 2,
+          "preparationResolved": 1,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 31000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "stable",
+          "boundary": "preparation",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795044994014,
+          "lastCheckAtMs": 1795044994014,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 1,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045021972
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "initial",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 300,
+          "ownerResolved": 300,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 300,
+          "readsResolved": 300,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045003462,
+          "lastCheckAtMs": 1795045003562,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045033462
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045003564,
+          "lastCheckAtMs": 1795045003664,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045033564
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045003667,
+          "lastCheckAtMs": 1795045003768,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045033667
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045003769,
+          "lastCheckAtMs": 1795045003869,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045033769
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045003870,
+          "lastCheckAtMs": 1795045003971,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045033870
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004077,
+          "lastCheckAtMs": 1795045004178,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034077
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004179,
+          "lastCheckAtMs": 1795045004279,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034179
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004281,
+          "lastCheckAtMs": 1795045004381,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034281
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004382,
+          "lastCheckAtMs": 1795045004483,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034382
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004484,
+          "lastCheckAtMs": 1795045004585,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034484
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004586,
+          "lastCheckAtMs": 1795045004686,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034586
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004688,
+          "lastCheckAtMs": 1795045004788,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034688
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004789,
+          "lastCheckAtMs": 1795045004890,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034789
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 1795045004892,
+          "lastCheckAtMs": 1795045004991,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045034892
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 60000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 13500,
+          "lastCheckAtMs": 60000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "none",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 10000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 1,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 60000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1000,
+          "lastCheckAtMs": 60000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 4500,
+          "lastCheckAtMs": 60000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 60000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30001,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 2,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30001,
+          "ownerStarted": 2,
+          "ownerResolved": 2,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 2,
+          "readsResolved": 2,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 73,
+          "ownerStarted": 1,
+          "ownerResolved": 1,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 1,
+          "readsResolved": 1,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 73
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 0,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 3,
+          "ownerResolved": 3,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 3,
+          "readsResolved": 3,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "stable",
+          "boundary": "loop",
+          "cutoff": "loop",
+          "firstCheckAtMs": 30000,
+          "lastCheckAtMs": 30000,
+          "ownerStarted": 0,
+          "ownerResolved": 0,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 0,
+          "readsResolved": 0,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 30000
+        }
+      },
+      {
+        "kind": "TEST_DESKTOP_READ_WAIT",
+        "read": {
+          "phase": "other",
+          "boundary": "pause",
+          "cutoff": "loop",
+          "firstCheckAtMs": 1795045103944,
+          "lastCheckAtMs": 1795045134005,
+          "ownerStarted": 192,
+          "ownerResolved": 192,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 192,
+          "readsResolved": 192,
+          "postReadLate": 0,
+          "contextRetries": 0,
+          "deadlineMs": 1795045133944
+        }
+      }
+    ],
+    "boundary": "After one detail Launch click (the eighth trace step), the existing 30s read-only wait never observed the explicit original runtime choice. Original runtime launch, reply and Stop proof were not entered."
+  },
+  "retainedOriginalProof": {
+    "status": "INCOMPLETE",
+    "sourceKind": "TEST-legacy-archive-without-native-release",
+    "execution": "finite-legacy-launch-protocol",
+    "scope": "Explicit original runtime choice with Host selected, original account/model readiness, solo finite Launch, visible reply, original Main Stop and physical cleanup",
+    "excluded": [
+      "genuine historical donor frontend",
+      "vendor CLI/inference/auth qualification",
+      "multi-member or Windows source release",
+      "native source session adoption"
+    ],
+    "sourceEffects": [
+      {
+        "kind": "finite-retained-bootstrap",
+        "pid": 4795,
+        "event": "metadata-version"
+      }
+    ],
+    "peerAbsentAfterCleanup": true,
+    "inputsFrozen": true,
+    "steps": [
+      {
+        "action": "mouseMoved",
+        "label": "hover open original More menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "state": null
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original More menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Teams",
+        "selector": "button",
+        "state": null
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Teams",
+        "selector": "button",
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open explicit TEST legacy archive",
+        "selector": ".team-row-zebra-card[data-team-name=\"test-retained-original\"]",
+        "state": null
+      },
+      {
+        "action": "mouseClick",
+        "label": "open explicit TEST legacy archive",
+        "selector": ".team-row-zebra-card[data-team-name=\"test-retained-original\"]",
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original detail Launch once",
+        "selector": "button",
+        "state": null
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original detail Launch once",
+        "selector": "button",
+        "state": "attempted"
+      }
+    ]
+  },
+  "postFailureDialogSample": [
+    {
+      "text": "Stopped Team import held\n\nRetry the original detached import? The legacy Team will remain unchanged.\n\nClose\nRetry original import",
+      "buttons": [
+        {
+          "text": "Close",
+          "disabled": false,
+          "x": 627.9375,
+          "y": 473,
+          "width": 69.796875,
+          "height": 38
+        },
+        {
+          "text": "Retry original import",
+          "disabled": false,
+          "x": 709.734375,
+          "y": 473,
+          "width": 157.265625,
+          "height": 38
+        }
+      ]
+    }
+  ],
+  "postFailureDialogLimit": "Retained later partial dialog sample, not atomic with the timed-out call and not proof of cause or effects.",
+  "sourceBeforeAfterEqual": true,
+  "cleanup": {
+    "quitRequested": true,
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 4773,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "emulatedRuntimeCleanup": {
+      "originalPeerPids": [
+        6087,
+        6157
+      ],
+      "remaining": [],
+      "absent": true,
+      "effects": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6087,
+          "event": "launch",
+          "parentPid": 5167,
+          "sessionId": "2411056f-93a4-468e-86b5-d3a5d2092793",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6087,
+          "event": "started",
+          "sessionId": "2411056f-93a4-468e-86b5-d3a5d2092793",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6087,
+          "event": "initialized",
+          "sessionId": "2411056f-93a4-468e-86b5-d3a5d2092793",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6157,
+          "event": "launch",
+          "parentPid": 5167,
+          "command": [
+            "auth",
+            "status",
+            "--json"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6157,
+          "event": "auth-status",
+          "command": [
+            "auth",
+            "status",
+            "--json"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6157,
+          "event": "exited",
+          "code": 0
+        }
+      ]
+    }
+  },
+  "cleanupQualification": "App exit0, acknowledged failure Quit/listener absence, remaining[], TEST peers absent. capturedHostObserved=false and capturedHostAbsent=null, so no captured-Host absence PASS.",
+  "retainedApplicationDiagnostics": [
+    {
+      "v": 1,
+      "t": "2026-11-18T23:38:13.981Z",
+      "level": "error",
+      "process": "main",
+      "namespace": "IPC:openCodeRuntime",
+      "appVersion": "2.18.7",
+      "platform": "linux",
+      "message": "Error in openCodeRuntime:getStatus: Backend routing: unavailable"
+    },
+    {
+      "v": 1,
+      "t": "2026-11-18T23:38:23.998Z",
+      "level": "diagnostic",
+      "process": "main",
+      "namespace": "StoppedTeamImport",
+      "appVersion": "2.18.7",
+      "platform": "linux",
+      "message": "Stopped Team import refusal {\"source\":\"application\",\"phase\":\"prepare\",\"category\":\"held\",\"outcome\":\"not-dispatched\"}"
+    },
+    {
+      "v": 1,
+      "t": "2026-11-18T23:38:54.253Z",
+      "level": "warn",
+      "process": "main",
+      "namespace": "Feature:AgentBackendConnections",
+      "appVersion": "2.18.7",
+      "platform": "linux",
+      "message": "Captured backend discovery held {\"phase\":\"discover-bindings\",\"code\":\"unavailable\"}"
+    }
+  ],
+  "classification": "Original StoppedTeamImport prepare diagnostic reports held/not-dispatched; later dialog says import held. Captured startup discovery initially ready. Exact reason for the preparation refusal is not yet established from the bounded evidence. No deadline/retry/permission changes inferred.",
+  "sourceBeforeAfterBinding": {
+    "equal": true,
+    "entryCount": 1883,
+    "canonicalJsonSha256": "c8b73788fb7abfc21103700188b6030a95d49101dcc383ef19dc0783c6da4af9",
+    "note": "Full exact source hash arrays retained in original receipt; digest here over canonical UTF-8 JSON sorted keys, compact separators and final newline."
+  }
+}

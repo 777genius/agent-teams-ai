@@ -12,6 +12,12 @@ interface ExecuteTeamRelaunchOptions {
   isTeamAlive: boolean;
   request: TeamLaunchRequest;
   members: TeamCreateRequest['members'];
+  /**
+   * The roster belongs to a team definition that the team edit flow owns (a
+   * per-project team). Required so no caller can forget it: such a relaunch
+   * never saves the roster shown in the dialog.
+   */
+  rosterReadOnly: boolean;
   memberSettingsRelaunch?: ReplaceMembersRequest['memberSettingsRelaunch'];
   rosterMetadata?: Pick<ReplaceMembersRequest, 'command' | 'configuration'> & {
     relaunch?: TeamRelaunchContinuation;
@@ -29,6 +35,7 @@ export async function executeTeamRelaunch({
   isTeamAlive,
   request,
   members,
+  rosterReadOnly,
   memberSettingsRelaunch,
   rosterMetadata,
   validateBeforeReplace,
@@ -40,6 +47,8 @@ export async function executeTeamRelaunch({
 }: ExecuteTeamRelaunchOptions): Promise<void> {
   const { relaunch, ...persistedMetadata } = rosterMetadata ?? {};
   if (relaunch) {
+    if (rosterReadOnly)
+      throw new Error('Project team roster is managed by its definition. Reopen project launch.');
     if (!relaunch.replaceConfirmed) {
       if (!relaunch.replaceAttempted) {
         await validateBeforeReplace?.();
@@ -70,11 +79,13 @@ export async function executeTeamRelaunch({
     await stopTeam(teamName);
     await validateBeforeReplace?.();
   }
-  await replaceMembers(teamName, {
-    members,
-    ...persistedMetadata,
-    ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
-  });
-  onMembersSaved?.();
+  if (!rosterReadOnly) {
+    await replaceMembers(teamName, {
+      members,
+      ...persistedMetadata,
+      ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
+    });
+    onMembersSaved?.();
+  }
   await launchTeam(request);
 }

@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-bound-dispose-boundary-review",
+  "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "jobId": 135261468626,
+  "reviewedAt": "2026-11-19T02:50:02.102606+00:00",
+  "status": "BOUNDARY_IDENTIFIED; FUNCTIONAL_ROOT_CAUSE_NOT_ESTABLISHED",
+  "originalEvidence": {
+    "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/stage1-linux-credential-protocol-dispose-failure-42a4.json",
+    "bytes": 48662,
+    "sha256": "c81c5670dfb6e9ae9ac0d3769fe1c215f7ff430c91f4cdece7a065c6463d0466",
+    "gitBlobComputed": "8c33910012e224b540c153238cb4c7ad73709072"
+  },
+  "providerArchive": {
+    "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+    "bytes": 191145,
+    "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+    "gitBlobComputed": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3"
+  },
+  "providerMemberPins": [
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+      "bytes": 18264,
+      "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+      "gitBlobComputed": "1a0cdb0a9c7a7a390907eae2cf1903d6d104aadc"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+      "bytes": 4496,
+      "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3",
+      "gitBlobComputed": "a19af1d05b387c3588bdae7aa9cb0827bbdc1b9b"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+      "bytes": 12918,
+      "sha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+      "gitBlobComputed": "89970d821fd48f36ce771a18279c81c1104c6ca5"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+      "bytes": 18831,
+      "sha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+      "gitBlobComputed": "4fda5bea7727ecfbd6152f9a99310fdcd900c5f2"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+      "bytes": 20239,
+      "sha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+      "gitBlobComputed": "d2236cc938e7d146ca04575ff0ba94fff2958b25"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.js",
+      "bytes": 8535,
+      "sha256": "7876f55d85ed25994a124f7a6307af2d1c0033510b2ec9dda7145a015279f42c",
+      "gitBlobComputed": "3a6ebdd4d9d81e4976e7b71c73d87439a635006b"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.js",
+      "bytes": 1002,
+      "sha256": "1d5a74bfdc4a62a468c267ce1b5406cd851782ee9f9c625d0734c8cef64634ad",
+      "gitBlobComputed": "f3b38e368d1392c10a7cfd526900bf409ff6f0ab"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/provider-archive/package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+      "bytes": 739,
+      "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+      "gitBlobComputed": "990828a752f67694dfc1bc4e30e3d18feca7022a"
+    }
+  ],
+  "currentHostAndCaptureSourcePins": [
+    {
+      "repositoryPath": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "path": "/workspace/scratch/c714f5bce554/credential-diagnostics-030-candidate/candidate/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 44790,
+      "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+      "gitBlobComputed": "3022c10041dd8bceabdd9e9982ab78a305e9c167"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/source/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 23840,
+      "sha256": "8bba637526af85f6fe1df8eda76df7afb92fceca2c746c341a3440169ab21d5f",
+      "gitBlobComputed": "3d10f88783c9187bfcd273af766c03ec0e238af3"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/linux-credential-audit/source/packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "bytes": 30721,
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "gitBlobComputed": "a870a9c2c213b802ae43a3dee9a0694a67feda7e"
+    }
+  ],
+  "firstDriverFailure": {
+    "epoch": 3,
+    "event": "driver-close-failed",
+    "atMs": 52480,
+    "trustedBinding": "8021292682450a4abe865f7a1666bb6a0c1935f1dca1fc4dddff614541ceff08",
+    "stage": "protocol-dispose",
+    "outcome": "threw"
+  },
+  "sourceFindings": [
+    {
+      "path": "driver-session.js",
+      "finding": "close seals and aborts, then awaits original loop/control/snapshotted replies. The protocol-dispose stage is assigned only after that join; confirmStopped is entered only if protocol.dispose resolves."
+    },
+    {
+      "path": "v2-driver-backend.js + v2-driver-native.js",
+      "finding": "The actual V2 backend delegates dispose to native.dispose. Native dispose sets closed, aborts shutdown, latches cleanupUnknown if activeOperations>0, then throws cleanup_unknown if the latch is set. This method performs no additional native HTTP request, child adoption, child census or stop confirmation."
+    },
+    {
+      "path": "v2-driver-native.js",
+      "finding": "The latch may originate from a prior cleanup_unknown or native_read_cleanup_unknown error, a rejected per-operation wire.dispose, or an active-operation observation at close. It intentionally remains latched even if subsequent tracked work settles."
+    },
+    {
+      "path": "v2-native-cut.js",
+      "finding": "A failed after-log/after-session sibling is aborted and joined with Promise.allSettled. Any unknown-cleanup rejection wins over the first ordinary failure. The existing failure producer publishes both the original first reason and finalReason after this translation/join."
+    },
+    {
+      "path": "passive-diagnostics.ts",
+      "finding": "The exact current projector validates and retains original reason, stage, elapsedMs, deadlineExpired and aborted, but drops producer finalReason. The resulting receipt cannot distinguish the initial transport failure from a later native_read_cleanup_unknown propagated out of the cut."
+    },
+    {
+      "path": "v2-execution-transport.js",
+      "finding": "Per-operation disposal aborts controllers and joins pending/io under the existing finite bound; nonempty sets or expired join retain unknown. The new receipt contains neither the relevant set counts nor the concrete cancellation/disposal rejection reason."
+    }
+  ],
+  "observedTimeline": {
+    "epoch": 3,
+    "ordinaryTraceCapAtMs": 32685,
+    "firstFailureAtMs": 52473,
+    "driverCloseFailureAtMs": 52480,
+    "hostProbeCloseFailureAtMs": 52561,
+    "differenceReadCutToDriverMs": 7,
+    "interpretation": "The time separation is an observation; it does not establish whether unknown custody was latched by reader cancellation, late fetch ownership, a wire-dispose failure, or another active operation."
+  },
+  "functionalDecision": {
+    "runtimePatchPrepared": false,
+    "finiteFunctionalRedPrepared": false,
+    "reason": "No exact defect or omitted original join/cancel is demonstrated. A mock that invents the missing rejection or clears cleanupUnknown would demonstrate invented conditions or weaken the cleanup contract, not reproduce the observed failure.",
+    "remainingGap": [
+      "Final translated read-cut reason was available at producer but not retained in current TEST receipt.",
+      "Original disposal counter/latch cause and wire pending/io counts were not retained after the ordinary trace cap.",
+      "No original actual child-at-failure census authorizes a live-child assertion or a successful cleanup claim."
+    ]
+  },
+  "limits": [
+    "All original42a4 Stage1 metadata/jobs/log/artifact endpoints are permanently retired. No requests were repeated for this review.",
+    "The old030 source cache was only reused after byte equality with the current pinned provider archive and current42a4 source leaf pins was verified. No old030 CI endpoint was accessed.",
+    "No app/native process/build/install/test rerun or source/ref/index change occurred; no deadline, guard, timeout classification or cleanup result was changed.",
+    "An outer stop or later absence cannot retroactively qualify failed driver cleanup."
+  ]
+}

@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - '.github/workflows/host-emulated-acceptance.yml'
+      - '.github/actions/prepare-host-emulated-inputs/**'
       - 'packages/legacy-agent-host/**'
       - 'packages/task-change-ledger/**'
       - 'scripts/legacy-agent-host/**'
@@ -48,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: [team, taskboard, skills, cross-team, collaboration, extensions, import, management, codex-login, codex, claude, claude-lifecycle, opencode, review, selection, processes]
+        lane: [team, taskboard, skills, cross-team, collaboration, extensions, import, import-lifecycle, retained-original, management, codex-login, codex, claude, claude-lifecycle, opencode, review, selection, processes]
         include:
           - lane: installer
             runner: macos-15
@@ -124,13 +125,19 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
-          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-file-digest.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-process.test.ts scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts
           node --test test/scripts/installDependenciesWithRetry.test.mjs
+      - name: Verify finite legacy bootstrap ownership and refusal boundaries
+        if: matrix.lane == 'import-lifecycle'
+        run: node --test scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts
+      - name: Verify finite retained archive ownership and refusal boundaries
+        if: matrix.lane == 'retained-original'
+        run: node --test scripts/legacy-agent-host/desktop-retained-original.test.ts scripts/legacy-agent-host/desktop-retained-original-failure-diagnostics.test.ts
       - name: Verify original Runtime and Team conversation contracts
         if: matrix.lane == 'team'
         run: |
           set -euo pipefail
-          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts
+          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts
           node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs
       - name: Verify complete workspace types and original typed lint scopes
         if: matrix.lane == 'team'
@@ -148,6 +155,8 @@ jobs:
             scripts/e2e/opencode-diagnostics/platform.test.mjs \
             scripts/legacy-agent-host/desktop-backend-fixture.ts \
             scripts/legacy-agent-host/desktop-backend-observations.test.ts \
+            scripts/legacy-agent-host/desktop-file-digest.ts \
+            scripts/legacy-agent-host/desktop-file-digest.test.ts \
             scripts/legacy-agent-host/desktop-captured-app.ts \
             scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \
             scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts \
@@ -158,6 +167,7 @@ jobs:
             scripts/legacy-agent-host/desktop-native-process-ui.test.ts \
             scripts/legacy-agent-host/desktop-native-stop-fixture.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-management-process.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \
             scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts \
             scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \
@@ -166,6 +176,14 @@ jobs:
             scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
             scripts/legacy-agent-host/desktop-team-ui-smoke.ts \
             scripts/legacy-agent-host/desktop-ui-controls.ts \
+            scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-owner-routing-epoch.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-launch.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts \
+            scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts \
             scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
             scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
             scripts/legacy-agent-host/qualify-linux-process-sdk.ts \
@@ -272,6 +290,8 @@ jobs:
             packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts \
             test/features/agent-backend/claudeCloseDiagnostics.test.ts \
             scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts \
+            scripts/legacy-agent-host/desktop-metadata-witness.ts \
+            scripts/legacy-agent-host/desktop-metadata-birth-census.ts \
             test/renderer/components/cli/CliStatusVisibility.test.ts \
             tools/owned-process-broker/nativeEmulatedSourceCold.ts \
             tools/owned-process-broker/nativeEmulatedProfile.ts \
@@ -292,61 +312,10 @@ jobs:
           pnpm lint:mcp
       - name: Capture package-manager and Host inputs without vendor executables
         id: inputs
-        run: |
-          set -euo pipefail
-          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-emulated-ui-inputs-XXXXXX")"
-          mkdir "$selected_inputs/corepack" "$selected_inputs/cache"
-          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
-          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
-          COREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version
-          if [[ "$RUNNER_OS" = Linux ]]; then
-            LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
-              --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
-              > "$RUNNER_TEMP/host-emulated-linux-child-exec-selection.json"
-          fi
-          HOST_EMULATED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { createHash } from 'node:crypto';
-          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-          import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
-          import { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';
-          import { join } from 'node:path';
-          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
-          const selected = process.env.HOST_EMULATED_INPUTS;
-          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
-          assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');
-          const pnpm = join(corepack, 'dist/pnpm.js');
-          let processLauncher, linuxChildExec;
-          if (process.platform === 'linux') {
-            const launcher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
-            processLauncher = { manifestSha256: launcher.manifestSha256, binarySha256: launcher.binarySha256 };
-            const pin = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-linux-child-exec-selection.json'), 'utf8'));
-            assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
-            assert.equal(pin.manifestPath, join(selected, 'linux-child-exec/manifest.json'));
-            assert.ok(!/[\r\n]/.test(pin.manifestPath));
-            linuxChildExec = verifyLinuxChildExecInput(pin);
-            assert.deepEqual(linuxChildExec, pin);
-            assert.equal(JSON.parse(readFileSync(pin.manifestPath, 'utf8')).sourceSha256,
-              sha('packages/legacy-agent-host/native/linux-child-exec.c'));
-          }
-          const values = {
-            LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
-            LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
-            LEGACY_DESKTOP_NODE_SHA256: sha(realpathSync(process.execPath)),
-            LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha('packages/legacy-agent-host/dist/cli.js'),
-            LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
-            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
-            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
-            ...(linuxChildExec ? { LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
-              LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256 } : {}),
-          };
-          for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
-          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
-            sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
-            architecture: process.arch, nativeProviders: ['opencode-v2-management', 'opencode-v2-review', 'opencode-v2-quit-active', 'opencode-v2-quit-pending-open', 'opencode-v2-resume', 'opencode-v2-chat-attachments'].includes(process.env.HOST_EMULATED_LANE) ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
-            values, linuxChildExec, processLauncher,
-          }, null, 2), { mode: 0o600 });
-          NODE
+        uses: ./.github/actions/prepare-host-emulated-inputs
+        with:
+          source-head: ${{ env.HOST_EMULATED_SOURCE_HEAD }}
+          lane: ${{ matrix.lane }}
       - name: Capture original controlled Linux process input without a provider
         if: matrix.lane == 'processes'
         run: |
@@ -428,8 +397,8 @@ jobs:
           xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-management-ui.log"
-      - name: Exercise original collaboration, Extensions and saved-import controls through finite peers
-        if: contains(fromJSON('["collaboration", "extensions", "import"]'), matrix.lane)
+      - name: Exercise original collaboration, Extensions and import controls through finite peers
+        if: contains(fromJSON('["collaboration", "extensions", "import", "import-lifecycle", "retained-original"]'), matrix.lane)
         env:
           LEGACY_DESKTOP_PROOF_MODE: emulated-${{ matrix.lane }}-ui
         run: |
@@ -533,6 +502,7 @@ jobs:
         if: matrix.lane == 'installer'
         env:
           LEGACY_DESKTOP_PROOF_MODE: emulated-installer-ui
+          AGENT_TEAMS_DISABLE_SOURCEMAPS: '1'
         run: |
           set -euo pipefail
           node scripts/legacy-agent-host/desktop-backend-smoke.ts \
@@ -937,6 +907,8 @@ jobs:
           import { basename, dirname, join } from 'node:path';
           import { isSkillsMetadataRefusal } from './scripts/legacy-agent-host/desktop-skills-fixture.ts';
           import { assertDesktopEmulatedImportModelChecks } from './scripts/legacy-agent-host/desktop-emulated-import-ui.ts';
+          import { validateDesktopFiniteStoppedImport } from './scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts';
+          import { validateDesktopRetainedOriginal } from './scripts/legacy-agent-host/desktop-retained-original-validation.ts';
           import { readDesktopStoppedImportSeed, stoppedImportSourceBytes } from './scripts/legacy-agent-host/desktop-stopped-import-fixture.ts';
           const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
           assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
@@ -963,6 +935,8 @@ jobs:
             collaboration: ['emulated-collaboration-ui'],
             extensions: ['emulated-extensions-ui'],
             import: ['emulated-import-ui'],
+            'import-lifecycle': ['emulated-import-lifecycle-ui'],
+            'retained-original': ['emulated-retained-original-ui'],
             management: ['emulated-management-ui'],
             'codex-login': ['emulated-codex-login-ui'],
             codex: ['emulated-codex-runtime-ui'],
@@ -1009,9 +983,9 @@ jobs:
             const selection = mode === 'emulated-selection-ui' || installer, processes = mode === 'process-cold-ui';
             const lifecycle = mode === 'emulated-claude-lifecycle-ui';
             const collaboration = mode === 'emulated-collaboration-ui';
-            const extensions = mode === 'emulated-extensions-ui', savedImport = mode === 'emulated-import-ui';
+            const extensions = mode === 'emulated-extensions-ui', savedImport = mode === 'emulated-import-ui', finiteImport = mode === 'emulated-import-lifecycle-ui', retainedOriginal = mode === 'emulated-retained-original-ui';
             // Settings fixtures pin a Runtime profile, while their wrappers permit management only.
-            const runtime = runtimeProvider !== undefined || selection || lifecycle || collaboration || extensions || savedImport;
+            const runtime = runtimeProvider !== undefined || selection || lifecycle || collaboration || extensions || savedImport || finiteImport || retainedOriginal;
             const codexLogin = mode === 'emulated-codex-login-ui';
             assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,
               managementConfigured: mode === 'emulated-management-ui' || codexLogin || runtime || skills, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
@@ -1025,10 +999,20 @@ jobs:
             else assert.deepEqual(receipt.finalSentinelCensus.refusedInvocations, []);
             assert.ok(receipt.finalSentinelCensus.invocations.length > 0);
             const proof = mode === 'team-ui' ? receipt.userControlProof : taskboard ? receipt.taskBoardUiProof : skills ? receipt.skillsUiProof :
-              collaboration ? receipt.emulatedCollaborationUiProof : extensions ? receipt.nativeExtensionsUi : savedImport ? receipt.stoppedImportUiProof :
+              collaboration ? receipt.emulatedCollaborationUiProof : extensions ? receipt.nativeExtensionsUi : retainedOriginal ? receipt.retainedOriginalUiProof : finiteImport ? receipt.finiteStoppedImportUiProof : savedImport ? receipt.stoppedImportUiProof :
               codexLogin ? receipt.codexLoginUi : lifecycle ? receipt.emulatedLifecycleUiProof : mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : selection ? receipt.emulatedSelectionUiProof :
               processes ? receipt.nativeProcessUi : runtime ? receipt.emulatedRuntimeUiProof : receipt.reviewUiProof;
             assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);
+            if (retainedOriginal) {
+              const screenshots = await validateDesktopRetainedOriginal(root, receipt);
+              completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });
+              continue;
+            }
+            if (finiteImport) {
+              const screenshots = await validateDesktopFiniteStoppedImport(root, receipt);
+              completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });
+              continue;
+            }
             if (mode === 'task-board-ui') {
               const originalNotification = receipt.taskNotificationUiProof;
               const trash = receipt.taskTrashRestoreUiProof;
@@ -1730,7 +1714,7 @@ jobs:
           name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
           retention-days: 14
           if-no-files-found: warn
-          include-hidden-files: ${{ contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
+          include-hidden-files: ${{ matrix.lane == 'import-lifecycle' || matrix.lane == 'retained-original' || contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
           path: |
             ${{ runner.temp }}/host-emulated-*.json
             ${{ runner.temp }}/host-emulated-*.log
@@ -1779,6 +1763,11 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-*.png
             ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-selection.json
             ${{ runner.temp }}/TEST-desktop-backend-*/stopped-import-ui-seed.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/finite-stopped-import-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/finite-stopped-import-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/finite-legacy-peer.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/claude/projects/**/*.jsonl
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-stopped-legacy/.host-owner/**
             ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
             ${{ runner.temp }}/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**

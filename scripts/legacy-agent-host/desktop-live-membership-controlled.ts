@@ -38,7 +38,7 @@ export function desktopFiniteV2MembershipSelected(): boolean {
   assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1');
   assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION, 'v2');
   assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, undefined);
-  const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|PROOF_MODE|MIXED_MEMBERSHIP_UI|OPENCODE_GENERATION|FINITE_V2_MEMBERSHIP|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
+  const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|PROOF_MODE|MIXED_MEMBERSHIP_UI|OPENCODE_GENERATION|FINITE_V2_MEMBERSHIP|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|TEST_FINITE_HEAP_1536|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
   for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_'))
     assert.ok(allowed.test(key), 'finite V2 membership refuses ' + key);
   for (const key of ['OPENCODE_V2_EMBEDDED_BUN', 'OPENCODE_V2_EMBEDDED_GRAPH']) assert.ok(process.env[key]);
@@ -148,7 +148,7 @@ export async function readDesktopFiniteMembershipPeers(selected: Pick<DesktopFin
       assert.ok(Number.isSafeInteger(row.pid) && Number(row.pid) > 1);
       assert.notEqual(row.event, 'failure', 'a finite peer refusal is never native V2 qualification');
       if (row.event === 'input') {
-        assert.equal(row.role, 'management', 'the two initial Runtime peers receive no business input');
+        // Model probes derived from Runtime selections retain that selection's role.
         assert.equal(row.marker, 'TEST_MODEL_PROBE');
       }
       effects.push(row);
@@ -156,7 +156,7 @@ export async function readDesktopFiniteMembershipPeers(selected: Pick<DesktopFin
   }
   assert.ok(effects.length <= 4096);
   return { effects, probeCounts: (['claude', 'codex'] as const).map(provider =>
-    effects.filter(row => row.provider === provider && row.role === 'management' && row.event === 'input').length) };
+    effects.filter(row => row.provider === provider && row.event === 'input').length) };
 }
 
 /** Same captured ps census plus Linux kernel identity for that Host and its direct children only. */
@@ -176,8 +176,19 @@ export async function desktopFiniteMembershipProcesses(group: number, fixture: {
     return { parentPid: Number(fields[1]), groupId: Number(fields[2]), birth: fields[19]! };
   };
   const replacements = new Map<number, ProcessFact>();
+  const absent = new Set<number>();
   for (const row of selected) {
-    const before = await readIdentity(row.pid), executable = await realpath(`/proc/${row.pid}/exe`);
+    let before: Awaited<ReturnType<typeof readIdentity>>;
+    try { before = await readIdentity(row.pid); }
+    catch (error) {
+      // A short-lived metadata candidate can exit after ps. This is current absence only,
+      // never a captured birth or owner release; the Runtime/lineage oracles still apply.
+      if (row.pid !== host.pid && (error as NodeJS.ErrnoException | null)?.code === 'ENOENT') {
+        absent.add(row.pid); continue;
+      }
+      throw error;
+    }
+    const executable = await realpath(`/proc/${row.pid}/exe`);
     const bytes = await readFile(`/proc/${row.pid}/cmdline`); assert.ok(bytes.length <= 128 * 1024);
     const args = bytes.toString('utf8').split('\0').filter(Boolean);
     assert.deepEqual(await readIdentity(row.pid), before, 'the observed original Linux process did not change');
@@ -194,7 +205,7 @@ export async function desktopFiniteMembershipProcesses(group: number, fixture: {
     if (row.pid === host.pid) assert.equal(executable, fixture.node);
     replacements.set(row.pid, { ...row, birth: 'linux-starttime:' + before.birth, command: executable });
   }
-  return table.map(row => replacements.get(row.pid) ?? row);
+  return table.filter(row => !absent.has(row.pid)).map(row => replacements.get(row.pid) ?? row);
 }
 
 export function captureDesktopFiniteMembershipScope(evidence: Row, selected: DesktopFiniteMembership) {

@@ -92,7 +92,7 @@ function fixture() {
     definitions: () => state.definitions,
     currentClient: (key: string) => clients.get(key)?.client,
     isCurrent: () => state.current,
-    publish, enabled: true,
+    publish, enabled: true, providers: ['codex'] as ('claude' | 'codex')[],
   };
   const optionsFor = captureHostPromptSuggestions(settings);
   const allocate = vi.fn(() => { throw new Error('TEST recovery must not allocate a provider'); });
@@ -142,6 +142,7 @@ it('forwards captured preferences, original custody and the same remaining funct
   const f = fixture();
   const replacement = vi.fn();
   Object.assign(f.settings, { enabled: false, publish: replacement });
+  f.settings.providers.push('claude');
   await expect(recoverCapturedHost(f.request, f.guard, f.options)).resolves.toMatchObject({ phase: 'captured' });
   const source = f.route.mock.calls[0]?.[1];
   if (!source) throw new Error('TEST original recovery source missing');
@@ -169,6 +170,8 @@ it('forwards captured preferences, original custody and the same remaining funct
   const nextSink = nextOptions?.onNativePromptSuggestion;
   if (!oldSink || !nextSink || !nextOptions) throw new Error('TEST original prompt composition missing');
   expect(nextOptions.nativeNextPromptEnabled).toBe(true);
+  expect(nextOptions.nativeNextPromptProviders).toEqual(['codex']);
+  expect(f.firstOptions.nativeNextPromptProviders).toEqual(['codex']);
   expect(nextOptions).not.toBe(f.firstOptions);
   expect(nextSink).not.toBe(oldSink);
   oldSink(prompt, f.original.client);
@@ -181,6 +184,8 @@ it('forwards captured preferences, original custody and the same remaining funct
   oldSink(prompt, f.original.client);
   expect(f.publish).toHaveBeenCalledTimes(1);
   nextSink(prompt, candidate);
+  expect(f.publish).toHaveBeenCalledTimes(2);
+  nextSink({ ...prompt, provider: 'claude' }, candidate);
   expect(f.publish).toHaveBeenCalledTimes(2);
   expect(replacement).not.toHaveBeenCalled();
   expect(probes.created).toHaveBeenCalledTimes(2);

@@ -11,6 +11,9 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
+import { configureRetainedOpenCodeImportAuthority } from './desktop-retained-opencode-authority.ts';
+import { retainedOpenCodeLaunchExpression, RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS } from './desktop-retained-opencode-launch.ts';
+import { readRetainedOpenDiagnostic, type RetainedOpenDiagnosticBinding } from './desktop-retained-product-record-diagnostics.ts';
 import {
   exerciseRetainedDonorHistory,
   originalLinuxProcessPresent,
@@ -149,6 +152,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   let fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>> | undefined;
   let app: Awaited<ReturnType<typeof startRetainedOpenCodeApp>> | undefined;
   let passed = false, cleanup = false, failure: unknown;
+  let retainedOpenAttempt: RetainedOpenDiagnosticBinding | undefined;
   const legacyTeam = 'test-retained-opencode-v1';
   let legacySubmitted = false, legacyStopped = false;
   const cleanupErrors: unknown[] = [], steps: Record<string, unknown>[] = [];
@@ -183,12 +187,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
         models: { 'TEST-model': { name: 'TEST-model', tool_call: true,
           limit: { context: 200000, output: 2000 } } } } } };
     await writeFile(join(legacyProject, 'opencode.json'), JSON.stringify(legacyConfig), { mode: 0o600, flag: 'wx' });
-    const profile = await json(fixture.profilePath);
+    const { profile, descriptor } = configureRetainedOpenCodeImportAuthority(
+      await json(fixture.profilePath), await json(fixture.descriptorPath)
+    );
     const runtime = record(profile.runtime), member = record((runtime.members as unknown[])[0]);
     record(record(member.embedded).providerConfiguration).settings = { baseURL: `${model.url}/host/v1`, apiKey: 'TEST-LOCALHOST-ONLY' };
     const profileBytes = JSON.stringify(profile);
     await writeFile(fixture.profilePath, profileBytes, { mode: 0o600 });
-    const descriptor = await json(fixture.descriptorPath);
     record(record(record((descriptor.owners as unknown[])[0]).profile).env).LEGACY_AGENT_HOST_PROFILE_SHA256 = digest(profileBytes);
     const descriptorBytes = JSON.stringify(descriptor);
     await writeFile(fixture.descriptorPath, descriptorBytes, { mode: 0o600 });
@@ -308,8 +313,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
-    const retainedLaunch = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+    retainedOpenAttempt = { mainPid: app.electron.pid, teamName: legacyTeam, intentId: 'TEST-coexist-retained-original-once' };
+    const retainedLaunch = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-original-once',
+      request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',
+        skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);
+    retainedOpenAttempt = undefined;
     assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);
     await waitLegacyRuntime(retainedLaunch.runId);
     const legacyProcesses = await legacyChildren();
@@ -346,8 +354,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) === false || null, 'retained V1 Stop settles', 120_000);
     assert.ok(hostProcesses.every(originalLinuxProcessPresent), 'legacy Stop preserves all original V2 native children');
     await send(hostKey, 'alice', 'TEST_OWNED_V2_AFTER_STOP');
-    const relaunched = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+    retainedOpenAttempt = { mainPid: app.electron.pid, teamName: legacyTeam, intentId: 'TEST-coexist-retained-after-stop-once' };
+    const relaunched = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-after-stop-once',
+      request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',
+        skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);
+    retainedOpenAttempt = undefined;
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
     const relaunchedRuntime = await waitLegacyRuntime(relaunched.runId);
     const relaunchedMember = record(record(relaunchedRuntime.members).bob);
@@ -422,6 +433,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     proof.status = passed && cleanup ? 'PASS' : 'FAIL';
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
     proof.cleanupFailures = cleanupErrors.map(error => error instanceof Error ? error.message : String(error));
+    if (failure) {
+      proof.retainedOpenDiagnostic = { status: 'diagnostic-unknown', reason: 'unreadable-log' };
+      try { proof.retainedOpenDiagnostic = await readRetainedOpenDiagnostic({ root: fixture?.root, binding: retainedOpenAttempt }); }
+      catch { /* Diagnostic availability cannot replace original failure or cleanup. */ }
+      try { console.error('TEST retained open diagnostic', JSON.stringify(proof.retainedOpenDiagnostic)); }
+      catch { /* The original save and error precedence remain authoritative. */ }
+    }
     await save();
   }
   if (failure && cleanupErrors.length) throw new AggregateError([failure, ...cleanupErrors], 'coexistence and cleanup failed');
@@ -520,7 +538,7 @@ async function runDonorHistory(input: {
   proof.inputs = donor; proof.root = root;
   const { desktopAgentSentinelSource, desktopShellEnvironmentProbeSource } = await import('./desktop-backend-fixture.ts');
   const sentinelLog = join(root, 'sentinel-invocations.ndjson');
-  const sentinel = desktopAgentSentinelSource(String(node.path), sentinelLog, String(runtime.cliVersion), 'metadata');
+  const sentinel = desktopAgentSentinelSource(String(node.path), sentinelLog, String(runtime.cliVersion), 'donor-saved-only');
   for (const directory of ['bin', 'claude/local/node_modules/.bin'])
     for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel', 'terminal-daemon'])
       await writeFile(join(root, directory, name), sentinel, { mode: 0o700, flag: 'wx' });

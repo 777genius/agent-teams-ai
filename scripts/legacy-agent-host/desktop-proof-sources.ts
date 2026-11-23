@@ -1,3 +1,4 @@
+import { desktopProofUiSources } from './desktop-proof-ui-sources.ts';
 import { desktopProofSupplementarySources, desktopProofProcessSources } from './desktop-proof-supplementary-sources.ts';
 import { desktopProofIntegratedSources } from './desktop-proof-integrated-sources.ts';
 import { desktopProofManagementSources } from './desktop-proof-management-sources.ts';
@@ -34,14 +35,7 @@ const desktopProofBaseSources = [
 
   ...desktopProofProcessSources,
 
-  'scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts',
-  'scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts',
-  'scripts/legacy-agent-host/desktop-mixed-native-fixture.ts',
-  'scripts/legacy-agent-host/desktop-mixed-dialog-settings.ts',
-  'scripts/legacy-agent-host/desktop-mixed-provider-settings.ts',
-  'scripts/legacy-agent-host/desktop-mixed-create-launch-ui-smoke.ts',
-  'packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts',
-  'packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts',
+  ...desktopProofUiSources,
   'scripts/legacy-agent-host/desktop-source-freeze.ts',
   'src/shared/utils/createdTeamReadiness.ts',
   'src/shared/utils/teamProvisioningContext.ts',
@@ -138,6 +132,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-host-routing-proof.ts',
   'scripts/legacy-agent-host/desktop-readback-fixture.ts',
   'scripts/legacy-agent-host/desktop-ui-controls.ts',
+  'scripts/legacy-agent-host/desktop-ui-read-observation.ts',
   'scripts/legacy-agent-host/desktop-reply-visibility.ts',
   'packages/legacy-agent-host/src/team/TeamProductChanges.ts',
   'packages/legacy-agent-host/src/team/TeamOwner.ts',
@@ -596,6 +591,8 @@ const desktopProofBaseSources = [
   'packages/legacy-agent-host/src/output.ts',
   'packages/legacy-agent-host/src/process/ControllerProcessPolicy.ts',
   'packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts',
+  'packages/legacy-agent-host/src/process/digestOpenExecutable.ts',
+  'packages/legacy-agent-host/tests/registered-process-executable-digest.test.ts',
   'packages/legacy-agent-host/src/process/TeamProcessCommands.ts',
   'packages/legacy-agent-host/src/process/createTeamProcessMethods.ts',
   'packages/legacy-agent-host/src/process/projectProcessViews.ts',
@@ -640,6 +637,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-cross-team-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-team-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-module-load-observation.ts',
   'scripts/legacy-agent-host/reconcile-desktop-native-stop.ts',
   'scripts/legacy-agent-host/stage-candidate.ts',
   'scripts/legacy-agent-host/stage-node.ts',

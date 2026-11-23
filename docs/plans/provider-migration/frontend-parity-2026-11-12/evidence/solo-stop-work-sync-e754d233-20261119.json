@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 1,
+  "kind": "main-native-stop-work-sync-functional-candidate",
+  "baseHead": "e754d23317ae5c8d12f48b2ece39a91167e40481",
+  "scope": "Uncommitted candidate on the named base; final source pins below. Root alone publishes the final combined tree. Runtime results remain separate and do not constitute original GUI or cross-platform acceptance.",
+  "productionFiles": 18,
+  "testFiles": 5,
+  "sourcePins": [
+    {
+      "path": "src/main/services/team/provisioning/LegacyNativeStopCensus.ts",
+      "kind": "production",
+      "sha256": "8ceb7586141a6952194eab9af420ac82b939463df34c78575ff7f4ea7ba83fa2",
+      "bytes": 9630,
+      "lines": 271,
+      "preImportSortSha256": "4366b1dbf6ff65e56615262640f1c3e9ad6f3c9d0fab4ec45b70720207f406f8",
+      "sameAsRootInitialPin": false
+    },
+    {
+      "path": "src/main/services/team/provisioning/LegacyNativeStopRelease.ts",
+      "kind": "production",
+      "sha256": "895c978a3b4c9c02932d2ca7f4af1ecc47bcd20646ee27e85f1bc2e04c2dccc4",
+      "bytes": 10061,
+      "lines": 282,
+      "preImportSortSha256": "895c978a3b4c9c02932d2ca7f4af1ecc47bcd20646ee27e85f1bc2e04c2dccc4",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/main/services/team/provisioning/LegacyNativeStopPublication.ts",
+      "kind": "production",
+      "sha256": "41585a0719858e6291c7aeed24990474025cc06ad9f18520b9b02c519d58c227",
+      "bytes": 6640,
+      "lines": 198,
+      "preImportSortSha256": "41585a0719858e6291c7aeed24990474025cc06ad9f18520b9b02c519d58c227",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts",
+      "kind": "production",
+      "sha256": "8d05f7e2c0b181969ffcdf7d9d0c3a5b26fe0458255f4ac30f836240eb77672c",
+      "bytes": 13976,
+      "lines": 404,
+      "preImportSortSha256": "8d05f7e2c0b181969ffcdf7d9d0c3a5b26fe0458255f4ac30f836240eb77672c",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts",
+      "kind": "production",
+      "sha256": "766375e989bf556aab1e89f9cc6efe2f29e3ce22c4bf20afbff809712ae72d45",
+      "bytes": 13891,
+      "lines": 336,
+      "preImportSortSha256": "766375e989bf556aab1e89f9cc6efe2f29e3ce22c4bf20afbff809712ae72d45",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts",
+      "kind": "production",
+      "sha256": "93ba91477b730113bb4b008623c72734a3d431815031aa9f5f05469831ea0096",
+      "bytes": 16829,
+      "lines": 298,
+      "preImportSortSha256": "93ba91477b730113bb4b008623c72734a3d431815031aa9f5f05469831ea0096",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+      "kind": "production",
+      "sha256": "d55fcd71e30cb2fc040511c8cf9b0351714b70a658d7a539668c8ca927bbedf7",
+      "bytes": 16279,
+      "lines": 379,
+      "preImportSortSha256": "ffc75e9b78926ae31384eebd9157cec4883079c59b88867ad8f86adeeda9e1f1",
+      "sameAsRootInitialPin": false
+    },
+    {
+      "path": "src/main/services/team/TeamProvisioningService.ts",
+      "kind": "production",
+      "sha256": "1b8002babc4b10869e77ae1e365ddf6793b58bb765b9ad4fd36effdc54d6f9f9",
+      "bytes": 15323,
+      "lines": 358,
+      "preImportSortSha256": "1f693f98f9d6ba670c7e28ee090cee2af77aef965083dc065b39cdc1dc89ffd6",
+      "sameAsRootInitialPin": false
+    },
+    {
+      "path": "src/main/index.ts",
+      "kind": "production",
+      "sha256": "494b52a7640bd82bf6ba96a65ed359ea9f1089b96039324caf0cb2b54c5865cb",
+      "bytes": 140669,
+      "lines": 3637,
+      "preImportSortSha256": null,
+      "sameAsRootInitialPin": null
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedImportContext.ts",
+      "kind": "production",
+      "sha256": "86ea3a309d715b49b2ecba30eec29ae7cafd8379c6e538cf3075b654428f2b5f",
+      "bytes": 4220,
+      "lines": 103,
+      "preImportSortSha256": "1f000ae8afe54087c3b61ed5d28402261aa9c8f7d294c3ddf3b2aea3d26a4e65",
+      "sameAsRootInitialPin": false
+    },
+    {
+      "path": "src/main/composition/legacySourceWriteAdmission.ts",
+      "kind": "production",
+      "sha256": "ddef074be57d9a6f402b3554bdbfbc9892990ab03397633dcb589ffbe4e0620c",
+      "bytes": 8212,
+      "lines": 194,
+      "preImportSortSha256": "ddef074be57d9a6f402b3554bdbfbc9892990ab03397633dcb589ffbe4e0620c",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts",
+      "kind": "production",
+      "sha256": "c7a03e5589974719032560245c796a31c7db6ceb8dbe8a958e4a8a00fe2230dd",
+      "bytes": 8704,
+      "lines": 234,
+      "preImportSortSha256": "c7a03e5589974719032560245c796a31c7db6ceb8dbe8a958e4a8a00fe2230dd",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
+      "kind": "production",
+      "sha256": "71f733afef3e070f1ab82b5cd53558a4ded860934f8874615573c3008949e789",
+      "bytes": 5304,
+      "lines": 141,
+      "preImportSortSha256": "71f733afef3e070f1ab82b5cd53558a4ded860934f8874615573c3008949e789",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts",
+      "kind": "production",
+      "sha256": "1600c4fa8e2f0ae95ca476a679b00ece4363bec44bbb3e5a3287c4bec5f42e04",
+      "bytes": 31393,
+      "lines": 800,
+      "preImportSortSha256": "1600c4fa8e2f0ae95ca476a679b00ece4363bec44bbb3e5a3287c4bec5f42e04",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts",
+      "kind": "production",
+      "sha256": "5096297fac20f9629b971f9a900398d3a766bdc90f808781856aeebe05291a6c",
+      "bytes": 25799,
+      "lines": 792,
+      "preImportSortSha256": "5096297fac20f9629b971f9a900398d3a766bdc90f808781856aeebe05291a6c",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts",
+      "kind": "production",
+      "sha256": "76e958295c0448a597e33bfc51dfef4dc87009d53f168b9898b79da9454cdff5",
+      "bytes": 3018,
+      "lines": 89,
+      "preImportSortSha256": "76e958295c0448a597e33bfc51dfef4dc87009d53f168b9898b79da9454cdff5",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts",
+      "kind": "production",
+      "sha256": "578b847c91e11bdd2c0e0e82ac733fc650656c59558ac18b5d7c20691faa1154",
+      "bytes": 2036,
+      "lines": 67,
+      "preImportSortSha256": "578b847c91e11bdd2c0e0e82ac733fc650656c59558ac18b5d7c20691faa1154",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts",
+      "kind": "production",
+      "sha256": "feec8810cba2abb42ba942e7a633944811040b0ee0d806d6be8b95dc9868a302",
+      "bytes": 9001,
+      "lines": 275,
+      "preImportSortSha256": "feec8810cba2abb42ba942e7a633944811040b0ee0d806d6be8b95dc9868a302",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "test/main/services/team/LegacyNativeStopRelease.test.ts",
+      "kind": "test",
+      "sha256": "14e5172860878248f58876e4d9f4a4794e9aa54c4651aa1aa1bff0e4ed8c6bfb",
+      "bytes": 22059,
+      "lines": 580,
+      "preImportSortSha256": "14e5172860878248f58876e4d9f4a4794e9aa54c4651aa1aa1bff0e4ed8c6bfb",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "test/main/services/team/LegacyNativeStopOrdering.test.ts",
+      "kind": "test",
+      "sha256": "a4faef4de562c741da43d3d4cff46f04426f3953b79185d511b7707abf3ce33e",
+      "bytes": 19217,
+      "lines": 517,
+      "preImportSortSha256": "9362a7b7be99c075c298420292b5649d7ead0795d5069a23ce1d9a6f47243f47",
+      "sameAsRootInitialPin": false
+    },
+    {
+      "path": "test/main/services/team/LegacyNativeStopWorkSyncCensus.test.ts",
+      "kind": "test",
+      "sha256": "2af80baa61c485b4883e4ea17759a8d9cd0c0a3a63092ecb077c46e8f4ecfb11",
+      "bytes": 13483,
+      "lines": 461,
+      "preImportSortSha256": "2af80baa61c485b4883e4ea17759a8d9cd0c0a3a63092ecb077c46e8f4ecfb11",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts",
+      "kind": "test",
+      "sha256": "6ca048c08a8863bc65d5dc8bd50b9607d43a6a391216cb8a504fc1436f717760",
+      "bytes": 13253,
+      "lines": 394,
+      "preImportSortSha256": "6ca048c08a8863bc65d5dc8bd50b9607d43a6a391216cb8a504fc1436f717760",
+      "sameAsRootInitialPin": true
+    },
+    {
+      "path": "test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts",
+      "kind": "test",
+      "sha256": "57ad4c68d9dbb219054a1b4c7af31b1fb15eae7f1b9081f14b36101ef1307ebd",
+      "bytes": 306418,
+      "lines": 9003,
+      "preImportSortSha256": "57ad4c68d9dbb219054a1b4c7af31b1fb15eae7f1b9081f14b36101ef1307ebd",
+      "sameAsRootInitialPin": true
+    }
+  ],
+  "runtimeGates": [
+    {
+      "id": "stop-work-sync-focused",
+      "status": "PASS",
+      "passed": 153,
+      "unselected": 0,
+      "exitCode": 0,
+      "durationSeconds": 38.73,
+      "log": "/workspace/scratch/de9d4631e21c/solo-stop-work-sync-focused-e754d233.log",
+      "logSha256": "c3804f8cfe52c52b85f79e59c8515b9d287c491772e4842b6350fb724eaa791c",
+      "logText": "\n RUN  v3.2.6 /workspace/scratch/1d5114b8d2ee/agent-teams-ai\n\n \u2713 test/features/member-work-sync/main/MemberWorkSyncEventQueue.test.ts (27 tests) 282ms\n \u2713 src/main/services/team/provisioning/__tests__/TeamProvisioningStopFlow.test.ts (19 tests) 67ms\n \u2713 test/features/member-work-sync/main/MemberWorkSyncTeamChangeRouter.test.ts (15 tests) 15ms\n \u2713 test/main/legacySourceWriteAdmission.test.ts (11 tests) 41ms\n \u2713 test/main/services/team/LegacyNativeStopRelease.test.ts (38 tests) 326ms\nstderr | test/main/services/team/LegacyNativeStopOrdering.test.ts\n[ClaudeDoctorProbe] node-pty not available - doctor fallback disabled\n\nstderr | test/main/services/team/LegacyNativeStopOrdering.test.ts\n[Feature:tmux-installer:pty] node-pty not available - interactive tmux installer terminal input disabled\n\n \u2713 test/main/services/team/LegacyNativeStopOrdering.test.ts (6 tests) 331ms\n \u2713 test/main/services/team/LegacyNativeStopWorkSyncCensus.test.ts (37 tests) 244ms\n\n Test Files  7 passed (7)\n      Tests  153 passed (153)\n   Start at  13:21:36\n   Duration  38.73s (transform 16.78s, setup 2.07s, collect 28.94s, tests 1.31s, environment 2.46s, prepare 1.08s)\n\n"
+    },
+    {
+      "id": "feature-ingress-subset",
+      "status": "PASS",
+      "passed": 16,
+      "unselected": 72,
+      "exitCode": 0,
+      "durationSeconds": 8.92,
+      "log": "/workspace/scratch/de9d4631e21c/solo-stop-feature-subset-e754d233.log",
+      "logSha256": "05ae22bf380f222e4154ff47d0b47379fed26825750c59b7cee578655786e7c4",
+      "logText": "\n RUN  v3.2.6 /workspace/scratch/1d5114b8d2ee/agent-teams-ai\n\n \u2713 test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts (88 tests | 72 skipped) 983ms\n   \u2713 createMemberWorkSyncFeature composition > cancels and drains admitted scheduled delivery before purging the team  510ms\n\n Test Files  1 passed (1)\n      Tests  16 passed | 72 skipped (88)\n   Start at  13:27:30\n   Duration  8.92s (transform 3.83s, setup 73ms, collect 6.64s, tests 983ms, environment 502ms, prepare 110ms)\n\n"
+    }
+  ],
+  "finalOrderingFixtureGate": {
+    "status": "PASS",
+    "passed": 6,
+    "unselected": 0,
+    "exitCode": 0,
+    "durationSeconds": 22.77,
+    "testsMilliseconds": 178,
+    "log": "/workspace/scratch/de9d4631e21c/solo-stop-ordering-typed-fixture-e754d233.log",
+    "logSha256": "a4a4f8cad3f85aa28e7c77d0d44947b009e8fb4009a4656633b5ee8470e33145",
+    "scope": "Only six existing ordering cases rerun after test-contract typing correction and root import-only sorts. These six were also included in the earlier153 batch; do not add them as new independent coverage.",
+    "logText": "\n RUN  v3.2.6 /workspace/scratch/1d5114b8d2ee/agent-teams-ai\n\nstderr | test/main/services/team/LegacyNativeStopOrdering.test.ts\n[ClaudeDoctorProbe] node-pty not available - doctor fallback disabled\n\nstderr | test/main/services/team/LegacyNativeStopOrdering.test.ts\n[Feature:tmux-installer:pty] node-pty not available - interactive tmux installer terminal input disabled\n\n \u2713 test/main/services/team/LegacyNativeStopOrdering.test.ts (6 tests) 178ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  13:31:09\n   Duration  22.77s (transform 13.10s, setup 579ms, collect 21.22s, tests 178ms, environment 0ms, prepare 123ms)\n\n"
+  },
+  "postRuntimeImportSort": {
+    "owner": "root",
+    "review": "Import-only ordering in the exact four paths; no behavior rerun is claimed.",
+    "paths": [
+      "src/main/services/team/provisioning/LegacyNativeStopCensus.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+      "src/main/services/team/TeamProvisioningService.ts",
+      "src/main/composition/createDesktopStoppedImportContext.ts"
+    ],
+    "preSortPinsReceipt": "/workspace/scratch/de9d4631e21c/stop-work-sync-types-e754d233/initial-config-result.json",
+    "receiptSha256": "709c2d9611e069f68810d856a356b424b041f12266af92c3b08f5d17977c4cb9",
+    "initialCompilerOutcome": "Stopped at scoped-config ambient type resolution before checking source; not a compiler PASS."
+  },
+  "testTypingCorrection": {
+    "path": "test/main/services/team/LegacyNativeStopOrdering.test.ts",
+    "reason": "Use the existing TeamProvisioningStopRun contract with anthropicApiKeyHelper:null; expose the real public Stop method through Pick<TeamProvisioningService,stopTeam> without a private-field intersection.",
+    "productionUnchanged": true
+  },
+  "independentReview": {
+    "agent": "pr_graph",
+    "production": "PASS",
+    "newMemberSpawnRegression": "PASS",
+    "typedOrderingFixture": "PASS /root; actual required anthropicApiKeyHelper:null and public stopTeam typing; no changed runtime actions or assertions."
+  },
+  "actualArchivedCensus": {
+    "status": "PASS_CONTENT_ONLY",
+    "report": "/workspace/scratch/de9d4631e21c/solo-stop-actual42-census-e754d233/classification.json",
+    "reportSha256": "6b8a6a7e6e576fdb28e1e0074606495a5baff0009f34cba93d33a2afb950bafa",
+    "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "originalE2eStatus": "INCOMPLETE",
+    "limitations": "Fresh extraction validates original canonical bytes only. Original directory identities, native process custody and release authority were not reconstructed; original nativeRelease remains absent.",
+    "originalReport": {
+      "schemaVersion": 1,
+      "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "candidateBase": "e754d23317ae5c8d12f48b2ece39a91167e40481",
+      "classifierSha256": "8d05f7e2c0b181969ffcdf7d9d0c3a5b26fe0458255f4ac30f836240eb77672c",
+      "nodeVersion": "24.21.0",
+      "status": "PASS_CONTENT_ONLY",
+      "scope": "The unchanged original archived bytes satisfy the candidate strict WorkSync census in fresh TEST directories. Extraction does not recreate native authority, original directory identities, or live custody.",
+      "originalE2eStatus": "INCOMPLETE",
+      "originalNativeReleasePresent": false,
+      "qualifiedCanonicalFiles": [
+        ".member-work-sync/report-token-secret.json",
+        ".member-work-sync/sqlite-fallback-replica.json",
+        "members/team-lead/.member-work-sync/journal.jsonl"
+      ],
+      "nativeDirectoryIdentityCount": 5,
+      "archiveManifestSha256": "9e4a6d5b52bf192d8206ce2fa99400557afb714a60be4c83a77219b73eb4e8e3",
+      "noNativeExecution": true,
+      "noOriginalSourceMutation": true,
+      "noSecretOrTokenValuesEmitted": true
+    }
+  },
+  "sourceRosterCoverage": {
+    "src/main/services/team/provisioning/LegacyNativeStopCensus.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/services/team/provisioning/LegacyNativeStopRelease.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/services/team/provisioning/LegacyNativeStopPublication.ts": [
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts": [
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts": [
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts": [
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/services/team/TeamProvisioningService.ts": [
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/index.ts": [
+      "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/composition/createDesktopStoppedImportContext.ts": [
+      "scripts/legacy-agent-host/desktop-proof-sources.ts"
+    ],
+    "src/main/composition/legacySourceWriteAdmission.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ],
+    "src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+    ]
+  },
+  "compilerVerification": {
+    "status": "PASS_SCOPED_NOT_FULL_WORKSPACE",
+    "result": {
+      "kind": "scoped-native-typescript-check",
+      "sourceHead": "e754d23317ae5c8d12f48b2ece39a91167e40481",
+      "sourceQualification": "Exact entrypoint and transitive source closure; working changes not yet committed. Not full workspace typecheck.",
+      "startedAt": "2026-11-19T11:32:49.506327+00:00",
+      "command": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "--singleThreaded",
+        "-p",
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/stop-work-sync-types-e754d233/tsconfig.json"
+      ],
+      "compilerProfile": {
+        "GOMEMLIMIT": "512MiB",
+        "GOGC": "50",
+        "GOMAXPROCS": "2"
+      },
+      "project": {
+        "extends": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/tsconfig.json",
+        "include": [
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/adapters/input/registerMemberWorkSyncIpc.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/index.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/composition/createDesktopStoppedImportContext.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/composition/legacySourceWriteAdmission.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/http/index.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/TeamProvisioningService.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/LegacyNativeStopCensus.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/LegacyNativeStopPublication.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/LegacyNativeStopRelease.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/TeamProvisioningStopFlow.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/services/team/provisioning/__tests__/TeamProvisioningStopFlowPortsFactory.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/startMemberWorkSyncFeature.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/main/utils/shutdownStep.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/features/agent-backend/legacyStoppedImportSource.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/features/agent-backend/stoppedImportDiagnostics.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/features/member-work-sync/main/reviewerClarification.safe-e2e.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/LegacyNativeStopOrdering.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/LegacyNativeStopRelease.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/LegacyNativeStopWorkSyncCensus.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncClaudeStopHook.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncCodex.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncOpenCode.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncRecovery.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncRecoveryClaude.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncRecoveryCodexTeammate.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncRecoveryOpenCode.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/MemberWorkSyncRecoveryOpenCodeLifecycle.live.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/services/team/memberWorkSyncLiveHarness.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/test/main/startMemberWorkSyncFeature.test.ts",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/src/**/*.d.ts"
+        ],
+        "exclude": [
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/dist",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/dist-electron"
+        ],
+        "files": [
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/react/index.d.ts"
+        ]
+      },
+      "exitCode": 0,
+      "error": null,
+      "elapsedSeconds": 19.811,
+      "sourceBefore": {
+        "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts": "0ea6bd4d3b7da6815fa0c5a37c36d79aff1f4b974b073b7046059e0387ccbbc8",
+        "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts": "e240d795dad3c9cb1b9dc5ac2d1e92fdc4353aa8f357b67193aaf48a3194a89f",
+        "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts": "299e5064f21681e3a3b80ba7088b41c6cdc2bf25c47875713d7a192113784909",
+        "src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts": "feec8810cba2abb42ba942e7a633944811040b0ee0d806d6be8b95dc9868a302",
+        "src/features/member-work-sync/main/adapters/input/registerMemberWorkSyncIpc.ts": "1b8c4d86772a97b3b6124d0045b084dc01b5d9078656957f814ea8e9ca8d5e83",
+        "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts": "1600c4fa8e2f0ae95ca476a679b00ece4363bec44bbb3e5a3287c4bec5f42e04",
+        "src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts": "c7a03e5589974719032560245c796a31c7db6ceb8dbe8a958e4a8a00fe2230dd",
+        "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts": "71f733afef3e070f1ab82b5cd53558a4ded860934f8874615573c3008949e789",
+        "src/features/member-work-sync/main/index.ts": "c84ca0c0373ca302d1d7bf8c157a82a34dbf30a8115d41dcdc0e3daf42d49e70",
+        "src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts": "5096297fac20f9629b971f9a900398d3a766bdc90f808781856aeebe05291a6c",
+        "src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts": "578b847c91e11bdd2c0e0e82ac733fc650656c59558ac18b5d7c20691faa1154",
+        "src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts": "76e958295c0448a597e33bfc51dfef4dc87009d53f168b9898b79da9454cdff5",
+        "src/main/composition/createDesktopStoppedImportContext.ts": "86ea3a309d715b49b2ecba30eec29ae7cafd8379c6e538cf3075b654428f2b5f",
+        "src/main/composition/legacySourceWriteAdmission.ts": "ddef074be57d9a6f402b3554bdbfbc9892990ab03397633dcb589ffbe4e0620c",
+        "src/main/http/index.ts": "de1c4bf9c50b77c50be0c24a83a49ceed27bd41ed377af7cace9a15e877e2309",
+        "src/main/services/team/TeamProvisioningService.ts": "1b8002babc4b10869e77ae1e365ddf6793b58bb765b9ad4fd36effdc54d6f9f9",
+        "src/main/services/team/provisioning/LegacyNativeStopCensus.ts": "8ceb7586141a6952194eab9af420ac82b939463df34c78575ff7f4ea7ba83fa2",
+        "src/main/services/team/provisioning/LegacyNativeStopPublication.ts": "41585a0719858e6291c7aeed24990474025cc06ad9f18520b9b02c519d58c227",
+        "src/main/services/team/provisioning/LegacyNativeStopRelease.ts": "895c978a3b4c9c02932d2ca7f4af1ecc47bcd20646ee27e85f1bc2e04c2dccc4",
+        "src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts": "8d05f7e2c0b181969ffcdf7d9d0c3a5b26fe0458255f4ac30f836240eb77672c",
+        "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts": "d55fcd71e30cb2fc040511c8cf9b0351714b70a658d7a539668c8ca927bbedf7",
+        "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts": "766375e989bf556aab1e89f9cc6efe2f29e3ce22c4bf20afbff809712ae72d45",
+        "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts": "93ba91477b730113bb4b008623c72734a3d431815031aa9f5f05469831ea0096",
+        "src/main/services/team/provisioning/__tests__/TeamProvisioningStopFlowPortsFactory.test.ts": "d4516d2157192b85f10d7e73fb793d03fee6c79501a5511c31945790b2456604",
+        "src/main/startMemberWorkSyncFeature.ts": "61c93ba1c72e71bd171041ee0a4dc76da1ec1ede0c234adf90ccf2373c6f8f5a",
+        "src/main/utils/shutdownStep.ts": "255b713c340949b5ccd9699ebf9fcab78cd87b3cbcaef592a56d935a2d6ba1f8",
+        "test/features/agent-backend/legacyStoppedImportSource.test.ts": "4d817603ddedef0e6452d0b2c4205fff7c0aed974be6ab0392f7d86c55b35414",
+        "test/features/agent-backend/stoppedImportDiagnostics.test.ts": "2d5cb3fd9fd18bb332d602bd80cbeb1a17abcaef69ac90378f9956ad0f0fa8b1",
+        "test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts": "57ad4c68d9dbb219054a1b4c7af31b1fb15eae7f1b9081f14b36101ef1307ebd",
+        "test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts": "6ca048c08a8863bc65d5dc8bd50b9607d43a6a391216cb8a504fc1436f717760",
+        "test/features/member-work-sync/main/reviewerClarification.safe-e2e.test.ts": "2a52471a89050039e5218f247db3283d9ae7a575a8db9ac8f82c08b4dff24dce",
+        "test/main/services/team/LegacyNativeStopOrdering.test.ts": "a4faef4de562c741da43d3d4cff46f04426f3953b79185d511b7707abf3ce33e",
+        "test/main/services/team/LegacyNativeStopRelease.test.ts": "14e5172860878248f58876e4d9f4a4794e9aa54c4651aa1aa1bff0e4ed8c6bfb",
+        "test/main/services/team/LegacyNativeStopWorkSyncCensus.test.ts": "2af80baa61c485b4883e4ea17759a8d9cd0c0a3a63092ecb077c46e8f4ecfb11",
+        "test/main/services/team/MemberWorkSyncClaudeStopHook.live.test.ts": "b1e789c6cbbc6816014c61b6a040a68f5931e718f95e09a5ffda3dfeebfbf80b",
+        "test/main/services/team/MemberWorkSyncCodex.live.test.ts": "19c72c37c640dfa84a4d67227bfcf379c84aad9fbe169f56fbc2279d2b9b3731",
+        "test/main/services/team/MemberWorkSyncOpenCode.live.test.ts": "1e5fa7198fae67622f2b5b1ef62fb4422b3a87f26bff4f2928e5a016867a28e3",
+        "test/main/services/team/MemberWorkSyncRecovery.live.test.ts": "d8327f9fa7dddf00078ef96c7b8259d49c7565060c1d9376eedd3c28cbe9ed9d",
+        "test/main/services/team/MemberWorkSyncRecoveryClaude.live.test.ts": "f429f100722cb60ece6e32529a8ecea4280c847c4f502180bbd8e2d9d2d942b6",
+        "test/main/services/team/MemberWorkSyncRecoveryCodexTeammate.live.test.ts": "f80683ea5b2866481022c1a222a9f2bdfe82865dfe05e934db8aa36c4c47f04b",
+        "test/main/services/team/MemberWorkSyncRecoveryOpenCode.live.test.ts": "1160c25f14e760824d0baf9d72a04a75d4c9cb2ad897c78e33ca29352747578e",
+        "test/main/services/team/MemberWorkSyncRecoveryOpenCodeLifecycle.live.test.ts": "f434ac9263eb894bb88b4828d8165cb6a9ac84df333f5b36b89b37cbba54511c",
+        "test/main/services/team/memberWorkSyncLiveHarness.ts": "59791ac87d55b031d63fe4ec49dfd0beda4b3e4a2775f866008f26ebca3c557e",
+        "test/main/startMemberWorkSyncFeature.test.ts": "8a56cb8cb4c5982bd00d0cc54ddee82cb8898c22b1317c080446d9df23e59686"
+      },
+      "sourceAfter": {
+        "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts": "0ea6bd4d3b7da6815fa0c5a37c36d79aff1f4b974b073b7046059e0387ccbbc8",
+        "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts": "e240d795dad3c9cb1b9dc5ac2d1e92fdc4353aa8f357b67193aaf48a3194a89f",
+        "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts": "299e5064f21681e3a3b80ba7088b41c6cdc2bf25c47875713d7a192113784909",
+        "src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts": "feec8810cba2abb42ba942e7a633944811040b0ee0d806d6be8b95dc9868a302",
+        "src/features/member-work-sync/main/adapters/input/registerMemberWorkSyncIpc.ts": "1b8c4d86772a97b3b6124d0045b084dc01b5d9078656957f814ea8e9ca8d5e83",
+        "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts": "1600c4fa8e2f0ae95ca476a679b00ece4363bec44bbb3e5a3287c4bec5f42e04",
+        "src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts": "c7a03e5589974719032560245c796a31c7db6ceb8dbe8a958e4a8a00fe2230dd",
+        "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts": "71f733afef3e070f1ab82b5cd53558a4ded860934f8874615573c3008949e789",
+        "src/features/member-work-sync/main/index.ts": "c84ca0c0373ca302d1d7bf8c157a82a34dbf30a8115d41dcdc0e3daf42d49e70",
+        "src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts": "5096297fac20f9629b971f9a900398d3a766bdc90f808781856aeebe05291a6c",
+        "src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts": "578b847c91e11bdd2c0e0e82ac733fc650656c59558ac18b5d7c20691faa1154",
+        "src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts": "76e958295c0448a597e33bfc51dfef4dc87009d53f168b9898b79da9454cdff5",
+        "src/main/composition/createDesktopStoppedImportContext.ts": "86ea3a309d715b49b2ecba30eec29ae7cafd8379c6e538cf3075b654428f2b5f",
+        "src/main/composition/legacySourceWriteAdmission.ts": "ddef074be57d9a6f402b3554bdbfbc9892990ab03397633dcb589ffbe4e0620c",
+        "src/main/http/index.ts": "de1c4bf9c50b77c50be0c24a83a49ceed27bd41ed377af7cace9a15e877e2309",
+        "src/main/services/team/TeamProvisioningService.ts": "1b8002babc4b10869e77ae1e365ddf6793b58bb765b9ad4fd36effdc54d6f9f9",
+        "src/main/services/team/provisioning/LegacyNativeStopCensus.ts": "8ceb7586141a6952194eab9af420ac82b939463df34c78575ff7f4ea7ba83fa2",
+        "src/main/services/team/provisioning/LegacyNativeStopPublication.ts": "41585a0719858e6291c7aeed24990474025cc06ad9f18520b9b02c519d58c227",
+        "src/main/services/team/provisioning/LegacyNativeStopRelease.ts": "895c978a3b4c9c02932d2ca7f4af1ecc47bcd20646ee27e85f1bc2e04c2dccc4",
+        "src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts": "8d05f7e2c0b181969ffcdf7d9d0c3a5b26fe0458255f4ac30f836240eb77672c",
+        "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts": "d55fcd71e30cb2fc040511c8cf9b0351714b70a658d7a539668c8ca927bbedf7",
+        "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts": "766375e989bf556aab1e89f9cc6efe2f29e3ce22c4bf20afbff809712ae72d45",
+        "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts": "93ba91477b730113bb4b008623c72734a3d431815031aa9f5f05469831ea0096",
+        "src/main/services/team/provisioning/__tests__/TeamProvisioningStopFlowPortsFactory.test.ts": "d4516d2157192b85f10d7e73fb793d03fee6c79501a5511c31945790b2456604",
+        "src/main/startMemberWorkSyncFeature.ts": "61c93ba1c72e71bd171041ee0a4dc76da1ec1ede0c234adf90ccf2373c6f8f5a",
+        "src/main/utils/shutdownStep.ts": "255b713c340949b5ccd9699ebf9fcab78cd87b3cbcaef592a56d935a2d6ba1f8",
+        "test/features/agent-backend/legacyStoppedImportSource.test.ts": "4d817603ddedef0e6452d0b2c4205fff7c0aed974be6ab0392f7d86c55b35414",
+        "test/features/agent-backend/stoppedImportDiagnostics.test.ts": "2d5cb3fd9fd18bb332d602bd80cbeb1a17abcaef69ac90378f9956ad0f0fa8b1",
+        "test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts": "57ad4c68d9dbb219054a1b4c7af31b1fb15eae7f1b9081f14b36101ef1307ebd",
+        "test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts": "6ca048c08a8863bc65d5dc8bd50b9607d43a6a391216cb8a504fc1436f717760",
+        "test/features/member-work-sync/main/reviewerClarification.safe-e2e.test.ts": "2a52471a89050039e5218f247db3283d9ae7a575a8db9ac8f82c08b4dff24dce",
+        "test/main/services/team/LegacyNativeStopOrdering.test.ts": "a4faef4de562c741da43d3d4cff46f04426f3953b79185d511b7707abf3ce33e",
+        "test/main/services/team/LegacyNativeStopRelease.test.ts": "14e5172860878248f58876e4d9f4a4794e9aa54c4651aa1aa1bff0e4ed8c6bfb",
+        "test/main/services/team/LegacyNativeStopWorkSyncCensus.test.ts": "2af80baa61c485b4883e4ea17759a8d9cd0c0a3a63092ecb077c46e8f4ecfb11",
+        "test/main/services/team/MemberWorkSyncClaudeStopHook.live.test.ts": "b1e789c6cbbc6816014c61b6a040a68f5931e718f95e09a5ffda3dfeebfbf80b",
+        "test/main/services/team/MemberWorkSyncCodex.live.test.ts": "19c72c37c640dfa84a4d67227bfcf379c84aad9fbe169f56fbc2279d2b9b3731",
+        "test/main/services/team/MemberWorkSyncOpenCode.live.test.ts": "1e5fa7198fae67622f2b5b1ef62fb4422b3a87f26bff4f2928e5a016867a28e3",
+        "test/main/services/team/MemberWorkSyncRecovery.live.test.ts": "d8327f9fa7dddf00078ef96c7b8259d49c7565060c1d9376eedd3c28cbe9ed9d",
+        "test/main/services/team/MemberWorkSyncRecoveryClaude.live.test.ts": "f429f100722cb60ece6e32529a8ecea4280c847c4f502180bbd8e2d9d2d942b6",
+        "test/main/services/team/MemberWorkSyncRecoveryCodexTeammate.live.test.ts": "f80683ea5b2866481022c1a222a9f2bdfe82865dfe05e934db8aa36c4c47f04b",
+        "test/main/services/team/MemberWorkSyncRecoveryOpenCode.live.test.ts": "1160c25f14e760824d0baf9d72a04a75d4c9cb2ad897c78e33ca29352747578e",
+        "test/main/services/team/MemberWorkSyncRecoveryOpenCodeLifecycle.live.test.ts": "f434ac9263eb894bb88b4828d8165cb6a9ac84df333f5b36b89b37cbba54511c",
+        "test/main/services/team/memberWorkSyncLiveHarness.ts": "59791ac87d55b031d63fe4ec49dfd0beda4b3e4a2775f866008f26ebca3c557e",
+        "test/main/startMemberWorkSyncFeature.test.ts": "8a56cb8cb4c5982bd00d0cc54ddee82cb8898c22b1317c080446d9df23e59686"
+      },
+      "sourceUnchanged": true,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "scopeNote": "44 source/test entrypoints and their real transitive closure; original strict app options. Explicit actual React declaration restores the ambient dependency present in full app. Giant Main index constructor wiring reviewed separately. No generated declaration/stub or source rewrite."
+  },
+  "implementationNotes": [
+    "Capture original process/run/session/root and WorkSync ingress synchronously under original Main Stop lock.",
+    "Stop original native processes once in that attempt, then drain already admitted operations, routing, due queued work, physical tails and audit outside team/identity/publication locks.",
+    "Reacquire original team lock and recheck Stop generation, same run/child/session/root, feature identity and durable publication epoch.",
+    "Canonical inactive WorkSync product history is content-qualified, while obligations/aliases/foreign identities/unknown artifacts refuse; content alone grants no native custody.",
+    "Qualified release revokes captured WorkSync source writes; ordinary ProductTask writes retain their separate owner.",
+    "Same-run explicit Stop retry reuses only raw original custody witness; its new attempt generation is checked separately.",
+    "Original delayed runAt, retry and drop behavior remains unchanged; new ingress closures own only their own tokens."
+  ],
+  "nextAcceptance": "Published exact source, then original import-lifecycle and retained GUI. Other platform qualification remains open.",
+  "fastLint": {
+    "status": "PASS",
+    "owner": "root",
+    "durationSeconds": 5.039,
+    "changedProductionFiles": 21,
+    "scope": "Root-reported final fast lint over combined changed production files after four import-order fixes. Final compiler receipt remains separate."
+  },
+  "sourceRosterAllProductionCovered": true,
+  "fastLintVerification": {
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--max-old-space-size=384",
+      "node_modules/eslint/bin/eslint.js",
+      "--config",
+      "eslint.fast.config.js",
+      "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts",
+      "src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts",
+      "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts",
+      "src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts",
+      "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
+      "src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts",
+      "src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts",
+      "src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts",
+      "src/main/composition/createDesktopStoppedImportContext.ts",
+      "src/main/composition/legacySourceWriteAdmission.ts",
+      "src/main/index.ts",
+      "src/main/services/team/TeamProvisioningService.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopCensus.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopPublication.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopRelease.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 5.039,
+    "scope": "changed production sources only",
+    "files": [
+      "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts",
+      "src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts",
+      "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts",
+      "src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission.ts",
+      "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
+      "src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts",
+      "src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal.ts",
+      "src/features/member-work-sync/main/infrastructure/memberWorkSyncQueueScope.ts",
+      "src/main/composition/createDesktopStoppedImportContext.ts",
+      "src/main/composition/legacySourceWriteAdmission.ts",
+      "src/main/index.ts",
+      "src/main/services/team/TeamProvisioningService.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopCensus.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopPublication.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopRelease.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts",
+      "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts",
+      "src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus.ts"
+    ]
+  }
+}

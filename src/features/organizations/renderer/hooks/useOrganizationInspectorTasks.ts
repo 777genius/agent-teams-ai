@@ -8,29 +8,48 @@ import {
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { OrganizationAgentTaskDto } from '../../contracts';
-import type { TeamTask, TeamTaskWithKanban } from '@shared/types';
+import { groupTasksByOwner, scopeInspectorTasks } from './organizationInspectorTaskScope';
 
-export interface OrganizationInspectorTaskBindings {
-  contextId: string;
-  tasks: TeamTaskWithKanban[];
+import type { OrganizationAgentTaskDto } from '../../contracts';
+import type { InspectorScopedTask } from './organizationInspectorTaskScope';
+import type { TeamTask } from '@shared/types';
+
+/** What one task card needs; every action runs against the team that owns the task. */
+export interface OrganizationInspectorTaskCardBindings {
   taskMap: Map<string, TeamTask>;
-  memberColorMap: Map<string, string>;
-  kanbanTaskStateById:
-    | NonNullable<ReturnType<typeof selectTeamDataForName>>['kanbanState']['tasks']
-    | undefined;
-  openTaskDetail: (task: TeamTask) => void;
-  openTaskSummaryDetail: (task: OrganizationAgentTaskDto) => void;
+  onTaskClick: (task: TeamTask) => void;
   onStartTask: (taskId: string) => void;
   onCompleteTask: (taskId: string) => void;
   onCancelTask: (taskId: string) => void;
-  onApproveTask: (taskId: string) => void;
+  onApprove: (taskId: string) => void;
   onRequestReview: (taskId: string) => void;
   onRequestChanges: (taskId: string) => void;
   onMoveBackToDone: (taskId: string) => void;
 }
 
-export function useOrganizationInspectorTasks(teamName: string): OrganizationInspectorTaskBindings {
+export interface OrganizationInspectorTaskBindings {
+  contextId: string;
+  tasks: InspectorScopedTask[];
+  memberColorMap: Map<string, string>;
+  kanbanTaskStateById:
+    | NonNullable<ReturnType<typeof selectTeamDataForName>>['kanbanState']['tasks']
+    | undefined;
+  openTaskSummaryDetail: (task: OrganizationAgentTaskDto) => void;
+  /**
+   * Bindings of the cards of one owning team. The owner is passed explicitly: task
+   * ids are only unique inside a team, so an id alone can name a task in two copies.
+   */
+  cardBindingsFor: (ownerTeamName: string) => OrganizationInspectorTaskCardBindings;
+}
+
+/**
+ * `executionTeamNames` are the project copies a per-project team keeps its tasks in.
+ * Task actions run against the copy that owns the task, not the team the node shows.
+ */
+export function useOrganizationInspectorTasks(
+  teamName: string,
+  executionTeamNames: readonly string[] = []
+): OrganizationInspectorTaskBindings {
   const {
     contextId,
     globalTasks,
@@ -55,115 +74,87 @@ export function useOrganizationInspectorTasks(teamName: string): OrganizationIns
     }))
   );
 
-  const tasks = useMemo<TeamTaskWithKanban[]>(() => {
-    if (!teamName) return [];
-    if (teamData?.tasks) return teamData.tasks;
-    return globalTasks.filter((task) => task.teamName === teamName);
-  }, [globalTasks, teamData?.tasks, teamName]);
+  // A stable key: the caller builds the list on every render.
+  const executionKey = executionTeamNames.join('\n');
+  const tasks = useMemo<InspectorScopedTask[]>(
+    () =>
+      scopeInspectorTasks({
+        teamName,
+        executionTeamNames: executionKey ? executionKey.split('\n') : [],
+        teamDataTasks: teamData?.tasks,
+        globalTasks,
+      }),
+    [executionKey, globalTasks, teamData?.tasks, teamName]
+  );
 
-  const taskMap = useMemo<Map<string, TeamTask>>(() => {
-    const map = new Map<string, TeamTask>();
-    for (const task of tasks) {
-      map.set(task.id, task);
-    }
-    return map;
-  }, [tasks]);
-
+  const taskMapsByOwner = useMemo(() => groupTasksByOwner(tasks, teamName), [tasks, teamName]);
   const memberColorMap = useMemo(() => buildMemberColorMap(members), [members]);
 
-  const openTaskById = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      openGlobalTaskDetail(teamName, taskId);
+  const openTaskSummaryDetail = useCallback(
+    (task: OrganizationAgentTaskDto): void => {
+      const owner = task.executionTeamName ?? teamName;
+      if (owner) openGlobalTaskDetail(owner, task.id);
     },
     [openGlobalTaskDetail, teamName]
   );
 
-  const openTaskDetail = useCallback(
-    (task: TeamTask): void => {
-      openTaskById(task.id);
+  const cardBindingsFor = useCallback(
+    (owner: string): OrganizationInspectorTaskCardBindings => {
+      const swallow = (): undefined => undefined;
+      return {
+        taskMap: taskMapsByOwner.get(owner) ?? new Map<string, TeamTask>(),
+        onTaskClick: (task) => {
+          if (owner) openGlobalTaskDetail(owner, task.id);
+        },
+        onStartTask: (taskId) => {
+          if (owner) void startTaskByUser(owner, taskId).catch(swallow);
+        },
+        onCompleteTask: (taskId) => {
+          if (owner) void updateTaskStatus(owner, taskId, 'completed').catch(swallow);
+        },
+        onCancelTask: (taskId) => {
+          if (owner) void updateTaskStatus(owner, taskId, 'pending').catch(swallow);
+        },
+        onApprove: (taskId) => {
+          if (owner) {
+            void updateKanban(owner, taskId, { op: 'set_column', column: 'approved' }).catch(swallow);
+          }
+        },
+        onRequestReview: (taskId) => {
+          if (owner) void requestReview(owner, taskId).catch(swallow);
+        },
+        onRequestChanges: (taskId) => {
+          if (owner) openGlobalTaskDetail(owner, taskId);
+        },
+        onMoveBackToDone: (taskId) => {
+          if (!owner) return;
+          void (async () => {
+            try {
+              await updateKanban(owner, taskId, { op: 'remove' });
+              await updateTaskStatus(owner, taskId, 'completed');
+            } catch {
+              // Store state surfaces the error.
+            }
+          })();
+        },
+      };
     },
-    [openTaskById]
-  );
-
-  const openTaskSummaryDetail = useCallback(
-    (task: OrganizationAgentTaskDto): void => {
-      openTaskById(task.id);
-    },
-    [openTaskById]
-  );
-
-  const onStartTask = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      void startTaskByUser(teamName, taskId).catch(() => undefined);
-    },
-    [startTaskByUser, teamName]
-  );
-
-  const onCompleteTask = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      void updateTaskStatus(teamName, taskId, 'completed').catch(() => undefined);
-    },
-    [teamName, updateTaskStatus]
-  );
-
-  const onCancelTask = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      void updateTaskStatus(teamName, taskId, 'pending').catch(() => undefined);
-    },
-    [teamName, updateTaskStatus]
-  );
-
-  const onApproveTask = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      void updateKanban(teamName, taskId, { op: 'set_column', column: 'approved' }).catch(
-        () => undefined
-      );
-    },
-    [teamName, updateKanban]
-  );
-
-  const onRequestReview = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      void requestReview(teamName, taskId).catch(() => undefined);
-    },
-    [requestReview, teamName]
-  );
-
-  const onMoveBackToDone = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      void (async () => {
-        try {
-          await updateKanban(teamName, taskId, { op: 'remove' });
-          await updateTaskStatus(teamName, taskId, 'completed');
-        } catch {
-          // Store state surfaces the error.
-        }
-      })();
-    },
-    [teamName, updateKanban, updateTaskStatus]
+    [
+      openGlobalTaskDetail,
+      requestReview,
+      startTaskByUser,
+      taskMapsByOwner,
+      updateKanban,
+      updateTaskStatus,
+    ]
   );
 
   return {
     contextId,
     tasks,
-    taskMap,
     memberColorMap,
     kanbanTaskStateById: teamData?.kanbanState.tasks,
-    openTaskDetail,
     openTaskSummaryDetail,
-    onStartTask,
-    onCompleteTask,
-    onCancelTask,
-    onApproveTask,
-    onRequestReview,
-    onRequestChanges: openTaskById,
-    onMoveBackToDone,
+    cardBindingsFor,
   };
 }

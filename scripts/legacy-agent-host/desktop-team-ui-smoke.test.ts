@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -18,6 +19,8 @@ import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';
 import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
+import { readNativeProviderArtifact } from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+import { readDesktopFiniteMembershipPeers } from './desktop-live-membership-controlled.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -84,6 +87,40 @@ test('the original remaining startup deadline rejects a pending snapshot without
   await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
   await rejected; assert.equal(f.discovery(), 0);
   held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+});
+
+test('startup diagnostics retain the final call and completed observation after the original 24 history cap', { timeout: 5000 }, async () => {
+  let rejectLast!: (reason: unknown) => void;
+  const failed = { promise: new Promise<Record<string, unknown>>((_, reject) => { rejectLast = reject; }),
+    resolve(_value: Record<string, unknown>) { assert.fail('the final TEST CDP call must reject'); } };
+  const reads = [...Array.from({ length: 25 }, () => deferred<Record<string, unknown>>()), failed];
+  const f = fixture(reads), pending = f.start(4500);
+  const original = Object.assign(new Error('CDP command timed out: Runtime.evaluate'), { private: 'TEST-private-error-payload' });
+  const rejected = assert.rejects(pending, error => error === original, 'retain the original rejection object');
+  for (let index = 0; index < 25; index++) {
+    await f.acknowledgments[index]!.promise;
+    reads[index]!.resolve({ ...ready, mainReady: index === 24, uiDidInit: false, storePresent: false, rootChildCount: 0 });
+  }
+  await f.acknowledgments[25]!.promise;
+  const diagnostic = (f.evidence.rendererDiagnostics as { startup: { appReadiness: {
+    observations: Record<string, unknown>[]; contextRetries: number; last: Record<string, unknown>;
+  } } }).startup.appReadiness;
+  assert.equal(diagnostic.observations.length, 24);
+  assert.ok(diagnostic.observations.every(value => value.mainReady === false));
+  assert.equal(diagnostic.last.attempt, 26); assert.equal(diagnostic.last.phase, 'evaluate');
+  assert.equal(diagnostic.last.completedAt, null); assert.equal(diagnostic.last.failure, null);
+  const observation = diagnostic.last.observation as Record<string, unknown>;
+  assert.equal(observation.attempt, 25); assert.equal(observation.mainReady, true);
+  rejectLast(original); await rejected;
+  assert.equal(diagnostic.last.failure, 'cdp-timeout'); assert.equal(diagnostic.last.phase, 'evaluate');
+  const call = diagnostic.last.callAt as { monotonicMs: number; epochMs: number };
+  const failure = diagnostic.last.failedAt as typeof call;
+  assert.ok(Number.isSafeInteger(call.monotonicMs) && Number.isSafeInteger(call.epochMs));
+  assert.ok(failure.monotonicMs >= call.monotonicMs); assert.ok(Number.isSafeInteger(failure.epochMs));
+  assert.equal(diagnostic.contextRetries, 0); assert.equal(f.observations(), 26); assert.equal(f.discovery(), 0);
+  assert.deepEqual(f.commands, ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+  assert.equal(JSON.stringify(f.evidence).includes('TEST-private-error-payload'), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(diagnostic.last)) < 2048, 'one fixed closed record beyond the unchanged history');
 });
 
 
@@ -209,6 +246,71 @@ test('throwing diagnostic stdout preserves the retained row and the original sta
   await refused;
   assert.equal(f.discovery(), 0);
   assert.equal(diagnostic.viewLoads.events.length, 1);
+});
+
+test('module diagnostics retain late pending, successful and failed loads without adding CDP commands', async () => {
+  const read = deferred<Record<string, unknown>>(), f = fixture([read]);
+  read.resolve(ready); await f.start(1000);
+  const originalCommands = [...f.commands];
+  const emit = (method: string, value: unknown) => f.listeners.get(method)!(value);
+  const request = (requestId: string, url: string) => emit('Network.requestWillBeSent', {
+    requestId, type: 'Script', frameId: 'TEST-frame', request: { url },
+  });
+  for (let index = 0; index < 300; index++) {
+    request(String(index), `http://localhost:5173/initial-${index}.ts`);
+    emit('Network.loadingFinished', { requestId: String(index) });
+  }
+  request('late-pending', 'http://localhost:5173/TeamDetailView.tsx?private=query#secret');
+  request('late-failed', 'http://localhost:5173/late-chunk.js');
+  emit('Network.responseReceived', { requestId: 'late-failed', response: { status: 503, headers: { private: 'secret' } } });
+  emit('Network.loadingFailed', { requestId: 'late-failed', errorText: 'net::ERR_INSUFFICIENT_RESOURCES' });
+  request('late-success', 'http://localhost:5173/shell.ts');
+  emit('Network.responseReceived', { requestId: 'late-success', response: { status: 200 } });
+  emit('Network.loadingFinished', { requestId: 'late-success' });
+  const diagnostics = f.evidence.rendererDiagnostics as { events: Record<string, unknown>[];
+    moduleLoads: { limit: number; overflow: boolean; loads: Record<string, unknown>[] } };
+  assert.equal(diagnostics.moduleLoads.loads.length, 256);
+  assert.equal(diagnostics.moduleLoads.overflow, true);
+  const [pending, failed, succeeded] = diagnostics.moduleLoads.loads.slice(-3);
+  assert.equal(pending!.path, '/TeamDetailView.tsx'); assert.equal(pending!.outcome, 'pending');
+  assert.equal(pending!.finishedMs, null);
+  assert.equal(failed!.outcome, 'failed'); assert.equal(failed!.status, 503);
+  assert.equal(failed!.failure, 'net::ERR_INSUFFICIENT_RESOURCES');
+  assert.equal(succeeded!.outcome, 'finished'); assert.equal(succeeded!.status, 200);
+  assert.ok(Number(succeeded!.finishedMs) >= Number(succeeded!.startedMs));
+  assert.equal(diagnostics.events.at(-1)!.event, 'Network.loadingFailed', 'existing failure subscription remains active');
+  assert.deepEqual(f.commands, originalCommands); assert.equal(f.observations(), 1);
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('secret'), false);
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('private'), false);
+});
+
+test('module diagnostics ignore foreign frames, non-script data and unretained completions', async () => {
+  const read = deferred<Record<string, unknown>>(), f = fixture([read]);
+  read.resolve(ready); await f.start(1000);
+  const emit = (method: string, value: unknown) => f.listeners.get(method)!(value);
+  const base = { requestId: 'TEST-private-id', frameId: 'TEST-frame', type: 'Script',
+    request: { url: 'http://localhost:5173/local.js' } };
+  for (const value of [null, [], {}, { ...base, frameId: 'foreign' }, { ...base, type: 'Fetch' },
+    { ...base, requestId: 'x'.repeat(129) }, { ...base, request: { url: 'https://external.example/private' } },
+    { ...base, request: { url: 'data:text/javascript,private' } }, { ...base, request: { url: 'invalid' } }])
+    assert.doesNotThrow(() => emit('Network.requestWillBeSent', value));
+  emit('Network.loadingFinished', { requestId: 'unobserved' });
+  const diagnostics = f.evidence.rendererDiagnostics as { events: Record<string, unknown>[];
+    moduleLoads: { loads: Record<string, unknown>[] } };
+  assert.equal(diagnostics.moduleLoads.loads.length, 0);
+  emit('Network.requestWillBeSent', base);
+  emit('Network.requestWillBeSent', base);
+  assert.equal(diagnostics.moduleLoads.loads.length, 1, 'duplicate events do not invent new loads');
+  emit('Network.responseReceived', { requestId: base.requestId, response: { status: Infinity } });
+  emit('Network.loadingFailed', { requestId: base.requestId, errorText: 'PRIVATE request payload' });
+  assert.equal(diagnostics.moduleLoads.loads[0]!.status, null);
+  assert.equal(diagnostics.moduleLoads.loads[0]!.failure, 'unclassified');
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('PRIVATE'), false);
+  emit('Network.requestWillBeSent', base);
+  emit('Network.loadingFailed', { requestId: base.requestId, errorText: 'net::ERR_' + 'A'.repeat(1_000_000) });
+  assert.equal(diagnostics.moduleLoads.loads[1]!.failure, 'unclassified');
+  assert.equal(diagnostics.events.at(-1)!.errorText, 'unclassified');
+  assert.ok(JSON.stringify(diagnostics).length < 64 * 1024, 'both passive observers retain bounded error text');
 });
 
 function readinessRuntime(expression: string, href: string, origin: string): Promise<Record<string, unknown>> {
@@ -1359,6 +1461,209 @@ for (const [change, replacement] of [
   });
 }
 
+function originalLoginActionabilityFixture() {
+  const selector = '[role="dialog"] button', text = 'Connect ChatGPT', child = {};
+  const state = { top: 400, wheels: 0, presses: 0, releases: 0, targetReads: 0, ownerCurrent: true };
+  const refusal = new Error('TEST original login renderer no longer owned');
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  const reads: { kind: 'scroll' | 'target'; available: boolean }[] = [];
+  const hooks: {
+    beforeRead?(kind: 'scroll' | 'target'): void;
+    afterRead?(kind: 'scroll' | 'target'): void;
+    afterInput?(type: string): void;
+    afterOwnerCheck?(): void;
+  } = {};
+  const scroller = { parentElement: null, scrollHeight: 1200, clientHeight: 698,
+    getBoundingClientRect: () => ({ x: 210, top: 130, bottom: 828, width: 980 }) };
+  const rectangle = () => ({ x: 992, y: state.top, top: state.top, bottom: state.top + 32, width: 150, height: 32 });
+  const dialog = { getBoundingClientRect: () => ({ x: 210, y: 45, width: 980, height: 810 }), getAnimations: () => [] };
+  const control = { parentElement: scroller, textContent: text, tagName: 'BUTTON',
+    contains: (node: unknown) => node === child, matches: () => false, getAttribute: () => null,
+    getBoundingClientRect: rectangle, closest: () => dialog, getAnimations: () => [] };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const kind = expression.includes('const wheelTop=') ? 'scroll' : 'target';
+      if (kind === 'target') state.targetReads++;
+      hooks.beforeRead?.(kind);
+      const value = runInNewContext(expression, {
+        innerWidth: 1400, innerHeight: 900,
+        getComputedStyle: () => ({ overflowY: 'auto', pointerEvents: 'auto' }),
+        document: { documentElement: scroller, fonts: { status: 'loaded' },
+          querySelectorAll(actual: string) {
+            assert.ok(actual === selector || actual === selector + ':enabled'); return [control];
+          },
+          elementFromPoint(x: number, y: number) {
+            return x >= 992 && x < 1142 && y >= 130 && y < 828 &&
+              y >= state.top && y < state.top + 32 ? child : null;
+          } },
+      }) as Record<string, unknown>;
+      reads.push({ kind, available: kind === 'scroll' ? value.visible === true : value.unavailableTarget !== true });
+      hooks.afterRead?.(kind);
+      return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params });
+      if (method !== 'Input.dispatchMouseEvent') return {};
+      const type = String(params.type);
+      if (type === 'mouseWheel') { state.wheels++; state.top = 400; }
+      if (type === 'mousePressed') state.presses++;
+      if (type === 'mouseReleased') state.releases++;
+      hooks.afterInput?.(type);
+      return {};
+    },
+  }, { assertOwnedRenderer() {
+    if (!state.ownerCurrent) throw refusal;
+    hooks.afterOwnerCheck?.();
+  }, step(value) { steps.push(value); } });
+  const click = () => Reflect.apply(ui.click, undefined, [selector, 'start one original browser login', text,
+    undefined, { scrollBeforeClick: { label: 'show original login action', selector: selector + ':enabled',
+      requireCenterHit: true } }]) as Promise<void>;
+  return { ui, click, selector, text, state, refusal, hooks, commands, steps, reads };
+}
+
+test('original prepared login click repairs first-visible then offscreen geometry before one press', { timeout: 5000 }, async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const f = originalLoginActionabilityFixture();
+  try {
+    // The failed original flow completed this zero-wheel read before starting its click.
+    await f.ui.scrollTo(f.selector + ':enabled', 'show original login action', f.text, 12, { requireCenterHit: true });
+    f.hooks.beforeRead = kind => {
+      if (kind !== 'target') return;
+      if (f.state.targetReads === 1) f.state.top = 884.5;
+      else if (f.state.wheels === 0) t.mock.timers.setTime(31_000);
+    };
+    await f.click().catch(error => {
+      assert.equal(f.state.presses, 0, 'unavailable geometry never dispatches the original login');
+      throw new Error('Original login stayed offscreen; physical presses=' + f.state.presses, { cause: error });
+    });
+    assert.equal(f.reads[0]?.available, true, 'the original scroll really observed a visible control');
+    assert.equal(f.reads.find(read => read.kind === 'target')?.available, false,
+      'the first actual click lookup observes the later offscreen control');
+    assert.equal(f.state.wheels, 1, 'one physical wheel repairs the observed geometry');
+    assert.equal(f.state.presses, 1);
+    assert.equal(f.state.releases, 1);
+    assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.type),
+      ['mouseWheel', 'mouseMoved', 'mousePressed', 'mouseReleased']);
+  } finally { t.mock.timers.reset(); }
+});
+
+for (const boundary of ['scroll-read', 'wheel', 'owner', 'wheel-transport'] as const) {
+  test(`original prepared login click refuses ${boundary} settlement before another lookup or input`, { timeout: 5000 }, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const f = originalLoginActionabilityFixture();
+    const transportFailure = new Error('Execution context was destroyed during original wheel');
+    const afterUnavailable = boundary === 'owner' || boundary === 'wheel-transport';
+    if (boundary === 'scroll-read') f.hooks.afterRead = kind => {
+      if (kind === 'scroll') t.mock.timers.setTime(31_000);
+    };
+    else {
+      if (afterUnavailable) f.hooks.beforeRead = kind => {
+        if (kind === 'target' && f.state.targetReads === 1) f.state.top = 884.5;
+      };
+      else f.state.top = 884.5;
+      f.hooks.afterInput = type => {
+        if (type !== 'mouseWheel') return;
+        if (boundary === 'owner') f.state.ownerCurrent = false;
+        else if (boundary === 'wheel-transport') throw transportFailure;
+        else t.mock.timers.setTime(31_000);
+      };
+    }
+    try {
+      await assert.rejects(f.click(), error => {
+        if (boundary === 'owner') assert.equal(error, f.refusal);
+        else if (boundary === 'wheel-transport') assert.equal(error, transportFailure);
+        else assert.match(String(error), /UI read timed out/);
+        return true;
+      });
+      assert.equal(f.state.targetReads, afterUnavailable ? 1 : 0,
+        'a late preparation cannot perform one extra target lookup');
+      assert.equal(f.state.wheels, boundary === 'scroll-read' ? 0 : 1);
+      assert.equal(f.reads.length, afterUnavailable ? 3 : 1, 'no fresh preparation after an original refusal');
+      assert.equal(f.state.presses, 0);
+      assert.equal(f.state.releases, 0);
+    } finally { t.mock.timers.reset(); }
+  });
+}
+
+for (const cutoff of ['owner', 'deadline'] as const) {
+  test(`original prepared login click rechecks ${cutoff} after final preparation fulfills`, { timeout: 5000 }, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const f = originalLoginActionabilityFixture();
+    let finalPreparationRead = false, checksAfterRead = 0;
+    f.hooks.afterRead = kind => {
+      if (kind === 'scroll' && f.state.targetReads === 4) finalPreparationRead = true;
+    };
+    f.hooks.afterOwnerCheck = () => {
+      // The scroll read and its caller have settled; revoke between fulfillment and final lookup.
+      if (finalPreparationRead && ++checksAfterRead === 2) queueMicrotask(() => {
+        if (cutoff === 'owner') f.state.ownerCurrent = false;
+        else t.mock.timers.setTime(31_000);
+      });
+    };
+    try {
+      await assert.rejects(f.click(), error => {
+        if (cutoff === 'owner') assert.equal(error, f.refusal);
+        else assert.match(String(error), /UI read timed out/);
+        return true;
+      });
+      assert.equal(finalPreparationRead, true);
+      assert.equal(f.state.targetReads, 4, 'no extra final target lookup after the awaited preparation');
+      assert.equal(f.state.wheels, 0);
+      assert.equal(f.state.presses, 0);
+      assert.equal(f.state.releases, 0);
+    } finally { t.mock.timers.reset(); }
+  });
+}
+
+test('original prepared login click shares twelve wheels across initial, stability and final reads', { timeout: 5000 }, async () => {
+  const f = originalLoginActionabilityFixture();
+  f.state.top = 884.5;
+  f.hooks.beforeRead = kind => {
+    if (kind === 'target') f.state.top = 400 + Math.max(0, Math.floor((f.state.targetReads - 2) / 3)) * 50;
+  };
+  f.hooks.afterRead = kind => { if (kind === 'target') f.state.top = 884.5; };
+  await assert.rejects(f.click(), /UI scroll timed out: show original login action/);
+  assert.equal(f.state.wheels, 12, 'no thirteenth wheel when a later phase needs another reveal');
+  assert.equal(f.state.targetReads, 12, 'the exhausted preparation cannot enter another target read');
+  assert.equal(f.reads.at(-1)?.kind, 'scroll');
+  assert.equal(f.reads.at(-1)?.available, false, 'zero remaining wheels still permits its final visibility read');
+  const trace = f.steps.find(step => step.action === 'mouseMoved')?.geometryTrace as { samples: { phase: string }[] };
+  assert.ok(trace.samples.filter(sample => sample.phase === 'final').length >= 3,
+    'the same original budget survives several final-target resamples');
+  assert.equal(f.state.presses, 0);
+  assert.equal(f.state.releases, 0);
+});
+
+test('original prepared login click admits visibility after the twelfth wheel without another wheel', { timeout: 5000 }, async () => {
+  const f = originalLoginActionabilityFixture();
+  f.state.top = 884.5;
+  f.hooks.afterInput = type => {
+    if (type === 'mouseWheel' && f.state.wheels < 12) f.state.top = 884.5;
+  };
+  await f.click();
+  assert.equal(f.state.wheels, 12);
+  assert.equal(f.state.presses, 1);
+  assert.equal(f.state.releases, 1);
+});
+
+for (const uncertain of ['mousePressed', 'mouseReleased'] as const) {
+  test(`original prepared login click never prepares again after uncertain ${uncertain}`, { timeout: 5000 }, async () => {
+    const f = originalLoginActionabilityFixture(), failure = new Error('TEST original uncertain ' + uncertain);
+    f.state.top = 884.5;
+    let readsAtPress = 0;
+    f.hooks.afterInput = type => {
+      if (type === 'mousePressed') { readsAtPress = f.reads.length; f.state.top = 884.5; }
+      if (type === uncertain) throw failure;
+    };
+    await assert.rejects(f.click(), error => { assert.equal(error, failure); return true; });
+    assert.equal(f.reads.length, readsAtPress, 'no scroll preparation or target read follows the original press');
+    assert.equal(f.state.wheels, 1);
+    assert.equal(f.state.presses, 1);
+    assert.equal(f.state.releases, uncertain === 'mouseReleased' ? 1 : 0);
+    assert.equal(f.commands.at(-1)?.type, uncertain, 'uncertain input is never retried');
+  });
+}
+
 for (const requireCenterHit of [false, true]) {
   test(requireCenterHit
     ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'
@@ -1860,6 +2165,7 @@ for (const label of ['missing selected A', 'non-string A handle', 'empty A handl
   });
 }
 
+
 async function selectionStoppedConvergence(options: {
   modes?: string[]; tables?: boolean[]; guardMs?: number[]; readMs?: number[]; bindingMismatch?: boolean;
 } = {}) {
@@ -1977,142 +2283,1028 @@ test('Selection stopped convergence refuses wrong identity, unaccepted progress,
 });
 
 
-test('the existing passive click recorder distinguishes the actual Team from later navigation without new actions', async () => {
-  const teamA = 'host-team:TEST-A', teamB = 'host-team:TEST-B';
-  type NavigationState = { selectedTeamName: string | null; activeTabId: string; openTabs: unknown[] };
-  const state = (selectedTeamName: string | null, activeTabId = 'list'): NavigationState => ({
-    selectedTeamName, activeTabId,
-    openTabs: [{ id: 'list', type: 'teams' }, { id: 'a', type: 'team', teamName: teamA },
-      { id: 'b', type: 'team', teamName: teamB }],
+type NavigationState = { paneLayout: { focusedPaneId: unknown; panes: Record<string, unknown>[] }; selectedTeamName: unknown; secret: string };
+function navigationState(team = hostTeamSelectionKey('TEST-A'), paneId = 'pane-1', tabId = 'tab-A'): NavigationState {
+  return { paneLayout: { focusedPaneId: paneId, panes: [{ id: paneId, activeTabId: tabId,
+    tabs: [{ id: tabId, type: 'team', teamName: team }] }] }, selectedTeamName: team, secret: 'TEST-private-unrelated-value' };
+}
+async function passiveNavigationFixture() {
+  const counts = { reads: 0, target: 0, attribute: 0, clock: 0, queries: 0, send: 0, evaluate: 0, micro: 0, timer: 0 };
+  const listeners = new Map<string, (event: Record<string, unknown>) => void>(), microtasks: (() => void)[] = [], timers: (() => void)[] = [];
+  let state: unknown = navigationState();
+  class TestElement {
+    tagName = 'DIV'; id = ''; className = 'team-row-zebra-card'; name: unknown = hostTeamSelectionKey('TEST-A');
+    card: TestElement | null = this; targetThrows = false; attributeThrows = false; isCard = true;
+    closest(selector: string): TestElement | null {
+      if (selector === '[data-team-name]') { counts.target++; if (this.targetThrows) throw new Error('TEST target read'); return this.card; }
+      assert.ok(['button', '.kanban-task-card', '[role="dialog"]'].includes(selector)); return null;
+    }
+    matches(selector: string) { assert.equal(selector, '.team-row-zebra-card'); return this.isCard; }
+    getAttribute(name: string): unknown {
+      if (name === 'data-team-name') { counts.attribute++; if (this.attributeThrows) throw new Error('TEST target attribute'); return this.name; }
+      assert.equal(name, 'aria-label'); return null;
+    }
+  }
+  const element = new TestElement();
+  const store: (() => never) & { getState(this: unknown): unknown } = Object.assign(() => assert.fail('never invoke the Zustand bound hook'), {
+    getState(this: unknown): unknown { assert.equal(this, store); counts.reads++; return state; },
   });
-  const setup = async () => {
-    const listeners = new Map<string, (event: Record<string, unknown>) => void>();
-    const microtasks: Array<() => void> = [], timers: Array<() => void> = [];
-    let current = state(teamA), failRead = false, failTarget = false;
-    const calls = { send: 0, evaluate: 0, stateReads: 0, microtasks: 0, timers: 0, business: 0 };
-    class Target {
-      tagName = 'DIV'; id = ''; className = 'TEST-card-body';
-      readonly team: string | null;
-      constructor(team: string | null) { this.team = team; }
-      getAttribute(name: string) { return name === 'data-team-name' ? this.team : null; }
-      closest(selector: string) {
-        if (selector === '[data-team-name]') {
-          if (failTarget) throw new Error('PRIVATE-target');
-          return this.team === null ? null : this;
-        }
-        assert.ok(['button', '[role="dialog"]', '.kanban-task-card'].includes(selector));
-        return null;
-      }
-    }
-    const passiveWindow: Record<string, unknown> = {
-      __agentTeamsDevStore: { getState: () => {
-        calls.stateReads++;
-        if (failRead) throw new Error('PRIVATE-store');
-        return current;
-      } },
-    };
-    const document = {
-      activeElement: new Target(null),
-      querySelectorAll(selector: string) {
-        assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
-        return [];
-      },
-      addEventListener(type: string, listener: (event: Record<string, unknown>) => void,
-        options: { capture: boolean; passive: boolean }) {
-        assert.equal(options.capture, true); assert.equal(options.passive, true);
-        assert.equal(listeners.has(type), false); listeners.set(type, listener);
-      },
-    };
-    const cdp = {
-      async send(method: string, params?: Record<string, unknown>) {
-        calls.send++;
-        assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true });
-      },
-      async evaluate(expression: string) {
-        calls.evaluate++;
-        if (expression === 'document.visibilityState') return 'visible';
-        assert.equal(calls.evaluate, 1, 'execute only the actual existing observer installation');
-        return runInNewContext(expression, {
-          window: passiveWindow, document, Element: Target, TextEncoder,
-          performance: { now: () => 17 },
-          queueMicrotask: (callback: () => void) => { calls.microtasks++; microtasks.push(callback); },
-          setTimeout: (callback: () => void, delay: number) => {
-            assert.equal(delay, 0); calls.timers++; timers.push(callback);
-          },
-        });
-      },
-    };
-    await createDesktopUiControls(cdp, {
-      assertOwnedRenderer: () => assert.fail('observer does not add an ownership call'),
-      step: () => assert.fail('passive observer does not dispatch an action'),
-    }).observeInput();
-    assert.equal(listeners.size, 9); assert.equal(calls.send, 1); assert.equal(calls.evaluate, 2);
-    const rows = (name = '__TEST_desktopInputEvents') => passiveWindow[name] as Array<Record<string, unknown>>;
-    const fire = (team: string | null, type = 'click', trusted = true) => {
-      const blocked = () => { calls.business++; assert.fail('observer cannot change or redispatch input'); };
-      listeners.get(type)!({ type, target: new Target(team), isTrusted: trusted, clientX: 191, clientY: 228,
-        button: 0, buttons: type === 'pointermove' ? 1 : 0, defaultPrevented: false,
-        preventDefault: blocked, stopPropagation: blocked, stopImmediatePropagation: blocked, dispatchEvent: blocked });
-      return rows(type === 'pointermove' ? '__TEST_desktopDragEvents' : undefined).at(-1)!;
-    };
-    return { calls, rows, fire, update: (next: NavigationState) => { current = next; },
-      failRead: () => { failRead = true; }, failTarget: () => { failTarget = true; },
-      microtask: () => { assert.equal(microtasks.length, 1); microtasks.shift()!(); },
-      dispatch: () => { assert.equal(timers.length, 1); timers.shift()!(); },
-    };
+  const window: Record<string, unknown> = { __agentTeamsDevStore: store };
+  const document = {
+    activeElement: element as TestElement | null,
+    addEventListener(name: string, listener: (event: Record<string, unknown>) => void, options: unknown) {
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), { capture: true, passive: true });
+      assert.equal(listeners.has(name), false); listeners.set(name, listener);
+    },
+    querySelectorAll(selector: string) {
+      assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
+      counts.queries++; return [];
+    },
   };
-  const normalized = (value: unknown) => JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
-  for (const actualTarget of [teamA, teamB]) {
-    const f = await setup(), row = f.fire(actualTarget);
-    // The original physical step retains intended B separately; this observer records actual A or B.
-    assert.ok(row.teamNavigation, 'the original passive click must retain its actual Team ancestor');
-    assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: actualTarget,
-      before: { selectedTeamKey: teamA, activeSurface: 'teams', activeTeamKey: null } });
-    f.update(state(actualTarget, actualTarget === teamA ? 'a' : 'b')); f.microtask();
-    f.update(state(teamA, 'a')); f.dispatch();
-    const navigation = normalized(row.teamNavigation);
-    assert.deepEqual(navigation.afterMicrotask, { selectedTeamKey: actualTarget, activeSurface: 'team', activeTeamKey: actualTarget });
-    assert.deepEqual(navigation.afterDispatch, { selectedTeamKey: teamA, activeSurface: 'team', activeTeamKey: teamA });
-    assert.equal(navigation.targetTeamKey, actualTarget, 'a later selected Team cannot rewrite the actual clicked ancestor');
-    assert.deepEqual(f.calls, { send: 1, evaluate: 2, stateReads: 3, microtasks: 1, timers: 1, business: 0 });
-  }
-  for (const mode of ['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected', 'bad-target', 'target-throws', 'untrusted', 'no-card', 'utf8-cap']) {
-    const f = await setup();
-    let target: string | null = teamB;
-    if (mode === 'read-throws') f.failRead();
-    if (mode === 'target-throws') f.failTarget();
-    if (mode === 'duplicate-tab') f.update({ ...state(teamA), openTabs: [{ id: 'list', type: 'teams' }, { id: 'list', type: 'teams' }] });
-    if (mode === 'too-many-tabs') f.update({ ...state(teamA), openTabs: Array.from({ length: 65 }, () => ({ id: 'list', type: 'teams' })) });
-    if (mode === 'bad-selected') f.update(state('PRIVATE-selected'));
-    if (mode === 'bad-target') target = 'host-team:' + 'x'.repeat(247);
-    if (mode === 'no-card') target = null;
-    if (mode === 'utf8-cap') {
-      target = 'host-team:' + '文'.repeat(246);
-      f.update({ selectedTeamName: target, activeTabId: 'a', openTabs: [{ id: 'a', type: 'team', teamName: target }] });
-    }
-    const row = f.fire(target, 'click', mode !== 'untrusted'); f.microtask(); f.dispatch();
-    if (['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected'].includes(mode))
-      assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: teamB, before: null, afterMicrotask: null, afterDispatch: null });
-    else assert.equal(row.teamNavigation, null);
-    assert.equal(JSON.stringify(row).includes('PRIVATE-'), false);
-    assert.ok(Buffer.byteLength(JSON.stringify(row.teamNavigation), 'utf8') <= 4096);
-    assert.equal(f.calls.send, 1); assert.equal(f.calls.evaluate, 2); assert.equal(f.calls.microtasks, 1);
-    assert.equal(f.calls.timers, 1); assert.equal(f.calls.business, 0);
-  }
-  const bounded = await setup();
-  for (let i = 0; i < 100; i++) { bounded.fire(null); bounded.microtask(); bounded.dispatch(); }
-  for (let i = 0; i < 35; i++) { bounded.fire(null, 'pointermove'); bounded.microtask(); bounded.dispatch(); }
-  assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
-  assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
+  const json = { stringify(value: unknown): string { const text = JSON.stringify(value); assert.ok(typeof text === 'string'); return text; } };
+  const context = { window, document, Element: TestElement, HTMLButtonElement: TestElement, JSON: json,
+    performance: { now() { counts.clock++; return 123.4; } },
+    queueMicrotask(callback: () => void) { counts.micro++; microtasks.push(callback); },
+    setTimeout(callback: () => void, delay: number) { assert.equal(delay, 0); counts.timer++; timers.push(callback); return 1; } };
+  const ui = createDesktopUiControls({
+    async send(method, params) { counts.send++; assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true }); return {}; },
+    async evaluate(expression) { counts.evaluate++; return expression === 'document.visibilityState' ? 'visible' : runInNewContext(expression, context); },
+  }, { assertOwnedRenderer() { assert.fail('observer adds no action-owner reads'); }, step() { assert.fail('observer adds no input action'); } });
+  await ui.observeInput();
+  assert.deepEqual([...listeners.keys()], ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'click', 'keydown', 'keyup', 'focusin', 'focusout']);
+  assert.deepEqual([counts.send, counts.evaluate, counts.reads, counts.clock, counts.micro, counts.timer], [1, 2, 0, 0, 0, 0]);
+  const events = () => window.__TEST_desktopInputEvents as Record<string, unknown>[];
+  const dragEvents = () => window.__TEST_desktopDragEvents as Record<string, unknown>[];
+  const emit = (type = 'click', target: unknown = element, buttons = 0) => {
+    const event = { target, clientX: 191, clientY: 228, button: 0, buttons, key: 'TEST-key', code: 'TEST-code', isTrusted: true, defaultPrevented: false };
+    const listener = listeners.get(type); assert.ok(listener); listener(event);
+    return { event, row: (type === 'pointermove' || type === 'pointercancel' ? dragEvents() : events()).at(-1)! };
+  };
+  const micro = () => { const callback = microtasks.shift(); assert.ok(callback); callback(); };
+  const timer = () => { const callback = timers.shift(); assert.ok(callback); callback(); };
+  const flush = () => { while (microtasks.length) micro(); while (timers.length) timer(); };
+  return { counts, element, store, window, document, json, emit, micro, timer, flush, events, dragEvents, setState(value: unknown) { state = value; } };
+}
+const navigationPlain = (value: unknown): Record<string, unknown> => JSON.parse(JSON.stringify(value));
+const navigationSample = (team: string, pane = 'pane-1', tab = 'tab-A') => ({
+  status: 'available', focusedPaneId: pane, activeTabId: tab, activeTabType: 'team', activeTabTeamName: team, selectedTeamName: team,
 });
 
+test('passive input keeps its actual Team target and three separate original navigation samples', async () => {
+  const a = hostTeamSelectionKey('TEST-A'), b = hostTeamSelectionKey('TEST-B');
+  const f = await passiveNavigationFixture(); f.element.name = b;
+  const initial = navigationState(a, 'pane-1', 'tab-teams'); initial.paneLayout.panes[0]!.tabs = [{ id: 'tab-teams', type: 'teams' }]; f.setState(initial);
+  const teamsA = { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-teams', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: a };
+  const { event, row } = f.emit('pointerdown');
+  assert.deepEqual(navigationPlain(row), { type: 'pointerdown', timeMs: 123, x: 191, y: 228, button: 0, buttons: 0,
+    key: 'TEST-key', code: 'TEST-code', trusted: true, buttonClass: null, target: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' },
+    focusBefore: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' }, defaultPreventedBefore: false,
+    sidebarRow: false, taskId: null, activeSortable: [], dragAnnouncement: [], taskClarification: null,
+    teamNavigation: { schemaVersion: 1, status: 'available', source: 'original-passive-input', atomicWithNavigation: false,
+      targetTeamName: b, before: teamsA, microtask: null, afterDispatch: null } });
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer], [1, 1, 1, 1, 1, 0]);
+  f.element.name = a; f.element.card = null; f.setState(navigationState(b)); event.defaultPrevented = true; f.micro();
+  assert.deepEqual(navigationPlain(row.teamNavigation).microtask, navigationSample(b));
+  f.setState(navigationState(a)); f.document.activeElement = null; f.timer();
+  const observation = navigationPlain(row.teamNavigation);
+  assert.equal(observation.targetTeamName, b); assert.deepEqual(observation.before, teamsA); assert.deepEqual(observation.afterDispatch, navigationSample(a));
+  assert.deepEqual([row.defaultPreventedAfterMicrotask, row.defaultPreventedAfterDispatch, row.focusAfterDispatch], [true, true, null]);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.queries, f.counts.send, f.counts.evaluate, f.counts.micro, f.counts.timer], [3, 1, 1, 1, 2, 1, 2, 1, 1]);
+  assert.equal(JSON.stringify(observation).includes('TEST-private-unrelated-value'), false);
+  const g = await passiveNavigationFixture(); const original = g.emit().row; g.element.name = b; g.element.card = null; g.setState(navigationState(b)); g.flush();
+  assert.equal(navigationPlain(original.teamNavigation).targetTeamName, a); assert.deepEqual(navigationPlain(original.teamNavigation).afterDispatch, navigationSample(b));
+});
+
+test('passive navigation preserves non-card events, the original ring bounds and null or non-Team state', async () => {
+  const f = await passiveNavigationFixture(); f.element.card = null;
+  for (const type of ['pointerdown', 'pointerup', 'click']) { const { row } = f.emit(type); f.flush(); assert.equal(row.teamNavigation, null); }
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute], [0, 3, 0]);
+  for (const type of ['keydown', 'keyup', 'focusin', 'focusout', 'pointercancel']) { const { row } = f.emit(type); f.flush(); assert.equal(Object.hasOwn(row, 'teamNavigation'), false); }
+  const count = f.counts.clock; f.emit('pointermove'); assert.equal(f.counts.clock, count);
+  for (let index = 0; index < 100; index++) f.emit('keydown');
+  for (let index = 0; index < 35; index++) f.emit('pointermove', f.element, 1);
+  f.flush(); assert.equal(f.events().length, 96); assert.equal(f.dragEvents().length, 32); assert.equal(f.counts.reads, 0);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer, f.counts.queries], [3, 0, 143, 143, 143, 286]);
+  assert.ok(f.dragEvents().every(row => !Object.hasOwn(row, 'teamNavigation')));
+  const g = await passiveNavigationFixture(), state = navigationState(); const pane = state.paneLayout.panes[0]!;
+  pane.activeTabId = null; state.selectedTeamName = null; g.setState(state);
+  const absent = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(absent.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: null, activeTabType: null, activeTabTeamName: null, selectedTeamName: null });
+  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { return assert.fail('non-Team metadata is not read'); } }];
+  const other = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(other.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-A', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: null });
+});
+
+test('passive navigation refuses malformed target and store facts without losing original callbacks', async () => {
+  for (const name of [null, undefined, 12, 'host-team:', 'host-team:%', 'host-team:%41', 'host-team:%00', 'host-team:' + 'x'.repeat(247), { toString() { assert.fail('no target coercion'); } }]) {
+    const f = await passiveNavigationFixture(); f.element.name = name; const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+    assert.equal(f.counts.reads, 0); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const throwing = await passiveNavigationFixture(); throwing.element.targetThrows = true; const target = throwing.emit().row; throwing.flush();
+  assert.deepEqual(navigationPlain(target.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+  const attr = await passiveNavigationFixture(); attr.element.attributeThrows = true; const attrRow = attr.emit().row; attr.flush();
+  assert.deepEqual(navigationPlain(attrRow.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' }); assert.equal(attr.counts.reads, 0);
+  let accessorCalls = 0; const operandAccessor = (): never => { accessorCalls++; throw new Error('TEST operand accessor'); };
+  const mutations: ((state: NavigationState) => void)[] = [
+    s => { s.selectedTeamName = undefined; }, s => { s.selectedTeamName = 'host-team:%41'; },
+    s => { s.paneLayout.panes[0] = Object.create({ id: 'pane-1' }) as Record<string, unknown>; },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; tab.teamName = 'host-team:%00'; },
+    s => { s.paneLayout.focusedPaneId = 'pane\n'; }, s => { s.paneLayout.focusedPaneId = 'p'.repeat(129); },
+    s => { s.paneLayout.panes = []; }, s => { s.paneLayout.panes = Array.from({ length: 5 }, (_, i) => ({ id: 'p' + i })); },
+    s => { s.paneLayout.panes.push(s.paneLayout.panes[0]!); }, s => { s.paneLayout.focusedPaneId = 'missing'; },
+    s => { s.paneLayout.panes[0]!.activeTabId = 'missing'; },
+    s => { const p = s.paneLayout.panes[0]!, tabs = p.tabs as Record<string, unknown>[]; p.tabs = [...tabs, ...tabs]; },
+    s => { s.paneLayout.panes[0]!.tabs = Array.from({ length: 129 }, (_, i) => ({ id: 'tab-' + i })); },
+    s => { Object.defineProperty(s, 'selectedTeamName', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout, 'panes', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes, '0', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!, 'activeTabId', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!.tabs as object, '0', { get: operandAccessor }); },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; Object.defineProperty(tab, 'type', { get: operandAccessor }); },
+  ];
+  for (const mutate of mutations) {
+    const f = await passiveNavigationFixture(), state = navigationState(); accessorCalls = 0; mutate(state); f.setState(state);
+    const { row } = f.emit(); f.flush(); const record = navigationPlain(row.teamNavigation);
+    for (const phase of ['before', 'microtask', 'afterDispatch']) assert.deepEqual(record[phase], { status: 'unavailable' });
+    assert.equal(f.counts.reads, 3); assert.equal(accessorCalls, 0, 'operand getters are never invoked'); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  for (const invalid of [null, 'TEST-state', new Proxy({}, { getOwnPropertyDescriptor() { throw new Error('TEST reflection'); } })]) {
+    const f = await passiveNavigationFixture(); f.setState(invalid); const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'defaultPreventedAfterDispatch'), true);
+  }
+  for (const method of [null, 'TEST-method', () => { throw new Error('TEST store read'); }]) {
+    const f = await passiveNavigationFixture(); Object.defineProperty(f.store, 'getState', { value: method });
+    const { row } = f.emit(); f.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  }
+  const missing = await passiveNavigationFixture(); delete missing.window.__agentTeamsDevStore;
+  const row = missing.emit().row; missing.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+});
+
+test('passive navigation remains bounded and cannot interrupt original writes on diagnostic failure', async () => {
+  const f = await passiveNavigationFixture(), key = hostTeamSelectionKey('x'.repeat(246)), id = 'p'.repeat(128);
+  f.element.name = key; const maximum = navigationState(key, id, id); const pane = maximum.paneLayout.panes[0]!;
+  (pane.tabs as Record<string, unknown>[]).push(...Array.from({ length: 127 }, (_, i) => ({ id: 'other-' + i })));
+  maximum.paneLayout.panes.push(...Array.from({ length: 3 }, (_, i) => ({ id: 'other-pane-' + i })));
+  f.setState(maximum); const { row } = f.emit(); f.flush();
+  const observation = navigationPlain(row.teamNavigation); assert.equal(Buffer.byteLength(JSON.stringify(observation), 'utf8'), 3101);
+  assert.deepEqual(observation.before, observation.microtask); assert.deepEqual(observation.before, observation.afterDispatch);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.send, f.counts.evaluate], [3, 1, 1, 1, 1, 2]);
+  const g = await passiveNavigationFixture(); const captured = g.emit().row; let getter = 0, setter = 0;
+  Object.defineProperty(captured, 'teamNavigation', { configurable: true, get() { getter++; throw new Error('TEST read'); }, set() { setter++; throw new Error('TEST write'); } });
+  g.flush(); assert.deepEqual([getter, setter, g.counts.reads], [0, 2, 3]);
+  assert.equal(Object.hasOwn(captured, 'defaultPreventedAfterMicrotask'), true); assert.equal(Object.hasOwn(captured, 'focusAfterDispatch'), true);
+  const h = await passiveNavigationFixture(); h.json.stringify = () => { throw new Error('TEST serialization'); };
+  const failed = h.emit().row; h.flush(); assert.equal(Object.hasOwn(failed, 'teamNavigation'), false); assert.equal(Object.hasOwn(failed, 'focusAfterDispatch'), true);
+  const over = await passiveNavigationFixture(); over.json.stringify = () => 'x'.repeat(4097);
+  const limited = over.emit().row; over.flush();
+  assert.deepEqual(navigationPlain(limited.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'projection-limit' });
+  assert.equal(Object.hasOwn(limited, 'focusAfterDispatch'), true);
+});
+
+
+test('passive navigation uses only the callable store own method and ignores unrelated card surfaces', async () => {
+  const f = await passiveNavigationFixture(); f.element.isCard = false;
+  const nonCard = f.emit().row; f.flush(); assert.equal(nonCard.teamNavigation, null);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.reads], [1, 0, 0]);
+  const nonElement = f.emit('click', null).row; f.flush(); assert.equal(nonElement.teamNavigation, null); assert.equal(f.counts.reads, 0);
+  for (const location of ['store', 'getState']) {
+    const g = await passiveNavigationFixture(); let getter = 0;
+    Object.defineProperty(location === 'store' ? g.window : g.store, location === 'store' ? '__agentTeamsDevStore' : 'getState',
+      { configurable: true, get() { getter++; throw new Error('TEST accessor'); } });
+    const row = g.emit().row; g.flush(); assert.equal(getter, 0);
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const g = await passiveNavigationFixture();
+  g.window.__agentTeamsDevStore = new Proxy(g.store, { getOwnPropertyDescriptor() { throw new Error('TEST callable reflection'); } });
+  const row = g.emit().row; g.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+});
+
+test('the selected provider receipt digest matches the actual manifest-selected archive bytes', async () => {
+  const repo = join(import.meta.dirname, '../..');
+  const manifest = JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8')) as {
+    dependencies: Record<string, unknown>;
+  };
+  const dependency = manifest.dependencies['@agent-teams/provider-implementations'];
+  assert.ok(typeof dependency === 'string' &&
+    /^file:\.\.\/\.\.\/vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/.test(dependency));
+  const path = dependency.slice('file:../../'.length);
+  const sha256 = createHash('sha256').update(await readFile(join(repo, path))).digest('hex');
+  assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+});
+
+test('provider receipt legacy, current and equal-dual implementation digests preserve manifest authority', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-positive-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const path = 'vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({
+    dependencies: { '@agent-teams/provider-implementations': 'file:../../' + path },
+  }));
+  for (const implementation of [
+    { newSha256: sha256 },
+    { sha256, file: 'agent-teams-provider-implementations-0.0.0.tgz' },
+    { newSha256: sha256, sha256, oldSha256: other },
+    { newSha256: sha256, file: 'TEST-not-the-selected-archive.tgz', existingPath: 'TEST-unselected', oldSha256: other },
+  ]) {
+    for (const aliases of [
+      { 'provider-implementations': implementation },
+      { 'agent-teams-provider-implementations-0.0.0.tgz': implementation },
+      { 'provider-implementations': implementation, 'agent-teams-provider-implementations-0.0.0.tgz': { sha256 } },
+    ]) {
+      await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+        packages: { ...aliases, 'provider-session-contracts': { sha256: other } },
+      }));
+      assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+    }
+  }
+});
+
+test('every present provider implementation digest must be valid and both recognized fields must agree', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-digest-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({ dependencies: {
+    '@agent-teams/provider-implementations': 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz',
+  } }));
+  const refused: Record<string, unknown>[] = [{}, { oldSha256: sha256 }, { digest: sha256 },
+    { newSha256: sha256, sha256: other }];
+  for (const key of ['newSha256', 'sha256'] as const) {
+    const otherKey = key === 'newSha256' ? 'sha256' : 'newSha256';
+    for (const value of [null, '', 0, false, {}, [], 'A'.repeat(64), 'a'.repeat(63), 'a'.repeat(65), 'g'.repeat(64)]) {
+      refused.push({ [key]: value }, { [key]: value, [otherKey]: sha256 });
+    }
+  }
+  for (const implementation of refused) {
+    for (const alias of ['provider-implementations', 'agent-teams-provider-implementations-0.0.0.tgz']) {
+      const otherAlias = alias === 'provider-implementations' ? 'agent-teams-provider-implementations-0.0.0.tgz' : 'provider-implementations';
+      for (const both of [false, true]) {
+        await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+          packages: { [alias]: implementation, ...(both ? { [otherAlias]: { sha256 } } : {}),
+            'provider-session-contracts': { sha256 } },
+        }));
+        await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' }, JSON.stringify({ alias, both, implementation }));
+      }
+    }
+  }
+  for (const alias of ['provider-implementations', 'agent-teams-provider-implementations-0.0.0.tgz']) {
+    const otherAlias = alias === 'provider-implementations' ? 'agent-teams-provider-implementations-0.0.0.tgz' : 'provider-implementations';
+    for (const invalid of [null, [], sha256, { sha256: other }]) {
+      await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+        packages: { [alias]: invalid, [otherAlias]: { sha256 } },
+      }));
+      await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+    }
+  }
+});
+
+test('provider receipt shape, package selection and original file or JSON errors remain strict', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-shape-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const manifestPath = join(host, 'package.json'), receiptPath = join(vendor, 'source-receipt.json');
+  const dependency = 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32);
+  const manifest = { dependencies: { '@agent-teams/provider-implementations': dependency } };
+  const receipt = { packages: { 'provider-implementations': { newSha256: sha256 } } };
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  for (const invalid of [null, [], {}, { packages: null }, { packages: [] }, { packages: {} },
+    { packages: { 'provider-implementations': null } }, { packages: { 'provider-implementations': [] } },
+    { packages: { 'provider-implementations': sha256 } },
+    { packages: { 'provider-session-contracts': { newSha256: sha256, sha256 } } },
+    { packages: { '@agent-teams/provider-implementations': { newSha256: sha256 } } },
+    { packages: { 'provider-implementations': { digest: sha256 } } }]) {
+    await writeFile(receiptPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  const invalidManifests: unknown[] = [null, [], {}, { dependencies: null }, { dependencies: [] },
+    { dependencies: {} }, { dependencies: { '@agent-teams/provider-session-contracts': dependency } }];
+  for (const invalid of [null, 7, '', 'https://example.invalid/TEST.tgz', '/TEST/archive.tgz',
+    dependency.replace('test-receipt', '../test-receipt'), dependency.replace('test-receipt', 'TEST-receipt'),
+    dependency.replace('0.0.0.tgz', '1.0.0.tgz'), dependency.replace('provider-implementations', 'provider-session-contracts')]) {
+    invalidManifests.push({ dependencies: { '@agent-teams/provider-implementations': invalid } });
+  }
+  for (const invalid of invalidManifests) {
+    await writeFile(manifestPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await writeFile(receiptPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  await writeFile(manifestPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await rm(receiptPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: receiptPath });
+  await rm(manifestPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: manifestPath });
+});
+
+type SavedLaunchFrame = {
+  count?: number; model?: string; id?: string | null; expanded?: string | null; dialog?: boolean;
+  rect?: { x: number; y: number; width: number; height: number };
+  animations?: { pending: boolean; playState: string }[];
+};
+
+async function savedLaunchReadinessFixture(t: import('node:test').TestContext, frames: SavedLaunchFrame[]) {
+  const { record } = await import('./desktop-resume-records.ts');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "await ui.click('button', 'open original saved Team Launch', 'Launch');";
+  const last = "const lead = '[role=\"dialog\"] [data-role=\"lead-row\"]';";
+  assert.equal(source.split(first).length, 2, 'one actual saved-Launch action boundary');
+  assert.equal(source.split(last).length, 2, 'one actual end of the saved-settings prefix');
+  const begin = source.indexOf(first), end = source.indexOf(last, begin);
+  assert.ok(end > begin);
+  const prefix = source.slice(begin, end), model = 'TEST-model \'quoted\' <ready>';
+  let now = 0, reads = 0, owned = 0, queries = 0, animationReads = 0;
+  const waits: number[] = [], labels: string[] = [];
+  const clicks: { selector: string; label: string; text: string | undefined; read: number }[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100, 'the original wait cadence is unchanged');
+    waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const actual = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const frame = frames[Math.min(reads++, frames.length - 1)]!;
+      assert.ok(frame, 'finite DOM frames are present');
+      const dialog = { getAnimations(options?: { subtree?: boolean }) {
+        animationReads++; assert.equal(options?.subtree ?? false, false, 'no descendant spinner observation');
+        return frame.animations ?? [];
+      } };
+      const row = {
+        textContent: 'Optional launch settings ' + (frame.model ?? model),
+        getAttribute(name: string) {
+          assert.ok(name === 'aria-controls' || name === 'aria-expanded');
+          return name === 'aria-controls' ? frame.id === undefined ? 'TEST-settings' : frame.id
+            : frame.expanded === undefined ? 'false' : frame.expanded;
+        },
+        getBoundingClientRect: () => frame.rect ?? { x: 412, y: 368.75, width: 200, height: 32 },
+        closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return frame.dialog === false ? null : dialog; },
+      };
+      const document = {
+        querySelectorAll(selector: string) {
+          queries++; assert.equal(selector, '[role="dialog"] button[aria-controls]');
+          return Array.from({ length: frame.count ?? 1 }, () => row);
+        },
+        get body() { return assert.fail('model preflight status must not gate editable launch settings'); },
+      };
+      return runInNewContext(expression, { document });
+    },
+    async send() { return assert.fail('the readiness fixture never dispatches browser input'); },
+  }, { assertOwnedRenderer() { owned++; }, step() { assert.fail('waitRead is observation only'); } });
+  const ui = {
+    async click(selector: string, label: string, text?: string) { clicks.push({ selector, label, text, read: reads }); },
+    waitRead(...args: Parameters<typeof actual.waitRead>) {
+      labels.push(args[1]); assert.equal(args[2] ?? 30_000, 30_000);
+      return actual.waitRead(...args);
+    },
+  };
+  return { run: () => runInNewContext('(async () => {\n' + prefix + '\n})()',
+    { ui, selected: { model }, record, literal: desktopJsLiteral }) as Promise<void>,
+  clicks, waits, labels, counts: () => ({ now, reads, owned, queries, animationReads }) };
+}
+
+function assertSavedLaunchBoundary(f: Awaited<ReturnType<typeof savedLaunchReadinessFixture>>, reads: number,
+  id = 'TEST-settings', expanded = false) {
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch'], 'one original readiness wait');
+  assert.deepEqual(f.clicks, [
+    { selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 },
+    ...expanded ? [] : [{ selector: `[role="dialog"] button[aria-controls=${JSON.stringify(id)}]`,
+      label: 'expand original saved launch settings', text: undefined, read: reads }],
+  ], 'the original settings action happens only after three equal eligible returned samples');
+  assert.equal(f.counts().reads, reads); assert.equal(f.counts().owned, reads);
+  assert.equal(f.counts().queries, reads);
+  assert.deepEqual(f.waits, Array.from({ length: reads - 1 }, () => 100));
+}
+
+test('saved Launch uses three stable actual DOM samples before its original settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}]); await f.run();
+  assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+test('saved Launch resets exact geometry when the original button shifts by a quarter pixel', async t => {
+  const shifted = { rect: { x: 412, y: 368.5, width: 200, height: 32 } };
+  const f = await savedLaunchReadinessFixture(t, [{}, shifted]); await f.run();
+  assertSavedLaunchBoundary(f, 4);
+});
+
+for (const [label, changed, id, expanded] of [
+  ['identity', { id: 'TEST-next-settings' }, 'TEST-next-settings', false],
+  ['expanded state', { expanded: 'true' }, 'TEST-settings', true],
+  ['horizontal position', { rect: { x: 413, y: 368.75, width: 200, height: 32 } }, 'TEST-settings', false],
+  ['width', { rect: { x: 412, y: 368.75, width: 201, height: 32 } }, 'TEST-settings', false],
+  ['height', { rect: { x: 412, y: 368.75, width: 200, height: 33 } }, 'TEST-settings', false],
+] as const)
+test('saved Launch restarts its three samples after changed ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, changed]); await f.run();
+  assertSavedLaunchBoundary(f, 5, id, expanded);
+});
+
+for (const [label, invalid] of [
+  ['absent target', { count: 0 }], ['ambiguous target', { count: 2 }], ['wrong model', { model: 'TEST-other-model' }],
+  ['absent identity', { id: null }], ['empty identity', { id: '' }], ['invalid expansion', { expanded: null }],
+  ['missing owning dialog', { dialog: false }],
+  ['nonfinite x', { rect: { x: NaN, y: 368.75, width: 200, height: 32 } }],
+  ['nonfinite y', { rect: { x: 412, y: Infinity, width: 200, height: 32 } }],
+  ['zero width', { rect: { x: 412, y: 368.75, width: 0, height: 32 } }],
+  ['negative height', { rect: { x: 412, y: 368.75, width: 200, height: -1 } }],
+  ['running own animation', { animations: [{ pending: false, playState: 'running' }] }],
+  ['paused own animation', { animations: [{ pending: false, playState: 'paused' }] }],
+  ['pending own animation', { animations: [{ pending: true, playState: 'finished' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch resets its original readiness after ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, invalid, {}]); await f.run();
+  assertSavedLaunchBoundary(f, 6);
+});
+
+for (const playState of ['finished', 'idle'])
+test('saved Launch allows ' + playState + ' own animation without inspecting descendant spinners or model status', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{ animations: [{ pending: false, playState }] }]);
+  await f.run(); assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+for (const [label, frame] of [
+  ['no matching model', { model: 'TEST-other-model' }],
+  ['unsettled own dialog', { animations: [{ pending: false, playState: 'running' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch exhausts its one original deadline with ' + label + ' and no settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [frame]);
+  await assert.rejects(f.run(), /UI read timed out: saved model hydrates original Launch; no mutation retry/);
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch']);
+  assert.deepEqual(f.clicks, [{ selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 }]);
+  assert.equal(f.counts().reads, 300); assert.equal(f.counts().owned, 300); assert.equal(f.counts().queries, 300);
+  assert.equal(f.counts().now, 30_000); assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+});
+
+type ConversationPreviewState = {
+  content: string; centerY: number; count: number; width: number; disabled: boolean;
+  covered: boolean; duplicateHit: boolean; bodyText: string; neighborText: string;
+};
+function conversationPreviewFixture(t: import('node:test').TestContext,
+  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {
+  const selector = 'button[aria-label^="alice,"]', label = 'TEST original conversation';
+  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,
+    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };
+  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;
+  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',
+    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),
+    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },
+    contains: () => false, getAttribute: () => null };
+  const duplicate = { ...row, textContent: 'alice TEST boot ready' };
+  const document = {
+    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },
+    querySelectorAll(actual: string) {
+      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);
+    },
+    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,
+  };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      reads++; expressions.push(expression);
+      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });
+  return { state, events, expressions, waits,
+    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,
+    counts: () => ({ now, owned, reads, bodyReads, front }) };
+}
+
+test('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }
+  });
+  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);
+  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');
+});
+
+test('default conversation click retains its original final geometry refusal without a preview predicate', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check >= 6 && (check - 6) % 4 === 0) state.centerY += 8.5;
+  });
+  await assert.rejects(f.run(), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 1000, owned: 22, reads: 17, bodyReads: 0, front: 1 });
+});
+
+for (const [label, invalid] of [
+  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],
+  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],
+  ['different required reply', { content: 'alice TEST stream partial' }],
+  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],
+  ['disabled target', { disabled: true }], ['covered target', { covered: true }],
+  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],
+] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])
+test('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {
+  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);
+  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);
+  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]));
+});
+
+test('original conversation serializes its required preview as literal data', async t => {
+  const marker = 'TEST "quoted" \\ \u2028 </script> $' + '{notCode} ready';
+  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);
+  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });
+});
+
+test('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';
+  });
+  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');
+});
+
+for (const kind of ['owner', 'movement'] as const)
+test('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {
+  const refusal = new Error('TEST original renderer owner lost');
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check < 6 || (check - 6) % 4 !== 0) return;
+    if (kind === 'owner') throw refusal;
+    state.centerY += 8.5;
+  });
+  await assert.rejects(f.run('TEST boot ready'), error => {
+    if (kind === 'owner') assert.equal(error, refusal);
+    else assert.match(String(error), /Original UI target moved after ownership check/);
+    return true;
+  });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 17);
+  assert.equal(f.counts().owned, kind === 'owner' ? 6 : 22);
+  assert.equal(f.counts().now, kind === 'owner' ? 200 : 1000);
+});
+
+for (const memberName of ['alice', 'team-lead'])
+for (const expectedReply of ['TEST boot ready', 'TEST stream partial'])
+test('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = 'const leadSelector =', last = 'const assertSameLive =';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end));
+  const calls: { method: string; args: unknown[] }[] = [];
+  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, ui, expectedReply); })',
+    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {
+      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },
+      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },
+    } }) as () => Promise<void>;
+  await run();
+  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';
+  assert.deepEqual(calls, [
+    { method: 'scrollTo', args: [selector, 'original lead conversation'] },
+    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },
+  ], 'one original scroll and one original click carrying the expected reply as data');
+});
+
+test('original selected stream verifies the opened partial reply before its screenshot and one release', async () => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "  await openChat(liveA, ui, 'TEST stream partial');";
+  const last = '  const completed = await poll(liveA.session';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end));
+  for (const bodyReady of [true, false]) {
+    const calls: string[] = [], liveA = {}, ui = {}, proof: Record<string, unknown> = {};
+    const failure = new Error('TEST original partial reply not visible');
+    const run = () => runInNewContext('(async () => { ' + actual + ' })()', {
+      assert, liveA, ui, proof, join, fixture: { emulatedRuntime: { peers: [{ root: '/TEST-selected-peer' }] } },
+      async openChat(live: unknown, controls: unknown, reply: string) {
+        assert.equal(live, liveA); assert.equal(controls, ui); assert.equal(reply, 'TEST stream partial'); calls.push('open');
+      },
+      async visible(reply: string) {
+        assert.equal(reply, 'TEST stream partial'); calls.push('body'); if (!bodyReady) throw failure;
+      },
+      cdp: { async evaluate(expression: string) {
+        assert.equal(expression, "document.body.innerText.includes('TEST stream partial complete')");
+        calls.push('full-body-check'); return false;
+      } },
+      async screenshot(label: string) { assert.equal(label, 'a-survived'); calls.push('screenshot'); return 'TEST-screenshot'; },
+      async writeFile(path: string, text: string, options: { mode: number; flag: string }) {
+        assert.equal(path, join('/TEST-selected-peer', 'release-stream')); assert.equal(text, 'TEST release once\n');
+        assert.equal(options.mode, 0o600); assert.equal(options.flag, 'wx'); calls.push('release');
+      },
+    }) as Promise<void>;
+    if (bodyReady) {
+      await run(); assert.deepEqual(calls, ['open', 'body', 'full-body-check', 'screenshot', 'release']);
+      assert.deepEqual(proof, { aSurvivedScreenshot: 'TEST-screenshot' });
+    } else {
+      await assert.rejects(run(), error => error === failure);
+      assert.deepEqual(calls, ['open', 'body']); assert.deepEqual(proof, {});
+    }
+  }
+});
+
+
+type CrossCloseGeometry = {
+  centerY: number; width: number; height: number; count: number; text: string;
+  disabled: boolean; secondDisabled: boolean; covered: boolean; noHit: boolean;
+  descendantHit: boolean; foreignClose: boolean;
+};
+
+function crossCloseFixture(t?: import('node:test').TestContext) {
+  const identity = { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
+  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
+  const controller = {
+    identity, surfaceId: captured.surfaceId, isOwner: true, canSubmit: true,
+    canEditNow: () => true, canResolveClarification: false, attachmentError: null,
+    session: { ownerSurfaceId: captured.surfaceId, ownerRevision: 1, commentText: '',
+      partRevisions: { commentText: 0, pendingAttachments: 0 }, submitPending: false,
+      submitError: null, pendingAttachments: [], pendingAttachmentPreparationIds: [] },
+  };
+  const detail = { identity: { ...identity }, phase: 'ready', loading: false, refreshPending: false,
+    error: null as unknown, deletionIntent: null as unknown,
+    full: { id: identity.taskId, owner: 'alice', status: 'pending',
+      needsClarification: undefined as unknown, deletedAt: undefined as unknown } };
+  const storedSession = { ...controller.session };
+  const state = { activeContextId: identity.contextId, selectedTeamName: identity.teamName,
+    isContextSwitching: false, taskDetailById: { [key]: detail },
+    taskDetailSessionById: { [key]: storedSession } as Record<string, typeof storedSession> };
+  const work = { refreshPending: false, teamUnavailable: false };
+  const geometry: CrossCloseGeometry = { centerY: 171.125, width: 40, height: 24, count: 1,
+    text: 'Close', disabled: false, secondDisabled: false, covered: false, noHit: false,
+    descendantHit: false, foreignClose: false };
+  const root = { return: null, stateNode: {} as { current: unknown } }; root.stateNode.current = root;
+  const dialogFiber = { return: root, memoizedProps: { open: true, teamName: identity.teamName,
+    task: { id: identity.taskId }, sessionController: controller } };
+  const trigger = { disabled: false, expanded: 'false', textContent: 'alice', tagName: 'BUTTON',
+    getAttribute: (name: string) => name === 'aria-expanded' ? trigger.expanded : null,
+    getBoundingClientRect: () => ({ x: 10, y: 10, width: 50, height: 20 }),
+    matches: () => trigger.disabled, contains: () => false };
+  const triggers = [trigger], descendant = {};
+  const closeButton = {
+    get textContent() { return geometry.text; }, tagName: 'BUTTON',
+    get disabled() { return geometry.disabled; },
+    getBoundingClientRect: () => ({ x: 1101, y: geometry.centerY - geometry.height / 2,
+      width: geometry.width, height: geometry.height }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.disabled; },
+    contains: (node: unknown) => node === descendant,
+    getAttribute: () => null,
+  };
+  const duplicate = { ...closeButton, textContent: 'Close',
+    get disabled() { return geometry.secondDisabled; },
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.secondDisabled; },
+    contains: () => false };
+  const foreignButton = { ...closeButton, textContent: 'Close', disabled: false,
+    getBoundingClientRect: () => ({ x: 1400, y: 100, width: 40, height: 24 }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return false; },
+    contains: () => false };
+  const ownButtons = () => [...triggers, ...Array.from({ length: geometry.count },
+    (_, index) => index === 0 ? closeButton : duplicate)];
+  const dialog = {
+    __reactFiber$TEST: dialogFiber, getClientRects: () => [1],
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === 'textarea') return [input];
+      if (selector === 'button[role="combobox"]') return triggers;
+      assert.equal(selector, 'button'); return ownButtons();
+    },
+  };
+  const foreignDialog = { getClientRects: () => [1],
+    querySelectorAll: () => geometry.foreignClose ? [foreignButton] : [] };
+  const input = { id: 'TEST-original-comment', disabled: false, getClientRects: () => [1],
+    closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return dialog; },
+    __reactFiber$TEST: { return: dialogFiber, memoizedProps: { controller, contextId: identity.contextId,
+      teamName: identity.teamName, taskId: identity.taskId, surfaceId: captured.surfaceId } } };
+  const document = {
+    getElementById(id: string) { assert.equal(id, input.id); return input; },
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === '[role="dialog"]') return [dialog, foreignDialog];
+      if (selector === 'textarea') return [input];
+      assert.equal(selector, '[role="dialog"] button');
+      return [...ownButtons(), ...(geometry.foreignClose ? [foreignButton] : [])];
+    },
+    elementFromPoint() {
+      if (geometry.noHit) return null;
+      if (geometry.covered) return {};
+      if (geometry.foreignClose && geometry.count === 0) return foreignButton;
+      return geometry.descendantHit ? descendant : closeButton;
+    },
+  };
+  let now = 0, owned = 0, reads = 0, front = 0;
+  let ownedHook: (check: number) => void = () => undefined;
+  let readHook: (read: number) => void = () => undefined;
+  const waits: number[] = [], imports: string[] = [], expressions: string[] = [];
+  const events: Record<string, unknown>[] = [];
+  if (t) {
+    t.mock.method(Date, 'now', () => now);
+    t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+      assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+      return 1 as unknown as NodeJS.Timeout;
+    });
+  }
+  const evaluate = async (expression: string) => {
+    reads++; expressions.push(expression);
+    readHook(reads);
+    return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+      window: { __agentTeamsDevStore: { getState: () => state } }, document,
+      innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),
+      async __testImport(path: string) {
+        imports.push(path);
+        if (path === '/store/slices/teamSlice.ts')
+          return { isTeamDataRefreshPending(team: string, getState: unknown) {
+            assert.equal(team, identity.teamName); assert.equal(typeof getState, 'function');
+            return work.refreshPending;
+          } };
+        assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
+        return {
+          captureTaskDetailReadScope(teamName: string, contextId: string) {
+            assert.deepEqual({ teamName, contextId }, { teamName: identity.teamName, contextId: captured.contextId });
+            return { ...scope };
+          },
+          isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {
+            assert.equal(observed, state); assert.equal(team, identity.teamName);
+            assert.deepEqual(observedScope, scope); return work.teamUnavailable;
+          },
+        };
+      },
+    }) as Promise<Record<string, unknown> | null>;
+  };
+  const ui = createDesktopUiControls({ evaluate,
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { ownedHook(++owned); }, step() {} });
+  return { identity, captured, key, controller, detail, storedSession, state, work, geometry,
+    trigger, triggers, ui, events, expressions, imports, waits,
+    setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },
+    setReadHook(callback: (read: number) => void) { readHook = callback; },
+    advanceTime(milliseconds: number) { now += milliseconds; },
+    counts: () => ({ now, owned, reads, front }),
+    evaluateTarget: () => {
+      const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,
+        ['TEST-owner', identity.taskId, captured, 'clarification-cleared']) as string;
+      assert.equal(expression.match(/await import\(/g)?.length, 2, 'only the two original readonly imports');
+      return evaluate(expression);
+    },
+  };
+}
+
+async function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {
+  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');
+  const first = '  proof.clarificationReceipt = await receiptFor(';
+  const last = '  await ui.waitRead(' + String.fromCharCode(96) +
+    '!document.querySelector(\'[role="dialog"]\')' + String.fromCharCode(96) + ', \'Task detail closed\');';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\n  );\n', receiptBegin);
+  const end = source.indexOf(last, receiptBegin);
+  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);
+  const actual = source.slice(receiptEnd + '\n  );\n'.length, end).trim();
+  assert.ok(actual.length > 20 && actual.length < 512);
+  const call = /^await ([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\(([\s\S]*)\);$/.exec(actual);
+  assert.ok(call, 'exactly one awaited original Close call');
+  assert.match(call[2]!, /^(?:\s+|[A-Za-z_$][\w$]*|[.,{}]|'(?:[^'\\\r\n]|\\.)*'|"(?:[^"\\\r\n]|\\.)*")*$/,
+    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');
+  const helpers = await import('./desktop-task-comment-input-target.ts');
+  const imports = [...source.matchAll(/import\s*\{([^{}]*)\}\s*from\s*(['"])\.\/desktop-task-comment-input-target\.ts\2\s*;/g)];
+  assert.equal(imports.length, 1, 'one actual named helper import block');
+  const bindings: Record<string, unknown> = {};
+  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {
+    assert.match(name, /^[A-Za-z_$][\w$]*$/, 'unsupported import binding');
+    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');
+    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');
+    const value = Reflect.get(helpers, name);
+    assert.equal(typeof value, 'function'); bindings[name] = value;
+  }
+  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');
+  await runInNewContext('(async () => { ' + actual + ' })()', {
+    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,
+    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,
+  });
+}
+
+test('original Cross Close target admits the ready cleared Task when canResolveClarification is false', async () => {
+  const f = crossCloseFixture();
+  const point = await f.evaluateTarget();
+  assert.ok(point);
+  assert.deepEqual([point.x, point.y, point.tag, point.text], [1121, 171.125, 'BUTTON', 'Close']);
+  assert.equal(f.controller.canResolveClarification, false);
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.imports, ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+});
+
+for (const [label, change] of [
+  ['retained user clarification', f => { f.detail.full.needsClarification = 'user'; }],
+  ['retained external clarification', f => { f.detail.full.needsClarification = 'external'; }],
+  ['null clarification', f => { f.detail.full.needsClarification = null; }],
+  ['full-detail refreshPending', f => { f.detail.refreshPending = true; }],
+  ['full-detail loading', f => { f.detail.loading = true; }],
+  ['current detail error', f => { f.detail.error = 'TEST detail error'; }],
+  ['current deletionIntent', f => { f.detail.deletionIntent = { pending: true }; }],
+  ['full Task deletedAt', f => { f.detail.full.deletedAt = '2026-11-16T00:00:00.000Z'; }],
+  ['full Task deleted status', f => { f.detail.full.status = 'deleted'; }],
+  ['non-ready full-detail phase', f => { f.detail.phase = 'loading'; }],
+  ['foreign full Task ID', f => { f.detail.full.id = 'TEST-foreign-task'; }],
+  ['foreign detail identity', f => { f.detail.identity.taskId = 'TEST-foreign-task'; }],
+  ['changed active context', f => { f.state.activeContextId = 'TEST-foreign-context'; }],
+  ['different selected Team', f => { f.state.selectedTeamName = 'host-team:TEST-foreign'; }],
+  ['rebound controller surface', f => { f.controller.surfaceId = 'TEST-foreign-surface'; }],
+  ['missing stored session', f => { delete f.state.taskDetailSessionById[f.key]; }],
+  ['different stored session owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-foreign-surface'; }],
+  ['changed stored owner revision', f => { f.storedSession.ownerRevision++; }],
+  ['current canEditNow false', f => { f.controller.canEditNow = () => false; }],
+  ['non-owning controller', f => { f.controller.isOwner = false; }],
+  ['scoped Team refresh', f => { f.work.refreshPending = true; }],
+  ['unavailable accepted Team metadata', f => { f.work.teamUnavailable = true; }],
+  ['disabled assignment control', f => { f.trigger.disabled = true; }],
+  ['expanded assignment control', f => { f.trigger.expanded = 'true'; }],
+  ['another assignee', f => { f.trigger.textContent = 'bob'; }],
+  ['missing assignment control', f => { f.triggers.length = 0; }],
+  ['duplicate assignment controls', f => { f.triggers.push({ ...f.trigger }); }],
+] satisfies readonly (readonly [string, (f: ReturnType<typeof crossCloseFixture>) => void])[])
+test('original Cross Close target refuses ' + label, async () => {
+  const f = crossCloseFixture(); change(f);
+  assert.equal(await f.evaluateTarget(), null);
+  assert.deepEqual(f.events, [], 'readiness observation never performs an input action');
+});
+
+test('actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates', async t => {
+  for (const descendantHit of [false, true]) {
+    t.mock.restoreAll();
+    const f = crossCloseFixture(t);
+    f.geometry.descendantHit = descendantHit; f.geometry.centerY = 167.125;
+    f.detail.full.needsClarification = 'user'; f.detail.loading = true; f.work.refreshPending = true;
+    f.setOwnedHook(check => {
+      if (check === 6) {
+        f.detail.full.needsClarification = undefined; f.detail.loading = false;
+        f.work.refreshPending = false; f.geometry.centerY = 171.125;
+      }
+    });
+    await runActualCrossClose(f);
+    assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+      [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+    assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, front: 1 });
+    assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+    assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one complete predicate in every phase');
+  }
+});
+
+function assertCrossCloseNoInputDeadline(f: ReturnType<typeof crossCloseFixture>) {
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one unchanged first-read predicate');
+}
+
+test('actual original Cross Close retains the first-read deadline while renderer readiness is pending', async t => {
+  const f = crossCloseFixture(t); f.detail.refreshPending = true;
+  await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+  assertCrossCloseNoInputDeadline(f);
+});
+
+test('actual original Cross Close cannot use a foreign dialog or an absent ineligible own control', async t => {
+  for (const invalid of [
+    { count: 0, foreignClose: true }, { count: 0 }, { text: 'Close another task' },
+    { width: 0 }, { height: 0 },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing', async t => {
+  for (const invalid of [
+    { count: 2 }, { count: 2, secondDisabled: true }, { count: 2, descendantHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses disabled covered and absent-hit controls', async t => {
+  for (const invalid of [
+    { disabled: true }, { covered: true }, { noHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });
+  await assert.rejects(runActualCrossClose(f), /UI read timed out: close original Task detail final target; no mutation retry/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 602, reads: 302, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');
+});
+
+test('actual original Cross Close waits for a pending final read before its single click', async t => {
+  const f = crossCloseFixture(t);
+  f.setReadHook(read => { f.detail.refreshPending = read === 5; });
+  await runActualCrossClose(f);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 300, owned: 9, reads: 6, front: 1 });
+  assert.deepEqual(f.waits, [100, 100, 100]);
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'only the original owner and control are read');
+});
+
+for (const late of [30_000, 30_001]) test(
+  `actual original Cross Close rejects a final ready result at ${late} within its original budget`, async t => {
+    const f = crossCloseFixture(t);
+    f.setReadHook(read => {
+      f.detail.refreshPending = read === 5;
+      if (read === 6) f.advanceTime(late - 300);
+    });
+    await assert.rejects(runActualCrossClose(f), /UI read timed out: close original Task detail final target; no mutation retry/);
+    assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved']);
+    assert.deepEqual(f.counts(), { now: late, owned: 9, reads: 6, front: 1 });
+    assert.deepEqual(f.waits, [100, 100, 100]);
+    assert.ok(f.expressions.every(value => value === f.expressions[0]));
+  }
+);
+
+for (const failure of ['revoked owner', 'unavailable control', 'transport'] as const) test(
+  `actual original Cross Close preserves ${failure} after a pending final read without input`, async t => {
+    const f = crossCloseFixture(t), refusal = new Error('TEST original final read refusal');
+    f.setReadHook(read => {
+      f.detail.refreshPending = read === 5;
+      if (read === 6) {
+        if (failure === 'transport') throw refusal;
+        f.geometry.disabled = true;
+      }
+    });
+    if (failure === 'revoked owner') f.setOwnedHook(check => { if (check === 7) throw refusal; });
+    await assert.rejects(runActualCrossClose(f), error => failure === 'unavailable control'
+      ? error instanceof Error && /Original UI target unavailable after ownership check/.test(error.message)
+      : error === refusal);
+    assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved']);
+    assert.equal(f.counts().reads, failure === 'revoked owner' ? 5 : 6);
+    assert.deepEqual(f.waits, failure === 'revoked owner' ? [100, 100] : [100, 100, 100]);
+    assert.ok(f.expressions.every(value => value === f.expressions[0]));
+  }
+);
+
+test('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {
+  const refusal = new Error('TEST original renderer ownership lost');
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) throw refusal; });
+  await assert.rejects(runActualCrossClose(f), error => { assert.equal(error, refusal); return true; });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 4, front: 1 });
+});
+
+test('actual original Cross Close preserves final exact geometry refusal without replay', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check >= 6 && (check - 6) % 4 === 0) f.geometry.centerY += 4; });
+  await assert.rejects(runActualCrossClose(f), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 1000, owned: 22, reads: 17, front: 1 });
+});
 
 async function originalLiveMembershipPoll() {
   const { stripTypeScriptTypes } = await import('node:module');
   const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
   for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
-  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
   const makePoll = Function('environment', `'use strict';
     const {assert,current,Date,setTimeout}=environment;
     ${actual}
@@ -2373,17 +3565,38 @@ test('the actual generated target expression keeps the same eligible click when 
   assert.deepEqual(output, [], 'a successful original click does not emit a failure diagnostic');
 });
 
-async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error) {
+async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error, settleObservations?: unknown[]) {
   const { stripTypeScriptTypes } = await import('node:module');
   const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const begin = '  const commentTarget = record(', end = "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');";
   for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');
-  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
   const selector = '[role="dialog"] textarea[id="TEST-original-correction-input"]';
-  const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];
-  let reads = 0;
+  const original = { selector, canEditNow: true, inputId: 'TEST-original-correction-input', ownerRevision: 7,
+    identity: { contextId: 'TEST-current-context', teamName: 'TEST-original-correction-owner', taskId: 'TEST-original-correction-task' },
+    surfaceId: 'TEST-current-surface' }, trace: string[] = [], budgets: number[] = [];
+  let reads = 0, settledReads = 0, inserted = false;
+  const ready = () => ({ settled: true, inputEnabled: true, visibility: 'visible', focused: true, documentFocused: true,
+    domValue: inserted ? 'TEST original correction text' : '', owner: { ...original,
+      commentText: inserted ? 'TEST original correction text' : '', submitPending: false, submitError: null,
+      canSubmit: true, pendingAttachmentCount: 0, pendingPreparationCount: 0, attachmentError: null } });
   const cdp = {
     async evaluate(expression: string) {
+      if (expression !== 'TEST-original-current-correction-expression') {
+        assert.ok(expression.includes('const settled=await TEST-original-settled-correction-expression'));
+        assert.ok(expression.includes('owner=TEST-original-current-correction-expression'));
+        trace.push('settled-read');
+        const observation = settleObservations ? settleObservations[settledReads++] : ready();
+        if (observation instanceof Error) throw observation;
+        if (observation && typeof observation === 'object' && !Array.isArray(observation)) {
+          const value = observation as Record<string, unknown>, owner = value.owner as Record<string, unknown> | undefined;
+          return { ...ready(), ...value, ...(owner ? { owner: { ...ready().owner, ...owner,
+            identity: { ...ready().owner.identity, ...(owner.identity as Record<string, unknown> | undefined) } } } : {}) };
+        }
+        return observation === 'ready' ? ready() : observation;
+      }
       assert.equal(expression, 'TEST-original-current-correction-expression');
       assert.ok(reads < observations.length, 'no unplanned currentness observation');
       const value = observations[reads++]; trace.push('read');
@@ -2396,6 +3609,7 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
       assert.deepEqual(params, { text: 'TEST original correction text' });
       trace.push('insert');
       if (insertFailure) throw insertFailure;
+      inserted = true;
       return {};
     },
   };
@@ -2403,12 +3617,20 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
   const ui = {
     ...controls,
     waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {
-      assert.equal(label, 'exact current correction Task/owner/surface');
+      assert.ok(['exact current correction Task/owner/surface',
+        'original correction empty owner and document focused after one click',
+        'original correction insertion reaches DOM and current owner',
+        'original correction exact draft before single submit'].includes(label));
       budgets.push(timeoutMs);
       return controls.waitRead(expression, label, timeoutMs, accepts);
     }) as typeof controls.waitRead,
-    async scrollTo(target: string, label: string) {
-      assert.equal(target, selector); assert.equal(label, 'existing Task comment composer'); trace.push('scroll');
+    async scrollTo(target: string, label: string, text?: string) {
+      if (label === 'existing Task comment composer') {
+        assert.equal(target, selector); assert.equal(text, undefined); trace.push('scroll');
+      } else {
+        assert.equal(target, '[role="dialog"] button.message-composer-send-button');
+        assert.equal(label, 'original correction Comment viewport'); assert.equal(text, 'Comment'); trace.push('submit-scroll');
+      }
     },
     async click(target: string, label: string, text?: string) {
       if (label === 'focus existing correction comment') {
@@ -2420,15 +3642,21 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
     },
   };
   const run = Function('environment', `'use strict';
-    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression}=environment;
+    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression,desktopTaskBoardAssignmentReadyExpression,proof,step}=environment;
     return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;
   return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,
     record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
-    options: { handleId: 'TEST-original-correction-owner' }, taskId: 'TEST-original-correction-task',
+    options: { handleId: 'TEST-original-correction-owner', assertOwnedRenderer() {} }, taskId: 'TEST-original-correction-task',
+    proof: {}, step() {},
     commentText: 'TEST original correction text',
     desktopTaskCommentInputExpression(handleId: string, taskId: string) {
       assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
       return 'TEST-original-current-correction-expression';
+    },
+    desktopTaskBoardAssignmentReadyExpression(handleId: string, taskId: string, captured: unknown, stage: string) {
+      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
+      assert.deepEqual(captured, { contextId: 'TEST-current-context', surfaceId: 'TEST-current-surface' });
+      assert.equal(stage, 'in-progress-comment'); return 'TEST-original-settled-correction-expression';
     },
   }) };
 }
@@ -2447,14 +3675,30 @@ test('original review correction admits current authority with one original inse
   for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {
     const f = await originalReviewCorrectionStage(observations);
     await f.run();
-    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'insert', 'submit']);
-    assert.deepEqual(f.budgets, [30_000]); assert.equal(f.reads(), observations.length);
+    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'settled-read', 'insert',
+      'settled-read', 'submit-scroll', 'settled-read', 'submit']);
+    assert.deepEqual(f.budgets, [30_000, 30_000, 30_000, 30_000]); assert.equal(f.reads(), observations.length);
   }
   const failure = new Error('TEST original insertion response failed');
   const refused = await originalReviewCorrectionStage(['current'], failure);
   await assert.rejects(refused.run(), error => error === failure);
-  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);
-  assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);
+  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'settled-read', 'insert']);
+  assert.deepEqual(refused.budgets, [30_000, 30_000]); assert.equal(refused.reads(), 1);
+});
+
+test('original review correction stops on unsettled focus or missing committed text without reinsertion', { timeout: 5000 }, async () => {
+  const failure = new Error('TEST original settled observation failed');
+  for (const observations of [[null, failure], [{ focused: false }, failure], [{ documentFocused: false }, failure],
+    [{ settled: false }, failure], [{ owner: { identity: { contextId: 'TEST-successor-context' } } }, failure],
+    [{ owner: { surfaceId: 'TEST-successor-surface' } }, failure], ['ready', { domValue: 'TEST uncommitted draft' }, failure],
+    ['ready', { owner: { selector: 'TEST other owner' } }, failure], ['ready', 'ready', { inputEnabled: false }, failure]]) {
+    const f = await originalReviewCorrectionStage(['current'], undefined, observations);
+    await assert.rejects(f.run(), error => error === failure);
+    assert.equal(f.trace.filter(value => value === 'focus').length, 1);
+    assert.equal(f.trace.filter(value => value === 'insert').length, observations[0] === 'ready' ? 1 : 0);
+    assert.equal(f.trace.includes('submit'), false);
+    assert.ok(f.budgets.every(value => value === 30_000));
+  }
 });
 
 async function originalEmulatedBootChat(fixture: {
@@ -2596,7 +3840,9 @@ test('original initial conversation rejects observations crossing the same cutof
   for (const expireAfter of ['preview', 'final-target', 'reply'] as const) {
     clock.now = 0;
     const f = await originalEmulatedBootChat({ clock, modes: ['current'], expireAfter });
-    await assert.rejects(f.run(), /original initial conversation deadline/);
+    await assert.rejects(f.run(), expireAfter === 'final-target'
+      ? /original initial conversation deadline/
+      : { message: `UI read timed out: ${expireAfter === 'preview' ? 'original lead BOOT preview' : 'original visible reply TEST boot ready'}; no mutation retry` });
     assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, expireAfter === 'reply' ? 1 : 0);
     assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, expireAfter === 'reply' ? 1 : 0);
     assert.equal(f.values.length, 1); assert.equal(f.budgets[0]!.ms, 60_000);
@@ -2640,7 +3886,7 @@ test('original lifecycle runtime and collaboration retain their boot budgets and
     assert.ok(f.trace.indexOf('preview') < f.trace.lastIndexOf('mousePressed'));
     clock.now = 0;
     const expired = await originalEmulatedBootChat({ clock, scenario, backShown, modes: ['current'], expireAfter: 'preview' });
-    await assert.rejects(expired.run(), /original initial conversation deadline/);
+    await assert.rejects(expired.run(), { message: 'UI read timed out: original lead BOOT preview; no mutation retry' });
     assert.equal(expired.commands.filter(row => row.type === 'mousePressed').length, backShown ? 1 : 0);
     assert.equal(expired.commands.filter(row => row.type === 'mouseReleased').length, backShown ? 1 : 0);
   }
@@ -2667,15 +3913,78 @@ test('finite V2 P11 admission rejects mixed selectors before any fixture or proc
     return actual();
   };
   assert.equal(await select({}), false); assert.equal(await select(allowed), true);
-  for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
+  const finiteHeap = { ...allowed, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' };
+  assert.equal(await select(finiteHeap), true);
+  for (const context of [allowed, finiteHeap]) for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
     { LEGACY_DESKTOP_PROOF_MODE: 'team-ui' }, { LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: undefined },
     { LEGACY_DESKTOP_OPENCODE_GENERATION: 'v1' }, { LEGACY_DESKTOP_EMULATED_ONLY: '1' },
     { LEGACY_DESKTOP_CLAUDE_PATH: '/TEST-unselected' }, { LEGACY_DESKTOP_CODEX_PATH: '/TEST-unselected' },
-    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
+    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { LEGACY_DESKTOP_TEST_FINITE_HEAP_8192: '1' },
+    { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
     { OPENCODE_V2_EMBEDDED_BUN_SHA256: 'bad' }])
-    await assert.rejects(select({ ...allowed, ...override }), assert.AssertionError);
+    await assert.rejects(select({ ...context, ...override }), assert.AssertionError);
   await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
   await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
+});
+
+test('finite V2 P11 effects count exact probes from both original profile roles and refuse business inputs', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-p11-effects-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const pin = async (name: string, bytes: string) => {
+    const path = join(root, name); await writeFile(path, bytes, { flag: 'wx' });
+    return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+  };
+  const source = await pin('TEST-source.mjs', 'export const source = "TEST finite protocol";\n');
+  const peers: Parameters<typeof readDesktopFiniteMembershipPeers>[0]['peers'][number][] = [];
+  for (const provider of ['claude', 'codex'] as const) {
+    const peerRoot = join(root, provider); await mkdir(peerRoot);
+    peers.push({ provider, root: peerRoot, executable: await pin(`TEST-${provider}.mjs`, `// TEST ${provider} wrapper; never executed\n`) });
+  }
+  const selected = { sources: [source], peers };
+  const original = peers.map(({ provider }, index) => ['management', 'runtime'].flatMap((role, roleIndex) => {
+    const common = { provider, role, pid: 200 + index * 10 + roleIndex, inputId: `TEST-${provider}-${role}` };
+    return [{ ...common, event: 'launch' }, { ...common, event: 'input', marker: 'TEST_MODEL_PROBE' },
+      { ...common, event: 'terminal', marker: 'Reply only OK. Do not use tools, access files or run commands.', outcome: 'succeeded' }];
+  }));
+  const writeRows = async (rows: Record<string, unknown>[][] = original) => {
+    for (const [index, peer] of peers.entries())
+      await writeFile(join(peer.root, 'effects.ndjson'), rows[index]!.map(row => JSON.stringify(row)).join('\n') + '\n');
+  };
+  await writeRows();
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: original.flat(), probeCounts: [2, 2] });
+  for (const [providerIndex] of peers.entries()) for (const role of ['management', 'runtime']) {
+    for (const marker of ['TEST_UI_BOOT', 'TEST_UI_HOLD', '/cost', 'TEST_MODEL_PROBE extra', 'TEST_MODEL_PROBE ',
+      'Reply only OK. Do not use tools, access files or run commands.', undefined, null]) {
+      const rows: Record<string, unknown>[][] = structuredClone(original);
+      rows[providerIndex]!.find(row => row.role === role && row.event === 'input')!.marker = marker;
+      await writeRows(rows);
+      await assert.rejects(readDesktopFiniteMembershipPeers(selected), error =>
+        error instanceof assert.AssertionError && error.actual === marker && error.expected === 'TEST_MODEL_PROBE');
+    }
+  }
+  for (const mutation of [{ event: 'failure' }, { role: 'other' }, { provider: 'opencode' },
+    { pid: 1 }, { pid: '200' }, { pid: 1.5 }, { pid: Number.MAX_SAFE_INTEGER + 1 }]) {
+    const rows: Record<string, unknown>[][] = structuredClone(original); Object.assign(rows[0]![1]!, mutation);
+    await writeRows(rows); await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  }
+  await writeRows();
+  for (const captured of [source, ...peers.map(peer => peer.executable)]) {
+    const bytes = await readFile(captured.path);
+    await writeFile(captured.path, Buffer.concat([bytes, Buffer.from('changed')]));
+    await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+    await writeFile(captured.path, bytes);
+  }
+  const effectsPath = join(peers[0]!.root, 'effects.ndjson');
+  await writeFile(effectsPath, ' '.repeat(1024 * 1024 + 1));
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  await writeRows([Array.from({ length: 4097 }, () => original[0]![0]!), []]);
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  await rm(effectsPath); await symlink(join(peers[1]!.root, 'effects.ndjson'), effectsPath);
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  for (const peer of peers) await rm(join(peer.root, 'effects.ndjson'));
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: [], probeCounts: [0, 0] });
+  await writeRows();
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: original.flat(), probeCounts: [2, 2] });
 });
 
 test('finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children', async () => {
@@ -2684,8 +3993,12 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
   const peer = { pid: 201, parentPid: 200, groupId: 201, birth: 'original ps peer', command: 'node' };
   const native = { pid: 202, parentPid: 200, groupId: 202, birth: 'original ps V2', command: 'bun' };
   const unrelated = { pid: 300, parentPid: 1, groupId: 300, birth: 'original other', command: 'other' };
-  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent') => {
+  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent' |
+    'candidate-exited-before-capture' | 'host-exited-before-capture' | 'candidate-exited-after-capture' | 'candidate-denied') => {
     const reads: string[] = [], stats = new Map<number, number>(); let censuses = 0;
+    const observationError = Object.assign(new Error('original process observation failed'), {
+      code: variant === 'candidate-denied' ? 'EACCES' : 'ENOENT',
+    });
     const table = variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated];
     const fixture = { node: '/TEST/node', hostEntry: '/TEST/host/cli.js', finiteInitialPeers: {
       peers: [{ provider: 'claude', executable: { path: '/TEST/peer' } }] } };
@@ -2703,6 +4016,9 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
           reads.push(path); const pid = Number(path.split('/')[2]), row = table.find(value => value.pid === pid); assert.ok(row);
           if (path.endsWith('/stat')) {
             const count = (stats.get(pid) ?? 0) + 1; stats.set(pid, count);
+            if ((pid === 201 && count === 1 && ['candidate-exited-before-capture', 'candidate-denied'].includes(variant)) ||
+              (pid === 200 && count === 1 && variant === 'host-exited-before-capture') ||
+              (pid === 201 && count === 2 && variant === 'candidate-exited-after-capture')) throw observationError;
             const fields = Array<string>(20).fill('0'); fields[0] = 'S';
             fields[1] = String(variant === 'wrong-parent' && pid === 201 ? 299 : row.parentPid);
             fields[2] = String(row.groupId); fields[19] = String(pid * 10 + (variant === 'changed-birth' && pid === 201 && count === 2 ? 1 : 0));
@@ -2716,19 +4032,23 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
         },
       });
     const promise = actual(100, fixture) as Promise<unknown>;
-    if (variant !== 'ready' && variant !== 'no-host') await assert.rejects(promise, assert.AssertionError);
+    if (['host-exited-before-capture', 'candidate-exited-after-capture', 'candidate-denied'].includes(variant))
+      await assert.rejects(promise, error => error === observationError);
+    else if (variant !== 'ready' && variant !== 'no-host' && variant !== 'candidate-exited-before-capture')
+      await assert.rejects(promise, assert.AssertionError);
     else {
       const result = await promise;
       assert.deepEqual(result, variant === 'no-host' ? table : [
         { ...host, birth: 'linux-starttime:2000', command: '/TEST/node' },
-        { ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' },
+        ...(variant === 'candidate-exited-before-capture' ? [] : [{ ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' }]),
         { ...native, birth: 'linux-starttime:2020', command: '/TEST/bun' }, unrelated]);
       assert.equal(censuses, 1); assert.ok(reads.every(path => !path.includes('/300/')));
-      assert.equal(reads.length, variant === 'no-host' ? 0 : 12);
+      assert.equal(reads.length, variant === 'no-host' ? 0 : variant === 'candidate-exited-before-capture' ? 9 : 12);
     }
     assert.deepEqual(table, variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated]);
   };
-  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent'] as const)
+  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent',
+    'candidate-exited-before-capture', 'host-exited-before-capture', 'candidate-exited-after-capture', 'candidate-denied'] as const)
     await exercise(variant);
 });
 
@@ -2782,11 +4102,13 @@ type NativeSetupStep = 'global-catalog' | 'global-source' | 'global-lineage' | '
 async function originalNativeSetupWindow(options: {
   clock: { now: number }; openCode?: boolean; opening?: boolean; startReady?: boolean; progressReady?: boolean;
   readyCount?: number; actorCount?: number; tickMs?: number; sessions?: Record<string, unknown>[];
+  hostVariant?: 'missing' | 'duplicate' | 'reused-birth';
   preparationProof?: { consumed: number; probes: { requestedModel: string }[] };
   onStep?: (step: NativeSetupStep, count: number) => void | Promise<void>;
   guard?: (count: number) => void; arm?: () => void; disarm?: () => void;
 }) {
   const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopMetadataProfileHash, desktopMetadataReadyScopeCount } = await import('./desktop-opencode-metadata-lineage.ts');
   const source = (await readFile(new URL('./desktop-native-stop-fixture.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const markers = ['const object = (value: unknown): Record<string, unknown> => {',
     'export async function prepareDesktopNativeStop(', '/** Closed diagnostic projection of one already completed Runtime file read. */',
@@ -2795,17 +4117,30 @@ async function originalNativeSetupWindow(options: {
   for (const marker of markers) assert.equal(source.split(marker).length, 2, 'one original native setup source boundary');
   const positions = markers.map(marker => source.indexOf(marker));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+  const metadataMarkers = ['export function readDesktopNativeHostProcesses(',
+    'export function separateDesktopOpenCodeRuntimeChildren(', 'type MetadataObservationBudget = {',
+    "/** Actual source-derived profile IDs, not the descriptor's common seed profile. */"];
+  for (const marker of metadataMarkers) assert.equal(source.split(marker).length, 2, 'one actual metadata helper boundary');
+  const metadataPositions = metadataMarkers.map(marker => source.indexOf(marker));
+  assert.deepEqual([...metadataPositions].sort((a, b) => a - b), metadataPositions);
+  assert.ok(positions[2]! < metadataPositions[0]! && metadataPositions[3]! < positions[3]!);
   const actual = stripTypeScriptTypes(source.slice(positions[0], positions[1]) +
     source.slice(positions[1], positions[2]).replace(/^export /u, '') +
+    source.slice(metadataPositions[0], metadataPositions[1]).replace(/^export /u, '') +
+    source.slice(metadataPositions[2], metadataPositions[3]) +
     source.slice(positions[3], positions[4]).replace(/^export /u, ''));
   const trace: string[] = [], calls: { step: NativeSetupStep; timeoutMs: number | undefined }[] = [];
   const counts = new Map<NativeSetupStep, number>(), evidence: Record<string, unknown> = {};
-  let guards = 0, arms = 0, disarms = 0;
+  let guards = 0, arms = 0, disarms = 0, hostReads = 0, sourceChecks = 0;
+  const guardsBefore = new Map<NativeSetupStep, number>();
   const fixture = { handleId: 'TEST-handle', node: 'TEST-node', hostEntry: 'TEST-host', root: 'TEST-root' }, group = 7;
   const host = { pid: 10, parentPid: 7, groupId: group, birth: 'TEST-host-birth', command: 'TEST-node TEST-host' };
   const globalSource = { sourceId: 'TEST-global', revision: 'TEST-revision', profileId: 'TEST-profile',
     configRevision: 'TEST-config', scope: 'global', projectPath: null };
-  const globalCaptured = { host, children: [{ pid: 11 }] }, projectCaptured = { host, children: [{ pid: 11 }, { pid: 12 }] };
+  const globalProfileHash = desktopMetadataProfileHash(globalSource);
+  const metadataChild = { pid: 11, parentPid: host.pid, groupId: 11,
+    birth: 'TEST-metadata-birth', command: 'TEST-native --metadata' };
+  const globalCaptured = { host, children: [metadataChild] }, projectCaptured = { host, children: [metadataChild, { pid: 12 }] };
   const runtimeCaptured = { host, children: [...projectCaptured.children, { pid: 31 }] };
   const metadataSources = [{ scope: 'global' }, { scope: 'project' }];
   const selection = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', members: [{ memberId: 'alice-id' }] };
@@ -2822,7 +4157,8 @@ async function originalNativeSetupWindow(options: {
     return () => { trace.push('disarm'); disarms++; options.disarm?.(); };
   } };
   async function observe<T>(step: NativeSetupStep, value: T): Promise<T> {
-    trace.push(step); const count = (counts.get(step) ?? 0) + 1; counts.set(step, count);
+    trace.push(step); if (!guardsBefore.has(step)) guardsBefore.set(step, guards);
+    const count = (counts.get(step) ?? 0) + 1; counts.set(step, count);
     assert.ok(count <= (step === 'progress' || step === 'sessions' ? 3 : 1), 'no setup operation replay or unbounded read loop');
     await options.onStep?.(step, count); return value;
   }
@@ -2864,7 +4200,8 @@ async function originalNativeSetupWindow(options: {
   const make = Function('environment', `'use strict';
     const {assert,Date,setTimeout,process,join,desktopJsLiteral,assertOwnedCdpListener,
       readDesktopOpenCodeMetadataSource,desktopMetadataProfileHash,captureMetadataObservation,metadataOnlyRuntimeDigest,
-      captureDesktopOpenCodeProjectMetadata,observeDesktopOpenCodeMetadata,readDesktopNativeStopSessions,fileDigest,processTable,command}=environment;
+      captureDesktopOpenCodeProjectMetadata,observeDesktopOpenCodeMetadata,readDesktopNativeStopSessions,fileDigest,processTable,
+      processFacts,readDesktopMetadataEvents,desktopMetadataReadyScopeCount,command}=environment;
     ${actual}
     return {prepareDesktopNativeStop,captureDesktopOpenCodeGlobalMetadata};`) as (environment: Record<string, unknown>) => {
       prepareDesktopNativeStop: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -2874,12 +4211,28 @@ async function originalNativeSetupWindow(options: {
     setTimeout(done: () => void, ms: number) { assert.equal(ms, 100); trace.push('tick'); options.clock.now += options.tickMs ?? ms; done(); },
     desktopJsLiteral: JSON.stringify,
     assertOwnedCdpListener(value: number) { assert.equal(value, group); guard(); },
-    readDesktopOpenCodeMetadataSource(root: string, projectPath: null) {
-      assert.equal(root, fixture.root); assert.equal(projectPath, null); return observe('global-source', globalSource);
+    processFacts() {
+      assert.ok(++hostReads <= 32, 'bounded original Host census');
+      const current = options.hostVariant === 'reused-birth' && hostReads > 1
+        ? { ...host, birth: 'TEST-reused-host-birth' } : host;
+      return options.hostVariant === 'missing' ? [metadataChild]
+        : options.hostVariant === 'duplicate' ? [current, { ...current }, metadataChild] : [current, metadataChild];
     },
-    desktopMetadataProfileHash(value: unknown) { assert.equal(value, globalSource); return 'TEST-global-profile-hash'; },
+    readDesktopMetadataEvents(root: string, hostPid: number, allowEmpty: boolean) {
+      assert.equal(root, fixture.root); assert.equal(hostPid, host.pid); assert.equal(allowEmpty, true);
+      return [{ hostPid, profileHash: globalProfileHash, mode: 'directory', providerHash: null,
+        pid: metadataChild.pid, startIdentityHash: 'a'.repeat(64), stage: 'ready' }];
+    },
+    desktopMetadataReadyScopeCount,
+    readDesktopOpenCodeMetadataSource(root: string, projectPath: null) {
+      assert.equal(root, fixture.root); assert.equal(projectPath, null);
+      if (!counts.has('global-source')) return observe('global-source', globalSource);
+      trace.push('global-source-check'); assert.ok(++sourceChecks <= 3, 'bounded passive source rechecks');
+      return globalSource;
+    },
+    desktopMetadataProfileHash(value: unknown) { assert.equal(value, globalSource); return globalProfileHash; },
     captureMetadataObservation(value: unknown, observedGroup: number, hashes: string[], original: unknown, expected: number) {
-      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.deepEqual(hashes, ['TEST-global-profile-hash']);
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.deepEqual(hashes, [globalProfileHash]);
       assert.equal(original, undefined); assert.equal(expected, 0); return observe('global-lineage', { captured: globalCaptured });
     },
     metadataOnlyRuntimeDigest(root: string) { assert.equal(root, fixture.root); return observe('global-digest', 'TEST-runtime-digest'); },
@@ -2899,7 +4252,8 @@ async function originalNativeSetupWindow(options: {
     command(pid: number) { assert.ok(pid === host.pid || actors.some(row => row.pid === pid));
       return pid === host.pid ? `${fixture.node} ${fixture.hostEntry}` : 'TEST-native --original'; },
   });
-  return { trace, calls, counts, evidence, armPayloads, configuration, globalSource, globalCaptured, openingSession,
+  return { trace, calls, counts, guardsBefore, evidence, armPayloads, configuration, globalSource, globalCaptured, openingSession,
+    metadataReads: () => ({ hostReads, sourceChecks }),
     projectCaptured, runtimeCaptured, metadataSources, countsOfPreparation: () => ({ arms, disarms }),
     run: () => functions.prepareDesktopNativeStop({ cdp, fixture, group, evidence, executable: 'TEST-native',
       ...(options.openCode === false ? {} : { openCode: { model: { configuredLaunchPreparation: preparation, probes } } }),
@@ -2927,6 +4281,8 @@ test('original native setup carries one live OpenCode window through actual glob
   assert.equal(setup.metadataBeforeLaunch, f.projectCaptured); assert.equal(setup.metadataAtRuntimeObservation, f.runtimeCaptured);
   assert.equal(setup.metadataSources, f.metadataSources); assert.equal(setup.nativeExecutableSha256, 'a'.repeat(64));
   assert.ok([...f.counts.values()].every(count => count === 1));
+  assert.equal(f.metadataReads().sourceChecks, 3, 'the actual passive helper rechecks the same source without replaying operations');
+  assert.ok(f.metadataReads().hostReads > 1);
 });
 
 test('original native setup never replenishes the start window and clamps ordinary reads to its smaller remainder', { timeout: 5000 }, async () => {
@@ -3014,12 +4370,13 @@ test('pending-open keeps original session identity empty-input and native actor 
 });
 
 test('owned guards and the original polling tick cannot dispatch after the setup cutoff', { timeout: 5000 }, async () => {
-  for (const [guardIndex, denied] of [[1, 'global-catalog'], [2, 'global-source'], [3, 'initial-read'],
-    [4, 'project-catalog'], [5, 'start'], [6, 'progress']] as const) {
+  const reference = await originalNativeSetupWindow({ clock: { now: 0 } }); await reference.run();
+  for (const denied of ['global-catalog', 'global-source', 'initial-read', 'project-catalog', 'start', 'progress'] as const) {
+    const guardIndex = reference.guardsBefore.get(denied); assert.ok(guardIndex, 'an original guard precedes this fixed operation');
     const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) clock.now = 180_000; } });
     await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
     assert.equal(f.trace.includes(denied), false); assert.equal(f.evidence.nativeSetup, undefined);
-    assert.deepEqual(f.countsOfPreparation(), guardIndex < 5 ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+    assert.deepEqual(f.countsOfPreparation(), ['start', 'progress'].includes(denied) ? { arms: 1, disarms: 1 } : { arms: 0, disarms: 0 });
   }
   const clock = { now: 0 }, armed = await originalNativeSetupWindow({ clock, arm() { clock.now = 180_000; } });
   await assert.rejects(armed.run(), /Original OpenCode setup observation deadline expired/u);
@@ -3053,11 +4410,13 @@ test('rejected original setup awaits and guards retain their exact Error even af
     await assert.rejects(f.run(), error => error === original); assert.equal(f.evidence.nativeSetup, undefined);
     assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
   }
-  for (const guardIndex of [1, 5]) {
+  const reference = await originalNativeSetupWindow({ clock: { now: 0 } }); await reference.run();
+  for (const target of ['global-catalog', 'start'] as const) {
+    const guardIndex = reference.guardsBefore.get(target); assert.ok(guardIndex);
     const clock = { now: 0 }, original = new Error('TEST original ownership guard');
     const f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) { clock.now = 180_001; throw original; } } });
     await assert.rejects(f.run(), error => error === original);
-    assert.deepEqual(f.countsOfPreparation(), guardIndex === 1 ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+    assert.deepEqual(f.countsOfPreparation(), target === 'global-catalog' ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
   }
 });
 
@@ -3096,6 +4455,19 @@ test('legacy native setup keeps undefined CDP overrides and its separate 45-seco
   assert.equal(expired.evidence.nativeSetup, undefined); assert.equal(expired.trace.includes('native-table'), false);
 });
 
+test('actual native setup refuses missing duplicate or reused original Host facts before metadata qualification', async () => {
+  for (const hostVariant of ['missing', 'duplicate', 'reused-birth'] as const) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, hostVariant });
+    await assert.rejects(f.run(), /one exact TEST Host|same retained metadata Host birth/u);
+    assert.equal(f.counts.get('global-source'), undefined);
+    assert.equal(f.counts.get('global-lineage'), undefined);
+    assert.equal(f.counts.get('initial-read'), undefined);
+    assert.equal(f.counts.get('start'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 });
+  }
+});
+
 test('standalone actual global metadata retains its default CDP override without selecting a setup window', { timeout: 5000 }, async () => {
   const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, onStep() { clock.now += 200_000; } });
   assert.deepEqual(await f.global(), { captured: f.globalCaptured, source: f.globalSource, runtimeDigest: 'TEST-runtime-digest' });
@@ -3103,3 +4475,4 @@ test('standalone actual global metadata retains its default CDP override without
   assert.deepEqual(f.trace, ['guard', 'global-catalog', 'guard', 'global-source', 'global-lineage', 'global-digest']);
   assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 }); assert.deepEqual(f.evidence, {});
 });
+await import('./desktop-ui-controls-deadline.test.ts');

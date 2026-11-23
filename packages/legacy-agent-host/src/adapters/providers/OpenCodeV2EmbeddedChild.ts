@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { verifyOpenCodeV2EmbeddedGraph } from './OpenCodeV2EmbeddedGraph.js';
 import { bindOpenCodeV2ConfiguredPackages } from './OpenCodeV2ConfiguredPackages.js';
 import { createOpenCodeV2NativeFileTransform } from './OpenCodeV2NativeFileKey.js';
+import { createOpenCodeV2NativeMediaReceipt } from './OpenCodeV2NativeMediaReceipt.js';
 import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
 
 import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
@@ -153,6 +154,16 @@ async function start(value: unknown): Promise<void> {
       nonce: input.nonce, password: input.password, graph, signal: controller.signal,
     });
   }
+  let nativeTransform = selectedFileTransform;
+  if (input.media !== undefined) {
+    const media = record(input.media);
+    if (Object.keys(media).sort().join(',') !== 'key,sessionId' ||
+        typeof media.key !== 'string' || typeof media.sessionId !== 'string') return fail();
+    const attestMedia = await createOpenCodeV2NativeMediaReceipt({
+      key: media.key, sessionId: media.sessionId, password: input.password, graph, signal: controller.signal,
+    });
+    nativeTransform = app => attestMedia(selectedFileTransform ? selectedFileTransform(app) : app);
+  }
   controller.signal.throwIfAborted();
   stage = 'effect';
   const { Effect, Scope, Exit } = (await import(
@@ -178,7 +189,7 @@ async function start(value: unknown): Promise<void> {
         config: { directory: configDirectory, project: false, content: JSON.stringify(nativeConfig) },
         models: { fetch: false, snapshot: true },
         fs: { filewatcher: false, fff: false },
-      }, undefined, selectedFileTransform)
+      }, undefined, nativeTransform)
       .pipe(Effect.provideService(Scope.Scope, scope)),
     { signal: controller.signal }
   );

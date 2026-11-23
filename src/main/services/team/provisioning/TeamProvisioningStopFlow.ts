@@ -9,6 +9,7 @@ import {
 
 import type { LegacyNativeStopPublication } from './LegacyNativeStopPublication';
 import type { TeamProvisioningProgress } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 interface StopLogger {
   info(message: string): void;
@@ -36,6 +37,7 @@ export interface TeamProvisioningStopRun
   processKilled: boolean;
   cancelRequested: boolean;
   child: unknown;
+  directMemberProcesses?: ReadonlySet<ChildProcess>;
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
@@ -64,6 +66,7 @@ export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStop
   deleteAliveRunId(teamName: string): void;
   killTeamProcess(child: TRun['child']): void;
   killTeamProcessAndWait(child: TRun['child']): Promise<void>;
+  stopOriginalWindowsDirectMembers(processes: ReadonlySet<ChildProcess> | undefined): Promise<void>;
   updateProgress(
     run: TRun,
     state: Exclude<TeamProvisioningProgress['state'], 'idle'>,
@@ -112,7 +115,17 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   } catch {
     ports.logger.info('task_activity_interval_pause_deferred_until_stop');
   }
-  ports.stopPersistentTeamMembers(teamName);
+  // An owned Windows handle has its own awaited taskkill /T. Running the
+  // legacy process-table stop concurrently would race it and incorrectly
+  // turn a confirmed tree termination into a "process not found" failure.
+  const trackedStopRunId = ports.getTrackedRunId(teamName);
+  const trackedStopRun = trackedStopRunId ? ports.runs.get(trackedStopRunId) : undefined;
+  const fallbackStopRunId = ports.getAliveRunId(teamName);
+  const ownedWindowsMemberRun = trackedStopRun ??
+    (fallbackStopRunId ? ports.runs.get(fallbackStopRunId) : undefined);
+  const deferPersistentProcessScan =
+    process.platform === 'win32' && !!ownedWindowsMemberRun?.directMemberProcesses?.size;
+  if (!deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);
   ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(teamName);
   const stopRuntimeLanesForRun = async (targetRunId: string): Promise<void> => {
     const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
@@ -175,10 +188,17 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   }
   cancelRunLeadRelayCapture(run);
   if (run.processKilled || run.cancelRequested) {
-    await awaitAllOwnedProcessStops([
-      ports.killTeamProcessAndWait(run.child),
-      stopRuntimeLanesForRun(run.runId),
-    ]);
+    try {
+      await awaitAllOwnedProcessStops([
+        ports.killTeamProcessAndWait(run.child),
+        ports.stopOriginalWindowsDirectMembers(run.directMemberProcesses),
+        stopRuntimeLanesForRun(run.runId),
+      ]);
+    } finally {
+      // Always run orphan discovery after the owned tree settles, even on
+      // refusal; never mask a failed handle stop with a successful scan.
+      if (deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);
+    }
     await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
       cleanupRunOwnedAnthropicApiKeyHelper(run));
     const stoppedRun = run;
@@ -190,7 +210,16 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   run.cancelRequested = true;
   const stopCurrentTeamProcess = ports.killTeamProcessAndWait(run.child);
   const stopCurrentRuntimeLanes = stopRuntimeLanesForRun(run.runId);
-  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
+  const stopDirectMembers = ports.stopOriginalWindowsDirectMembers(run.directMemberProcesses);
+  try {
+    await awaitAllOwnedProcessStops([
+      stopCurrentTeamProcess,
+      stopCurrentRuntimeLanes,
+      stopDirectMembers,
+    ]);
+  } finally {
+    if (deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);
+  }
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);
@@ -203,12 +232,23 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   ports.cleanupRun(run);
 }
 
-export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+async function executeTeamStopFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>,
-  publication?: LegacyNativeStopPublication | null
-): Promise<void> {
+  publication?: LegacyNativeStopPublication | null,
+  deferPublication = false
+): Promise<(() => Promise<void>) | undefined> {
   let cleanup: (() => void) | undefined;
+  let completion: Promise<void> | undefined;
+  const finalize = () =>
+    (completion ??= (async () => {
+      if (publication && !(await publication.complete())) {
+        throw new Error(
+          'Team process stopped; native release publication is unconfirmed. Retry Stop to confirm original ownership release.'
+        );
+      }
+      cleanup?.();
+    })());
   // Keep the team lock until both branches settle, including runtime-owned
   // cleanup on runtime success even when durable cancellation fails.
   let stopFailed = false;
@@ -221,14 +261,7 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
         await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       }),
     ]);
-    if (publication) {
-      if (!(await publication.complete())) {
-        throw new Error(
-          'Team process stopped; native release publication is unconfirmed. Retry Stop to confirm original ownership release.'
-        );
-      }
-      cleanup?.();
-    }
+    if (publication && !deferPublication) await finalize();
   } catch (error) {
     stopFailed = true;
     stopFailure = error;
@@ -246,6 +279,26 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   }
   if (stopFailed) throw stopFailure;
   if (pauseFailed) throw new Error('task_activity_interval_pause_failed_after_stop');
+  return publication && deferPublication ? finalize : undefined;
+}
+
+export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+  teamName: string,
+  ports: TeamProvisioningStopTeamPorts<TRun>,
+  publication?: LegacyNativeStopPublication | null
+): Promise<void> {
+  await executeTeamStopFlow(teamName, ports, publication);
+}
+
+/** Native teardown and the final team-wide pause stay in the original team lock. */
+export async function prepareNativeStopTeamFlow<TRun extends TeamProvisioningStopRun>(
+  teamName: string,
+  ports: TeamProvisioningStopTeamPorts<TRun>,
+  publication: LegacyNativeStopPublication
+): Promise<() => Promise<void>> {
+  const finalize = await executeTeamStopFlow(teamName, ports, publication, true);
+  if (!finalize) throw new Error('Original native Stop completion is unavailable');
+  return finalize;
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {

@@ -306,6 +306,9 @@ describe('TeamProvisioning API binders', () => {
       hasProvisioningRun(this: RunSource, teamName: string): boolean {
         return teamName === this.activeTeamName;
       },
+      isProvisioningLaunchActive(this: RunSource, teamName: string): boolean {
+        return teamName === this.activeTeamName;
+      },
     };
     const claudeLogsSource: ClaudeLogsSource = {
       sourceName: 'logs-bound',
@@ -324,6 +327,7 @@ describe('TeamProvisioning API binders', () => {
     const getClaudeLogs = logsApi.getClaudeLogs.bind(undefined);
 
     expect(runApi.hasProvisioningRun('team-bound')).toBe(true);
+    expect(runApi.isProvisioningLaunchActive?.('team-bound')).toBe(true);
     await cancelProvisioning('run-bound');
     expect(runSource.canceledRunId).toBe('run-bound');
     await expect(getClaudeLogs('team-bound')).resolves.toEqual({

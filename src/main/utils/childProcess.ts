@@ -4,6 +4,10 @@ import {
   resolveDirectWindowsLauncher,
 } from '@agent-teams/legacy-agent-host/owned-process';
 import {
+  readOriginalRuntimeScope,
+  retainOriginalRuntimeChild,
+} from '@main/services/runtime/OriginalRuntimeScope';
+import {
   type ChildProcess,
   execFile,
   type ExecFileOptions,
@@ -21,7 +25,11 @@ import {
 } from './cliProcessCustody';
 import { withCliProcessDefaults } from './cliProcessDefaults';
 import { classifyCliSpawnError } from './cliWorkingDirectory';
-import { execFileWithLinuxChildLaunch, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from './linuxChildLaunch';
+import {
+  execFileWithLinuxChildLaunch,
+  remainingLinuxChildLaunchTime,
+  spawnWithLinuxChildLaunch,
+} from './linuxChildLaunch';
 import { isLinuxChildLaunchFailure } from './linuxChildLaunchSelection';
 import {
   isSameUnixProcessIdentity,
@@ -62,6 +70,7 @@ function execFileAsync(
   outputLimits: { stdoutMaxBuffer?: number; stderrMaxBuffer?: number } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    readOriginalRuntimeScope();
     const entered = performance.now();
     const { timeout, killSignal, signal, maxBuffer, ...baseExecOptions } = options;
     const timeoutMs = typeof timeout === 'number' && timeout > 0 ? timeout : 0;
@@ -162,35 +171,44 @@ function execFileAsync(
       rejectAborted();
       return;
     }
-    child = execFileWithLinuxChildLaunch(cmd, args, execOptions, (err, stdout, stderr) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-      if (err) {
-        const normalizedError =
-          err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error');
-        Object.assign(normalizedError, {
-          stdout: String(stdout),
-          stderr: String(stderr),
-        });
-        if (isLinuxChildLaunchFailure(err) ||
-            (err as NodeJS.ErrnoException).code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
-          Object.assign(normalizedError, {
-            killed: true,
-            signal: timeoutSignal,
-            processOutcomeUnknown: true,
-          });
-          rejectAfterProcessTreeTermination(normalizedError);
-        } else {
-          reject(normalizedError);
+    child = execFileWithLinuxChildLaunch(
+      cmd,
+      args,
+      execOptions,
+      (err, stdout, stderr) => {
+        if (settled) {
+          return;
         }
-      } else resolve({ stdout: String(stdout), stderr: String(stderr) });
-    }, timeoutMs > 0 ? entered + timeoutMs : undefined, (originalChild) => {
-      handoffCleanup ??= killProcessTreeAndWait(originalChild, timeoutSignal);
-      return handoffCleanup;
-    });
+        settled = true;
+        cleanup();
+        if (err) {
+          const normalizedError =
+            err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error');
+          Object.assign(normalizedError, {
+            stdout: String(stdout),
+            stderr: String(stderr),
+          });
+          if (
+            isLinuxChildLaunchFailure(err) ||
+            (err as NodeJS.ErrnoException).code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+          ) {
+            Object.assign(normalizedError, {
+              killed: true,
+              signal: timeoutSignal,
+              processOutcomeUnknown: true,
+            });
+            rejectAfterProcessTreeTermination(normalizedError);
+          } else {
+            reject(normalizedError);
+          }
+        } else resolve({ stdout: String(stdout), stderr: String(stderr) });
+      },
+      timeoutMs > 0 ? entered + timeoutMs : undefined,
+      (originalChild) => {
+        handoffCleanup ??= killProcessTreeAndWait(originalChild, timeoutSignal);
+        return handoffCleanup;
+      }
+    );
     if (!settled) {
       trackCliProcess(child);
       signal?.addEventListener('abort', handleAbort, { once: true });
@@ -219,23 +237,26 @@ function execFileAsync(
         });
       }
       if (timeoutMs > 0) {
-        timeoutHandle = setTimeout(() => {
-          if (settled) {
-            return;
-          }
-          settled = true;
-          cleanup();
-          const error = new Error(
-            `Command timed out after ${timeoutMs}ms: ${cmd} ${args.join(' ')}`
-          );
-          Object.assign(error, {
-            killed: true,
-            signal: timeoutSignal,
-            stdout: stdoutText,
-            stderr: stderrText,
-          });
-          rejectAfterProcessTreeTermination(error);
-        }, remainingLinuxChildLaunchTime(child, timeoutMs, entered));
+        timeoutHandle = setTimeout(
+          () => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            const error = new Error(
+              `Command timed out after ${timeoutMs}ms: ${cmd} ${args.join(' ')}`
+            );
+            Object.assign(error, {
+              killed: true,
+              signal: timeoutSignal,
+              stdout: stdoutText,
+              stderr: stderrText,
+            });
+            rejectAfterProcessTreeTermination(error);
+          },
+          remainingLinuxChildLaunchTime(child, timeoutMs, entered)
+        );
         timeoutHandle.unref?.();
       }
     }
@@ -338,6 +359,7 @@ export function untrackCliProcess(child: ChildProcess | null): void {
 }
 
 function trackCliProcess<T extends ChildProcess>(child: T): T {
+  retainOriginalRuntimeChild(child);
   activeCliProcesses.add(child);
   if (process.platform !== 'win32' && child.pid) {
     const rootIdentity = tryReadUnixProcessTable()?.get(child.pid);
@@ -387,8 +409,11 @@ export async function execCli(
   args: string[],
   options: ExecCliOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
+  const original = readOriginalRuntimeScope();
   try {
-    return await execCliUnclassified(binaryPath, args, options);
+    const result = await execCliUnclassified(binaryPath, args, options);
+    original?.assertCurrent();
+    return result;
   } catch (error) {
     if (isLinuxChildLaunchFailure(error)) throw error;
     // A missing cwd surfaces as `spawn <binary> ENOENT`; report the real cause.
@@ -453,6 +478,11 @@ async function execCliUnclassified(
   return { stdout: String(shellResult.stdout), stderr: String(shellResult.stderr) };
 }
 
+/** Native wrapper handle: never replace the executable with cmd.exe. */
+export function spawnCliDirectExecutable(exe: string, args: string[], opts: SpawnOptions = {}) {
+  return trackCliProcess(spawn(exe, args, { ...withCliProcessDefaults(opts), shell: false }));
+}
+
 /**
  * Spawn a child process.  If the initial `spawn()` call throws
  * synchronously with EINVAL on Windows, retry using a shell-based
@@ -464,6 +494,7 @@ export function spawnCli(
   args: string[],
   options: SpawnOptions = {}
 ): ReturnType<typeof spawn> {
+  readOriginalRuntimeScope();
   const opts = withCliProcessDefaults(options);
   const directLauncher = resolveDirectWindowsLauncher(binaryPath);
   if (directLauncher) {

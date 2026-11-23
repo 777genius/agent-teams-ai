@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-selected-ui-lane-success",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "job": {
+    "id": 135261471120,
+    "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T02:24:48Z",
+    "completed_at": "2026-11-19T02:34:05Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261471120",
+    "runner_name": "GitHub Actions 1000396282"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261471120,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 02:36:26 UTC",
+    "bytes": 251386,
+    "sha256": "fc6a420b0b632b80afb9fe5e5c0fab8bc557a926633b228d76155ba2ea4722b2",
+    "computedGitBlobSha": "55c21e6053a4eca6cb43f26f783308323418c330",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471120-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471120-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "55c21e6053a4eca6cb43f26f783308323418c330",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 514",
+    "ℹ pass 508",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 6",
+    "ℹ todo 0",
+    "ℹ duration_ms 33836.587375",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 312.873834"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-pLBIqn/desktop-backend-receipt.json"
+    },
+    {
+      "status": "PASS",
+      "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-pLBIqn/desktop-readback-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-19T02:25:46Z",
+      "completed_at": "2026-11-19T02:25:47Z"
+    },
+    {
+      "name": "Exercise original OpenCode V2 native Desktop journey",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 34,
+      "started_at": "2026-11-19T02:28:33Z",
+      "completed_at": "2026-11-19T02:31:59Z"
+    },
+    {
+      "name": "Verify original V2 journey receipts, source binding and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 37,
+      "started_at": "2026-11-19T02:33:49Z",
+      "completed_at": "2026-11-19T02:33:50Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierProgramLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "case \"$HOST_EMULATED_LANE:$LEGACY_DESKTOP_PROOF_MODE:$HOST_EMULATED_V2_READBACK_MODE\" in",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: native-quit-ui",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: native-quit-readback-ui",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14492404111,
+    "bytes": 559117,
+    "sha256": "b80554fb1ab1c894766c44dedbc1caf60743e1ddefe48d6332e4d78b7cf0c551",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original exact42a4 native OpenCode V2 Quit while open pending journey, cold readback, and final original source/receipt/cleanup verifier passed. Console PASS objects and original verification step are retained; no separate success ZIP decoding or visual audit performed.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt was not separately downloaded. Verifier program lines are original assertions, not separately decoded field observations. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

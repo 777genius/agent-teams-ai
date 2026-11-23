@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "kind": "passive-existing-first-refusal-diagnostic-source-reproduction",
+  "createdAt": "2026-11-18T20:40:22.135008+00:00",
+  "sourceHead": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+  "priorFullManifest": {
+    "blob": "b8601a668ab5686dea67213cccbbfd22c3d5fd2f",
+    "sha256": "a0b38d895bf3b67124d527efb793f11697b99876d3c68c5cb5836447196be0c1",
+    "bytes": 258498,
+    "readbackExact": true
+  },
+  "observer": {
+    "path": "first-refusal-subscriber.mjs",
+    "bytes": 890,
+    "sha256": "0881e100a4b96e417b1cc3aff5b99e5b575689c1638fdddb0e4479f7e8e7c361",
+    "effect": "Passive existing diagnostics_channel subscription only; enables existing source timing counters",
+    "bounds": "8 events per runner process; max16KiB per event; observer exceptions swallowed",
+    "sourceAndResourcePrecondition": "800originalfiles+singlepreparedresource unchanged",
+    "noSourceTestLoaderOrDeadlineChanges": true
+  },
+  "result": {
+    "kind": "one-passive-first-refusal-source-callback",
+    "startedAt": "2026-11-18T20:35:42.178588+00:00",
+    "head": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--import",
+      "./source-register.mjs",
+      "--import",
+      "./first-refusal-subscriber.mjs",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^cross\\-provider\\ creation\\ inherits\\ original\\ lead\\ A\\ and\\ original\\ locator;\\ target\\ ambient\\ B\\ is\\ never\\ read\\ and\\ target\\ native\\ policy/account\\ stay\\ independent$",
+      "packages/legacy-agent-host/tests/native-member-creation-runtime.test.ts"
+    ],
+    "sourcePrecondition": "all800exact + single prepared resource hash",
+    "qualification": "Source-only finite original callback; not compiled artifact or native process qualification.",
+    "observerSha256": "0881e100a4b96e417b1cc3aff5b99e5b575689c1638fdddb0e4479f7e8e7c361",
+    "status": "completed",
+    "originalTwoAttemptsRetained": true,
+    "pid": 4,
+    "exitCode": 1,
+    "outerTimeout": false,
+    "elapsedSeconds": 33.921,
+    "sourcePostMismatches": [],
+    "stdout": {
+      "sha256": "aee0c207b9e1792d17f23857d66c8a4bb9ec6d226d0c0b6a2838d895e5da0b41",
+      "bytes": 3440
+    },
+    "stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "resolution": {
+      "sha256": "9100dffe94463c3fc8a2f833eb733e47c45080d40f07ff8e69c2716c47f7f370",
+      "bytes": 490960
+    },
+    "testAndSourceAndResourceUnchanged": true,
+    "observerExitRecords": [
+      {
+        "pid": 11,
+        "observed": 2,
+        "written": 2,
+        "oversize": 0,
+        "writeFailures": 0
+      }
+    ],
+    "events": [
+      {
+        "event": 1,
+        "pid": 11,
+        "value": {
+          "kind": "reference",
+          "commandDigest": "761ad4a6451e5a750f3c43f92f74435fa9f31495d8cd25410b4607d1e76af9c8",
+          "contextDigest": "0f84c065535351beaea6127f51f1dd7d55dc042045fcb78a5fbe74bc0570a891",
+          "phase": "inspect",
+          "reason": "threw",
+          "probeCutoff": null,
+          "probeNow": null,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null
+        }
+      },
+      {
+        "event": 2,
+        "pid": 11,
+        "value": {
+          "kind": "consumer",
+          "actionDigest": "3d0267db16d8b56e50f98362ca2da0a4950f4baa543b84d9c8eae481cc0228fa",
+          "groupDigest": "5c43565f57126935bb92fb8b89a91d94711fc09a1d80b7cbeba26cccebb0b8ab",
+          "bindingDigest": "68dfe00321aa13c66e86430181b7c90d60aee3e3894f6d204a2c8cf261bba1ec",
+          "consumerId": "bdafeddbf1b9e0ca1bfcca84e642ef2d891bfca2091e445e91a2a97a228e270f",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1795034242137,
+          "observedAt": 1795034170478,
+          "currentCalls": {
+            "count": 1,
+            "totalMs": 5486,
+            "maxMs": 5486,
+            "lastMs": 5486,
+            "truncated": false,
+            "regions": {
+              "initialAuthorityCount": 1,
+              "initialAuthorityMs": 153,
+              "readConsumerCount": 1,
+              "readConsumerMs": 1,
+              "referenceCount": 1,
+              "referenceMs": 5333,
+              "finalAuthorityCount": 0,
+              "finalAuthorityMs": 0,
+              "referenceAccountCount": 0,
+              "referenceAccountMs": 0,
+              "referenceAccountAuthorityCount": 0,
+              "referenceAccountAuthorityMs": 0
+            }
+          }
+        }
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "first-refusal-subscriber.mjs",
+      "sha256": "0881e100a4b96e417b1cc3aff5b99e5b575689c1638fdddb0e4479f7e8e7c361",
+      "bytes": 890,
+      "normalizedText": "import { channel } from 'node:diagnostics_channel';\nimport { appendFileSync } from 'node:fs';\n\nconst target = new URL('./passive-refusals.jsonl', import.meta.url);\nlet observed = 0;\nlet written = 0;\nlet oversize = 0;\nlet writeFailures = 0;\nchannel('agent-teams.legacy-host.first-refusal').subscribe(value => {\n  try {\n    observed++;\n    if (observed > 8) return;\n    const text = JSON.stringify({ event: observed, pid: process.pid, value });\n    if (Buffer.byteLength(text) > 16 * 1024) { oversize++; return; }\n    appendFileSync(target, text + '\\n');\n    written++;\n  } catch { writeFailures++; }\n});\nprocess.once('exit', () => {\n  try {\n    appendFileSync(new URL('./passive-refusals-exit.jsonl', import.meta.url),\n      JSON.stringify({ pid: process.pid, observed, written, oversize, writeFailures }) + '\\n');\n  } catch { /* Observer failure cannot change the original result. */ }\n});\n"
+    },
+    {
+      "path": "passive.stdout.log",
+      "sha256": "aee0c207b9e1792d17f23857d66c8a4bb9ec6d226d0c0b6a2838d895e5da0b41",
+      "bytes": 3440,
+      "normalizedText": "legacy-agent-host: runtime-open {\"profileHash\":\"2682cf7928ae052a37769a933ec6c4833644cc8f32a83520bc1e42ef0313ed8d\",\"configurationHash\":\"edc70a34d8b7533d37134a5fda95b25afa06e13d5b62d38e4fa3660d088abd0c\",\"source\":\"factory\",\"phase\":\"model-readiness\",\"category\":\"held\",\"observedAtMs\":1795034175811}\nlegacy-agent-host: runtime-open {\"profileHash\":\"2682cf7928ae052a37769a933ec6c4833644cc8f32a83520bc1e42ef0313ed8d\",\"configurationHash\":\"edc70a34d8b7533d37134a5fda95b25afa06e13d5b62d38e4fa3660d088abd0c\",\"source\":\"runtime\",\"phase\":\"driver-open\",\"category\":\"held\",\"observedAtMs\":1795034175812}\n✖ cross-provider creation inherits original lead A and original locator; target ambient B is never read and target native policy/account stay independent (30736.892482ms)\nℹ tests 1\nℹ suites 0\nℹ pass 0\nℹ fail 1\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 33698.990443\n\n✖ failing tests:\n\ntest at packages/legacy-agent-host/tests/native-member-creation-runtime.test.ts:1:15814\n✖ cross-provider creation inherits original lead A and original locator; target ambient B is never read and target native policy/account stay independent (30736.892482ms)\n  AssertionError [ERR_ASSERTION]: {\"content\":[{\"type\":\"text\",\"text\":\"{\\\"commandId\\\":\\\"TEST-native-created-restart\\\",\\\"launchId\\\":\\\"TEST-run\\\",\\\"memberId\\\":\\\"fc76a581-2791-59c7-a664-5dd6cc05e12d\\\",\\\"action\\\":\\\"restart\\\",\\\"rosterRevision\\\":\\\"b3a4d38f0757db810931b176ebc4568aef3558ad4da73c27ef5ff9416414c6e1\\\",\\\"allocation\\\":\\\"runtime\\\",\\\"sourceGeneration\\\":\\\"capture-16d1a09c-dce5-5777-8e0c-d0f2c8c72496\\\",\\\"selectedGeneration\\\":\\\"restart-37c500fa96e19252b0636a501beb3e97aa3893d6891a587cc6d2b9236c9a0d7d\\\",\\\"stage\\\":\\\"selected\\\",\\\"current\\\":true,\\\"source\\\":{\\\"availability\\\":\\\"observed\\\",\\\"generation\\\":\\\"capture-16d1a09c-dce5-5777-8e0c-d0f2c8c72496\\\",\\\"phase\\\":\\\"closed\\\",\\\"custody\\\":\\\"released\\\",\\\"attached\\\":false},\\\"selected\\\":{\\\"availability\\\":\\\"observed\\\",\\\"generation\\\":\\\"restart-37c500fa96e19252b0636a501beb3e97aa3893d6891a587cc6d2b9236c9a0d7d\\\",\\\"phase\\\":\\\"held\\\",\\\"custody\\\":\\\"unknown\\\",\\\"attached\\\":false}}\"}],\"structuredContent\":{\"result\":{\"commandId\":\"TEST-native-created-restart\",\"launchId\":\"TEST-run\",\"memberId\":\"fc76a581-2791-59c7-a664-5dd6cc05e12d\",\"action\":\"restart\",\"rosterRevision\":\"b3a4d38f0757db810931b176ebc4568aef3558ad4da73c27ef5ff9416414c6e1\",\"allocation\":\"runtime\",\"sourceGeneration\":\"capture-16d1a09c-dce5-5777-8e0c-d0f2c8c72496\",\"selectedGeneration\":\"restart-37c500fa96e19252b0636a501beb3e97aa3893d6891a587cc6d2b9236c9a0d7d\",\"stage\":\"selected\",\"current\":true,\"source\":{\"availability\":\"observed\",\"generation\":\"capture-16d1a09c-dce5-5777-8e0c-d0f2c8c72496\",\"phase\":\"closed\",\"custody\":\"released\",\"attached\":false},\"selected\":{\"availability\":\"observed\",\"generation\":\"restart-37c500fa96e19252b0636a501beb3e97aa3893d6891a587cc6d2b9236c9a0d7d\",\"phase\":\"held\",\"custody\":\"unknown\",\"attached\":false}}}}\n  \n  3 !== 4\n  \n      at TestContext.<anonymous> (<ISOLATED_REPOSITORY>/packages/legacy-agent-host/tests/native-member-creation-runtime.test.ts:616:10)\n      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: 3,\n    expected: 4,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n"
+    },
+    {
+      "path": "passive.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "normalizedText": ""
+    },
+    {
+      "path": "passive-refusals.jsonl",
+      "sha256": "6231d8acd2610fa14cba924c66d41ef42fa459a5fa90745d218da233ff7819a6",
+      "bytes": 1220,
+      "normalizedText": "{\"event\":1,\"pid\":11,\"value\":{\"kind\":\"reference\",\"commandDigest\":\"761ad4a6451e5a750f3c43f92f74435fa9f31495d8cd25410b4607d1e76af9c8\",\"contextDigest\":\"0f84c065535351beaea6127f51f1dd7d55dc042045fcb78a5fbe74bc0570a891\",\"phase\":\"inspect\",\"reason\":\"threw\",\"probeCutoff\":null,\"probeNow\":null,\"scopeCutoff\":null,\"scopeNow\":null,\"preparationCutoff\":null,\"preparationNow\":null}}\n{\"event\":2,\"pid\":11,\"value\":{\"kind\":\"consumer\",\"actionDigest\":\"3d0267db16d8b56e50f98362ca2da0a4950f4baa543b84d9c8eae481cc0228fa\",\"groupDigest\":\"5c43565f57126935bb92fb8b89a91d94711fc09a1d80b7cbeba26cccebb0b8ab\",\"bindingDigest\":\"68dfe00321aa13c66e86430181b7c90d60aee3e3894f6d204a2c8cf261bba1ec\",\"consumerId\":\"bdafeddbf1b9e0ca1bfcca84e642ef2d891bfca2091e445e91a2a97a228e270f\",\"phase\":\"reference\",\"reason\":\"threw\",\"cutoff\":1795034242137,\"observedAt\":1795034170478,\"currentCalls\":{\"count\":1,\"totalMs\":5486,\"maxMs\":5486,\"lastMs\":5486,\"truncated\":false,\"regions\":{\"initialAuthorityCount\":1,\"initialAuthorityMs\":153,\"readConsumerCount\":1,\"readConsumerMs\":1,\"referenceCount\":1,\"referenceMs\":5333,\"finalAuthorityCount\":0,\"finalAuthorityMs\":0,\"referenceAccountCount\":0,\"referenceAccountMs\":0,\"referenceAccountAuthorityCount\":0,\"referenceAccountAuthorityMs\":0}}}}\n"
+    },
+    {
+      "path": "passive-refusals-exit.jsonl",
+      "sha256": "a5599910de9f1b87f4902c344cbd43d011fe8525a16082792626f1c043c1dcc8",
+      "bytes": 67,
+      "normalizedText": "{\"pid\":11,\"observed\":2,\"written\":2,\"oversize\":0,\"writeFailures\":0}\n"
+    }
+  ],
+  "observations": {
+    "sameOriginalAssertion616": {
+      "actual": 3,
+      "expected": 4
+    },
+    "consumerPhase": "reference",
+    "referencePhase": "inspect",
+    "consumerCutoffMarginAtCheckMs": 71659,
+    "consumerCutoffGatePassed": true,
+    "probeScopePreparationExpiryGatesReached": false,
+    "accountCaptureStarted": false,
+    "consumerFinalAuthorityReached": false,
+    "referenceRegionElapsedMs": 5333,
+    "observerWrites": {
+      "observed": 2,
+      "written": 2,
+      "oversize": 0,
+      "writeFailures": 0
+    }
+  },
+  "limits": [
+    "Passive subscription enables pre-existing timing counters; observer overhead is not a performance qualification.",
+    "Existing source diagnostics report reference-inspect and consumer-reference throw only; no captured inner exception stack.",
+    "Observed elapsed time does not by itself identify lock or timeout cause.",
+    "No guards, test, deadlines, source loader, prepared resource or original 800 source files changed.",
+    "No further test, model/native/desktop application execution."
+  ]
+}

@@ -11,6 +11,7 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { type BrowserWindow, shell } from 'electron';
 
 import { getDesktopProviderManagementPort } from '../ipc/agentBackend';
+import { readOriginalRuntimeScope } from '../services/runtime/OriginalRuntimeScope';
 
 /** Compose gateway and captured provider ports once before provisioning resolves model declarations. */
 export function createDesktopProviderManagementFeatures(
@@ -44,12 +45,16 @@ export function createDesktopProviderManagementFeatures(
       safeSendToRenderer(deps.getMainWindow(), RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
     },
   });
+  const resolveOriginalInput = createOpenCodeInputDeclarationResolver(
+    runtimeProviderManagementFeature.loadModels
+  );
   return {
     gatewayProviderRuntime,
     gatewayLaunchRuntime,
     runtimeProviderManagementFeature,
-    resolveOpenCodeInputDeclaration: createOpenCodeInputDeclarationResolver(
-      runtimeProviderManagementFeature.loadModels
-    ),
+    resolveOpenCodeInputDeclaration: (...args: Parameters<typeof resolveOriginalInput>) =>
+      (readOriginalRuntimeScope()?.resolveOpenCodeInputDeclaration ?? resolveOriginalInput)(
+        ...args
+      ),
   };
 }

@@ -56,6 +56,7 @@ describe('ConfigManager Codex migration hardening', () => {
       };
 
       expect(persisted.providerConnections.codex).toEqual({
+        nativeNextPromptSuggestionsEnabled: true,
         preferredAuthMode: 'chatgpt',
         customProvider: {
           enabled: false,
@@ -88,6 +89,7 @@ describe('ConfigManager Codex migration hardening', () => {
     } as never);
 
     expect(updated.providerConnections.codex).toEqual({
+      nativeNextPromptSuggestionsEnabled: true,
       preferredAuthMode: 'api_key',
       customProvider: {
         enabled: true,
@@ -108,6 +110,7 @@ describe('ConfigManager Codex migration hardening', () => {
       };
 
       expect(persisted.providerConnections.codex).toEqual({
+        nativeNextPromptSuggestionsEnabled: true,
         preferredAuthMode: 'api_key',
         customProvider: {
           enabled: true,
@@ -126,6 +129,7 @@ describe('ConfigManager Codex migration hardening', () => {
     } as never);
 
     expect(disabled.providerConnections.codex).toEqual({
+      nativeNextPromptSuggestionsEnabled: true,
       preferredAuthMode: 'api_key',
       customProvider: {
         enabled: false,
@@ -146,6 +150,7 @@ describe('ConfigManager Codex migration hardening', () => {
       };
 
       expect(persisted.providerConnections.codex).toEqual({
+        nativeNextPromptSuggestionsEnabled: true,
         preferredAuthMode: 'api_key',
         customProvider: {
           enabled: false,
@@ -208,6 +213,7 @@ describe('ConfigManager Codex migration hardening', () => {
     const config = manager.getConfig();
 
     expect(config.providerConnections.anthropic).toEqual({
+      nativeNextPromptSuggestionsEnabled: true,
       authMode: 'oauth',
       fastModeDefault: true,
       compatibleEndpoint: {
@@ -273,6 +279,7 @@ describe('ConfigManager Codex migration hardening', () => {
     } as never);
 
     expect(updated.providerConnections.anthropic).toEqual({
+      nativeNextPromptSuggestionsEnabled: true,
       authMode: 'oauth',
       fastModeDefault: true,
       compatibleEndpoint: {
@@ -294,6 +301,7 @@ describe('ConfigManager Codex migration hardening', () => {
       };
 
       expect(persisted.providerConnections.anthropic).toEqual({
+        nativeNextPromptSuggestionsEnabled: true,
         authMode: 'oauth',
         fastModeDefault: true,
         compatibleEndpoint: {

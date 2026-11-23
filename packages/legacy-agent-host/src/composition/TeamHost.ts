@@ -35,7 +35,7 @@ import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
-import type { CapturedPromptSuggestionNotice } from './createCapturedPromptSuggestionBinding.js';
+import { type CapturedPromptSuggestionNotice, PROMPT_SUGGESTION_PROVIDERS, type PromptSuggestionProvider } from './createCapturedPromptSuggestionBinding.js';
 import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertAccountNamespaces } from './assertAccountNamespaces.js';
@@ -68,13 +68,13 @@ export function createTeamHost(
   streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
   composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
     createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
-    /** Separate captured app preference, evaluated only when the Host is constructed. */
-    promptSuggestionsEnabled?: boolean }
+    /** Separate captured app preference per provider, evaluated only when the Host is constructed. */
+    promptSuggestionProviders?: readonly PromptSuggestionProvider[]; reviewFlowDefaultsDirectory?: string }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
   // CLI/Main owns this app-level preference. Profile remains digest-bound and
   // existing sessions are never interrupted to apply a change.
-  const promptSuggestionsEnabled = composition?.promptSuggestionsEnabled ?? profile.promptSuggestions?.enabled ?? false;
+  const promptSuggestionProviders: readonly PromptSuggestionProvider[] = composition?.promptSuggestionProviders ?? (profile.promptSuggestions?.enabled ? PROMPT_SUGGESTION_PROVIDERS : []);
   assertAccountNamespaces([
     ...(profile.runtime?.members ?? []),
     ...(profile.runtime?.providerTemplates ?? []),
@@ -166,6 +166,7 @@ export function createTeamHost(
       const team = createFilesystemTeamOwner({
         store,
         root: profile.owner.storageRoot,
+        ...(composition?.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: composition.reviewFlowDefaultsDirectory } : {}),
         binding: definition.binding,
         crossTeamSourceAuthority: crossTeam.sourceAuthorized,
         ...(definition.savedSettings === undefined
@@ -275,8 +276,8 @@ export function createTeamHost(
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
-        ...(promptSuggestionsEnabled
-          ? { promptSuggestionsEnabled: true, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
+        ...(promptSuggestionProviders.length > 0
+          ? { promptSuggestionProviders, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
               emitPromptSuggestion?.(notice) }
           : {}),
         ...(composition?.createProvider ? { createProvider: composition.createProvider } : {}),
@@ -303,7 +304,7 @@ export function createTeamHost(
         | 'lookup'
         | 'getTask'
         | 'listTasks'
-        | 'snapshot'
+        | 'snapshot' | 'review-flow.read'
         | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
@@ -330,6 +331,11 @@ export function createTeamHost(
             if (input.liveRoster.phase === 'continue') throw new TeamOwnerError('hold');
           }
           const connection = selected.connection;
+          if (operation === 'review-flow.read') {
+            z.object({}).strict().parse(input.payload);
+            if (!connection.readQueries) throw new TeamOwnerError('hold');
+            return { ok: true, value: json({ kind: 'review-flow', ...connection.readQueries.getReviewFlowSettings() }) };
+          }
           if (operation === 'roster.read' || operation === 'roster.lookup') {
             if (operation === 'roster.read') {
               z.object({}).strict().parse(input.payload);
@@ -661,7 +667,7 @@ export function createTeamHost(
       buildId: profile.owner.buildId,
       capabilities: [
         'team.task',
-        'team.snapshot',
+        'team.snapshot', 'team.review-flow.read',
         'team.messages.page',
         'team.roster',
         'team.product-changes',
@@ -704,6 +710,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.review-flow.read': method('review-flow.read'),
         'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),
@@ -763,7 +770,7 @@ export function createTeamHost(
     };
     emitPromptSuggestion = (notice) => {
       // Auxiliary, bounded, best-effort notification; never changes Team/Runtime result.
-      if (!sealed && promptSuggestionsEnabled)
+      if (!sealed && promptSuggestionProviders.length > 0)
         server.notifyData('runtime.prompt-suggestion.updated', json(notice));
     };
     runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.

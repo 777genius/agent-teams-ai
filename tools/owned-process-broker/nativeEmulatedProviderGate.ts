@@ -1,6 +1,6 @@
 /** TEST actual Main -> Host -> D adapters with Node peers and original native Windows service Jobs. */
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, resolve, sep } from 'node:path';
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { FileRuntimeStore } from '../../packages/legacy-agent-host/dist/adapters/runtime/FileRuntimeStore.js';
 import { CapturedHostClient } from '../../src/features/agent-backend/main/infrastructure/CapturedHostClient';
 import { captureMainWindowsCustody } from '../../src/features/agent-backend/main/infrastructure/CapturedWindowsCustody';
-import { capturedQueryableWitness, timeout } from './nativeGateContext';
+import { capturedGateSentinel, capturedQueryableWitness, timeout } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash, prepareEmulatedProfile } from './nativeEmulatedProfile';
 import { nativeEmulatedOwnerLossScenario } from './nativeEmulatedOwnerLossScenario';
@@ -372,10 +372,8 @@ async function main() {
   assert.equal(existsSync(receiptPath), false);
   const paths = [wholeBroker, actor, scopedBroker].map(path => realpathSync(path));
   const pins = paths.map(path => ({ path, sha256: fileHash(path) }));
-  const sentinel = spawn(paths[1]!, [sourceProvider === undefined ? 'sentinel' : 'source-sentinel'],
-    { stdio: [sourceProvider === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'], windowsHide: true });
-  const exited = new Promise<number | null>((resolveExit, reject) => { sentinel.once('exit', resolveExit); sentinel.once('error', reject); });
-  void exited.catch(() => undefined);
+  const sentinelOwner = capturedGateSentinel(paths[1]!);
+  const sentinel = sentinelOwner.process;
   const providers: Record<string, unknown>[] = [], wrappers: string[] = [], sourceScenarios: Record<string, unknown>[] = [];
   const ownerLoss: Record<string, unknown>[] = [
     { scenario: 'completed-install-before-physical-resume', status: 'INCOMPLETE', stage: 'not-started', cleanup: false },
@@ -383,7 +381,7 @@ async function main() {
   ];
   let complete = false, cleanup = false, failure: unknown;
   try {
-    await timeout(new Promise<void>((resolveReady, reject) => { sentinel.stdout!.once('data', () => resolveReady()); sentinel.once('error', reject); }));
+    await timeout(sentinelOwner.ready);
     if (sourceProvider === undefined) {
       wrappers.push(...await nativeLauncherScenarios(realpathSync(sandbox), paths[0]!, paths[1]!));
       for (const provider of ['codex', 'opencode'] as const) {
@@ -409,8 +407,12 @@ async function main() {
     complete = true;
   } catch (error) { failure = error; }
   finally {
-    if (sentinel.exitCode === null && sentinel.signalCode === null) sentinel.kill();
-    try { await timeout(exited); cleanup = true; } catch (error) { failure ??= error; }
+    try { await sentinelOwner.close(); cleanup = true; }
+    catch (error) {
+      failure ??= error;
+      // This original child alone is gate-owned; fallback never qualifies cleanup.
+      if (sentinel.exitCode === null && sentinel.signalCode === null) sentinel.kill();
+    }
     writeFileSync(receiptPath, JSON.stringify({ kind: sourceProvider === undefined
       ? 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY' : 'TEST_WINDOWS_EMULATED_SOURCE_PARITY',
       sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: `${process.platform}-${process.arch}`,

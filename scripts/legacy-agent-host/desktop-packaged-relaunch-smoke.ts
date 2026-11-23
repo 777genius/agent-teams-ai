@@ -5,6 +5,7 @@ import { createWriteStream } from 'node:fs';
 import { lstat, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -15,8 +16,8 @@ import { captureDesktopRendererFailure, cleanupCapturedDesktopApp, connectCaptur
 import type { DesktopCdpLibrary, DesktopCdpPort } from './desktop-captured-app.ts';
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import { observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup, prepareDesktopEmulatedRuntimeFixture,
-  readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
-import { desktopProofEvidence } from './desktop-proof-evidence.ts';
+  readDesktopEmulatedPeerRefusal, readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
+import { desktopProofEvidence, projectDesktopEmulatedReadinessFailure } from './desktop-proof-evidence.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -83,8 +84,10 @@ async function main() {
     excluded: ['Claude/Codex executable execution', 'vendor inference/authentication', 'full cold Resume/active Quit', 'release qualification'],
     packedCandidate: { ...packed, capture, node: candidate.node, hostEntry: candidate.entry },
     fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });
-  const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',
-    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts', 'scripts/e2e/comment-notification/cdp.mjs'])];
+  const sources = [...new Set([...desktopProofSources,
+    'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',
+    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts',
+    'scripts/e2e/comment-notification/cdp.mjs'])];
   const sourceHashes = await captureDesktopSourceHashes(repo, sources);
   evidence.selectedSourceHashesBeforeApp = sourceHashes;
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
@@ -112,8 +115,26 @@ async function main() {
     evidence.app = { pid: group, processGroup: group, identity: appIdentity, invocation };
     const connected = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });
     cdp = connected.cdp;
-    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed });
-    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');
+    const startupDeadline = connected.startupStarted + connected.startupBudgetMs;
+    const startupObservation = {
+      clock: 'monotonic performance.now milliseconds',
+      scope: 'Original app/CDP startup, captured binding verification, then first TEST peer census and launch journal',
+      startedAtMs: connected.startupStarted, budgetMs: connected.startupBudgetMs, deadlineMs: startupDeadline,
+      phase: 'binding', steps: [] as { phase: string; elapsedMs: number; remainingMs: number }[],
+    };
+    evidence.packagedStartupObservation = startupObservation;
+    const remainingStartupMs = (phase: 'binding' | 'peer-observation' | 'complete') => {
+      const now = performance.now(), remainingMs = startupDeadline - now;
+      startupObservation.phase = phase;
+      startupObservation.steps.push({ phase, elapsedMs: Math.round(now - connected.startupStarted), remainingMs: Math.floor(remainingMs) });
+      assert.ok(remainingMs > 0, 'Original packaged startup observation deadline');
+      return remainingMs;
+    };
+    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed,
+      remainingStartupMs: remainingStartupMs('binding') });
+    remainingStartupMs('peer-observation');
+    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read', startupDeadline);
+    remainingStartupMs('complete');
     await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true,
       restartSameProfile: async () => { throw new Error('Automatic app.relaunch cannot become a harness restart'); } });
     assert.equal(record(evidence.emulatedLaunchStopUiProof).status, 'PASS');
@@ -143,6 +164,8 @@ async function main() {
         key: 'failureQuit' }).catch(() => { evidence.failureQuitUnconfirmed = true; });
     }
   } finally {
+    const peerRefusal = readDesktopEmulatedPeerRefusal(fixture);
+    if (peerRefusal) evidence.emulatedRuntimeChildRefusal = peerRefusal;
     if (cdp) await bounded(cdp.close(), 3000, 'disconnect original packaged renderer').catch(() => undefined);
     evidence.quitRequested = quitRequested;
     const cleanup = await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity,
@@ -171,7 +194,9 @@ async function main() {
     await bounded(new Promise<void>(done => log.end(done)), 3000, 'close packaged relaunch log')
       .catch(() => { evidence.status = 'INCOMPLETE'; evidence.logCleanupFailed = true; });
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
-    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root }));
+    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root,
+      ...(evidence.status !== 'PASS'
+        ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}) }));
   }
   if (originalFailure) throw originalFailure;
   assert.equal(evidence.status, 'PASS', 'Original packaged relaunch and all cleanup must pass');

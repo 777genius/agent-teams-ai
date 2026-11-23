@@ -102,6 +102,21 @@ function disposition(category: ImportCategory, path: string): SnapshotFile['disp
     return hold();
   }
   if (path.startsWith('.host-owner/')) return hold();
+  // Main-owned profile/recovery state and derived lookup caches never grant the new Host authority.
+  // Their bytes still participate in both exhaustive source censuses, but are not transported.
+  if (path === '.agent-teams-owner.json' || path === '.team-runtime-recovery/state.json')
+    return 'excluded';
+  const affinity = /^cache\/transcript-affinity\/([^/]+)\.json$/.exec(path);
+  if (affinity) {
+    let canonical = false;
+    try {
+      canonical = encodeURIComponent(decodeURIComponent(affinity[1]!)) === affinity[1];
+    } catch {
+      // The Main writer only creates encodeURIComponent(projectId) file names.
+    }
+    if (!canonical) return hold();
+    return 'excluded';
+  }
   if (
     /^(launch-|bootstrap-|stop-|runtime-|opencode-|\.opencode-runtime\/|\.member-work-sync\/)/.test(
       path
@@ -125,7 +140,8 @@ function disposition(category: ImportCategory, path: string): SnapshotFile['disp
   if (/^inboxes\/[^/]+\.json$/.test(path)) return 'archive';
   if (
     /^(review-decisions|members|archive)\//.test(path) ||
-    path === 'comment-notification-journal.json'
+    path === 'comment-notification-journal.json' ||
+    path === 'comment-notification-journal.json.sqlite-fallback-replica'
   )
     return 'archive';
   return hold(); // Unknown files are censused as refusal, never silently omitted.

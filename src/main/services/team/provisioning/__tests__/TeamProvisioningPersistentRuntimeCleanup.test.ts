@@ -468,6 +468,7 @@ describe.skipIf(process.platform === 'win32')('wired owned native Stop confirmat
         killTeamProcessAndWait: async () => {
           await exited;
         },
+        stopOriginalWindowsDirectMembers: async () => undefined,
         updateProgress: (_run, state, message) => ({
           runId: run.runId,
           teamName,

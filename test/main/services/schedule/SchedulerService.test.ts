@@ -3,13 +3,13 @@
  * concurrency locks, auto-pause on consecutive failures, and recovery.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'crypto';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Schedule, ScheduleChangeEvent, ScheduleRun } from '@shared/types';
-import type { ScheduleRepository } from '../../../../src/main/services/schedule/ScheduleRepository';
 import type { ExecutionRequest, ScheduledTaskResult } from '../../../../src/main/services/schedule/ScheduledTaskExecutor';
+import type { ScheduleRepository } from '../../../../src/main/services/schedule/ScheduleRepository';
 import type { WarmUpFn } from '../../../../src/main/services/schedule/SchedulerService';
+import type { Schedule, ScheduleChangeEvent, ScheduleRun } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -109,6 +109,12 @@ function createMockRepository(): ScheduleRepository {
     saveSchedule: vi.fn(async (schedule: Schedule, options?: { mustExist: true }) => {
       if (options?.mustExist && !schedules.has(schedule.id)) throw new Error('Schedule no longer exists');
       schedules.set(schedule.id, schedule);
+    }),
+    updateSchedule: vi.fn(async (id: string, update: (current: Schedule) => Schedule | null) => {
+      const current = schedules.get(id);
+      const updated = current ? update(current) : null;
+      if (updated) schedules.set(id, updated);
+      return updated;
     }),
     deleteSchedule: vi.fn(async (id: string, onCommitted?: () => void | Promise<void>) => {
       schedules.delete(id);
@@ -213,6 +219,93 @@ describe('SchedulerService', () => {
     service.setChangeEmitter((event) => events.push(event));
     return service;
   }
+
+  it('blocks project aliases at create and manual launch admission and says why', async () => {
+    const service = new SchedulerService(
+      repo, executor as never, warmUpFn, undefined,
+      async (name) => name.startsWith('ptc-')
+        ? { allowed: false, reason: 'Schedule the team itself, not its project copy' }
+        : { allowed: true }
+    );
+    await expect(service.createSchedule({
+      teamName: 'ptc-project-a',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project-a', prompt: 'must never dispatch' },
+    })).rejects.toThrow('Schedule the team itself, not its project copy');
+    expect(repo.saveSchedule).not.toHaveBeenCalled();
+
+    const previous = makeSchedule({ teamName: 'ptc-project-a' });
+    await repo.saveSchedule(previous);
+    await expect(service.triggerNow(previous.id)).rejects.toThrow('project copy');
+    await expect(service.resumeSchedule(previous.id)).rejects.toThrow('project copy');
+    expect(executor.execute).not.toHaveBeenCalled();
+  });
+
+  it('keeps a generic reason for an admission that only says no', async () => {
+    const service = new SchedulerService(
+      repo, executor as never, warmUpFn, undefined, async () => false
+    );
+    await expect(service.createSchedule({
+      teamName: 'any-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project-a', prompt: 'must never dispatch' },
+    })).rejects.toThrow('Scheduling is unavailable for this team');
+  });
+
+  it('asks the admission about the project folder when a schedule is created or edited', async () => {
+    const admit = vi.fn(async (_team: string, change?: { cwd?: string }) =>
+      change?.cwd === '/tmp/gone'
+        ? { allowed: false as const, reason: 'The project folder does not exist' }
+        : { allowed: true as const }
+    );
+    const service = new SchedulerService(repo, executor as never, warmUpFn, undefined, admit);
+    const input = {
+      teamName: 'builders',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project-a', prompt: 'go' },
+    };
+    const created = await service.createSchedule(input);
+    expect(admit).toHaveBeenCalledWith('builders', { cwd: '/tmp/project-a' });
+
+    await expect(
+      service.createSchedule({ ...input, launchConfig: { cwd: '/tmp/gone', prompt: 'go' } })
+    ).rejects.toThrow('The project folder does not exist');
+    await expect(
+      service.updateSchedule(created.id, { launchConfig: { cwd: '/tmp/gone', prompt: 'go' } })
+    ).rejects.toThrow('The project folder does not exist');
+    expect((await repo.getSchedule(created.id))?.launchConfig.cwd).toBe('/tmp/project-a');
+    // An edit also tells the admission which folder the schedule has now (a project can not move).
+    expect(admit).toHaveBeenCalledWith('builders', { cwd: '/tmp/gone', from: '/tmp/project-a' });
+    await service.updateSchedule(created.id, { label: 'no folder named' });
+    expect(admit).toHaveBeenLastCalledWith('builders', { cwd: undefined, from: '/tmp/project-a' });
+    await service.stop();
+  });
+
+  it('records a team refused at fire time as a skipped run with the reason, never executing it', async () => {
+    let calls = 0;
+    // Allowed at the manual trigger, refused when the run itself is admitted (state changed in between).
+    const service = new SchedulerService(
+      repo, executor as never, warmUpFn, undefined,
+      async () => (++calls === 1
+        ? { allowed: true }
+        : { allowed: false, reason: 'Team metadata is unreadable' })
+    );
+    service.setChangeEmitter((event) => events.push(event));
+    const schedule = makeSchedule({ teamName: 'builders' });
+    await repo.saveSchedule(schedule);
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(500);
+
+    const runs = await repo.listRuns(schedule.id);
+    expect(runs[0]?.status).toBe('skipped');
+    expect(runs[0]?.summary).toContain('Team metadata is unreadable');
+    expect(executor.execute).not.toHaveBeenCalled();
+    expect(events.some((e) => e.type === 'run-failed')).toBe(false);
+    await service.stop();
+  });
 
   // --- Lifecycle ---
 
@@ -831,7 +924,10 @@ describe('SchedulerService', () => {
     }).cronJobs.get(schedule.id);
     expect(cron).toBeDefined();
     const pauseSpy = vi.spyOn(cron!, 'pause');
-    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+    vi.mocked(repo.updateSchedule).mockImplementationOnce(async (_id, update) => {
+      update(failing);
+      throw new Error('storage unavailable');
+    });
 
     const subject = service as unknown as {
       incrementConsecutiveFailures(input: Schedule): Promise<void>;

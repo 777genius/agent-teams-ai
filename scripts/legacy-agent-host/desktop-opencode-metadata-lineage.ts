@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import type { DesktopMetadataWitness } from './desktop-metadata-witness.ts';
 
 type Row = Record<string, unknown>;
 export interface DesktopMetadataEvent {
@@ -47,7 +48,7 @@ const identity = (value: DesktopMetadataEvent) => [value.hostPid, value.profileH
   value.providerHash, value.pid, value.startIdentityHash];
 
 /** Parse the existing private log only; this observation has no process/Host authority. */
-function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
+export function readDesktopMetadataEvents(root: string, hostPid: number, allowEmpty = false): DesktopMetadataEvent[] {
   const directory = join(root, 'userData/logs');
   let rotated = Buffer.alloc(0);
   try { rotated = readFileSync(join(directory, 'app-errors.1.ndjson')); }
@@ -95,16 +96,17 @@ function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
     events.push({ hostPid, profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
       pid: value.pid, startIdentityHash: value.startIdentityHash, stage: value.stage });
   }
-  assert.ok(events.length > 0 && events.length <= 128, 'finite original metadata lifecycle observations');
+  assert.ok((allowEmpty || events.length > 0) && events.length <= 128, 'finite original metadata lifecycle observations');
   return events;
 }
+const readEvents = readDesktopMetadataEvents;
 
 /** One captured owner per profile; a successor requires the previous exact ready's confirmed close. */
-function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number) {
+function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number, allowEmpty = false) {
   assert.ok(profileHashes.length === 1 || profileHashes.length === 2);
   assert.equal(new Set(profileHashes).size, profileHashes.length);
   assert.ok(profileHashes.every(hash));
-  assert.ok(events.length > 0 && events.length <= 128);
+  assert.ok((allowEmpty || events.length > 0) && events.length <= 128);
   const originals = new Map<number, DesktopMetadataEvent>(), active = new Map<string, DesktopMetadataEvent>();
   for (const event of events) {
     assert.equal(event.hostPid, hostPid);
@@ -124,6 +126,14 @@ function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: reado
     }
   }
   return { originals, active };
+}
+
+
+/** A passive readiness count, never a physical birth, Runtime or release qualification. */
+export function desktopMetadataReadyScopeCount(
+  events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number
+): number {
+  return lifecycle(events, profileHashes, hostPid, true).active.size;
 }
 
 export function assertDesktopMetadataLineageRetained(
@@ -256,7 +266,44 @@ export interface DesktopSourceMetadataLineage {
   readonly live: readonly ProcessFact[];
 }
 
-/** One whole-log budget for the original configuration/A/B source journey. */
+/** Actual pre-ready observations under one captured Host; never process-control authority. */
+export interface DesktopMetadataBirthWitness {
+  readonly host: ProcessFact;
+  readonly births: readonly ProcessFact[];
+}
+
+function witnessedPartition(options: {
+  host: ProcessFact; executable: string; profileHash: string; events: readonly DesktopMetadataEvent[];
+  observed: readonly ProcessFact[]; witness: DesktopMetadataBirthWitness;
+  original?: DesktopMetadataLineage;
+}): DesktopMetadataLineage {
+  const { host, events, witness, observed } = options;
+  assert.deepEqual(witness.host, host, 'pre-ready births belong to this exact original Host');
+  assert.ok(witness.births.length <= 128);
+  assert.equal(new Set(witness.births.map(row => row.pid)).size, witness.births.length);
+  const state = lifecycle(events, [options.profileHash], host.pid);
+  const births: ProcessFact[] = [];
+  for (const [pid, ready] of state.originals) {
+    const birth = witness.births.find(row => row.pid === pid);
+    assert.ok(birth, 'every original metadata ready, including retired predecessors, needs a retained physical birth');
+    assert.equal(birth.parentPid, host.pid); assert.equal(birth.groupId, pid);
+    assert.equal(birth.command, options.executable);
+    assert.match(birth.birth, /^linux-starttime:[1-9]\d*$/u);
+    assert.equal(ready.startIdentityHash, createHash('sha256').update(pid + ':' +
+      birth.birth.slice('linux-starttime:'.length)).digest('hex'), 'exact original Linux metadata birth');
+    const physical = observed.filter(row => row.pid === pid);
+    if (state.active.get(options.profileHash) === ready) {
+      assert.equal(physical.length, 1, 'original ready is physically present');
+      assert.deepEqual(physical[0], birth, 'the physically active original birth is unchanged');
+    } else assert.equal(physical.length, 0, 'the original retired birth is physically absent');
+    births.push({ ...birth });
+  }
+  const result = { profileHashes: [options.profileHash], events: events.map(row => ({ ...row })), births };
+  if (options.original) assertDesktopMetadataLineageRetained(options.original, result);
+  return result;
+}
+
+/** The live sampler may supply its same-census log snapshot; full reads always reread the original log. */
 export function captureDesktopSourceMetadataLineage(options: {
   root: string;
   host: ProcessFact;
@@ -264,13 +311,26 @@ export function captureDesktopSourceMetadataLineage(options: {
   observed: readonly ProcessFact[];
   executable: string;
   original?: DesktopSourceMetadataLineage;
+  witness?: DesktopMetadataWitness;
+  birthWitness?: DesktopMetadataBirthWitness;
   released?: boolean;
-}): DesktopSourceMetadataLineage {
-  const { host, profileHashes, observed, original } = options;
+}, sampledEvents?: readonly DesktopMetadataEvent[]): DesktopSourceMetadataLineage {
+  const { host, profileHashes, observed } = options;
+  const witnessed = options.witness?.read(), original = witnessed ?? options.original;
+  if (witnessed && options.original) {
+    assert.deepEqual(witnessed.host, options.original.host);
+    assert.deepEqual(witnessed.profileHashes.slice(0, options.original.profileHashes.length), options.original.profileHashes);
+    assert.deepEqual(witnessed.events.slice(0, options.original.events.length), options.original.events);
+    for (const partition of options.original.partitions) {
+      const next = witnessed.partitions.find(row => row.profileHashes[0] === partition.profileHashes[0]);
+      assert.ok(next); assertDesktopMetadataLineageRetained(partition, next);
+    }
+  }
   assert.ok(profileHashes.length >= 1 && profileHashes.length <= 3);
   assert.equal(new Set(profileHashes).size, profileHashes.length);
   assert.ok(profileHashes.every(hash));
-  const events = readEvents(options.root, host.pid);
+  const events = sampledEvents ?? readEvents(options.root, host.pid);
+  assert.ok(events.length > 0 && events.length <= 128, 'finite original metadata lifecycle observations');
   if (original) {
     assert.deepEqual(host, original.host, 'same original source-selection Host');
     assert.deepEqual(profileHashes.slice(0, original.profileHashes.length), original.profileHashes);
@@ -302,7 +362,14 @@ export function captureDesktopSourceMetadataLineage(options: {
     const before = original?.partitions.find(value => value.profileHashes[0] === profileHash);
     const ready = active.get(profileHash);
     let result: DesktopMetadataLineage;
-    if (ready) {
+    if (options.birthWitness) {
+      result = witnessedPartition({ host, executable: options.executable, profileHash, events: subset,
+        observed, witness: options.birthWitness, ...(before ? { original: before } : {}) });
+      if (ready) {
+        const birth = result.births.find(value => value.pid === ready.pid); assert.ok(birth);
+        live.push({ ...birth });
+      }
+    } else if (ready) {
       result = captureDesktopMetadataLineage({ events: subset, host, profileHashes: [profileHash],
         observed, executable: options.executable, ...(before ? { original: before } : {}) });
       const birth = result.births.find(value => value.pid === ready.pid); assert.ok(birth);

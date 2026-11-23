@@ -140,7 +140,10 @@ import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
+import type {
+  NativeNextPromptCandidate,
+  NativeNextPromptProvider,
+} from '@features/native-prompt-suggestions/contracts';
 
 const logger = createLogger('IPC:handlers');
 
@@ -151,7 +154,7 @@ export function initializeAgentBackendConnection(
     getMainWindow: () => import('electron').BrowserWindow | null;
     rendererIndexPath: string;
     publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
-    nativeNextPromptEnabled?: boolean;
+    nativeNextPromptProviders?: readonly NativeNextPromptProvider[];
   }
 ): void {
   registerDesktopAgentBackend({

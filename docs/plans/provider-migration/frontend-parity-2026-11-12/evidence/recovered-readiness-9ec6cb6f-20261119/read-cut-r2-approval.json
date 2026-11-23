@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-existing-read-cut-final-reason-review",
+  "reviewer": "/root/combined_review_42",
+  "reviewedAt": "2026-11-19T03:04:41.286301+00:00",
+  "verdict": "APPROVED_SCOPED_TEST_OBSERVABILITY_ONLY",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "manifest": {
+    "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate-manifest.json",
+    "bytes": 2887,
+    "sha256": "6919d4e42be603fe7e548cc6593765db1e55f3cf2d89f2607b1b724415aecc79",
+    "gitBlob": "a8ac285ea8847e9a941c71d210808c6bfd1a2a13"
+  },
+  "authorVerification": {
+    "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/verification.json",
+    "bytes": 8738,
+    "sha256": "4f02114db0d49aa1d9b4e717cf447f897ad5b52fa83c36b7191fea12ff533b8b",
+    "gitBlob": "c13f3cc35521c89afbf46ed4103ffdc6a6f949da"
+  },
+  "checkedReferencedPins": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 44790,
+      "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+      "gitBlob": "3022c10041dd8bceabdd9e9982ab78a305e9c167"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 45233,
+      "sha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+      "gitBlob": "7675e9d9f09931ae793217e0fdd272e608ee026a"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before/packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "bytes": 11220,
+      "sha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+      "gitBlob": "4dbce7ddf863f4b1513bdb018c67b29ec31eac71"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "bytes": 19833,
+      "sha256": "a5f40a040b17bd438e32edc1a1eaf9a833f16d4c5e860a35c54a0c269ee40963",
+      "gitBlob": "d888c0642b0755123176126ce35cf51250d6997f"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate.patch",
+      "bytes": 11487,
+      "sha256": "ee931c90f03fe40ee6acf0ee8f0647422dacb6a3ab94716bd9723c8daef4ca69",
+      "gitBlob": "8aaff8140d87f9ade9744da8c81ab50e19b5bddb"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate-manifest.json",
+      "bytes": 2887,
+      "sha256": "6919d4e42be603fe7e548cc6593765db1e55f3cf2d89f2607b1b724415aecc79",
+      "gitBlob": "a8ac285ea8847e9a941c71d210808c6bfd1a2a13"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/stage1-linux-credential-protocol-dispose-failure-42a4.json",
+      "bytes": 48662,
+      "sha256": "c81c5670dfb6e9ae9ac0d3769fe1c215f7ff430c91f4cdece7a065c6463d0466",
+      "gitBlob": "8c33910012e224b540c153238cb4c7ad73709072"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/linux-credential-dispose-source-gap-42a4.json",
+      "bytes": 10633,
+      "sha256": "15d7e49a607e893c2be1b354a45d84a1a00de04e86397ca6673db64657799e66",
+      "gitBlob": "f05a42f70ee8214069e50a0be262cccdc036fa05"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before-run.log",
+      "bytes": 1389,
+      "sha256": "425f1d1e6e7df38f170a602c9bb6bfc73f6eeeb008a388a9488595f6a28b229b",
+      "gitBlob": "4a2bd6302fc4c1a0e742b355e26de014496136ea"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/after-run.log",
+      "bytes": 1388,
+      "sha256": "87851a6d77ffe50c40dccefdb501bc3893a5c432823d91442b8b861bb31a0f6c",
+      "gitBlob": "fc5ef457cc9f104a0f9ee7604facfa3c8ff20c74"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host/tsconfig.final-reason-focused.json",
+      "bytes": 734,
+      "sha256": "248490ee0f2d6c1dbddc0c2d3ff7c8e789564bf8008ff29b78cc78fea9e35485",
+      "gitBlob": "203acdd0c4175726422ed2a285466522440a478b"
+    }
+  ],
+  "sourceComposition": {
+    "changedExistingTestPaths": 2,
+    "productionPathsChanged": 0,
+    "newProductionPaths": 0,
+    "fixtureLinesBefore": 690,
+    "fixtureLinesAfter": 695,
+    "testLinesBefore": 182,
+    "testLinesAfter": 318,
+    "originalSourceMatchesBase42": true,
+    "exactPatchRebuilt": true,
+    "inverseThreeDiagnosticHunksRestoresEntireOriginalFixture": true,
+    "allOriginalSixTestBodiesBytePreserved": true,
+    "regressionTestBytesEqualInBeforeAndAfterViews": true,
+    "unchangedOperationCounts": {
+      "await": {
+        "before": 8,
+        "after": 8
+      },
+      "setTimeout": {
+        "before": 0,
+        "after": 0
+      },
+      "setInterval": {
+        "before": 0,
+        "after": 0
+      },
+      "subscriptions": {
+        "before": 10,
+        "after": 10
+      },
+      "emitCalls": {
+        "before": 16,
+        "after": 16
+      },
+      "whileLoops": {
+        "before": 2,
+        "after": 2
+      },
+      "forLoops": {
+        "before": 11,
+        "after": 11
+      }
+    }
+  },
+  "producerVocabulary": {
+    "archive": {
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 191145,
+      "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+      "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3"
+    },
+    "member": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+    "memberBytes": 18831,
+    "memberSha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+    "memberGitBlob": "4fda5bea7727ecfbd6152f9a99310fdcd900c5f2",
+    "declaredFinalReasons": [
+      "deadline",
+      "cleanup_unknown",
+      "native_read_cleanup_unknown",
+      "invalid_native_read_response",
+      "invalid_native_read_json",
+      "native_session_binding_mismatch",
+      "invalid_native_envelope",
+      "invalid_native_page",
+      "invalid_native_model",
+      "invalid_native_position",
+      "invalid_native_identity",
+      "incomplete_native_log",
+      "incomplete_native_transcript",
+      "native_cut_byte_budget",
+      "frame_limit",
+      "body_limit",
+      "transport_failure",
+      "authority_mismatch",
+      "disposed",
+      "media_type",
+      "http_failure",
+      "unknown",
+      "mutable_native_readback"
+    ],
+    "count": 23,
+    "matchesExistingPinnedProducerExactly": true,
+    "firstReasonUnchanged": "The pinned producer suppresses first mutable_native_readback failures, but already projects the final translated reason from the full declared vocabulary. Candidate retains the existing first reason separately."
+  },
+  "reviewFindings": [
+    {
+      "boundary": "Own data only",
+      "source": "fixture lines40-55",
+      "finding": "FinalReason is read via its own property descriptor. An inherited field is ignored; a missing own field preserves legacy absence. A present accessor or invalid own value rejects that one event. No getters or raw error values are read, and descriptor exceptions are caught."
+    },
+    {
+      "boundary": "Both passive projections",
+      "source": "fixture lines197-217 and575-579",
+      "finding": "The same pure whitelist projector feeds the existing emitter and receipt path. The added receipt field is copied only from its validated fixed value."
+    },
+    {
+      "boundary": "Original first observation",
+      "source": "fixture lines202-204,243-245 and564-578",
+      "finding": "Malformed events are discarded before either first-read flag is set; a later valid event cannot replace a previously retained original failure. The original reason/code is not overwritten."
+    },
+    {
+      "boundary": "Existing lifecycle",
+      "source": "entire inverse-normalized fixture",
+      "finding": "All subscriptions, writes, first-only flags, counters, waits, guards, teardown, runtime-open paths and process imports are byte-identical outside the three diagnostic projection edits. No producer/native runtime file changes."
+    }
+  ],
+  "bounds": {
+    "rawLineBytes": 512,
+    "serializedEntryIncludingNewlineBytes": 513,
+    "traceBytes": 65536,
+    "emitterOrdinaryRows": 251,
+    "receiptOrdinaryRows": 250,
+    "emitterTotalRows": 257,
+    "receiptTotalRows": 257,
+    "allGuardAndReserveExpressionsByteUnchanged": true,
+    "newEventRows": 0,
+    "newReservedSlots": 0,
+    "newSubscribers": 0,
+    "sourceBasedMaximumArithmetic": {
+      "combinations": 3036,
+      "atMs": 3600000,
+      "elapsedMs": 60000,
+      "epoch": 3,
+      "booleans": false,
+      "maxRawBytesExcludingNewline": 244,
+      "maxReceiptEntryBytesIncludingNewline": 348,
+      "maxLabels": {
+        "stage": "before-session",
+        "reason": "native_session_binding_mismatch",
+        "finalReason": "native_session_binding_mismatch"
+      },
+      "qualification": "Arithmetic over fixed admitted producer fields, not a runtime test. Existing explicit size checks enforce the same hard limits for all receipt rows, including other epochs or optional ordinary fields."
+    }
+  },
+  "reviewedAuthorRuns": {
+    "before-run": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before-run.json",
+        "bytes": 619,
+        "sha256": "5b96f2a89fb355160fe011bd3759bb8891edfd0908631db50f647c6302874b4f",
+        "gitBlob": "d96168dca9edddd3c91d839184589434a8c13893"
+      },
+      "log": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before-run.log",
+        "bytes": 1389,
+        "sha256": "425f1d1e6e7df38f170a602c9bb6bfc73f6eeeb008a388a9488595f6a28b229b",
+        "gitBlob": "4a2bd6302fc4c1a0e742b355e26de014496136ea"
+      },
+      "exitCode": 1
+    },
+    "after-run": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/after-run.json",
+        "bytes": 548,
+        "sha256": "47f5d485b54ae5aa7e98878837026ed2c044b72a9f345d4716b54b5f6a747260",
+        "gitBlob": "6eb7506efc8da5acd6c49d1d67d813e880ec0da3"
+      },
+      "log": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/after-run.log",
+        "bytes": 1388,
+        "sha256": "87851a6d77ffe50c40dccefdb501bc3893a5c432823d91442b8b861bb31a0f6c",
+        "gitBlob": "fc5ef457cc9f104a0f9ee7604facfa3c8ff20c74"
+      },
+      "exitCode": 0
+    },
+    "typecheck": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/typecheck.json",
+        "bytes": 1523,
+        "sha256": "2800681cd24b748de3d869da4c0294f96f170b424a210efc2d8dbc1ce03a8a7c",
+        "gitBlob": "2bb1bbea3a5576920931f2bd0edcc50cec33b795"
+      },
+      "log": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/typecheck.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "exitCode": 0
+    }
+  },
+  "finiteClaims": "Author saved evidence supports one selected actual-source RED, ten actual-source PASS tests (six original/four new), focused strict noEmit PASS. R2 did not rerun tests or start native/app/Host.",
+  "preservedLimits": [
+    "This only restores an already-produced diagnostic label and does not repair or qualify original Linux credential disposal.",
+    "Original source42a4 failure remains INCOMPLETE with unknown cleanup/custody; next original receipt may provide more evidence.",
+    "No CI endpoints, local native/app/GUI/build/install, source mutation, policy/baseline/ref/index changes occurred during R2.",
+    "Harness package metadata and focused tsconfig are verification-only, explicitly outside the two-path publication manifest.",
+    "Frozen a7c092df tree was not changed."
+  ]
+}

@@ -5,6 +5,19 @@ import { normalizeBinding } from '../runtime/identity.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { MemberEntry } from './MemberEntry.js';
 
+export const PROMPT_SUGGESTION_PROVIDERS = ['claude', 'codex'] as const;
+export type PromptSuggestionProvider = (typeof PROMPT_SUGGESTION_PROVIDERS)[number];
+
+/** Startup preference from Main: a comma separated subset of the providers, or empty for none. */
+export function parsePromptSuggestionProviders(value: string): PromptSuggestionProvider[] {
+  const names = value === '' ? [] : value.split(',');
+  const providers = names.filter((name): name is PromptSuggestionProvider =>
+    (PROMPT_SUGGESTION_PROVIDERS as readonly string[]).includes(name));
+  if (providers.length !== names.length || new Set(providers).size !== providers.length)
+    throw new Error('Invalid native suggestion providers');
+  return providers;
+}
+
 /** Structural consumer port. The concrete native provider owns SDK/JSON-RPC types. */
 export interface CapturedPromptSuggestion {
   readonly provider: 'claude' | 'codex';

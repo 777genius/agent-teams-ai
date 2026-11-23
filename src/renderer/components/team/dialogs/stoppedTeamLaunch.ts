@@ -1,16 +1,39 @@
 import {
+  isHostTeamRunId,
   isHostTeamSelectionKey,
   parseHostTeamSelectionKey,
 } from '@features/agent-backend/contracts';
+import {
+  closeRetainedLegacyLaunch,
+  openRetainedLegacyLaunch,
+  type RetainedLegacyLaunchChoice,
+} from '@features/agent-backend/renderer';
+import { assertMemberSettingsRelaunchRoster } from '@features/team-provisioning/renderer';
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { useStore } from '@renderer/store';
 import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 
+import {
+  resolveTeamLaunchDefaultProjectPath,
+  resolveTeamListProjectPermissionAlias,
+} from '../teamProjectSelection';
+
 import type { TeamLaunchDialogMode } from './LaunchTeamDialog.types';
-import type { ResolvedTeamMember, TeamMemberSnapshot } from '@shared/types';
+import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
+import type { ResolvedTeamMember, TeamCreateRequest, TeamMemberSnapshot } from '@shared/types';
+import type { TeamsAPI } from '@shared/types/api';
+
+type OriginalTeamData = Awaited<ReturnType<TeamsAPI['getData']>>;
+interface OriginalLaunchOptions {
+  mode?: TeamLaunchDialogMode;
+  memberSettingsDraft?: MemberSettingsRelaunchDraft;
+  baselineMembers?: ResolvedTeamMember[];
+  onOriginalData?: (data: OriginalTeamData) => void;
+}
 
 export function resolveLaunchDialogMembers(
   members: readonly TeamMemberSnapshot[]
@@ -23,7 +46,135 @@ export function resolveLaunchDialogMembers(
   }));
 }
 
+function resolveSavedLaunchDialogMembers(
+  members: TeamCreateRequest['members']
+): ResolvedTeamMember[] {
+  return members.map((member) => ({
+    ...member,
+    joinedAt: 0,
+    currentTaskId: null,
+    taskCount: 0,
+    messageCount: 0,
+    lastActiveAt: null,
+    status: 'idle',
+  }));
+}
+
+interface ExistingTeamLaunchDialogTarget {
+  teamName: string;
+  mode: TeamLaunchDialogMode;
+  members: ResolvedTeamMember[];
+  projectPath: string;
+  retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
+  projectPermissionTeamName?: string | null;
+}
+
 export class StoppedTeamLaunchHold extends Error {}
+class StoppedTeamLaunchCancelled extends Error {}
+
+/** Explicit original-runtime transition, before any Launch model or preflight reads. */
+async function chooseOriginalRuntime(
+  teamName: string,
+  alive: boolean,
+  current: () => boolean,
+  retain: (choice: RetainedLegacyLaunchChoice) => void,
+  signal: AbortSignal | undefined,
+  options: OriginalLaunchOptions
+): Promise<boolean> {
+  const teams = api.teams;
+  const originalRun = () => {
+    const state = useStore.getState();
+    return (
+      state.currentRuntimeRunIdByTeam?.[teamName] ??
+      state.currentProvisioningRunIdByTeam?.[teamName]
+    );
+  };
+  const runId = alive ? originalRun() : undefined;
+  const assertCurrent = () => {
+    if (!current()) throw new StoppedTeamLaunchHold('Team context changed. Reopen Launch.');
+  };
+  const validateDraft = async (data: OriginalTeamData) => {
+    const draft = options.memberSettingsDraft;
+    if (!draft) return;
+    if (!options.baselineMembers)
+      throw new StoppedTeamLaunchHold(
+        'Original member settings are unavailable. Reopen member settings.'
+      );
+    assertMemberSettingsRelaunchRoster(teamName, data.members, options.baselineMembers, draft);
+    assertCurrent();
+    const saved = await teams.getSavedRequest(teamName);
+    assertCurrent();
+    if (
+      !saved ||
+      saved.teamName !== teamName ||
+      saved.savedSettingsFingerprint !== draft.expectedTeamSettingsFingerprint
+    )
+      throw new StoppedTeamLaunchHold(
+        'Team settings changed. Close Launch and reopen member settings.'
+      );
+  };
+  const accepted = await confirm({
+    title: alive ? 'Stop and use the original runtime?' : 'Use the original runtime?',
+    message: alive
+      ? 'Stop this team’s current run, then configure its next launch with the original runtime and connection settings.'
+      : options.memberSettingsDraft
+        ? 'Keep this team’s existing settings and configure this launch with its original runtime and connection settings.'
+        : 'This team cannot be moved to Host yet. You can launch it with its original runtime and connection settings.',
+    confirmLabel: alive
+      ? 'Stop and configure original runtime'
+      : 'Use original runtime for this team',
+    cancelLabel: 'Close',
+  });
+  if (!accepted) return false;
+  assertCurrent();
+  if (alive || options.memberSettingsDraft) {
+    let data = await teams.getData(teamName, { includeMemberBranches: false });
+    assertCurrent();
+    if (data.teamName !== teamName)
+      throw new StoppedTeamLaunchHold('Original team changed. Reopen Launch.');
+    await validateDraft(data);
+    assertCurrent();
+    if (alive && data.isAlive === true) {
+      if (
+        !runId ||
+        runId.startsWith('pending:') ||
+        isHostTeamRunId(runId) ||
+        originalRun() !== runId
+      )
+        throw new StoppedTeamLaunchHold(
+          'Original team run is unavailable or changed. Reopen Launch.'
+        );
+      const progress = await teams.getProvisioningStatus(runId);
+      assertCurrent();
+      if (progress.runId !== runId || progress.teamName !== teamName || originalRun() !== runId)
+        throw new StoppedTeamLaunchHold('Original team run changed. Reopen Launch.');
+      try {
+        await teams.cancelProvisioning(runId);
+      } catch {
+        throw new StoppedTeamLaunchHold(
+          'Original Stop outcome is unknown. Check the team before reopening Launch.'
+        );
+      }
+      assertCurrent();
+      data = await teams.getData(teamName, { includeMemberBranches: false });
+      assertCurrent();
+    }
+    if (data.teamName !== teamName || data.isAlive !== false)
+      throw new StoppedTeamLaunchHold(
+        'Original team Stop is not confirmed. Check the team before reopening Launch.'
+      );
+    if (alive) await validateDraft(data);
+    options.onOriginalData?.(data);
+  }
+  assertCurrent();
+  const choice = await openRetainedLegacyLaunch(teamName, signal);
+  if (!current()) {
+    await closeRetainedLegacyLaunch(choice);
+    throw new StoppedTeamLaunchHold('Team context changed. Reopen Launch.');
+  }
+  retain(choice);
+  return true;
+}
 async function loadImportedDialog(teamName: string, projectPath: string) {
   try {
     const data = await api.teams.getData(teamName, { includeMemberBranches: false });
@@ -43,39 +194,89 @@ async function loadImportedDialog(teamName: string, projectPath: string) {
 export async function loadExistingTeamLaunchDialog(
   teamName: string,
   projectPath: string,
-  mode: TeamLaunchDialogMode
-) {
+  mode: TeamLaunchDialogMode,
+  signal?: AbortSignal
+): Promise<ExistingTeamLaunchDialogTarget | null> {
   try {
+    const projectContextMode = useStore.getState().teamByName?.[teamName]?.projectContextMode;
+    const perProject = projectContextMode === 'per_project';
+    let projectPermissionTeamName: string | null | undefined;
+    if (perProject) {
+      try {
+        const context = await api.teams.getProjectContextView(teamName, projectPath);
+        projectPermissionTeamName = resolveTeamListProjectPermissionAlias(
+          teamName,
+          projectPath,
+          context
+        );
+      } catch {
+        // An unverified project runtime must require an explicit permission choice.
+        projectPermissionTeamName = null;
+      }
+    }
+    if (signal?.aborted) return null;
+    let retainedLegacyLaunch: RetainedLegacyLaunchChoice | undefined;
+    const retain = (choice: RetainedLegacyLaunchChoice) => {
+      retainedLegacyLaunch = choice;
+    };
     let data;
     try {
       data = await api.teams.getData(teamName, { includeMemberBranches: false });
     } catch (error) {
-      if (!(error instanceof Error && error.message.includes('TEAM_DRAFT'))) throw error;
-      const target = await stoppedTeamLaunchSelection(teamName, false);
+      if (!perProject && !(error instanceof Error && error.message.includes('TEAM_DRAFT')))
+        throw error;
+      const target = perProject
+        ? teamName
+        : await stoppedTeamLaunchSelection(teamName, false, retain, signal, { mode });
       if (target !== teamName) return await loadImportedDialog(target, projectPath);
-      return { teamName, mode, members: [] as ResolvedTeamMember[], projectPath };
+      const saved = await api.teams.getSavedRequest(teamName).catch(() => null);
+      return {
+        teamName,
+        mode,
+        members: resolveSavedLaunchDialogMembers(saved?.members ?? []),
+        projectPath,
+        retainedLegacyLaunch,
+        projectPermissionTeamName,
+      };
     }
-    const target = await stoppedTeamLaunchSelection(teamName, data.isAlive);
+    const target = perProject
+      ? teamName
+      : await stoppedTeamLaunchSelection(teamName, data.isAlive, retain, signal, {
+          mode,
+          onOriginalData: (original) => {
+            data = original;
+          },
+        });
     if (target !== teamName) return await loadImportedDialog(target, projectPath);
     return {
       teamName,
-      mode,
+      mode: retainedLegacyLaunch ? ('launch' as const) : mode,
+      retainedLegacyLaunch,
       members: resolveLaunchDialogMembers(data.members ?? []),
-      projectPath: data.config.projectPath ?? projectPath,
+      projectPath: resolveTeamLaunchDefaultProjectPath(
+        projectContextMode,
+        projectPath,
+        data.config.projectPath
+      ),
+      projectPermissionTeamName,
     };
   } catch (error) {
-    showStoppedTeamLaunchHold(error);
+    if (!signal?.aborted) showStoppedTeamLaunchHold(error);
     return null;
   }
 }
 /** Original stopped action hands off to saved Host configuration; never dispatches Launch. */
 export async function stoppedTeamLaunchSelection(
   teamName: string,
-  isAlive: boolean | undefined
+  isAlive: boolean | undefined,
+  retain?: (choice: RetainedLegacyLaunchChoice) => void,
+  signal?: AbortSignal,
+  options: OriginalLaunchOptions = {}
 ): Promise<string> {
-  if (isHostTeamSelectionKey(teamName) || isAlive !== false || !api.agentBackend) return teamName;
+  if (isHostTeamSelectionKey(teamName) || isAlive === undefined || !api.agentBackend)
+    return teamName;
   const epoch = captureContextScopedRequestEpoch();
-  const current = () => isContextScopedRequestEpochCurrent(epoch);
+  const current = () => !signal?.aborted && isContextScopedRequestEpochCurrent(epoch);
   let state;
   try {
     state = await api.agentBackend.getConnections();
@@ -86,6 +287,13 @@ export async function stoppedTeamLaunchSelection(
   }
   if (!current()) throw new StoppedTeamLaunchHold('Team context changed. Reopen Launch.');
   if (state.state === 'unconfigured') return teamName;
+  if (isAlive || options.memberSettingsDraft) {
+    if (!retain || (isAlive && options.mode !== 'relaunch'))
+      throw new StoppedTeamLaunchHold('Team is already running. Reopen its Relaunch action.');
+    if (await chooseOriginalRuntime(teamName, isAlive, current, retain, signal, options))
+      return teamName;
+    throw new StoppedTeamLaunchCancelled();
+  }
   if (!api.agentBackend.stoppedImport)
     throw new StoppedTeamLaunchHold('Stopped Team import is unavailable in this context.');
   let result;
@@ -115,6 +323,15 @@ export async function stoppedTeamLaunchSelection(
     throw new StoppedTeamLaunchHold(
       'Team context changed. Reopen Launch to recover the original import.'
     );
+  if (
+    !result.ok &&
+    result.reason === 'native-custody-unverified' &&
+    result.outcome === 'not-dispatched' &&
+    retain
+  ) {
+    if (await chooseOriginalRuntime(teamName, false, current, retain, signal, options))
+      return teamName;
+  }
   if (!result.ok)
     throw new StoppedTeamLaunchHold(
       result.reason === 'native-custody-unverified'
@@ -129,6 +346,7 @@ export async function stoppedTeamLaunchSelection(
   return result.selection;
 }
 export function showStoppedTeamLaunchHold(error: unknown): void {
+  if (error instanceof StoppedTeamLaunchCancelled) return;
   void confirm({
     title: 'Team Launch unavailable',
     message: error instanceof Error ? error.message : 'Stopped Team import is unavailable.',

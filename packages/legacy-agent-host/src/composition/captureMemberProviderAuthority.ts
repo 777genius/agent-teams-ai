@@ -2,6 +2,7 @@ import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import type { MemberEntry } from './MemberEntry.js';
 import type { RuntimeSessionRecord } from '../runtime/contracts.js';
+import type { CapturedProviderCurrent } from '../team/TeamOwner.js';
 
 /** Original transition authority ends only at this exact target's allocation commit.
  * Target lifetime uses its own grant; retained callbacks never follow a mutable entry. */
@@ -14,7 +15,7 @@ export function captureMemberProviderAuthority(options: {
   /** Original writer lease, required by the production factory before sharing a Team fence. */
   assertWriter?(): void;
   /** Closed Team operation; a denied/corrupt source must throw, never return legacy applicability. */
-  assertProviderAuthority?(): 'current' | 'roster-not-applicable';
+  assertProviderAuthority?(onCurrent?: CapturedProviderCurrent): 'current' | 'roster-not-applicable';
   beforeTeamAuthority?: () => void;
   assertCurrent(): void;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
@@ -54,7 +55,7 @@ export function captureMemberProviderAuthority(options: {
     )
       throw new RuntimeOwnerError('forbidden');
   }
-  function assertCurrent() {
+  function assertCurrent(onCurrent?: CapturedProviderCurrent) {
     // Never enter a different Team's lock through a replaced mutable entry.
     assertOriginal();
     // A replaced store root must be refused before even publishing a lock there.
@@ -62,7 +63,7 @@ export function captureMemberProviderAuthority(options: {
     beforeTeamAuthority?.();
     assertOriginal();
     if (assertWriter && options.assertProviderAuthority) {
-      const authority = options.assertProviderAuthority();
+      const authority = onCurrent ? options.assertProviderAuthority(onCurrent) : options.assertProviderAuthority();
       if (authority === 'current') return;
       if (authority !== 'roster-not-applicable') throw new RuntimeOwnerError('forbidden');
     }
@@ -120,8 +121,10 @@ export function captureMemberProviderAuthority(options: {
         record.custody === 'owned' &&
         attached &&
         record.sessionRef
-      )
+      ) {
+        assertCurrent();
         return true;
+      }
       if (
         record.phase !== 'opening' ||
         record.custody !== 'unknown' ||

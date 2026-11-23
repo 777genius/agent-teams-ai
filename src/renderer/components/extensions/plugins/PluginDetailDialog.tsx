@@ -198,7 +198,7 @@ export const PluginDetailDialog = ({
         {/* Install controls */}
         <div className="flex items-center gap-3 rounded-md border border-border bg-surface-raised px-4 py-3">
           <div className="flex flex-1 items-center gap-2">
-            <Label className="text-xs text-text-muted">{t('pluginDetail.scope.label')}</Label>
+            <Label className="text-xs">{t('pluginDetail.scope.label')}</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as PluginInstallScope)}>
               <SelectTrigger className="h-7 w-36 text-xs">
                 <SelectValue />

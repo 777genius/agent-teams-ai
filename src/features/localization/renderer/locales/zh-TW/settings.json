@@ -16,6 +16,10 @@
     "gatewayProviders": {
       "description": "管理閘道端點，讓每位隊友各自存取模型。",
       "label": "閘道供應商"
+    },
+    "reviewFlow": {
+      "description": "選擇 AI 審查後由誰做最終核准，可針對所有團隊或個別團隊設定。",
+      "label": "審查流程"
     }
   },
   "view": {

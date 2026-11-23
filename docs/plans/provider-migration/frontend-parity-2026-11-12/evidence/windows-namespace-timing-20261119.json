@@ -1,0 +1,462 @@
+{
+  "kind": "PASSIVE_NAMESPACE_TIMING_FOR_ORIGINAL_WINDOWS_FAILURE",
+  "recordedAt": "2026-11-19T23:18:53.148155+00:00",
+  "sourceHeadBeforeChange": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+  "originalFailure": {
+    "stage": "Team-A",
+    "status": "INCOMPLETE",
+    "assertion": "Original source Team readiness",
+    "stack": "nativeEmulatedSourceScenario.ts poll:59 -> launch:481 -> scenario:537 -> nativeEmulatedProviderGate.ts:401",
+    "lastLaunchReadiness": {
+      "source": {
+        "sourceId": "0fbbac65e75408b2c6fed4d1982eec2b62bb43c32c5c2e69cc904c0d6d8e6d3a",
+        "revision": "3a0990a7ec75946d3000a0beb45dba58e5300299311e1cfc9d871262120c3d3e"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 65,
+      "elapsedMs": 15021.426599999999,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "reference",
+          "commandDigest": "e6fc2c0c6a10c2214bece06461827d9d0ef7a2e0566b2f765410a8468eb8918b",
+          "contextDigest": "25e7ff1d932d1a1ec617b57cb2ffa109502d12e6a8d87242748e95fd88d71f73",
+          "phase": "probe-expiry",
+          "reason": "held",
+          "probeCutoff": 1795128136449,
+          "probeNow": 1795128136788,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null,
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "0fbbac65e75408b2c6fed4d1982eec2b62bb43c32c5c2e69cc904c0d6d8e6d3a",
+            "revision": "3a0990a7ec75946d3000a0beb45dba58e5300299311e1cfc9d871262120c3d3e"
+          }
+        },
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "188ba1b505ea0ef4e1414caee3fbfc9d99ab3daa19fbc425056c19eb91a9ce43",
+          "bindingDigest": "11c106b6ec2bdebb16cef4376845d33312b20a626a1832dd388f4abf65867456",
+          "consumerId": "86941d401f0c0e0590333deee5ecfd63aba36d6947185f7e97cb96b85e93a501",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1795128136449,
+          "observedAt": 1795128136343,
+          "currentCalls": {
+            "count": 27,
+            "totalMs": 10421,
+            "maxMs": 467,
+            "lastMs": 467,
+            "truncated": false,
+            "regions": {
+              "initialAuthorityCount": 27,
+              "initialAuthorityMs": 365,
+              "readConsumerCount": 27,
+              "readConsumerMs": 153,
+              "referenceCount": 27,
+              "referenceMs": 9556,
+              "finalAuthorityCount": 26,
+              "finalAuthorityMs": 352,
+              "referenceAccountCount": 27,
+              "referenceAccountMs": 5463,
+              "referenceAccountAuthorityCount": 27,
+              "referenceAccountAuthorityMs": 4868,
+              "referenceAccountProviderCount": 27,
+              "referenceAccountProviderMs": 2520,
+              "referenceAccountAllocationCount": 27,
+              "referenceAccountAllocationMs": 2346
+            }
+          },
+          "ordinal": 2,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "0fbbac65e75408b2c6fed4d1982eec2b62bb43c32c5c2e69cc904c0d6d8e6d3a",
+            "revision": "3a0990a7ec75946d3000a0beb45dba58e5300299311e1cfc9d871262120c3d3e"
+          }
+        },
+        {
+          "kind": "opencode-open",
+          "bindingDigest": "11c106b6ec2bdebb16cef4376845d33312b20a626a1832dd388f4abf65867456",
+          "phase": "native-ready",
+          "reason": "threw",
+          "ordinal": 3,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "0fbbac65e75408b2c6fed4d1982eec2b62bb43c32c5c2e69cc904c0d6d8e6d3a",
+            "revision": "3a0990a7ec75946d3000a0beb45dba58e5300299311e1cfc9d871262120c3d3e"
+          }
+        }
+      ]
+    },
+    "probeExpiryAfterCutoffMs": 339,
+    "consumerObservedBeforeCutoffMs": 106
+  },
+  "originalCleanup": {
+    "receipt": true,
+    "scenario": true,
+    "epochs": [
+      {
+        "mainEpoch": "abc32ec5-aef2-4d08-91cd-7f79dc954643",
+        "firstCloseEntryMs": 22219.1134,
+        "serviceOperations": 0,
+        "jobs": [
+          {
+            "capability": "5e653942-28cc-44d8-8156-18f577d058ff",
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "capability": "571e4f68-b021-49aa-b1bf-31b91990e192",
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "capability": "cf411baf-4264-4bc0-be5b-b2443701d5cb",
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          }
+        ]
+      }
+    ],
+    "qualification": "The intermediate log preceded final HANDLE absence witnesses; final receipt confirms all three original handles absent. Runtime open UNKNOWN is retained."
+  },
+  "sourceAnalysis": {
+    "file": "windows-x64-d8a0c-source-analysis.json",
+    "sha256": "83cf41f3d0bbdba3aebf9654b5e4b520a4eec5faf98a976b7212e4d8588857df"
+  },
+  "measuredAndDerived": {
+    "measured": "27 containing current/reference/account intervals; reference9556ms, account5463ms, account-authority4868ms. These are not 27 nested authority calls.",
+    "sourceDerivedMultiplicity": {
+      "accountCallbacksPerCompleteInspection": 8,
+      "compositeCallbacksPerCompleteCurrent": 11,
+      "finalExpiredCurrentCompositeCallbacks": 10,
+      "accountCallbacksDerived": 216,
+      "totalCompositeCallbacksDerived": 296,
+      "qualification": "Derived from pinned configured-key V1 branch and existing controlled count assertion; no additional native measurement."
+    },
+    "providerScope": "Original source scenario is OpenCode V1 TEST A/B. V2 admission45a does not participate. V1 driver-session/factory unchanged from b194.",
+    "remainingUnknown": "Retained outer regions do not identify namespace directory-path versus recursive-tree cost, nor exact disk calls or scheduler gaps. No causal production speed fix is established.",
+    "fixCandidate": null
+  },
+  "implementation": {
+    "kind": "FINAL_LOCAL_PASSIVE_WINDOWS_NAMESPACE_DIAGNOSTIC",
+    "recordedAt": "2026-11-19T23:12:36.158578+00:00",
+    "sourceHead": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+    "status": "LOCAL_CHECKS_PASS_REVIEW_DELIVERY_OWNED_BY_ROOT",
+    "records": [
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-x64-d8a0c-source-analysis.json",
+        "sha256": "83cf41f3d0bbdba3aebf9654b5e4b520a4eec5faf98a976b7212e4d8588857df",
+        "sizeBytes": 22533
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-namespace-timing-candidate-r1.json",
+        "sha256": "13f630bf948a84e29564d93f7b41fce34269e0a672ddd8c981c4dd4a12203523",
+        "sizeBytes": 7510
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-namespace-timing-candidate-r2.json",
+        "sha256": "fcd5d9725f4543bf64391db290a737eef7e853911812014d9e4b54a489f1bc68",
+        "sizeBytes": 7917
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-namespace-timing-checks-r1.json",
+        "sha256": "0be61d7d3c65edb3f0c4c47b57a987e14ebe244cd2f2b1e006eee3e94fed0034",
+        "sizeBytes": 5712
+      },
+      {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-namespace-timing-checks-r2.json",
+        "sha256": "15726ade0683a63d4a96175fc994ea05d8cb1a85733f6e61b68f419e43b24560",
+        "sizeBytes": 5513
+      }
+    ],
+    "files": [
+      {
+        "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+        "sha256": "cfb06dd5e4a98ffff1e7fbc0594d763564867a2dcf5e79bbbc9874f815b97e58",
+        "sizeBytes": 13370,
+        "lines": 255,
+        "snapshot": "/workspace/scratch/f45fed8e9067/audit1192/TEST-namespace-timing-candidate-r2/packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "sha256": "6d3195625854e0b9de1a5e30699ce5112142cc61976f4c78cf239905e3134913",
+        "sizeBytes": 7879,
+        "lines": 226,
+        "snapshot": "/workspace/scratch/f45fed8e9067/audit1192/TEST-namespace-timing-candidate-r2/packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "sha256": "91eafaa44a3ff8816b3311fbd90188d7bcaec983f8bb388509617cd963548016",
+        "sizeBytes": 34572,
+        "lines": 424,
+        "snapshot": "/workspace/scratch/f45fed8e9067/audit1192/TEST-namespace-timing-candidate-r2/tools/owned-process-broker/nativeEmulatedSourceProfile.ts"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "sha256": "699be5e1dde8d88ea1ee8663610d6687390b422cbdbebe84f540ddf4dda0c151",
+        "sizeBytes": 29938,
+        "lines": 401,
+        "snapshot": "/workspace/scratch/f45fed8e9067/audit1192/TEST-namespace-timing-candidate-r2/tools/owned-process-broker/nativeEmulatedSourceReadiness.ts"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+        "sha256": "decf02a5f3f4b03c675a46ab253d1159a7089a6327a0a95d3e6ccf08337f7cd0",
+        "sizeBytes": 55174,
+        "lines": 939,
+        "snapshot": "/workspace/scratch/f45fed8e9067/audit1192/TEST-namespace-timing-candidate-r2/packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts"
+      }
+    ],
+    "protectedFiles": [
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "sha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+        "sizeBytes": 45961,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "sha256": "38c42051561c5aca7e97f6ada0fb74c4bc3ccf397d3db45a93521d66053f5703",
+        "sizeBytes": 20534,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+        "sha256": "06f9e6879e0a806029c2fbc0fd55aa5f4741fdda8bee71dda87484779069aceb",
+        "sizeBytes": 1143,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+        "sha256": "74fb65d52520ae92e5284649b742ea52f73ce338666b0cec45f0798f894ead38",
+        "sizeBytes": 5348,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeControlAuthority.ts",
+        "sha256": "aae5ab79d92ca2c6ad1c5ed06744ca6e40b13a98c6e801e374802967c5c722b7",
+        "sizeBytes": 5118,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts",
+        "sha256": "3072cfce3a6d4bd499e97bf2eb887f147217e0244d992c3624fa06a1cd0f7dbf",
+        "sizeBytes": 7618,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "sha256": "9c87416bacfc3c4f79a2ded42c039ae13687bc45ae6ae34f135c6d54d0784c93",
+        "sizeBytes": 34489,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+        "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+        "sizeBytes": 30721,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "sha256": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf",
+        "sizeBytes": 58832,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "sha256": "88463c59938091a9b4578cbc2a4d135732b0a775105b02311813410b1a1e02be",
+        "sizeBytes": 30212,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "sha256": "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d",
+        "sizeBytes": 103002,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-owner-store-fence.test.ts",
+        "sha256": "3e21720c3111471b88d30459de4b9f0fa4b68d5a61e01e9401fcc480f12f11a4",
+        "sizeBytes": 6550,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-namespace-admission.test.ts",
+        "sha256": "ebcf34a1c3b1dbfa6e5dad5f4568c07c94a182c55dff6a1820b7a482e07a1c1c",
+        "sizeBytes": 10409,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "sha256": "789c73dcec0a1621088614b34bd1a3ef7fa1c3cd8bf24aeeec94d98e1b89931d",
+        "sizeBytes": 43092,
+        "gitSourceUnchanged": true
+      },
+      {
+        "path": "vendor/provider-migration/v2-admission-45a569bd/agent-teams-provider-implementations-0.0.0.tgz",
+        "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4",
+        "sizeBytes": 191469,
+        "gitSourceUnchanged": true
+      }
+    ],
+    "protectedBlocks": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "start": "  fenced<T>",
+        "end": "  /** Reject",
+        "sha256": "d12410b098b431288a778347063bd967be91d25b80c5e03a1de95efd57792e38",
+        "unchanged": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "start": "    const directoryPath =",
+        "end": "    const team =",
+        "sha256": "241855b3701defcb9bcb123d1f881a368bb85caaf136a28a56d8e595dd7aeb53",
+        "unchanged": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "start": "const ledger = ${JSON.stringify(refusals)}",
+        "end": null,
+        "sha256": "25d2f3b7b24198af2dba449be99babf8c79061bf5851053d1319c0497015722b",
+        "unchanged": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "start": "/** Join only the already-read original refusal records",
+        "end": null,
+        "sha256": "328c912771e95b12e6b78204d7c1b8286fd627807ca4a078db97d021e45f20fd",
+        "unchanged": true
+      }
+    ],
+    "emittedPins": [
+      {
+        "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+        "sha256": "cfb06dd5e4a98ffff1e7fbc0594d763564867a2dcf5e79bbbc9874f815b97e58",
+        "sizeBytes": 13370,
+        "provenance": "frozen source"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/diagnostics/modelReadinessTiming.js",
+        "sha256": "39e18b04dd8d8a8fdb4bfdfc010fe9286ae42c2c3697ced40d79f8998ec956f4",
+        "sizeBytes": 17091,
+        "provenance": "canonical scoped TypeScript7.0.2 emission from unchanged R1 production bytes"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/diagnostics/modelReadinessTiming.d.ts",
+        "sha256": "6eff15cd86e98817a91d9fda908280844c5173b41067018d4898ac33a38c2cba",
+        "sizeBytes": 1844,
+        "provenance": "canonical scoped TypeScript7.0.2 emission from unchanged R1 production bytes"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "sha256": "6d3195625854e0b9de1a5e30699ce5112142cc61976f4c78cf239905e3134913",
+        "sizeBytes": 7879,
+        "provenance": "frozen source"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js",
+        "sha256": "286b5cd59c0e4eff6ab5e5bbc19f8ff1c0ab7fad1b1d0b326029a9d992e1ae15",
+        "sizeBytes": 8689,
+        "provenance": "canonical scoped TypeScript7.0.2 emission from unchanged R1 production bytes"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.d.ts",
+        "sha256": "9509fc818cbecb56bc2298f639fa08d357e2c8a2ba3cd06e8df9cd4d981f9661",
+        "sizeBytes": 909,
+        "provenance": "canonical scoped TypeScript7.0.2 emission from unchanged R1 production bytes"
+      }
+    ],
+    "schema": {
+      "container": "currentCalls.namespace",
+      "fields": [
+        "referenceSamples",
+        "referenceDirectoryPathMs",
+        "referenceTreeMs",
+        "accountSamples",
+        "accountDirectoryPathMs",
+        "accountTreeMs"
+      ],
+      "meaning": "Samples count completed diagnostic intervals around actual original validateNamespace invocations, including original partial throws. Account intervals are included in reference; synchronous reentrant spans are inclusive. These are not old outer Count fields. Raw durations accumulate before projection rounding.",
+      "maximumMeasurementAttempts": 4096,
+      "invalidSample": "Omitted, existing truncated=true; earlier valid observations retained. No clamping.",
+      "inactive": "No extra diagnostic clocks without TEST subscriber, after first refusal, outside original reference, after measurement cap or from closed late callbacks.",
+      "payload": "Only six finite safe nonnegative integers. Both existing emitter and collector exact-key validators preserve old shapes and reject malformed/accessor/symbol/prototype/unpaired/overflow observations."
+    },
+    "checks": {
+      "canonicalHostBuild": "PASS, inherited tsconfig.json options without overrides, production unchanged between R1 and R2",
+      "canonicalHostTestTypes": "PASS final R2 test bytes, inherited tsconfig.test.json",
+      "canonicalRetainedHostToolingTypes": "PASS inherited tsconfig.retained-host.json, both decoder files",
+      "focusedDiagnostics": {
+        "passed": 16,
+        "failed": 0,
+        "fullRuntimeOpenSuiteRun": false,
+        "scope": "six namespace regressions plus unchanged factory/account semantics and expanded exact emitter/collector allowlist negatives"
+      },
+      "fastLint": "PASS five paths, no warnings",
+      "sourceSizeGuard": "PASS,5167 production files,141 unchanged frozen legacy exceptions,800-line default",
+      "teamProvisioningArchitectureGuard": "PASS unchanged baseline counts",
+      "diffCheck": "PASS"
+    },
+    "invariants": {
+      "authorityAndCurrentnessReads": "unchanged",
+      "filesystemCallsAndOrder": "unchanged, actual validator source exercised with stubbed original reads/errors",
+      "fenceAndLockScopes": "unchanged",
+      "cutoffsAndTimers": "unchanged",
+      "newOperationalActions": 0,
+      "newOperationalOwners": 0,
+      "newFilesystemIO": 0,
+      "providerArchiveOrInstalledDistEdits": false,
+      "realClaudeOrCodexExecuted": false,
+      "manualCIOrNativeRuns": false,
+      "fullWorkspaceRerun": false,
+      "committedOrPushed": false
+    },
+    "readinessQualification": "The original Windows x64 d8 source readiness failure remains INCOMPLETE with UNKNOWN runtime custody and confirmed original HANDLE cleanup. This adds observations for the next ordinary run; it does not prove a performance root cause or fix. ARM evidence is outside this slice and remains root-owned.",
+    "review": "Independent task_detail_finish source R2 preliminary PASS; reviewer owns its final separate report. Root owns STATUS, source-pin/index documentation, integration and publication."
+  },
+  "independentR2": {
+    "file": "windows-namespace-timing-independent-r2.json",
+    "sha256": "c94c591a68a922d04b971d163e9f881391fefd5a94e0bd6595fcdb0e88ccd5d8",
+    "result": "PASS_SCOPED_PASSIVE_NAMESPACE_DIAGNOSTIC_SOURCE_AND_SAVED_LOCAL_EVIDENCE_R2",
+    "findings": []
+  },
+  "rawEvidence": {
+    "path": "windows-namespace-timing-checks-20261119.tar.gz",
+    "bytes": 38628,
+    "sha256": "53f27f9eb47e26984752f83d116506e0aca658689dafea7fb0bbe628d88489cd",
+    "entries": 24
+  },
+  "limits": [
+    "Diagnostic fields only; no Windows readiness fix or native PASS asserted.",
+    "Original file calls, sync lock placement, authority/currentness reads, budgets and negative oracles unchanged.",
+    "No real Claude/Codex or native/CI execution was used for local checks."
+  ]
+}

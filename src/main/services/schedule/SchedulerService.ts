@@ -17,6 +17,7 @@ import { createScheduleRun, persistScheduleRun } from './createScheduleRun';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 import { assertScheduledTeamTarget, hasScheduledTeamTarget, HOST_SCHEDULE_UNSUPPORTED } from './scheduledTeamTarget';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
+import { admissionRefusal, folderChange, type ScheduleAdmissionCheck } from './scheduleTarget';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleTargetAdmission } from './scheduledTeamTarget';
@@ -83,18 +84,22 @@ export class SchedulerService {
     repository: ScheduleRepository,
     executor: Pick<ScheduledTaskExecutor, 'execute' | 'cancel' | 'cancelAll'>,
     warmUpFn?: WarmUpFn,
-    smartDispatcher?: ScheduleDispatcher
+    smartDispatcher?: ScheduleDispatcher,
+    private readonly allowTeamSchedule: ScheduleAdmissionCheck = async () => true
   ) {
     this.repository = repository;
     this.executor = executor;
     this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
+  private async assertSchedulableTeam(...args: Parameters<ScheduleAdmissionCheck>): Promise<void> {
+    const refusal = admissionRefusal(await this.allowTeamSchedule(...args));
+    if (refusal) throw new Error(refusal);
+  }
 
   setChangeEmitter(emitter: ChangeEmitter): void {
     this.changeEmitter = emitter;
   }
-
   // ===========================================================================
   // Lifecycle
   // ===========================================================================
@@ -162,7 +167,6 @@ export class SchedulerService {
 
     logger.info('Scheduler stopped');
   }
-
   // ===========================================================================
   // CRUD
   // ===========================================================================
@@ -179,6 +183,7 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput, admission?: ScheduleTargetAdmission): Promise<Schedule> {
+    await this.assertSchedulableTeam(input.teamName, { cwd: input.launchConfig.cwd });
     const cronExpression = input.cronExpression.trim();
     const timezone = input.timezone.trim();
     getValidScheduleNextRuns(cronExpression, timezone);
@@ -233,6 +238,7 @@ export class SchedulerService {
     if (!existing) throw new Error(`Schedule not found: ${id}`);
     const hostTarget = admission?.target ?? existing.hostTarget;
     assertScheduledTeamTarget({ teamName: existing.teamName, hostTarget }, this.smartDispatcher?.supportsHost === true);
+    await this.assertSchedulableTeam(existing.teamName, folderChange(existing, patch));
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
@@ -329,6 +335,7 @@ export class SchedulerService {
   async resumeSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
+    await this.assertSchedulableTeam(existing.teamName);
 
     // A retained Host schedule cannot be armed against the legacy executor.
     assertScheduledTeamTarget(existing, this.smartDispatcher?.supportsHost === true);
@@ -361,7 +368,6 @@ export class SchedulerService {
 
     logger.info(`Schedule resumed: ${id}`);
   }
-
   // ===========================================================================
   // Run History
   // ===========================================================================
@@ -376,7 +382,6 @@ export class SchedulerService {
   async getRunLogs(scheduleId: string, runId: string): Promise<{ stdout: string; stderr: string }> {
     return this.repository.getRunLogs(scheduleId, runId);
   }
-
   // ===========================================================================
   // Trigger Now
   // ===========================================================================
@@ -386,6 +391,7 @@ export class SchedulerService {
     return this.stopBarrier.withAdmission(id, async (isCurrent) => {
       const schedule = await this.repository.getSchedule(id);
       if (!schedule) throw new Error(`Schedule not found: ${id}`);
+      await this.assertSchedulableTeam(schedule.teamName);
       assertScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true);
       const conflict = this.lockConflict(schedule);
       if (conflict) throw new Error(conflict);
@@ -394,7 +400,6 @@ export class SchedulerService {
       return run;
     });
   }
-
   // ===========================================================================
   // claudeRootPath Change
   // ===========================================================================
@@ -404,7 +409,6 @@ export class SchedulerService {
     await this.stop();
     await this.start();
   }
-
   // ===========================================================================
   // Cron Job Management
   // ===========================================================================
@@ -444,7 +448,6 @@ export class SchedulerService {
     }
     this.clearWarmUpTimer(scheduleId);
   }
-
   // ===========================================================================
   // Warm-Up Timer
   // ===========================================================================
@@ -525,7 +528,6 @@ export class SchedulerService {
       }
     });
   }
-
   // ===========================================================================
   // Cron Tick → Execution
   // ===========================================================================
@@ -554,7 +556,6 @@ export class SchedulerService {
     if (holder && holder !== schedule.id) return `Working directory "${cwd}" is locked by another schedule: ${holder}`;
     return undefined;
   }
-
   // ===========================================================================
   // Execution
   // ===========================================================================
@@ -607,7 +608,11 @@ export class SchedulerService {
     let finishFinalization: (() => void) | undefined;
 
     try {
-      const outcome = schedule.executionMode || schedule.hostTarget
+      const refusal = admissionRefusal(await this.allowTeamSchedule(schedule.teamName));
+      if (this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id) return;
+      const outcome = refusal
+        ? { kind: 'skipped' as const, summary: refusal }
+        : schedule.executionMode || schedule.hostTarget
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
             this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
           )
@@ -624,9 +629,9 @@ export class SchedulerService {
       finishFinalization = this.stopBarrier.beginFinalization();
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
-        const receiptRun = outcome.kind === 'skipped' && outcome.pendingTaskCommandId
+        const receiptRun = outcome.kind === 'skipped' && 'pendingTaskCommandId' in outcome && outcome.pendingTaskCommandId
           ? { ...run, pendingTaskCommandId: outcome.pendingTaskCommandId } : run;
-        await this.completeRun(receiptRun, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
+        await this.completeRun(receiptRun, outcome.kind, null, outcome.summary, undefined, outcome);
         if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
         const result = outcome.result;
@@ -747,85 +752,73 @@ export class SchedulerService {
     exitCode: number | null,
     summary?: string,
     error?: string,
-    linkedTaskId?: string
+    link?: { taskId?: string; executionTeamName?: string }
   ): Promise<void> {
     await completeScheduleRun(
       this.repository, (event) => this.emitChange(event),
-      run, status, exitCode, summary, error, linkedTaskId
+      link?.executionTeamName ? { ...run, executionTeamName: link.executionTeamName } : run,
+      status, exitCode, summary, error, link?.taskId
     );
   }
-
   // ===========================================================================
   // Consecutive Failure Tracking
   // ===========================================================================
 
   private async resetConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh || fresh.consecutiveFailures === 0) return;
-
-    const updated: Schedule = {
+    await this.repository.updateSchedule(schedule.id, (fresh) => fresh.consecutiveFailures === 0 ? null : ({
       ...fresh,
       consecutiveFailures: 0,
       updatedAt: new Date().toISOString(),
-    };
-    await this.repository.saveSchedule(updated, { mustExist: true });
+    }));
   }
 
   private async incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh) return;
-    const newCount = fresh.consecutiveFailures + 1;
-    const shouldAutoPause = newCount >= fresh.maxConsecutiveFailures;
+    let shouldAutoPause = false;
+    const updated = await this.repository.updateSchedule(schedule.id, (fresh) => {
+      const newCount = fresh.consecutiveFailures + 1;
+      shouldAutoPause = newCount >= fresh.maxConsecutiveFailures;
+      if (shouldAutoPause) {
+        logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
+      }
+      return {
+        ...fresh,
+        consecutiveFailures: newCount,
+        status: shouldAutoPause ? 'paused' : fresh.status,
+        updatedAt: new Date().toISOString(),
+      };
+    });
 
-    const updated: Schedule = {
-      ...fresh,
-      consecutiveFailures: newCount,
-      status: shouldAutoPause ? 'paused' : fresh.status,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (shouldAutoPause) {
-      logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
-    }
-
-    await this.repository.saveSchedule(updated, { mustExist: true });
-
-    if (shouldAutoPause) {
+    if (updated && shouldAutoPause) {
       this.cronJobs.get(schedule.id)?.pause();
       this.clearWarmUpTimer(schedule.id);
       this.emitChange({
         type: 'schedule-paused',
         scheduleId: schedule.id,
         teamName: schedule.teamName,
-        detail: `auto-paused after ${newCount} consecutive failures`,
+        detail: `auto-paused after ${updated.consecutiveFailures} consecutive failures`,
       });
     }
   }
-
   // ===========================================================================
   // Schedule Timestamp Updates
   // ===========================================================================
 
   private async updateScheduleTimestamps(schedule: Schedule): Promise<void> {
-    // Reload fresh from repo to avoid overwriting changes from incrementConsecutiveFailures
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh) return;
-
-    const now = new Date().toISOString();
-    const nextRunAt = computeScheduleNextRunAt(fresh);
-
-    const updated: Schedule = {
-      ...fresh,
-      lastRunAt: now,
-      nextRunAt: nextRunAt ?? undefined,
-      updatedAt: now,
-    };
-
-    await this.repository.saveSchedule(updated, { mustExist: true });
+    // Pause and edits may commit while a run finishes; retain their latest fields.
+    const updated = await this.repository.updateSchedule(schedule.id, (fresh) => {
+      const now = new Date().toISOString();
+      return {
+        ...fresh,
+        lastRunAt: now,
+        nextRunAt: computeScheduleNextRunAt(fresh) ?? undefined,
+        updatedAt: now,
+      };
+    });
+    if (!updated) return;
     this.emitChange({
       type: 'schedule-updated',
-      scheduleId: fresh.id,
-      teamName: fresh.teamName,
+      scheduleId: updated.id,
+      teamName: updated.teamName,
     });
   }
 

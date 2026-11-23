@@ -556,7 +556,7 @@ test('native attachment capability projection requires the exact attached curren
   assert.equal(stopped.sessionCommands, undefined);
 });
 
-test('native Host fixture admits only exact boolean attachment capability projections', () => {
+test('native Host fixture admits only closed boolean and native media attachment capability projections', () => {
   const safe = { memberId: 'TEST-member', inputs: [{ inputId: 'TEST-input', phase: 'consumed' }] };
   assert.doesNotThrow(() => assertSafeRuntimeProjection(safe));
   for (let mask = 0; mask < 8; mask++) {
@@ -579,6 +579,31 @@ test('native Host fixture admits only exact boolean attachment capability projec
     { ...valid, textFiles: null },
   ]) {
     assert.throws(() => assertSafeRuntimeProjection({ ...safe, attachmentCapabilities }));
+  }
+  const media = { revision: 'opencode-2.1.4-native-media-v1', videos: false,
+    mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'],
+    maxBytes: 4 * 1024 * 1024, maxCount: 5, maxTotalBytes: 8 * 1024 * 1024 };
+  for (const mimeTypes of [[], ['image/png'], ['application/pdf'], media.mimeTypes]) {
+    assert.doesNotThrow(() => assertSafeRuntimeProjection({ ...safe, attachmentCapabilities: {
+      images: mimeTypes.some(mime => mime.startsWith('image/')), documents: mimeTypes.includes('application/pdf'),
+      textFiles: false, nativeMedia: { ...media, mimeTypes },
+    } }));
+  }
+  for (const nativeMedia of [
+    undefined, null, [], {},
+    { ...media, revision: 'TEST-unknown' }, { ...media, videos: true },
+    { ...media, privatePath: '/TEST-private' },
+    { ...media, mimeTypes: ['image/png', 'application/pdf', 'video/mp4'] },
+    { ...media, mimeTypes: ['image/png', 'application/pdf', 'image/png'] },
+    { ...media, mimeTypes: ['image/png', 'application/pdf', null] },
+    { ...media, mimeTypes: ['image/png'] }, { ...media, mimeTypes: ['application/pdf'] },
+    ...(['maxBytes', 'maxCount', 'maxTotalBytes'] as const).flatMap(key =>
+      [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, String(media[key]), media[key] + 1]
+        .map(value => ({ ...media, [key]: value }))),
+  ]) {
+    assert.throws(() => assertSafeRuntimeProjection({ ...safe, attachmentCapabilities: {
+      images: true, documents: true, textFiles: false, nativeMedia,
+    } }));
   }
   assert.throws(() => assertSafeRuntimeProjection({ ...safe, privatePath: '/TEST-private' }));
   assert.throws(() => assertSafeRuntimeProjection({

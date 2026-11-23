@@ -16,6 +16,7 @@ import { runtimeDigest } from '../../../packages/legacy-agent-host/dist/runtime/
 import { ProviderManagementCoordinator } from '../../../packages/legacy-agent-host/dist/composition/ProviderManagementCoordinator.js';
 import { runtimeMemberProfileSchema } from '../../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { RuntimeTeamCoordinator } from '../../../packages/legacy-agent-host/dist/composition/RuntimeTeamCoordinator.js';
+import { modelConfigurationFromLaunch } from '../../../packages/legacy-agent-host/dist/composition/savedTeamModelProbe.js';
 import { teamHostProfileSchema } from '../../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import { executeTeamModelProbe, teamModelProbeProfile } from '../../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
@@ -107,9 +108,18 @@ it('unchanged OpenCode readiness binds the original product roster before captur
     const f = await fixture();
     try {
       const handle = { handleId: 'TEST-handle' }, teamId = f.team.definition.binding.teamId;
-      const read = () => projectLaunchModelConfiguration(f.runtime.executeLaunch(teamId, 'model.configuration.read', 'TEST-read', {}));
+      // Retain the old launch source explicitly; an unstarted seed's model read now returns the product source.
+      const read = () => projectLaunchModelConfiguration(prospective
+        ? f.runtime.executeLaunch(teamId, 'model.configuration.read', 'TEST-read', {})
+        : modelConfigurationFromLaunch(f.runtime.executeLaunch(teamId, 'configuration.read', 'TEST-read', {})));
       const view = read(), roster = f.team.connection.readRoster();
-      expect(view.source.rosterRevision).not.toBe(roster.revision);
+      if (prospective) {
+        expect(view.source.sourceId).toMatch(/^saved-model-/);
+        expect(view.source.rosterRevision).toBe(roster.revision);
+      } else {
+        expect(view.source.sourceId).toBe(f.team.definition.scope.runId);
+        expect(view.source.rosterRevision).not.toBe(roster.revision);
+      }
       let probeCommand = '', selection: BackendLaunchModelSelection;
       const invoke = async (request: BackendOperationRequest, budget?: LocalModelReadinessContext): Promise<BackendOperationResult> => {
         if (request.operation === 'team.launch.model.configuration.read') return { ok: true, value: read() };

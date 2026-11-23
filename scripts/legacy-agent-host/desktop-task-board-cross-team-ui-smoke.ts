@@ -7,6 +7,7 @@ import { projectDesktopHarnessFailure } from './desktop-backend-observations.ts'
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { runDesktopTaskBoardUiSmoke } from './desktop-task-board-ui-smoke.ts';
 import { runDesktopTaskReviewCycleUiSmoke } from './desktop-task-review-cycle-ui-smoke.ts';
+import { runDesktopReviewFlowUiSmoke } from './desktop-review-flow-ui-smoke.ts';
 import {
   runDesktopTaskNotificationUiSmoke,
   runDesktopTaskNotificationMarkReadUiSmoke,
@@ -149,6 +150,7 @@ export async function runDesktopOfflineTaskBoardUiSmoke(
     await runDesktopTaskNotificationUiSmoke(cdp, options);
   } else {
     await runDesktopTaskReviewCycleUiSmoke(cdp, options);
+    await runDesktopReviewFlowUiSmoke(cdp, options);
     await runDesktopTaskNotificationUiSmoke(cdp, options);
     await runDesktopCrossTeamUiSmoke(cdp, options);
     // UI composer is intentionally capped; this tests accepted large Host

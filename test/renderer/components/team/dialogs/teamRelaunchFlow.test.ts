@@ -2,6 +2,24 @@ import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelau
 import { describe, expect, it, vi } from 'vitest';
 
 describe('executeTeamRelaunch', () => {
+  it('rejects a Host roster continuation presented as a read-only project roster', async () => {
+    const stopRun = vi.fn(), replaceMembers = vi.fn(), launchTeam = vi.fn();
+    await expect(executeTeamRelaunch({
+      teamName: 'host-team:TEST-owner',
+      isTeamAlive: true,
+      rosterReadOnly: true,
+      request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
+      members: [],
+      rosterMetadata: { relaunch: {
+        originalRunId: 'TEST-original', stopConfirmed: false,
+        replaceAttempted: false, replaceConfirmed: false,
+      } },
+      stopTeam: vi.fn(), stopRun, replaceMembers, launchTeam,
+    })).rejects.toThrow('managed by its definition');
+    expect(stopRun).not.toHaveBeenCalled();
+    expect(replaceMembers).not.toHaveBeenCalled();
+    expect(launchTeam).not.toHaveBeenCalled();
+  });
   it('retries an uncertain launch without stopping its replacement or rewriting the roster', async () => {
     const relaunch = {
       originalRunId: 'TEST-original-run',
@@ -14,6 +32,7 @@ describe('executeTeamRelaunch', () => {
     const replaceMembers = vi.fn().mockResolvedValue(undefined);
     const launchTeam = vi.fn().mockRejectedValueOnce(new Error('unknown')).mockResolvedValue({});
     const options = {
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
@@ -52,6 +71,7 @@ describe('executeTeamRelaunch', () => {
     const replaceMembers = vi.fn().mockRejectedValueOnce(new Error('roster unknown')).mockResolvedValue(undefined);
     const validate = vi.fn().mockResolvedValue(undefined);
     const options = {
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
@@ -77,6 +97,7 @@ describe('executeTeamRelaunch', () => {
   it('refuses an alive Host relaunch without the original run before stopping or replacing', async () => {
     const stopTeam = vi.fn(), replaceMembers = vi.fn(), launchTeam = vi.fn();
     await expect(executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
@@ -101,6 +122,7 @@ describe('executeTeamRelaunch', () => {
     };
     const replaceMembers = vi.fn();
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
@@ -124,6 +146,7 @@ describe('executeTeamRelaunch', () => {
       const launchTeam = vi.fn();
       await expect(
         executeTeamRelaunch({
+          rosterReadOnly: false,
           teamName: 'test-team',
           isTeamAlive,
           request: { teamName: 'test-team', cwd: '/tmp/test-project' },
@@ -151,6 +174,7 @@ describe('executeTeamRelaunch', () => {
     const launchTeam = vi.fn();
     await expect(
       executeTeamRelaunch({
+        rosterReadOnly: false,
         teamName: 'test-team',
         isTeamAlive: true,
         request: { teamName: 'test-team', cwd: '/tmp/test-project' },
@@ -179,6 +203,7 @@ describe('executeTeamRelaunch', () => {
     });
 
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'team-alpha',
       isTeamAlive: true,
       request: {
@@ -211,6 +236,7 @@ describe('executeTeamRelaunch', () => {
     });
 
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'team-alpha',
       isTeamAlive: false,
       request: {
@@ -251,6 +277,7 @@ describe('executeTeamRelaunch', () => {
     ];
 
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'team-alpha',
       isTeamAlive: true,
       request,
@@ -280,6 +307,7 @@ it('passes the target guard into persistence and does not launch after a write c
   const launchTeam = vi.fn();
   await expect(
     executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'test-team',
       isTeamAlive: true,
       request: { teamName: 'test-team', cwd: '/tmp/test-only' },
@@ -307,6 +335,7 @@ it.each([true, false])(
     });
     await expect(
       executeTeamRelaunch({
+        rosterReadOnly: false,
         teamName: 'test-only',
         isTeamAlive: false,
         request: { teamName: 'test-only', cwd: '/tmp/test-only' },
@@ -321,5 +350,34 @@ it.each([true, false])(
     ).rejects.toThrow(saved ? 'launch failed' : 'save failed');
     expect(onMembersSaved).toHaveBeenCalledTimes(saved ? 1 : 0);
     expect(launchTeam).toHaveBeenCalledTimes(saved ? 1 : 0);
+  }
+);
+
+it.each([false, true])(
+  'never saves the roster of a read-only (per-project) team, but still stops and relaunches (alive=%s)',
+  async (isTeamAlive) => {
+    const calls: string[] = [];
+    const onMembersSaved = vi.fn();
+    const replaceMembers = vi.fn(async () => {
+      calls.push('replace');
+    });
+    await executeTeamRelaunch({
+      teamName: 'builders',
+      isTeamAlive,
+      rosterReadOnly: true,
+      request: { teamName: 'builders', cwd: '/tmp/test-project' },
+      members: [{ name: 'mangled' }],
+      stopTeam: async () => {
+        calls.push('stop');
+      },
+      replaceMembers,
+      launchTeam: async () => {
+        calls.push('launch');
+      },
+      onMembersSaved,
+    });
+    expect(replaceMembers).not.toHaveBeenCalled();
+    expect(onMembersSaved).not.toHaveBeenCalled();
+    expect(calls).toEqual(isTeamAlive ? ['stop', 'launch'] : ['launch']);
   }
 );

@@ -53,6 +53,19 @@ export class TeamProvisioningRuntimeStateProjection<
     return this.options.state.provisioningRunByTeam.has(teamName);
   }
 
+  /** A cancelled run can retain ownership until cleanup is confirmed, but is no longer launching. */
+  isProvisioningLaunchActive(teamName: string): boolean {
+    const runId = this.options.state.provisioningRunByTeam.get(teamName);
+    if (!runId) return false;
+    const run = this.options.state.runs.get(runId);
+    if (!run) return true; // The launch may still be registering its run.
+    return (
+      !run.cancelRequested &&
+      !run.processKilled &&
+      !['failed', 'cancelled', 'disconnected'].includes(run.progress.state)
+    );
+  }
+
   isTeamAlive(teamName: string): boolean {
     const runId = this.options.ports.getAliveRunId(teamName);
     if (!runId) return false;

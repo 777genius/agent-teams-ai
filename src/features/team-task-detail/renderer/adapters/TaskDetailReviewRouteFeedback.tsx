@@ -17,6 +17,7 @@ export const TaskDetailReviewRouteFeedback = (): React.JSX.Element | null => {
   useEffect(() => {
     if (!request || !currentContext || request.status === 'blocked') return;
     const state = useStore.getState();
+    const navigationTeamName = request.navigationTeamName ?? request.teamName;
     const targetActive = layout.panes.some(
       (pane) =>
         pane.activeTabId === request.targetTeamTabId &&
@@ -24,7 +25,7 @@ export const TaskDetailReviewRouteFeedback = (): React.JSX.Element | null => {
           (tab) =>
             tab.id === request.targetTeamTabId &&
             isOrdinaryTeamTab(tab) &&
-            tab.teamName === request.teamName
+            tab.teamName === navigationTeamName
         )
     );
     if (

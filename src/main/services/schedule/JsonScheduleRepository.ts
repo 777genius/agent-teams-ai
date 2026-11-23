@@ -87,6 +87,23 @@ export class JsonScheduleRepository implements ScheduleRepository {
     await fs.promises.rm(logsPath, { recursive: true, force: true }).catch(() => undefined);
   }
 
+  async updateSchedule(
+    id: string, update: (current: Schedule) => Schedule | null
+  ): Promise<Schedule | null> {
+    return this.writeMetadata(async () => {
+      const schedules = await this.readSchedulesFile(true);
+      const idx = schedules.findIndex((schedule) => schedule.id === id);
+      const current = schedules[idx];
+      if (!current) return null;
+      const updated = update(current);
+      if (!updated) return null;
+      if (updated.id !== id) throw new Error('Schedule update changed its identity');
+      schedules[idx] = updated;
+      await this.writeSchedulesFile(schedules);
+      return updated;
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Run CRUD
   // ---------------------------------------------------------------------------

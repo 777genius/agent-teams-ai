@@ -113,6 +113,7 @@ function task(value: unknown): BackendTask {
     result.reviewState = oneOf(source.reviewState, [
       'none',
       'review',
+      'reviewed',
       'approved',
       'needsFix',
     ] as const);
@@ -144,6 +145,7 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
     'task.review',
     'task.board.clear',
     'task.board.order',
+    'task.board.review-flow',
     'task.relationship',
     'task.clarification',
     'message.send',
@@ -163,7 +165,7 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
   if (result.taskSubmissionNoEffect) return result;
   if (source.result !== undefined) {
     const applied = row(source.result);
-    if (operation === 'task.board.order') {
+    if (operation === 'task.board.order' || operation === 'task.board.review-flow') {
       string(applied.teamName);
       array(applied.reviewers, string);
       for (const value of Object.values(row(applied.tasks)))
@@ -258,6 +260,23 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       documents: boolean(capabilities.documents),
       textFiles: boolean(capabilities.textFiles),
     };
+    if (capabilities.nativeMedia !== undefined) {
+      const transport = row(capabilities.nativeMedia);
+      const mimeTypes = array(transport.mimeTypes, value => oneOf(value,
+        ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'] as const));
+      if (transport.revision !== 'opencode-2.1.4-native-media-v1' || transport.videos !== false ||
+          new Set(mimeTypes).size !== mimeTypes.length || mimeTypes.length > 5 ||
+          mimeTypes.some(mime => mime.startsWith('image/')) !== result.attachmentCapabilities.images ||
+          mimeTypes.includes('application/pdf') !== result.attachmentCapabilities.documents ||
+          !Number.isSafeInteger(transport.maxBytes) || Number(transport.maxBytes) < 1 || Number(transport.maxBytes) > 4 * 1024 * 1024 ||
+          !Number.isSafeInteger(transport.maxCount) || Number(transport.maxCount) < 1 || Number(transport.maxCount) > 5 ||
+          !Number.isSafeInteger(transport.maxTotalBytes) || Number(transport.maxTotalBytes) < 1 || Number(transport.maxTotalBytes) > 8 * 1024 * 1024) {
+        throw new Error('Invalid native media transport capability');
+      }
+      result.attachmentCapabilities.nativeMedia = { revision: transport.revision, mimeTypes,
+        maxBytes: Number(transport.maxBytes), maxCount: Number(transport.maxCount),
+        maxTotalBytes: Number(transport.maxTotalBytes), videos: false };
+    }
   }
   if (source.diagnostic !== undefined)
     result.diagnostic = oneOf(source.diagnostic, [
@@ -467,6 +486,17 @@ export function projectBackendResult(
     request.operation === 'task.attachment.read'
   )
     return { ok: true, value: readBackendAttachmentChunk(source.value, request.payload) };
+  if (request.operation === 'team.review-flow.read') {
+    const value = row(source.value);
+    if (value.kind !== 'review-flow') throw new Error('Invalid review flow settings');
+    const settings = value.settings === null ? null : row(value.settings);
+    if (value.unreadable !== undefined && (value.unreadable !== true || settings !== null))
+      throw new Error('Invalid review flow read');
+    return { ok: true, value: { kind: 'review-flow', ...(value.unreadable ? { unreadable: true as const } : {}), settings: settings === null ? null : {
+      reviewFlow: oneOf(settings.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const),
+      reviewFlowPrompt: string(settings.reviewFlowPrompt),
+    } } };
+  }
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
   if (request.operation === 'team.messages.page')

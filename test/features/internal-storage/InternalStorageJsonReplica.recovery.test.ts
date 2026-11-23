@@ -98,6 +98,55 @@ describe('opt-in replica recovery candidate', () => {
     await expect(replica.readClean(TEAM, true)).resolves.toEqual(next);
   });
 
+  it('reads only an existing clean binding without inferring one from unbound contents', async () => {
+    await expect(replica.readBoundClean(TEAM)).resolves.toBeNull();
+    await replica.writeClean(TEAM, snapshot);
+    await expect(replica.readBoundClean(TEAM)).resolves.toBeNull();
+    await replica.markDirty(TEAM);
+    await expect(replica.readBoundClean(TEAM)).resolves.toBeNull();
+    await replica.writeClean(TEAM, snapshot, INC);
+    const before = await readFile(path, 'utf8');
+    await expect(replica.readBoundClean(TEAM)).resolves.toEqual({ incarnation: INC, snapshot });
+    expect(await readFile(path, 'utf8')).toBe(before);
+  });
+
+  it.each([
+    ['state', 'dirty'],
+    ['incarnation', null],
+    ['incarnation', ''],
+    ['incarnation', ' padded '],
+    ['incarnation', 7],
+    ['snapshot', null],
+    ['snapshot', { ...snapshot, teamName: 'foreign' }],
+    ['updatedAt', 'invalid'],
+    ['runtimeAdmission', {}],
+  ])('preserves invalid bound publication metadata %s=%j', async (key, value) => {
+    await replica.writeClean(TEAM, snapshot, INC);
+    const envelope = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+    envelope[key as string] = value;
+    const before = JSON.stringify(envelope);
+    await writeFile(path, before);
+    await expect(replica.readBoundClean(TEAM)).rejects.toThrow(InternalStorageFallbackUnsafeError);
+    expect(await readFile(path, 'utf8')).toBe(before);
+  });
+
+  it('retains an explicit publication binding on the dirty fence without authorizing recovery', async () => {
+    await replica.writeClean(TEAM, snapshot, INC);
+    await replica.markDirty(TEAM, INC);
+    expect(JSON.parse(await readFile(path, 'utf8'))).toMatchObject({
+      state: 'dirty',
+      incarnation: INC,
+    });
+    await expect(replica.readBoundClean(TEAM)).rejects.toThrow(InternalStorageFallbackUnsafeError);
+    await expect(replica.readForAuthorityPreparation(TEAM, INC)).resolves.toEqual({
+      state: 'dirty',
+      candidate: null,
+    });
+    await expect(replica.readForAuthorityPreparation(TEAM, 'foreign')).rejects.toThrow(
+      'incarnation mismatch'
+    );
+  });
+
   it.each(['clean', 'dirty'] as const)(
     'rejects %s data bound to another incarnation without modifying it',
     async (state) => {

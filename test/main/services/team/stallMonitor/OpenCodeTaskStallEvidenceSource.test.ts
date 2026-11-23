@@ -62,6 +62,20 @@ describe('OpenCodeTaskStallEvidenceSource', () => {
               ],
             }),
             createMessage({
+              uuid: 'msg-review-complete',
+              timestamp: '2026-04-19T12:00:30.000Z',
+              toolCalls: [{
+                id: 'tool-review-complete',
+                name: 'mcp__agent-teams__review_complete',
+                input: {
+                  teamName: 'demo',
+                  taskId: 'task-a',
+                  expectedReviewRequestId: 'request-1',
+                },
+                isTask: false,
+              }],
+            }),
+            createMessage({
               uuid: 'msg-foreign',
               timestamp: '2026-04-19T12:01:00.000Z',
               toolCalls: [
@@ -93,7 +107,7 @@ describe('OpenCodeTaskStallEvidenceSource', () => {
       memberName: 'bob',
       limit: 500,
     });
-    expect(evidence.recordsByTaskId.get('task-a')).toHaveLength(1);
+    expect(evidence.recordsByTaskId.get('task-a')).toHaveLength(2);
     expect(evidence.recordsByTaskId.get('task-a')?.[0]).toMatchObject({
       timestamp: '2026-04-19T12:00:00.000Z',
       actor: {
@@ -106,10 +120,14 @@ describe('OpenCodeTaskStallEvidenceSource', () => {
         toolUseId: 'tool-start',
       },
     });
+    expect(evidence.recordsByTaskId.get('task-a')?.[1]).toMatchObject({
+      action: { canonicalToolName: 'review_complete', category: 'review' },
+    });
     const exactRows = [...evidence.exactRowsByFilePath.values()][0] ?? [];
     expect(exactRows.map((row) => row.messageUuid)).toEqual([
       'msg-native',
       'msg-start',
+      'msg-review-complete',
       'msg-foreign',
     ]);
     expect(exactRows[0]?.toolUseIds).toEqual(['tool-read']);

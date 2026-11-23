@@ -13,7 +13,8 @@ const toolContextSchema = {
 export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'kanban_get',
-    description: 'Get current kanban state',
+    description:
+      'Get current kanban state, including the effective reviewFlow (agent_approval, human_approval or lead_then_human) and reviewFlowPrompt',
     parameters: z.object({
       ...toolContextSchema,
     }),

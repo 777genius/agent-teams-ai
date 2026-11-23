@@ -17,6 +17,11 @@ import WebSocket from 'ws';
 
 import { processes } from './opencode-diagnostics/platform.mjs';
 import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
+import {
+  observeScheduleTeamSelection,
+  prepareScheduleOptionClick,
+  scheduleOptionObservationSource,
+} from './teams-create-page-schedule-observation.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
@@ -84,7 +89,8 @@ async function seedFixture() {
     xdgStateHome: path.join(root, 'xdg-state'),
     xdgRuntimeDir: path.join(root, 'xdg-runtime'),
     projectPath: path.join(root, 'sandbox-project'),
-    teamName: `teams-create-page-e2e-${randomUUID()}`,
+    // Keep a nonnumeric suffix: Copy Team treats trailing -digits as an existing copy index.
+    teamName: `teams-create-page-e2e-${randomUUID()}-seed`,
     memberName: 'team-lead',
     runtimeScriptPath: path.join(root, 'fixture-runtime-deny.cjs'),
     runtimeWrapperPath: path.join(
@@ -367,6 +373,140 @@ async function startApp(fixture) {
   return { port, renderer, inspectorWebSocketDebuggerUrl };
 }
 
+function installTaskTabObservation(browser, document, element, identity) {
+  const slot = '__teamsTaskTabObservation';
+  if (Object.getOwnPropertyDescriptor(browser, slot)) return false;
+  const data = (value, key, optional = false) => {
+    if (!value || typeof value !== 'object' || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+      throw new Error('Unavailable diagnostic data');
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor && optional) return undefined;
+    if (!descriptor || !('value' in descriptor) || descriptor.value === undefined) throw new Error('Unavailable diagnostic field');
+    return descriptor.value;
+  };
+  const id = value => {
+    if (typeof value !== 'string' || value.length > 256 || !value.trim()) throw new Error('Unavailable diagnostic identity');
+    return value;
+  };
+  const list = (value, limit) => {
+    if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype)
+      throw new Error('Unavailable diagnostic collection');
+    const length = Object.getOwnPropertyDescriptor(value, 'length')?.value;
+    if (!Number.isInteger(length) || length < 0 || length > limit) throw new Error('Unavailable diagnostic size');
+    const rows = [];
+    for (let index = 0; index < length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !('value' in descriptor)) throw new Error('Unavailable diagnostic row');
+      rows.push(descriptor.value);
+    }
+    return rows;
+  };
+  const record = { version: 1, before: null, first: null, last: null, samples: 0,
+    samplesCapped: false, events: [], eventsCapped: false, finished: 'pending' };
+  const listeners = [];
+  let context, key, beforeOwner, disposed = false;
+  const dispose = status => {
+    if (disposed) return;
+    disposed = true; record.finished = status;
+    for (const [kind, listener, capture] of listeners)
+      try { document.removeEventListener(kind, listener, capture); } catch { /* Diagnostic only. */ }
+    listeners.length = 0; element = null;
+  };
+  const snapshot = (state, initial = false) => { try {
+    if (!context || !key) return null;
+    const global = data(state, 'globalTaskDetail');
+    const globalIdentity = global == null ? null : ['contextId', 'teamName', 'taskId'].map(field => id(data(global, field)).trim());
+    const globalDialog = globalIdentity === null ? 'absent' :
+      globalIdentity[0] === context && globalIdentity[1] === identity.teamName && globalIdentity[2] === identity.taskId ? 'target' : 'other';
+    const session = data(data(state, 'taskDetailSessionById'), key, true), detail = data(data(state, 'taskDetailById'), key, true);
+    const owner = session === undefined ? undefined : data(session, 'ownerSurfaceId');
+    if (owner !== undefined && owner !== null) id(owner);
+    const revision = session === undefined ? null : data(session, 'ownerRevision');
+    if (session !== undefined && (!Number.isInteger(revision) || revision < 0 || revision > 2147483647)) return null;
+    const layout = data(state, 'paneLayout'), focused = data(layout, 'focusedPaneId'), rootActive = data(state, 'activeTabId');
+    if (focused != null) id(focused);
+    if (rootActive != null) id(rootActive);
+    let targetTabs = 0, activeTargetTabs = 0, focusedTarget = false, rootActiveTarget = false, ownerMatchesTarget = false;
+    for (const pane of list(data(layout, 'panes'), 8)) {
+      const paneId = id(data(pane, 'id')), active = data(pane, 'activeTabId');
+      if (active != null) id(active);
+      for (const tab of list(data(pane, 'tabs'), 32)) {
+        const tabId = id(data(tab, 'id')), task = data(tab, 'taskDetail', true);
+        if (task == null) continue;
+        const taskIdentity = [id(data(tab, 'teamName')).trim(), id(data(task, 'contextId')).trim(), id(data(task, 'taskId')).trim()];
+        if (taskIdentity[0] !== identity.teamName || taskIdentity[1] !== context || taskIdentity[2] !== identity.taskId) continue;
+        targetTabs++; activeTargetTabs += tabId === active ? 1 : 0;
+        focusedTarget ||= paneId === focused && tabId === active;
+        rootActiveTarget ||= tabId === rootActive; ownerMatchesTarget ||= tabId === owner;
+      }
+    }
+    const activeContext = id(data(state, 'activeContextId')).trim(), switching = data(state, 'isContextSwitching');
+    if (typeof switching !== 'boolean') return null;
+    if (detail !== undefined && typeof data(detail, 'phase') !== 'string') return null;
+    if (initial) beforeOwner = owner;
+    return { contextMatches: activeContext === context, switching, globalDialog,
+      detailReady: detail === undefined ? false : data(detail, 'phase') === 'ready', sessionPresent: session !== undefined,
+      ownerPresent: owner != null, ownerChanged: owner == null || beforeOwner == null ? null : owner !== beforeOwner,
+      ownerMatchesTarget, ownerRevision: revision, targetTabs, activeTargetTabs, focusedTarget, rootActiveTarget };
+  } catch { return null; } };
+  const observe = (event, kind, phase) => { try {
+    if (disposed) return;
+    if (record.events.length >= 8) { record.eventsCapped = true; return; }
+    let sameMeasured = false, taskTabTarget = false, inDialog = false, node = event.target, count = 0;
+    try {
+      for (; node && count < 16; count++, node = node.parentElement) {
+        sameMeasured ||= node === element;
+        taskTabTarget ||= node.hasAttribute('data-task-detail-open-tab') === true;
+        inDialog ||= node.getAttribute('role') === 'dialog';
+        if (sameMeasured && taskTabTarget && inDialog) { node = null; break; }
+      }
+      if (node) { if (!sameMeasured) sameMeasured = null; if (!taskTabTarget) taskTabTarget = null; if (!inDialog) inDialog = null; }
+    } catch { sameMeasured = null; taskTabTarget = null; inDialog = null; }
+    const trusted = event.isTrusted, connected = element?.isConnected, prevented = event.defaultPrevented;
+    record.events.push({ kind, phase, trusted: typeof trusted === 'boolean' ? trusted : null,
+      sameMeasured, taskTabTarget, inDialog, measuredConnected: typeof connected === 'boolean' ? connected : null,
+      prevented: typeof prevented === 'boolean' ? prevented : null });
+  } catch { /* A failed observation cannot affect input delivery. */ } };
+  const recorder = Object.freeze({
+    sample(state, activeTab, visible, result) { try {
+      if (disposed) return;
+      if (record.samples < 65535) record.samples++; else record.samplesCapped = true;
+      const sample = { state: snapshot(state), predicate: {
+        activeTab: typeof activeTab === 'boolean' ? activeTab : null, visible: typeof visible === 'boolean' ? visible : null,
+        result: result === true ? 'true' : result === false ? 'false' : result === null ? 'null' : result === undefined ? 'undefined' : 'other',
+      } };
+      record.first ??= sample; record.last = sample;
+      if (result) dispose('success');
+    } catch { /* Preserve the original predicate result. */ } },
+    read() { try {
+      dispose('failure');
+      const raw = JSON.stringify(record);
+      return raw.length <= 4096 && /^[\x20-\x7e]*$/.test(raw) ? JSON.parse(raw) : null;
+    } catch { return null; } },
+  });
+  try {
+    identity = { teamName: id(data(identity, 'teamName')).trim(), taskId: id(data(identity, 'taskId')).trim() };
+    const store = Object.getOwnPropertyDescriptor(browser, '__agentTeamsDevStore');
+    if (!store || !('value' in store) || !store.value) return false;
+    const getState = Object.getOwnPropertyDescriptor(store.value, 'getState');
+    if (!getState || !('value' in getState) || typeof getState.value !== 'function') return false;
+    const initial = Reflect.apply(getState.value, store.value, []);
+    try {
+      const global = data(initial, 'globalTaskDetail');
+      if (id(data(global, 'teamName')).trim() === identity.teamName && id(data(global, 'taskId')).trim() === identity.taskId) {
+        context = id(data(global, 'contextId')).trim(); key = JSON.stringify([context, identity.teamName, identity.taskId]);
+      }
+    } catch { /* The before identity remains unavailable. */ }
+    record.before = snapshot(initial, true);
+    Object.defineProperty(browser, slot, { value: recorder });
+    for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
+      const listener = event => observe(event, kind, capture ? 'capture' : 'bubble');
+      listeners.push([kind, listener, capture]); document.addEventListener(kind, listener, { capture, passive: true });
+    }
+    return true;
+  } catch { dispose('setup-failed'); return false; }
+}
+
 class CdpClient {
   constructor(socket) {
     this.socket = socket;
@@ -414,24 +554,24 @@ class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
 
-  async evaluate(expression) {
+  async evaluate(expression, timeoutMs = 30_000) {
     const response = await this.send('Runtime.evaluate', {
       expression,
       awaitPromise: true,
       returnByValue: true,
-    });
+    }, timeoutMs);
     if (response.exceptionDetails) {
       throw new Error(
         response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'
@@ -445,11 +585,14 @@ class CdpClient {
     let lastTransientError = null;
     while (Date.now() < deadline) {
       try {
-        if (await this.evaluate(`Boolean(${expression})`)) return;
+        if (await this.evaluate(`Boolean(${expression})`)) {
+          try { if (label === 'fully hydrated visible localized task detail in active native tab') this.taskTabObservationInstalled = false; } catch { /* Diagnostic only. */ }
+          return;
+        }
         lastTransientError = null;
       } catch (error) {
         if (
-          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(
+          !/execution context was destroyed|cannot find (?:default )?execution context|CDP command timed out: Runtime\.evaluate/i.test(
             String(error)
           )
         ) {
@@ -464,18 +607,26 @@ class CdpClient {
     );
   }
 
-  async click(expression) {
+  async click(expression, taskTab = null, scheduleTeam = null) {
     const cutoff = Date.now() + 30_000;
     const remaining = () => Math.max(0, cutoff - Date.now());
     await this.waitFor(expression, expression, remaining());
     assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+    let taskTabObservation = '';
+    try {
+      const team = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'teamName'), task = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'taskId');
+      if (team && task && 'value' in team && 'value' in task && typeof team.value === 'string' && typeof task.value === 'string' &&
+          team.value.length <= 256 && task.value.length <= 256)
+        taskTabObservation = `if (target) { try { target.taskTabObserved = (${installTaskTabObservation.toString()})(window, document, element, ${JSON.stringify({ teamName: team.value, taskId: task.value })}); } catch {} }`;
+    } catch { /* An unavailable diagnostic cannot prevent the original measurement/input. */ }
+    const scheduleObservation = scheduleTeam === null ? '' : scheduleOptionObservationSource(scheduleTeam);
     await this.evaluate(`(() => {
       const element = ${expression};
       if (element && !element.disabled) {
         element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
       }
     })()`);
-    const hitTarget = `(() => {
+    const hitTarget = (observation = '') => `(() => {
       const element = ${expression};
       if (!element?.isConnected || element.disabled) return null;
       for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
@@ -485,20 +636,28 @@ class CdpClient {
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
       const hit = document.elementFromPoint(x, y);
-      return rect.width > 0 && rect.height > 0 &&
+      const target = rect.width > 0 && rect.height > 0 &&
         x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
         hit && element.contains(hit) ? { x, y } : null;
+      ${observation}
+      return target;
     })()`;
-    await this.waitFor(hitTarget, `settled exact E2E click target: ${expression}`, remaining());
-    const target = await this.evaluate(hitTarget);
-    assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
-    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
+    await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
+    let prepared;
+    try {
+      if (scheduleTeam !== null)
+        prepared = await prepareScheduleOptionClick(this, expression, scheduleTeam, cutoff, scheduleObservation);
+      const target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
+      try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
+      assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+      assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+    } finally { if (prepared) await prepared.release(); }
   }
 
   async fill(selector, value) {
@@ -709,6 +868,7 @@ async function dumpRenderer(client, label) {
         dialog: Boolean(dialog),
         creationPageName: document.querySelector('[data-testid="create-team-page"] #team-name')?.value ?? null,
         bodyText: (document.body?.innerText ?? '').slice(0, 800),
+        ${client.taskTabObservationInstalled === true ? "taskTabObservation: (() => { try { return window.__teamsTaskTabObservation.read(); } catch { return null; } })()," : ''}
       };
     })()`);
     process.stderr.write(`${JSON.stringify(snapshot, null, 2)}\n`);
@@ -849,6 +1009,12 @@ async function setBrowserWindowZoom(inspector, factor) {
 
 async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
   const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  // This scenario exercises Run now; an automatic occurrence must not race its single click.
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 2);
+  const cronDate = `${futureDate.getDate()} ${futureDate.getMonth() + 1} *`;
+  const initialCron = `0 9 ${cronDate}`;
+  const editedCron = `0 10 ${cronDate}`;
   log('reject invalid cron and timezone at the actual native IPC boundary');
   for (const { timing, expectedError } of [
     { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },
@@ -886,13 +1052,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
 
   log('select the fixture team and review its saved one-time startup prompt');
   await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
-  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
-    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
-  await client.click(teamOption);
-  await client.waitFor(
-    "document.querySelector('[role=dialog] button[role=combobox]')?.textContent?.trim() === " +
-      JSON.stringify(fixture.teamName) + " && document.querySelector('#schedule-saved-prompt-reviewed')",
-    'saved prompt acknowledgement for the exact fixture team visible before Save', 45_000);
+  await observeScheduleTeamSelection(client, fixture.teamName);
   await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
 
   await client.fill('#schedule-label', scheduleLabel);
@@ -907,7 +1067,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     false, 'Invalid cron was persisted before Save'
   );
 
-  await client.fill('input[placeholder="0 9 * * 1-5"]', '*/30 * * * *');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', initialCron);
   await client.click("document.querySelector('#schedule-saved-prompt-reviewed')");
   await client.waitFor("(" + saveButton + ")?.disabled === false",
     'valid schedule and reviewed old prompt allow Save', 45_000);
@@ -932,7 +1092,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     'Native IPC rejected invalid edit for the wrong reason: ' + invalidEditResult);
   const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
-  assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
+  assert.equal(afterRejectedEdit?.cronExpression, initialCron,
     'Rejected timing edit corrupted the saved active schedule');
   assert.equal(afterRejectedEdit?.status, 'active',
     'Rejected timing edit deactivated the saved schedule');
@@ -1013,14 +1173,14 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.click(createButtonExpression('Edit'));
   await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
     'existing schedule editor loaded', 45_000);
-  await client.fill('input[placeholder="0 9 * * 1-5"]', '0 * * * *');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', editedCron);
   await client.waitFor(createButtonExpression('Save Changes'), 'edited schedule can save');
   await captureScreenshot(client, fixture, 'schedules-edit');
   await client.click(createButtonExpression('Save Changes'));
   await client.waitFor("!document.querySelector('[role=dialog]')", 'schedule edit persisted');
   const afterEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
-  assert.equal(afterEdit?.cronExpression, '0 * * * *');
+  assert.equal(afterEdit?.cronExpression, editedCron);
   assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
 
   log('pause and resume the schedule through the real actions menu');
@@ -1228,7 +1388,7 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
     'localized task detail dialog and open-tab action', 60_000
   );
   await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
-  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')");
+  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')", { teamName: fixture.teamName, taskId: '77' });
   await cdp.waitFor(
     `(() => {
       const s = window.__agentTeamsDevStore.getState();
@@ -1236,10 +1396,12 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
         t.id === p.activeTabId && t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)}));
       const page = document.querySelector('[data-task-detail-page][data-task-detail-task-id="77"]');
       const visible = page && page.getClientRects().length > 0 && page.getBoundingClientRect().height > 0;
-      return !s.globalTaskDetail && activeTab && visible &&
+      const result = !s.globalTaskDetail && activeTab && visible &&
         page.getAttribute('data-task-detail-team') === ${JSON.stringify(fixture.teamName)} &&
         page.getAttribute('data-origin-current') === 'true' &&
         page.querySelector('h1')?.textContent?.includes('TEST zh-TW task detail');
+      try { if (${cdp.taskTabObservationInstalled === true}) window.__teamsTaskTabObservation.sample(s, activeTab, visible, result); } catch { /* Diagnostic only. */ }
+      return result;
     })()`,
     'fully hydrated visible localized task detail in active native tab', 60_000
   );
@@ -1261,6 +1423,125 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
     screenshot: 'teams-create-zh-tw-member-mcp-strict-allowlist.png',
     controlEditedThroughNativeCdp: true,
   };
+}
+
+
+/**
+ * Windows-only native E2E: launch a disposable teammate-shaped process from
+ * the real Electron Main process while its BrowserWindow is visible.
+ * It spawns cmd/git/PowerShell without forcing windowsHide on the tool children.
+ * This verifies Main -> native process console inheritance, NOT actual provider
+ * inference or TeamProvisioningMemberLifecycle product launch.
+ */
+async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture, log) {
+  assert.equal(process.platform, 'win32');
+  const inspector = await CdpClient.connect(inspectorUrl);
+  const nodeBinary = await realpath(process.execPath);
+  const scriptPath = path.join(repoRoot, 'scripts/e2e/windows-teammate-console-native.mjs');
+  const fixtureMarker = 'native-custody-' + randomUUID();
+  try {
+    await inspector.send('Runtime.enable');
+    // The native IPC/store can hydrate before React finishes rendering Teams.
+    // A skeleton-only screenshot must never qualify as a usable GUI.
+    await client.waitFor(
+      "Array.from(document.querySelectorAll('.team-row-zebra-card')).some(card => " +
+        "card.textContent?.includes(" + JSON.stringify(fixture.teamName) + ") && " +
+        "card.getBoundingClientRect().width > 0 && card.getBoundingClientRect().height > 0)",
+      'actual seeded team card visibly rendered', 60_000
+    );
+    const rendererFocusedBefore = await client.evaluate('document.hasFocus()');
+    const expression = [
+      '(async () => {',
+      "  const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);",
+      "  if (!req) throw new Error('Electron main module require unavailable');",
+      "  const { spawn, spawnSync } = req('node:child_process');",
+      "  const { BrowserWindow } = req('electron');",
+      "  const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));",
+      "  if (!win) throw new Error('Real Electron test BrowserWindow missing');",
+      '  const mainFocusedBefore = win.isFocused();',
+      '  let mainBlurEvents = 0;',
+      '  const onMainBlur = () => { mainBlurEvents++; };',
+      "  win.on('blur', onMainBlur);",
+      '  const child = spawn(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--teammate-fixture', " + JSON.stringify(fixtureMarker) + "], " +
+        "{ detached: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });",
+      '  return await new Promise((resolve, reject) => {',
+      '    let settled = false, ready = false, stderr = ""; const tools = [];',
+      '    const finish = (error, value) => {',
+      '      if (settled) return; settled = true; clearTimeout(deadline);',
+      "      win.off('blur', onMainBlur);",
+      "      if (error && child.pid && child.exitCode === null && child.signalCode === null) {",
+      '        // Terminate only the original marker-bound fixture process tree.',
+      '        const result = spawnSync(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--kill-owned-fixture', String(child.pid), " +
+        JSON.stringify(fixtureMarker) +
+        "], { windowsHide: true, timeout: 30000, encoding: 'utf8' });",
+      '        if (result.error || result.status !== 0) {',
+      '          child.kill("SIGKILL");',
+      '          error = new Error("Verified fixture cleanup failed: " + (error?.message || String(error)));',
+      '        }',
+      '      }',
+      '      if (error) reject(error); else resolve(value);',
+      '    };',
+      "    const deadline = setTimeout(() => finish(new Error('Electron-owned native teammate timeout')), 25000);",
+      "    child.stderr?.on('data', b => { stderr = (stderr + b.toString()).slice(-2000); });",
+      "    child.on('message', msg => {",
+      "      if (msg?.type === 'tool') tools.push(msg);",
+      "      if (msg?.type === 'ready') {",
+      "        if (msg.pid !== child.pid) return finish(new Error('Native teammate PID mismatch'));",
+      "        ready = true; child.send({ type: 'stop' });",
+      '      }',
+      '    });',
+      "    child.once('error', err => finish(err));",
+      "    child.once('close', (code, signal) => {",
+      "      if (!ready || code !== 0) return finish(new Error('Native teammate failed: ' + (signal || code) + ' ' + stderr));",
+      "      finish(null, { mainElectronPid: process.pid, teammatePid: child.pid,",
+      "        detached: false, windowsHide: true, mainFocusedBefore, mainFocusedAfter: win.isFocused(), mainBlurEvents, tools });",
+      '    });',
+      '  });',
+      '})()',
+    ].join('\n');
+    // This one evaluation may spend 25s in the child, followed by 30s of
+    // marker-verified cleanup. Other CDP calls retain their 30s default.
+    const evidence = await inspector.evaluate(expression, 70_000);
+    assert.equal(evidence.detached, false);
+    assert.equal(evidence.windowsHide, true);
+    assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
+    assert.deepEqual(evidence.tools.map(tool => tool.name), ['cmd', 'git', 'powershell']);
+    assert.ok(evidence.tools.every(tool => tool.exitCode === 0 && tool.pid > 0));
+    const powershell = evidence.tools.find(tool => tool.name === 'powershell');
+    assert.equal(powershell?.consoleWindowVisible, false,
+      'Real Electron-owned PowerShell unexpectedly had a visible console');
+    assert.ok(['none', 'hidden'].includes(powershell.consoleState),
+      'Real Electron-owned PowerShell console state was not verified');
+    const rendererFocusedAfter = await client.evaluate('document.hasFocus()');
+    const focusObservable = evidence.mainFocusedBefore === true && rendererFocusedBefore === true;
+    if (focusObservable) {
+      assert.equal(evidence.mainFocusedAfter, true, 'Electron app lost native focus during tool calls');
+      assert.equal(evidence.mainBlurEvents, 0, 'Electron app temporarily lost focus during tool calls');
+      assert.equal(rendererFocusedAfter, true, 'Electron renderer lost focus during tool calls');
+    }
+    await captureScreenshot(client, fixture, 'windows-electron-console');
+    const result = {
+      schemaVersion: 1, success: true, scope: 'real Electron Main -> fixture teammate -> native tool calls',
+      realElectronMainHosted: true, hydratedTeamCardVerified: true,
+      realProductTeammateLaunch: false,
+      realVendorRuntimeOrModel: false, actualConsoleWindowsEnumerated: false,
+      cmdGitWindowVisibilityUnknown: true, powershellConsoleNotVisibleVerified: true,
+      powershellConsoleState: powershell.consoleState,
+      nativeFocusObservable: focusObservable, rendererFocusedBefore, rendererFocusedAfter,
+      ...evidence, screenshot: 'teams-create-windows-electron-console.png',
+    };
+    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, 'teams-create-windows-console-result.json'),
+      JSON.stringify(result, null, 2) + '\n');
+    log('Windows Electron Main native console fixture completed');
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  } finally {
+    inspector.close();
+  }
 }
 
 async function main() {
@@ -1287,6 +1568,10 @@ async function main() {
     let started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
     await initializeTeams(cdp, fixture);
+    if (process.argv.includes('--windows-console-only')) {
+      await exerciseWindowsElectronConsoleProbe(started.inspectorWebSocketDebuggerUrl, cdp, fixture, log);
+      return;
+    }
 
     log('click real Create Team button');
     await cdp.click(createButtonExpression('Create Team'));
@@ -1786,6 +2071,17 @@ async function main() {
       'Native config-only creation did not persist roster metadata');
     await captureScreenshot(cdp, fixture, 'config-only-created');
 
+    // A config-only team may open its Launch Team dialog when the newly
+    // created tab becomes active. Dismiss it via the real UI before clicking
+    // a different team's card; otherwise the modal intercepts pointer input.
+    const launchDialog = `Array.from(document.querySelectorAll('[role="dialog"]'))` +
+      `.find(dialog => dialog.textContent?.includes('Launch Team') && dialog.getClientRects().length > 0)`;
+    if (await cdp.evaluate(`Boolean(${launchDialog})`)) {
+      await cdp.click(launchDialog +
+        `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`);
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss launch dialog before copying a team');
+    }
+
     log('copy an existing sandbox team using the real Teams card');
     await cdp.evaluate(
       `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.projectPath)})`
@@ -1795,11 +2091,39 @@ async function main() {
       ".find(card => card.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))" +
       "?.querySelector('button[aria-label=\"Copy team\"]')";
     await cdp.click(copyTarget);
+    const copyStarted = `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`;
+    const replaceDraftConfirm =
+      `Array.from(document.querySelectorAll('[role="dialog"] button'))` +
+      `.find(button => button.textContent?.trim() === 'Replace draft' && button.getClientRects().length > 0)`;
+    // The config-only team can open its Launch Team dialog after the
+    // earlier visibility check. It intercepts real pointer events on Copy.
+    // Recover only when that exact modal is present and copy has not begun.
     await cdp.waitFor(
-      `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`,
-      'copy action initialized the new team identity from the selected card',
+      `${copyStarted} || Boolean(${replaceDraftConfirm}) || Boolean(${launchDialog})`,
+      'copy editor, replace-draft confirmation, or late launch dialog',
       30_000
     );
+    if (
+      !(await cdp.evaluate(`${copyStarted} || Boolean(${replaceDraftConfirm})`)) &&
+      (await cdp.evaluate(`Boolean(${launchDialog})`))
+    ) {
+      await cdp.click(
+        launchDialog +
+          `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`
+      );
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss late launch dialog before copy');
+      await cdp.click(copyTarget);
+    }
+    await cdp.waitFor(
+      `${copyStarted} || Boolean(${replaceDraftConfirm})`,
+      'copy editor or explicit replace-draft confirmation',
+      30_000
+    );
+    if (await cdp.evaluate(`Boolean(${replaceDraftConfirm})`)) {
+      await cdp.click(replaceDraftConfirm);
+    }
+    await cdp.waitFor(copyStarted,
+      'copy action initialized the new team identity from the selected card', 30_000);
     const copiedName = await cdp.evaluate(
       "document.querySelector('[data-testid=create-team-page] #team-name')?.value"
     );
@@ -1902,6 +2226,10 @@ async function main() {
       "document.querySelector('#team-description')?.value === " +
       JSON.stringify('Design, build and validate apps, websites and digital products.'),
       'template applied after explicit confirmation'
+    );
+    await cdp.waitFor(
+      `document.querySelector('[data-testid="create-template-option-builtin-software-product"]')?.getAttribute('aria-pressed') === 'true' && document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')`,
+      'header template reflected in shared selection and editable team prompt'
     );
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
@@ -2030,8 +2358,12 @@ async function main() {
       await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
     }
     await cdp.click(createButtonExpression('Create'));
+    // Config-only Create closes before the asynchronous list refresh. Wait for its
+    // exact row so that refresh cannot insert a preceding option during selection.
     await cdp.waitFor(
-      "!document.querySelector('[data-testid=create-team-page]')",
+      "!document.querySelector('[data-testid=create-team-page]') && " +
+        "window.__agentTeamsDevStore.getState().teamByName[" + JSON.stringify(orgTeamName) +
+        "]?.teamName === " + JSON.stringify(orgTeamName),
       'organization team saved and editor closed', 45_000
     );
     const structure = await cdp.evaluate(

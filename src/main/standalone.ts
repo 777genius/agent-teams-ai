@@ -2,7 +2,6 @@ import { join } from 'node:path';
 
 import { DesktopBackendFeature } from '@features/agent-backend/main';
 import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
-import { createInternalStorageFeature } from '@features/internal-storage/main';
 /**
  * Standalone (non-Electron) entry point for Agent Teams AI.
  *
@@ -19,17 +18,21 @@ import { createInternalStorageFeature } from '@features/internal-storage/main';
 // Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
+import { createCustomTeamTemplatesFeature, type CustomTeamTemplatesFeature } from '@features/custom-team-templates/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
+  getAppDataBasePath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
   getTodosBasePath,
+  setAppDataBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
 
@@ -50,6 +53,7 @@ const logger = createLogger('Standalone');
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
+const APP_DATA_DIR = process.env.APP_DATA_DIR;
 
 // Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
@@ -99,6 +103,8 @@ let httpServer: HttpServer;
 let agentBackend: DesktopBackendFeature | undefined;
 let backendStorage: InternalStorageFeature | undefined;
 let backendCurrent = true;
+let internalStorageFeature: ReturnType<typeof createInternalStorageFeature> | undefined;
+let customTeamTemplatesFeature: CustomTeamTemplatesFeature | undefined;
 
 // =============================================================================
 // Lifecycle
@@ -111,6 +117,11 @@ async function start(): Promise<void> {
   if (CLAUDE_ROOT) {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
+  }
+
+  if (APP_DATA_DIR) {
+    setAppDataBasePath(APP_DATA_DIR);
+    logger.info(`Using APP_DATA_DIR: ${APP_DATA_DIR}`);
   }
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
@@ -139,6 +150,13 @@ async function start(): Promise<void> {
   // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
+
+  const userDataPath = getAppDataBasePath();
+  internalStorageFeature = createInternalStorageFeature({ userDataPath });
+  await internalStorageFeature.probeBackend();
+  customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
+    backend: internalStorageFeature.customTeamTemplatesBackend,
+  });
 
   // Create HTTP server
   httpServer = new HttpServer();
@@ -185,6 +203,7 @@ async function start(): Promise<void> {
         ? { path: descriptorPath ?? '', sha256: descriptorHash ?? '' }
         : null,
     bindingDirectory: join(getClaudeBasePath(), 'agent-backend', 'http-bindings'),
+    reviewFlowDefaultsDirectory: getClaudeBasePath(),
     commandRunner: () => commandRunner,
   });
 
@@ -201,6 +220,7 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
+    customTeamTemplatesFeature,
     workspaceTrust: createWorkspaceTrustFeatures({
       getClaudeConfigDir: getClaudeBasePath,
       getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
@@ -230,6 +250,8 @@ async function shutdown(): Promise<void> {
 
   await backendDrain;
   await backendStorage?.dispose();
+  customTeamTemplatesFeature?.dispose();
+  await internalStorageFeature?.dispose();
 
   if (localContext) {
     localContext.dispose();

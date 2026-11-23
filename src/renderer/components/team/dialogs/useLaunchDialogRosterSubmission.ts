@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { buildMemberSettingsRelaunchIntent } from '@features/team-provisioning/renderer';
+import { useStore } from '@renderer/store';
 
 import { isHostSavedRequest } from './launchDialogPrefill';
 
@@ -25,6 +27,7 @@ export function useLaunchDialogRosterSubmission(
   open: boolean,
   preparationId: string
 ) {
+  const retained = useRetainedLegacyLaunch();
   const source = useRef<TeamCreateRequest | null>(null);
   const submitted = useRef<{
     commandId: string;
@@ -60,6 +63,8 @@ export function useLaunchDialogRosterSubmission(
     replaceMembers: TeamsAPI['replaceMembers'],
     onMembersSaved?: () => void
   ): Promise<void> {
+    if (props.rosterReadOnly && (retained || isHostTeamSelectionKey(request.teamName)))
+      throw new Error('Project team roster is managed by its definition. Reopen project launch.');
     const intent = submitted.current
       ? submitted.current.intent
       : buildMemberSettingsRelaunchIntent(
@@ -69,6 +74,13 @@ export function useLaunchDialogRosterSubmission(
           request.effort ?? null,
           members
         );
+    if (retained) {
+      await props.validateMemberSettings?.();
+      await retained.replaceMembers(teamName, { members, memberSettingsRelaunch: intent });
+      onMembersSaved?.();
+      await useStore.getState().launchTeam(request, retained.launch);
+      return;
+    }
     let metadata: Metadata | undefined;
     // Selection qualification is checked independently of source availability.
     if (isHostTeamSelectionKey(request.teamName)) {
@@ -143,8 +155,10 @@ export function useLaunchDialogRosterSubmission(
       else await props.onRelaunch(request, members, intent);
     } else {
       await props.validateMemberSettings?.();
-      await replaceMembers(teamName, { members, memberSettingsRelaunch: intent, ...metadata });
-      onMembersSaved?.();
+      if (!props.rosterReadOnly) {
+        await replaceMembers(teamName, { members, memberSettingsRelaunch: intent, ...metadata });
+        onMembersSaved?.();
+      }
       await props.onLaunch(launchRequest);
     }
   }

@@ -146,12 +146,15 @@ test('restored provider authority binds the complete open request and keeps curr
   }
   t.mock.method(TeamOwnerStore.prototype, 'read', observeRead);
   const fences = t.mock.method(TeamOwnerStore.prototype, 'fenced');
-  let currentFailure: Error | undefined;
+  let currentFailure: Error | undefined, revokeDuringRuntimeRead = false;
   const authority = captureMemberProviderAuthority({
     entry, request, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
     assertAllocation() { allocationChecks++; },
     assertCurrent() { if (currentFailure) throw currentFailure; },
-    readRuntime: () => ({ record, attached }),
+    readRuntime() {
+      if (revokeDuringRuntimeRead) currentFailure = new Error('TEST-revoked-during-runtime-read');
+      return { record, attached };
+    },
   });
   authority.assertCurrent();
   assert.ok(tokens.length >= 3, 'original admit state and both original control state reads are reached');
@@ -184,6 +187,12 @@ test('restored provider authority binds the complete open request and keeps curr
   record.hostIncarnation = 'TEST-host';
   record.phase = 'allocated'; record.custody = 'owned'; record.sessionRef = 'TEST-restored-session'; attached = true;
   authority.assertAllocatedCurrent();
+  assert.equal(authority.canAllocate(), true, 'an existing allocation retains its current authority');
+  revokeDuringRuntimeRead = true;
+  assert.equal(authority.canAllocate(), false, 'the allocation guard closes after the Runtime read');
+  assert.equal(allocationChecks, 1, 'an existing allocation never replays its opening intent');
+  revokeDuringRuntimeRead = false; currentFailure = undefined;
+  assert.equal(authority.canAllocate(), true, 'a subsequent call checks authority afresh');
   record.sealed = true; assert.equal(authority.canAllocate(), false); record.sealed = false;
   request.checkpointRef = 'TEST-mutated-caller';
   record.config = structuredClone(request);
@@ -326,7 +335,7 @@ test('only validated legacy roster applicability can fall back after all common 
   const authority = captureMemberProviderAuthority({
     entry, request: entry.config, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
     assertWriter: writer.assertCurrent,
-    assertProviderAuthority: () => readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding),
+    assertProviderAuthority: onCurrent => readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding, onCurrent),
     assertCurrent() {
       fallbacks++;
       assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
@@ -343,7 +352,7 @@ test('only validated legacy roster applicability can fall back after all common 
     ['malformed roster history', state => { state.rosterCommands = [{ commandId: 'TEST-invalid-roster', principalId: 'human', fingerprint: 'invalid', revision: 'a'.repeat(64) }]; }],
   ];
   try {
-    assert.equal(authority.isCurrent(), true);
+    assert.doesNotThrow(() => authority.assertCurrent(() => assert.fail('legacy fallback cannot invoke a closed-provider continuation')));
     assert.equal(fallbacks, 1, 'the original full fallback still supports this legacy capture');
     for (const [name, mutate] of faults) {
       const changed = structuredClone(original);

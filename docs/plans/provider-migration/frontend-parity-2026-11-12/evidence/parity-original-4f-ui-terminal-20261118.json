@@ -1,0 +1,1127 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-ui-workflow-terminal-closure-with-executed-job-evidence",
+  "head": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "compiledAt": "2026-11-18T21:13:19.536225+00:00",
+  "owner": "/root/lint_review_ui_ci",
+  "phase": "permanently-retired",
+  "allRunJobLogArtifactEndpointsRetired": true,
+  "lastJobPageSequence": 8,
+  "workflowCount": 2,
+  "jobCount": 33,
+  "jobConclusions": {
+    "success": 2,
+    "cancelled": 31
+  },
+  "artifactCount": 2,
+  "logRequests": 2,
+  "runs": [
+    {
+      "run": {
+        "id": 44393170280,
+        "name": "Host Emulated Acceptance",
+        "event": "pull_request",
+        "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "cancelled",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44393170280",
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "created_at": "2026-11-18T20:38:36Z",
+        "updated_at": "2026-11-18T21:03:52Z"
+      },
+      "jobs": [
+        {
+          "id": 135115982319,
+          "name": "Offline frontend tests (2/4)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982668,
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982733,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-15"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982742,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-15"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982755,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-15"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982759,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-15"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982809,
+          "name": "Offline frontend tests (4/4)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982868,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115982881,
+          "name": "Offline frontend tests (1/4)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983133,
+          "name": "Offline frontend tests (3/4)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983178,
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983251,
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983255,
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983316,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983321,
+          "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983343,
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983356,
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983358,
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983373,
+          "name": "Offline Host Desktop (darwin-arm64, installer)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-15"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983377,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983386,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983400,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983403,
+          "name": "Offline Host Desktop (linux-x64, retained-original)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983466,
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983504,
+          "name": "Offline Host Desktop (linux-x64, review)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983509,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-15"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983532,
+          "name": "Offline Host Desktop (linux-x64, opencode)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983580,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135115983641,
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:39Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        },
+        {
+          "id": 135131331679,
+          "name": "Offline Host Desktop",
+          "run_id": 44393170280,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T21:03:52Z",
+          "completed_at": "2026-11-18T21:03:52Z",
+          "runner_id": null,
+          "runner_name": null,
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": []
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "run": {
+        "id": 44393169922,
+        "name": "Teams creation page Electron E2E",
+        "event": "pull_request",
+        "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "cancelled",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44393169922",
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "created_at": "2026-11-18T20:38:36Z",
+        "updated_at": "2026-11-18T21:03:51Z"
+      },
+      "jobs": [
+        {
+          "id": 135115971473,
+          "name": "Creation page (ubuntu-latest)",
+          "run_id": 44393169922,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T20:53:31Z",
+          "completed_at": "2026-11-18T20:57:26Z",
+          "runner_id": 1000394712,
+          "runner_name": "GitHub Actions 1000394712",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-18T20:53:32Z",
+              "completed_at": "2026-11-18T20:53:33Z"
+            },
+            {
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 2,
+              "started_at": "2026-11-18T20:53:33Z",
+              "completed_at": "2026-11-18T20:53:33Z"
+            },
+            {
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-18T20:53:33Z",
+              "completed_at": "2026-11-18T20:53:43Z"
+            },
+            {
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-18T20:53:43Z",
+              "completed_at": "2026-11-18T20:53:46Z"
+            },
+            {
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-18T20:53:46Z",
+              "completed_at": "2026-11-18T20:54:01Z"
+            },
+            {
+              "name": "Prepare Linux virtual display and zh-TW font fallback",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-11-18T20:54:01Z",
+              "completed_at": "2026-11-18T20:54:12Z"
+            },
+            {
+              "name": "Install frozen dependencies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-11-18T20:54:12Z",
+              "completed_at": "2026-11-18T20:54:22Z"
+            },
+            {
+              "name": "Build isolated Host before Electron startup",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-18T20:54:22Z",
+              "completed_at": "2026-11-18T20:54:25Z"
+            },
+            {
+              "name": "Typecheck application before Electron startup",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-18T20:54:25Z",
+              "completed_at": "2026-11-18T20:54:53Z"
+            },
+            {
+              "name": "Stage pinned terminal-platform runtime before Electron startup",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-11-18T20:54:53Z",
+              "completed_at": "2026-11-18T20:54:54Z"
+            },
+            {
+              "name": "Ensure Electron binary before UI E2E",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11,
+              "started_at": "2026-11-18T20:54:54Z",
+              "completed_at": "2026-11-18T20:55:02Z"
+            },
+            {
+              "name": "Verify owned Windows process census and fail-closed teardown invariants",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12,
+              "started_at": "2026-11-18T20:55:02Z",
+              "completed_at": "2026-11-18T20:55:02Z"
+            },
+            {
+              "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13,
+              "started_at": "2026-11-18T20:55:02Z",
+              "completed_at": "2026-11-18T20:57:22Z"
+            },
+            {
+              "name": "Upload sanitized evidence",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14,
+              "started_at": "2026-11-18T20:57:22Z",
+              "completed_at": "2026-11-18T20:57:24Z"
+            },
+            {
+              "name": "Post Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 26,
+              "started_at": "2026-11-18T20:57:24Z",
+              "completed_at": "2026-11-18T20:57:24Z"
+            },
+            {
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 27,
+              "started_at": "2026-11-18T20:57:24Z",
+              "completed_at": "2026-11-18T20:57:24Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 28,
+              "started_at": "2026-11-18T20:57:24Z",
+              "completed_at": "2026-11-18T20:57:24Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 29,
+              "started_at": "2026-11-18T20:57:24Z",
+              "completed_at": "2026-11-18T20:57:24Z"
+            }
+          ]
+        },
+        {
+          "id": 135115972105,
+          "name": "Creation page (windows-latest)",
+          "run_id": 44393169922,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T20:45:11Z",
+          "completed_at": "2026-11-18T20:53:29Z",
+          "runner_id": 1000394660,
+          "runner_name": "GitHub Actions 1000394660",
+          "labels": [
+            "windows-latest"
+          ],
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-18T20:45:12Z",
+              "completed_at": "2026-11-18T20:45:13Z"
+            },
+            {
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-18T20:45:13Z",
+              "completed_at": "2026-11-18T20:45:14Z"
+            },
+            {
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-18T20:45:14Z",
+              "completed_at": "2026-11-18T20:45:48Z"
+            },
+            {
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-18T20:45:48Z",
+              "completed_at": "2026-11-18T20:46:04Z"
+            },
+            {
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-18T20:46:04Z",
+              "completed_at": "2026-11-18T20:46:49Z"
+            },
+            {
+              "name": "Prepare Linux virtual display and zh-TW font fallback",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6,
+              "started_at": "2026-11-18T20:46:49Z",
+              "completed_at": "2026-11-18T20:46:49Z"
+            },
+            {
+              "name": "Install frozen dependencies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-11-18T20:46:49Z",
+              "completed_at": "2026-11-18T20:48:25Z"
+            },
+            {
+              "name": "Build isolated Host before Electron startup",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-18T20:48:25Z",
+              "completed_at": "2026-11-18T20:48:29Z"
+            },
+            {
+              "name": "Typecheck application before Electron startup",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-18T20:48:29Z",
+              "completed_at": "2026-11-18T20:49:03Z"
+            },
+            {
+              "name": "Stage pinned terminal-platform runtime before Electron startup",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-11-18T20:49:03Z",
+              "completed_at": "2026-11-18T20:49:43Z"
+            },
+            {
+              "name": "Ensure Electron binary before UI E2E",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11,
+              "started_at": "2026-11-18T20:49:43Z",
+              "completed_at": "2026-11-18T20:49:50Z"
+            },
+            {
+              "name": "Verify owned Windows process census and fail-closed teardown invariants",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12,
+              "started_at": "2026-11-18T20:49:50Z",
+              "completed_at": "2026-11-18T20:49:51Z"
+            },
+            {
+              "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13,
+              "started_at": "2026-11-18T20:49:51Z",
+              "completed_at": "2026-11-18T20:53:22Z"
+            },
+            {
+              "name": "Upload sanitized evidence",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14,
+              "started_at": "2026-11-18T20:53:22Z",
+              "completed_at": "2026-11-18T20:53:24Z"
+            },
+            {
+              "name": "Post Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 26,
+              "started_at": "2026-11-18T20:53:24Z",
+              "completed_at": "2026-11-18T20:53:24Z"
+            },
+            {
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 27,
+              "started_at": "2026-11-18T20:53:24Z",
+              "completed_at": "2026-11-18T20:53:24Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 28,
+              "started_at": "2026-11-18T20:53:24Z",
+              "completed_at": "2026-11-18T20:53:26Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 29,
+              "started_at": "2026-11-18T20:53:26Z",
+              "completed_at": "2026-11-18T20:53:26Z"
+            }
+          ]
+        },
+        {
+          "id": 135115972230,
+          "name": "Creation page (macos-latest)",
+          "run_id": 44393169922,
+          "run_attempt": 1,
+          "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "started_at": "2026-11-18T20:38:38Z",
+          "completed_at": "2026-11-18T21:03:51Z",
+          "runner_id": 0,
+          "runner_name": "",
+          "labels": [
+            "macos-latest"
+          ],
+          "steps": []
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 14471100765,
+          "node_id": "MDg6QXJ0aWZhY3QxNDQ3MTEwMDc2NQ==",
+          "name": "teams-create-page-ubuntu-latest-4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "size_in_bytes": 2898861,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14471100765",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14471100765/zip",
+          "expired": false,
+          "digest": "sha256:974ad497e84f437ed0404ed5dd23f5398968d8e3f89fe26485876ae06a2424e2",
+          "created_at": "2026-11-18T20:57:23Z",
+          "updated_at": "2026-11-18T20:57:23Z",
+          "expires_at": "2026-12-02T20:57:22Z",
+          "workflow_run": {
+            "id": 44393169922,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab"
+          }
+        },
+        {
+          "id": 14470260567,
+          "node_id": "MDg6QXJ0aWZhY3QxNDQ3MDI2MDU2Nw==",
+          "name": "teams-create-page-windows-latest-4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+          "size_in_bytes": 1889732,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14470260567",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14470260567/zip",
+          "expired": false,
+          "digest": "sha256:37dd771e815ff08e16b5d9f69cc86c0f277321845602f7332a10b709e3706cce",
+          "created_at": "2026-11-18T20:53:24Z",
+          "updated_at": "2026-11-18T20:53:24Z",
+          "expires_at": "2026-12-02T20:53:22Z",
+          "workflow_run": {
+            "id": 44393169922,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "head_sha": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab"
+          }
+        }
+      ]
+    }
+  ],
+  "completedJobEvidence": [
+    {
+      "jobId": 135115972105,
+      "terminalConclusion": "success",
+      "log": {
+        "kind": "log",
+        "blob": "63df4d51e67301e67ba9aeb04f1f1c9ed1feb6f1",
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/job-135115972105-terminal.log",
+        "exactDecodedReadback": true,
+        "sha256": "9529b7cc98205f45bca102c5060c61ff3f24dc3d185959ed92f3b2ec869bb9ce",
+        "bytes": 99437
+      },
+      "extractedOriginalJson": {
+        "kind": "evidence",
+        "blob": "4e2b6fccf475432570bac3b00fb1e838585281ac",
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/job-135115972105-evidence.json",
+        "exactDecodedReadback": true,
+        "sha256": "72ad36cbc7467a14bdb2d5c90c69b20d493ed3781f87cec506974e96a12803b6",
+        "bytes": 4103
+      },
+      "endpointPermanentlyRetired": true
+    },
+    {
+      "jobId": 135115971473,
+      "terminalConclusion": "success",
+      "log": {
+        "kind": "log",
+        "blob": "2e15cfc6de30035232c5e3c7ec3dcf8b89330a42",
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/job-135115971473-terminal.log",
+        "sha256": "147125c1d9549485e183947e59812d0368a90ee702e8d481e20e092cf6f85d18",
+        "bytes": 67368,
+        "exactDecodedReadback": true
+      },
+      "extractedOriginalJson": {
+        "kind": "evidence",
+        "blob": "70b4823cd2076740eaba733f021173a768159b07",
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/job-135115971473-evidence.json",
+        "sha256": "d38214960ceed5ab313a9bef83c56fc0cd651200eb5c3d25cf490ef3cfcf4848",
+        "bytes": 3343,
+        "exactDecodedReadback": true
+      },
+      "endpointPermanentlyRetired": true
+    }
+  ],
+  "artifactEvidence": [
+    {
+      "os": "windows",
+      "artifactId": 14470260567,
+      "sourceJobId": 135115972105,
+      "zip": {
+        "artifactId": 14470260567,
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/teams-create-windows-4f.zip",
+        "sha256": "37dd771e815ff08e16b5d9f69cc86c0f277321845602f7332a10b709e3706cce",
+        "bytes": 1889732,
+        "apiDigestMatches": true,
+        "phase": "permanently-retired"
+      },
+      "memberCount": 41,
+      "pngCount": 40,
+      "jsonCount": 1,
+      "artifactJsonExactlyMatchesOriginalLog": true,
+      "resultJson": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-page-result.json",
+        "sha256": "3b05dc48a5d184353ef9f75e386c2a8155bf1eceeb7902253856f52435b326a3",
+        "bytes": 2916
+      },
+      "memberManifest": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-14470260567-contents.json",
+        "sha256": "949a4118e337a3f1811d0b7abacd34870981348a6e0ef8ca74ff8f751b2abaf9",
+        "bytes": 12233
+      },
+      "downloadEndpointPermanentlyRetired": true
+    },
+    {
+      "os": "ubuntu",
+      "artifactId": 14471100765,
+      "sourceJobId": 135115971473,
+      "zip": {
+        "artifactId": 14471100765,
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/teams-create-ubuntu-4f.zip",
+        "sha256": "974ad497e84f437ed0404ed5dd23f5398968d8e3f89fe26485876ae06a2424e2",
+        "bytes": 2898861,
+        "apiDigestMatches": true,
+        "phase": "permanently-retired"
+      },
+      "memberCount": 41,
+      "pngCount": 40,
+      "jsonCount": 1,
+      "artifactJsonExactlyMatchesOriginalLog": true,
+      "resultJson": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-ubuntu/teams-create-page-result.json",
+        "sha256": "6bc711434e7659d95884ca647feb4f4ae80e60e2296bc6a3a7289945b29d92b3",
+        "bytes": 2207
+      },
+      "memberManifest": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-14471100765-contents.json",
+        "sha256": "770de7f1e775cd274a0559a16025e630a82c2867106de4131866254c55563b50",
+        "bytes": 12194
+      },
+      "downloadEndpointPermanentlyRetired": true
+    }
+  ],
+  "staticKeyframeReview": {
+    "receipt": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/4f-static-keyframe-review.json",
+      "sha256": "46f4986df4b563a7e1cd1ee336e55537f32c124c5b75baf2b43f9f287fdf59c7",
+      "bytes": 6012
+    },
+    "reviewedFrameCount": 8,
+    "availablePngCount": 80,
+    "finding": "One visible narrow Windows200% template-label crop; no newly introduced regression established."
+  },
+  "qualification": [
+    "Exact4f Windows and Ubuntu Teams creation original jobs and their existing scenario JSON succeeded, including recorded cleanup.",
+    "Workflow conclusions are CANCELLED; Host30 and Teams macOS1 did not execute any steps.",
+    "No full OS/provider-matrix, all-screenshot visual acceptance or cancellation-cause claim."
+  ],
+  "rawCaptures": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-state.json",
+      "sha256": "e126ea5f46eaa38fbe00ff2c91d8d0daf0372e350023bbb61ad716149d3b4cd8",
+      "bytes": 468
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/4f-static-keyframe-review.json",
+      "sha256": "46f4986df4b563a7e1cd1ee336e55537f32c124c5b75baf2b43f9f287fdf59c7",
+      "bytes": 6012
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-44393170280-terminal-run.json",
+      "sha256": "0a3683fabf5eb60f5c46754ac9385153e77a4c4c2ede130d9316e81a2b090eea",
+      "bytes": 15890
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-44393170280-jobs-08.json",
+      "sha256": "07bc7fdd05f8ac881197d9410097abfe4dd1393037852fd5aa34932dcd9968e2",
+      "bytes": 36301
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-44393170280-terminal-artifacts.json",
+      "sha256": "04efb4aa534568c61064dd9ed70716a9986508fd8d8959e15a47d4f2e13a6ce8",
+      "bytes": 83
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-44393169922-terminal-run.json",
+      "sha256": "e72605cd80f1ad229a5091affde7e41ee3ff032fabd2a1317e5961ff88111738",
+      "bytes": 15904
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-44393169922-jobs-08.json",
+      "sha256": "661604fef964d98c4eb754eda4d4af2ccbf98bb3c79dde66166a8cf9b2917654",
+      "bytes": 13949
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/ui-44393169922-terminal-artifacts.json",
+      "sha256": "8d14b1643b3a57f0039ab9718e1d0d674b82038aeb615b542756c140c5bb7d14",
+      "bytes": 2064
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-14470260567-materialized.json",
+      "sha256": "b4c2a1991100a0d9c06d83aebce33f49f32ded5c80e4f8fdaa218b3d241f73c1",
+      "bytes": 288
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-14470260567-contents.json",
+      "sha256": "949a4118e337a3f1811d0b7abacd34870981348a6e0ef8ca74ff8f751b2abaf9",
+      "bytes": 12233
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-14471100765-materialized.json",
+      "sha256": "ac81ed5178d948f61cf5fd9b789e2b4aa722775f542e0500fbd9b9443d860bd6",
+      "bytes": 287
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-14471100765-contents.json",
+      "sha256": "770de7f1e775cd274a0559a16025e630a82c2867106de4131866254c55563b50",
+      "bytes": 12194
+    }
+  ]
+}

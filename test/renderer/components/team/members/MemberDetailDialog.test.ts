@@ -867,6 +867,9 @@ describe('MemberDetailDialog activity count', () => {
         if (!button) throw new Error('Expected member Restart button');
         return button;
       },
+      hide: async () => {
+        await act(async () => root.render(null));
+      },
       close: async () => {
         await act(async () => {
           root.unmount();
@@ -959,6 +962,43 @@ describe('MemberDetailDialog activity count', () => {
       expect(view.host.textContent).toContain('current context failure');
       expect(view.restartButton().disabled).toBe(false);
       await view.close();
+    }
+  );
+
+  it.each(['resolve', 'reject'] as const)(
+    'ignores an old %s after actual unmount and reopen',
+    async (outcome) => {
+      const old = deferredRestart();
+      const current = deferredRestart();
+      const restart = vi.fn().mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+      const view = restartHarness(restart);
+      try {
+        await view.render();
+        await act(async () => view.restartButton().click());
+        expect(view.restartButton().disabled).toBe(true);
+        await view.hide();
+        await view.render({ open: true, initialTab: 'logs' });
+        expect(view.host.querySelector('[data-tabs-value="logs"]')).not.toBeNull();
+        expect(view.restartButton().disabled).toBe(false);
+        await act(async () => view.restartButton().click());
+        expect(restart).toHaveBeenCalledTimes(2);
+        await act(async () => {
+          if (outcome === 'resolve') old.resolve();
+          else old.reject(new Error('old unmounted failure'));
+        });
+        expect(view.host.textContent).not.toContain('old unmounted failure');
+        expect(view.restartButton().disabled).toBe(true);
+        expect(view.host.querySelector('[data-tabs-value="logs"]')).not.toBeNull();
+        await act(async () => current.reject(new Error('current reopened failure')));
+        expect(view.host.textContent).toContain('current reopened failure');
+        expect(view.restartButton().disabled).toBe(false);
+      } finally {
+        await act(async () => {
+          old.resolve();
+          current.resolve();
+        });
+        await view.close();
+      }
     }
   );
 });

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect } from 'react';
 
+import { useRetainedLegacyInstallers, useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
 import {
   resolveOpenCodeQuickConnectGate,
   resolveOpenCodeQuickConnectRuntimeRevision,
@@ -24,13 +25,16 @@ export function useOpenCodeSourceDirectory(projectPath: string | null): SourceDi
 }
 
 export function useScopedOpenCodeStatus(projectPath: string): CliProviderStatus | null {
-  return useStore((state) =>
+  const retained = useRetainedLegacyLaunch();
+  const original = useRetainedLegacyRuntimeStatus(projectPath);
+  const stored = useStore((state) =>
     projectPath
       ? (state.cliProviderStatusByScope?.[
           getCliProviderStatusScopeKey('opencode', projectPath)
         ] ?? null)
       : null
   );
+  return retained ? (original.status?.providers.find((p) => p.providerId === 'opencode') ?? null) : stored;
 }
 
 /** One summary-only source lookup per dialog, not per team member. */
@@ -43,18 +47,26 @@ export const OpenCodeSourceDirectoryProvider = ({
   enabled: boolean;
   projectPath: string | null | undefined;
 }>): JSX.Element => {
+  const retained = useRetainedLegacyLaunch();
+  const original = useRetainedLegacyRuntimeStatus(projectPath, enabled);
+  const installers = useRetainedLegacyInstallers();
   const normalizedPath = projectPath?.trim() || null;
-  const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus ?? null);
-  const runtimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading === true);
-  const runtimeError = useStore((state) => state.openCodeRuntimeError ?? null);
+  const storedRuntimeStatus = useStore((state) => state.openCodeRuntimeStatus ?? null);
+  const storedRuntimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading === true);
+  const storedRuntimeError = useStore((state) => state.openCodeRuntimeError ?? null);
   const fetchRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
-  const cliStatusLoading = useStore((state) => state.cliStatusLoading === true);
-  const provider = useStore(
+  const storedCliStatusLoading = useStore((state) => state.cliStatusLoading === true);
+  const storedProvider = useStore(
     (state) => state.cliStatus?.providers.find((item) => item.providerId === 'opencode') ?? null
   );
+  const provider = retained ? (original.status?.providers.find((p) => p.providerId === 'opencode') ?? null) : storedProvider;
+  const runtimeStatus = retained ? installers.opencode : storedRuntimeStatus;
+  const runtimeStatusLoading = retained ? installers.loading : storedRuntimeStatusLoading;
+  const runtimeError = retained ? installers.error : storedRuntimeError;
+  const cliStatusLoading = retained ? original.loading : storedCliStatusLoading;
   useEffect(() => {
     if (
-      enabled &&
+      !retained && enabled &&
       !runtimeStatus &&
       !runtimeStatusLoading &&
       !runtimeError &&
@@ -62,7 +74,7 @@ export const OpenCodeSourceDirectoryProvider = ({
     ) {
       void fetchRuntimeStatus();
     }
-  }, [enabled, fetchRuntimeStatus, runtimeError, runtimeStatus, runtimeStatusLoading]);
+  }, [retained, enabled, fetchRuntimeStatus, runtimeError, runtimeStatus, runtimeStatusLoading]);
 
   const gate = resolveOpenCodeQuickConnectGate({
     runtimeStatus,
@@ -70,7 +82,7 @@ export const OpenCodeSourceDirectoryProvider = ({
     provider,
     cliStatusLoading,
   });
-  const runtimeRevision = resolveOpenCodeQuickConnectRuntimeRevision({ gate, runtimeStatus });
+  const runtimeRevision = retained ? retained.choice.scopeId : resolveOpenCodeQuickConnectRuntimeRevision({ gate, runtimeStatus });
   const runtimeReady = enabled && gate === 'ready';
   const checking = enabled && (gate === 'checking' || gate === 'installing');
   const directory = useRuntimeProviderQuickConnect({

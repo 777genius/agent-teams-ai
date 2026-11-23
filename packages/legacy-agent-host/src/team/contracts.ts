@@ -55,6 +55,11 @@ export interface ExpectedTaskRecipient {
   requireIdle?: true;
 }
 
+export interface TeamReviewFlowSettings {
+  reviewFlow: 'agent_approval' | 'human_approval' | 'lead_then_human';
+  reviewFlowPrompt: string;
+}
+
 export type TeamCommand = { commandId: string } & (
   | {
       operation: 'task.create';
@@ -89,6 +94,10 @@ export type TeamCommand = { commandId: string } & (
       };
     }
   | {
+      operation: 'task.board.review-flow';
+      payload: { settings: TeamReviewFlowSettings | null };
+    }
+  | {
       operation: 'task.relationship';
       payload: {
         taskId: string;
@@ -121,6 +130,7 @@ export type TeamCommand = { commandId: string } & (
         | { taskId: string; action: 'request'; reviewer?: string }
         | { taskId: string; action: 'start' }
         | { taskId: string; action: 'disapprove' }
+        | { taskId: string; action: 'complete'; expectedReviewRequestId: string; note?: string }
         | {
             taskId: string;
             action: 'approve';
@@ -128,7 +138,7 @@ export type TeamCommand = { commandId: string } & (
             notifyOwner?: boolean;
             suppressTaskComment?: boolean;
           }
-        | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: TaskRef[] };
+        | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: TaskRef[]; expectedReviewRequestId?: string };
     }
   | {
       operation: 'task.comment';

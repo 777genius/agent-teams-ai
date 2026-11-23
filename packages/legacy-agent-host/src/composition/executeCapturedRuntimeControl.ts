@@ -8,6 +8,7 @@ import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
 import { captureRuntimeControlAuthority } from './runtimeControlAuthority.js';
+import { captureTeamAccountRead } from './captureTeamAccountRead.js';
 import { resolveRuntimeControlEntry } from './resolveRuntimeControlEntry.js';
 import { checkCapturedPromptOperation } from './checkCapturedPromptOperation.js';
 import { interactionPreviewInput } from './HostInteractionControls.js';
@@ -220,7 +221,9 @@ export async function executeCapturedRuntimeControl(
         let qualified = false;
         try {
           const selected = inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent: assertAuthority });
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent: assertAuthority,
+            withAccountRead: captureTeamAccountRead({ entry, principalId: options.principalId,
+              assertCurrent: assertAuthority }) });
           const reference = selected.reference;
           const initialReference = reference && entry.initialModelAdmission?.admissions.some(admission =>
             admission.targets.some(target => target.memberId === entry.profile.memberId &&

@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-combined-type-fix-tree-review",
+  "reviewer": "/root/combined_review_42",
+  "reviewedAt": "2026-11-19T02:11:37.066200+00:00",
+  "verdict": "PASS_TREE_SOURCE_SCOPE_AND_EVIDENCE_BINDINGS",
+  "approvedTree": "a7c092df216f79504d93d2be94cc3e92bb4bba0a",
+  "baseHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "baseTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "method": "Read immutable547 Git objects only, reconstruct full030 and42a4 from frozen overlays, apply exact36 changes and pure-hash the complete Git tree. Check local pins, index, source-only deltas, all production leaves and evidence archive contents. No CI endpoint, source edit, Git write, compiler/runtime test, build, installation or native execution.",
+  "reconstruction": [
+    {
+      "snapshot": "immutable547",
+      "tree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+      "leaves": 11452
+    },
+    {
+      "snapshot": "original030",
+      "tree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+      "leaves": 11476
+    },
+    {
+      "snapshot": "published42a4",
+      "tree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+      "leaves": 11561
+    },
+    {
+      "snapshot": "candidate",
+      "tree": "a7c092df216f79504d93d2be94cc3e92bb4bba0a",
+      "leaves": 11594
+    }
+  ],
+  "scope": {
+    "changedLeaves": 36,
+    "testSourceLeaves": 2,
+    "proofLeaves": 32,
+    "documentLeaves": 2,
+    "additions": 33,
+    "updates": 3,
+    "deletions": 0,
+    "preservedOriginalLeaves": 11558,
+    "unchangedProductionLeaves": 5162,
+    "candidateBytesVerified": 1243131,
+    "allUnchangedLeavesPreserved": true
+  },
+  "sourceReview": {
+    "hostLoaderTest": "Exactly two <typeof loads> arguments are the complete source delta. Removing them reconstructs the entire published preimage. Empty-load assertions, callback, entry/specifier oracle and runtime operations are unchanged. Author focused actualTS7 RED2→GREEN0, erasure identity and two existing finite regressions retain their prepared-input limits; no full project/native acceptance is inferred.",
+    "soloStopTest": "Exactly one local synthetic ChildProcess assertion gains {exitCode:number|null}, with formatting of the same declaration. Replacing that declaration reconstructs the entire preimage. All runtime release/assignment/Stop assertions remain unchanged. Complete stored JavaScript outputs are byte-identical. Author proof is explicitly source-excerpt TS7 and one selected existing positive case;16 cases remain intentionally unselected.",
+    "sourcePins": [
+      {
+        "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4a64e6228f2b44f42ec9f3d24cca63272915291e",
+        "sha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "bytes": 52832,
+        "preimage": "1e4522ba6e600545535c116e59a53a95f6120b37",
+        "lines": 744,
+        "scope": "Two erased explicit generic arguments on existing strict empty-array assertions; no production or runtime change"
+      },
+      {
+        "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "36728b28d564cac2d107f17be0add0ab5dafb43c",
+        "sha256": "1b6a05cb460ada5596bce3f2553a917777e86545e2af8e23995606c44cfd5900",
+        "bytes": 28238,
+        "preimage": "7ca326f89632042a98c5bc459250df221980bdd4",
+        "lines": 689,
+        "scope": "Only the existing synthetic TEST ChildProcess view declares its exitCode mutable; no production or runtime behavior changes"
+      }
+    ],
+    "productionAndPolicy": "All5162 previous production paths/blobs remain identical; no production source, provider, source roster, size policy, runtime guard, timeout or oracle change. No new size-guard run is claimed."
+  },
+  "documentationReview": {
+    "indexReferencesVerified": 35,
+    "originalBindingsPreserved": "Historical030 evidence remains explicitly bound to030; current42a4 receipts are separately identified and successor acceptance is pending.",
+    "currentFailures": "Original Host five-platform compiler failures and Teams compiler failures remain failed with runtime/E2E steps unentered. Source excerpt/focused finite proofs do not replace those gates.",
+    "nativeWindowsARM": "Both original manual and auto receipts independently show PASS,11requests,0model failures,7stages,2clean Host exits each; original/neighbor Job cleanup confirmed. Desktop/vendor/release and Linux coordination remain unqualified.",
+    "nativeDarwin": "Both native Host/custody receipts PASS, while the later POSIX witness remains INCOMPLETE. Verified all10 cleanup/reaped/group-absence records per architecture, preserved x64 errno13/execErrno0/-67062 versus ARM baselinePASS, and retained SCRIPT:B counterexamples. No execve-denial or driver-close claim is made.",
+    "ui": "Frontend2 counts550passed files/2skipped and6891passed tests/18skipped are bounded. Changed tests are subsets, not additional counts. Codex and installer claims remain original finite/emulated verifier results with no real vendor or independent ZIP/visual audit claim.",
+    "publicationGate": "Fresh useful-current-job/ref/PR/base gates remain required; no current-job gate exception and no P09 contract selection."
+  },
+  "gzipBundles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-raw-20261119.json.gz",
+      "sha": "9a42bb4126e17def50a46dfd27e451069e855e4b",
+      "membersVerified": 10,
+      "uncompressedBytes": 143017
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-raw-20261119.json.gz",
+      "sha": "d592aeda8ecfa65ca1faf1a1f9cb65c36282d498",
+      "membersVerified": 17,
+      "uncompressedBytes": 1423341
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-test-types-additional-raw-20261119.json.gz",
+      "sha": "d461242e9f7a8912664c1f9befc947011d362206",
+      "membersVerified": 11,
+      "uncompressedBytes": 1565926
+    }
+  ],
+  "nativeZipBundles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-win-arm-original-artifact-20261119.zip",
+      "sha": "c7f1442228c8235c8b1d5ec50db6774c8e7a8f10",
+      "membersVerified": 4,
+      "names": [
+        "opencode-v2-embedded-inputs.json",
+        "opencode-v2-windows-custody.json",
+        "opencode-v2-embedded-host.json",
+        "opencode-v2-embedded-host-auto.json"
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-darwin-x64-original-artifact-20261119.zip",
+      "sha": "2e295307252b87b51c48d20c1f650ea02367ab6f",
+      "membersVerified": 4,
+      "names": [
+        "opencode-v2-embedded-inputs.json",
+        "opencode-v2-embedded-host.json",
+        "opencode-v2-darwin-custody.json",
+        "opencode-v2-posix-exec.json"
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-darwin-arm-original-artifact-20261119.zip",
+      "sha": "211d33cbd81b5163164c8165142108dcbe54f659",
+      "membersVerified": 4,
+      "names": [
+        "opencode-v2-embedded-inputs.json",
+        "opencode-v2-darwin-custody.json",
+        "opencode-v2-embedded-host.json",
+        "opencode-v2-posix-exec.json"
+      ]
+    }
+  ],
+  "darwinPosixResultCounts": {
+    "artifact-14489703382.zip": {
+      "PASS": 6,
+      "INCOMPLETE": 3,
+      "COUNTEREXAMPLE": 1
+    },
+    "artifact-14490956505.zip": {
+      "PASS": 7,
+      "INCOMPLETE": 2,
+      "COUNTEREXAMPLE": 1
+    }
+  },
+  "uploadRecordReview": {
+    "rowsBound": 36,
+    "rootRecordedUTF8ExactReadbacks": 30,
+    "rootRecordedBinaryServerSHA": 6,
+    "reviewerRemoteReadbackPerformed": false
+  },
+  "inputPins": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/delta547to030.json",
+      "bytes": 7561,
+      "sha256": "f869f380914a7a4528827a68cf0d5b3a1dbc222ce32923fddc1d1d3c2cac4a5f",
+      "sha": "1c901ac60800dd48f600b3bc7e554610b77e9b87"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/publication-all-rows.json",
+      "bytes": 54036,
+      "sha256": "8afea436ec0abd86e97967baa6668413b552a774c6a008b1d4e9360568d653ff",
+      "sha": "ae7b697c6b5e2418b2b8773d32d79d3b7d7947c2"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/counted-production-records-publication.json",
+      "bytes": 1369730,
+      "sha256": "e9a37beb52621bb5cdc39f14f398faa8d7ba30042355ea5395ff061941101b77",
+      "sha": "501c51ec421d2f36c72e2cd4ddb0a44dcac11e99"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/source-rows-publication.json",
+      "bytes": 1376,
+      "sha256": "0ebab3dda955672f65ae5159ac9c03a09ef83c904543760b8321b6bcad83a17a",
+      "sha": "e92aef28ee6bb327adea47219ab41043b9d75c94"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/evidence-rows-publication.json",
+      "bytes": 14742,
+      "sha256": "bf423275606f0f8a7d3ed4b6425e364bc2f944fe9010dc1f45c8280fa9ec7083",
+      "sha": "0eea9f9994b9b2998d71bb2ca2739d3b96acd158"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/document-rows-publication.json",
+      "bytes": 919,
+      "sha256": "650fee294550d4006975aecbdcc1edec1a6d24a72d6ec84b165da7335ac60545",
+      "sha": "e1d1799a90e93d8723b083cc1b84d98f158b77b9"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/STATUS-publication.md",
+      "bytes": 77043,
+      "sha256": "ff25a775b981180044bd798ef8129208b589a1e7aa489154dbf78b3f66c2ae61",
+      "sha": "4d07d7023f64e82b6cf2d7b97cf1fca72127f57e"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/parity-test-types-index-20261119.json",
+      "bytes": 17929,
+      "sha256": "d126e59ed5956700a56925c2496f4b07dbaf2e82ca9b56f4c2daef5f3b8fffee",
+      "sha": "fd4fc45d5edfaeb941827abbd202df4193ab8631"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/publication-created-tree.json",
+      "bytes": 656,
+      "sha256": "a289f3c9453effb9057549a8988e203890c27af523aef40ab221386fa6c1b84d",
+      "sha": "77000c0a3e719875991ef6c7ad759578dcbd0924"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-42a4-types/uploaded-blobs.json",
+      "bytes": 14869,
+      "sha256": "3d6951a898c5595f3aa1918d1fa5588ab84efa1fe0b55fbe0d911c34fbb6d545",
+      "sha": "2e9956ac19036eeea25615848a0688df32d9165f"
+    }
+  ],
+  "limits": [
+    "Approves immutable candidate content and scoped claims only; not a commit, push or new CI/native acceptance.",
+    "Actual remote tree SHA and upload/readback results were provided in root durable records; reviewer independently reconstructed its full hash without remote queries.",
+    "No source or proof record was altered, and no compiler/runtime/native test was rerun.",
+    "Root remains sole ref/index writer and must obtain fresh publication gates.",
+    "This report is outside the approved tree; adding it would change the tree hash."
+  ]
+}

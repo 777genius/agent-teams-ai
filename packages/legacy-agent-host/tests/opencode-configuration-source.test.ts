@@ -71,10 +71,13 @@ test('synchronous OpenCode configuration observation preserves clone isolation a
     const changed = fixture(t), source = join(changed.project, 'opencode.json');
     changed.write(source, value);
     let current = true;
-    assert.throws(() => captureOpenCodeConfigurationSource(changed.input, undefined, () => current, 'project', () => {
+    let derivedKey: unknown;
+    assert.throws(() => captureOpenCodeConfigurationSource(changed.input, undefined, () => current, 'project', config => {
+      derivedKey = (config.provider as typeof value.provider)['TEST-local'].options.apiKey;
       if (change === 'owner') current = false;
-      else changed.write(source, { model: 'TEST-replaced-during-observation' });
-    }), { reason: 'configuration-changed' }, 'a change inside the observation refuses the entire capture');
+      else changed.write(source, { provider: { 'TEST-local': { options: { apiKey: 'TEST-replaced-key' } } } });
+    }), { reason: 'configuration-changed' }, 'a change after key derivation refuses the entire capture');
+    assert.equal(derivedKey, 'TEST-original-key', 'a derived key cannot escape a failed closing observation');
   }
   let observed = false;
   assert.throws(() => captureOpenCodeConfigurationSource(f.input, undefined, () => false, 'project', () => {

@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "kind": "finite-import-template-and-public-conversation",
+  "parentSourceHead": "3b459631577f89145a55acfee275ade9780436e5",
+  "qualification": "TEST-only exact-source verification. Original3b remains INCOMPLETE. No fresh consumer Stop/cold, retained, native-provider or platform PASS inferred.",
+  "originalEvidence": "gui-import-lifecycle-3b459631-20261119.json",
+  "templateOnlyFixture": {
+    "cause": "RuntimeTeamCoordinator installs static profile members; ordinary close calls stopCapturedSession for each. RuntimeOwner.stopOwned intentionally seals an empty closed/released tombstone for never-opened bindings, as covered by existing runtime-owner tests. The unrelated static sidebar seed therefore conflicts with exact final Runtime census.",
+    "change": "Remove only unused static Runtime member from this finite import profile after proving it equals the explicit provider template. Keep template, management, peers, source archive, sidebar handle, import principal and exact final Runtime records==[after] oracle.",
+    "scope": "Shared fixture verifier permits members=[] only under exact pinned current-solo-v1 marker plus finite mode, Claude source/wrapper/peer environment and original owner/import descriptor checks. Other modes retain one static member.",
+    "adoption": {
+      "kind": "APPLIED_EXACT_REVIEWED_PATCH",
+      "appliedAt": "2026-11-19T12:24:49.540161+00:00",
+      "baseSourceHead": "3b459631577f89145a55acfee275ade9780436e5",
+      "candidatePatch": {
+        "path": "/workspace/scratch/de9d4631e21c/finite-import-template-only-3b459631-20261119/candidate.patch",
+        "sha256": "8a04d5492eca6b925089ff713f04e79bcbad7fe200603bb94b35ded21ced94a4"
+      },
+      "files": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+          "beforeSha256": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c",
+          "candidateSha256": "ba632cbbda386ea3358378abee0d5d19d56680ba740da7bea8bbed5b9b7b1596"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "beforeSha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+          "candidateSha256": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts",
+          "beforeSha256": "cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6",
+          "candidateSha256": "1840d5a56a9890575b6abf74597901c80411edf4bc3cabe6c86287f8f30d9f53"
+        }
+      ],
+      "validation": "pending original single factory test after donor resource release"
+    },
+    "independentReview": "Root reviewed schema, factory order, publisher, canonical fresh recipe, unchanged retained fixture and actual shutdown call path. Production sealing is preserved."
+  },
+  "publicConversation": {
+    "kind": "finite-import-conversation-source-review",
+    "baseHead": "3b459631577f89145a55acfee275ade9780436e5",
+    "reviewer": "pr_graph",
+    "originalOutcome": "INCOMPLETE",
+    "failure": "Public product snapshot assertion at desktop-finite-stopped-import-ui.ts:158; original visible lead reply and snapshot.ok preceded it.",
+    "remedy": "Replace that one public read with original team.messages.page; retain exact complete no-gap page and unique lead reply scoped to original Runtime binding. No extra read/poll/input/deadline or production change.",
+    "limitations": [
+      "No private assistant messageRef exposed in existing read set; public reply ID shape checked, no fabricated inversion or added file read.",
+      "Source review and saved content are not an actual successful new UI run.",
+      "Existing sole original Stop/cold/all-record/cleanup checks remain mandatory."
+    ],
+    "sourcePins": [
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "sha256": "83040d2af471a9e886510cef4e1e896d8ada3009290f1cab8c648f683bf1863e",
+        "bytes": 33886,
+        "finding": "productMessages reads canonical inbox; collectProductState snapshot.messages is productMessages only (641-678)."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/ownerMessageReads.ts",
+        "sha256": "d497120b2d51a5faae4b6415f883cef20b8165fb51b1bf9828bd515194ab23d3",
+        "bytes": 5002,
+        "finding": "readMessagesPage nongroup read captures original principal/grant/roster, calls Runtime conversation outside Team fence, then checks authority again and combines product and lead conversation rows (61-99)."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/readTeamConversation.ts",
+        "sha256": "40536d69ed938947f3f5fe320008321b893810f6530af17c86ebd605b17e0c74",
+        "bytes": 4474,
+        "finding": "Only original captured current lead and validated retained lineage; fences before/inside/after. Reply from original lead name, source lead_session, leadSessionId host-lead- plus validated costScope (25-76)."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeActivitySources.ts",
+        "sha256": "4afa47afac6e8e25b6ff5335390f6f8e1981adcdeeeb6fd1a7f5d29154edcfc0",
+        "bytes": 6205,
+        "finding": "Fresh/no-restore scope is canonical runtimeDigest(original binding); validated retained lineage does not substitute another generation (26,85-87)."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/runtimeConversation.ts",
+        "sha256": "1c112719175f3f09621f8448c1365633e61a253617a1d90c7b4f48dc48f319fe",
+        "bytes": 12618,
+        "finding": "Canonical conversation validation correlates message inputId/operationRef and full binding against original Runtime input. Public host-reply ID includes private assistant messageRef, not native wire user UUID."
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamMessagesPage.ts",
+        "sha256": "d2b3dac262627277218dec23ce48669eba3162869ba7e8494ab975af605fbafe",
+        "bytes": 2898,
+        "finding": "Existing canonical public projection applies 384 KiB bound, max100 messages, signed cursor/hasMore consistency and projected conversation metadata/reply DTO."
+      },
+      {
+        "path": "src/features/agent-backend/renderer/readHostMessagesPage.ts",
+        "sha256": "46f010692afdd5afb70aecde9dd5f7efb04877e90d75175962fcc2dcb650169d",
+        "bytes": 5581,
+        "finding": "Original renderer conversation route calls team.messages.page under captured handle/read fence; complete original signed parts are required before publication."
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+        "sha256": "0cfc06e84a2345172cb9a2224a5877fa50b8428140a49fb43daea2c1a392c460",
+        "bytes": 32355,
+        "finding": "getMessagesPage resolves current captured Host connection and delegates original readHostMessagesPage; snapshot is documented product-only."
+      },
+      {
+        "path": "src/renderer/store/team/teamMessagesProvenance.ts",
+        "sha256": "018257385a1dfd6846ca7557a9c03eabb3413c5fd80cbb32b0d2147891780c2f",
+        "bytes": 17813,
+        "finding": "Original chat head refresh uses readTeamMessagesPage with limit50, not team.snapshot.messages."
+      }
+    ],
+    "savedFixture": "/tmp/TEST-desktop-backend-Fk8FDH",
+    "savedRuntimeConversation": {
+      "messages": 1,
+      "gaps": [],
+      "bindingDigest": "76027231759aa5bbff2eea6cc8821ddcbfac556a9b7a19b0db35d75f2b31dfa2",
+      "textMatchesFiniteReply": true,
+      "inputAndOperationMatchOriginalTerminal": true
+    },
+    "testsExecutedByThisReview": 0
+  },
+  "tests": {
+    "schemaVersion": 1,
+    "kind": "FINAL_TYPED_FACTORY_AND_PUBLIC_CONVERSATION_TESTS",
+    "baseSourceHead": "3b459631577f89145a55acfee275ade9780436e5",
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--test",
+      "--test-name-pattern",
+      "^finite import (factory keeps only|conversation readback binds)",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+    ],
+    "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+    "startedAt": "2026-11-19T12:32:53.499290+00:00",
+    "finishedAt": "2026-11-19T12:32:56.334268+00:00",
+    "elapsedSeconds": 2.835,
+    "exitCode": 0,
+    "counts": {
+      "tests": 2,
+      "suites": 0,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "sourceBefore": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "533bdae340b451839c3e2fc49fa43920defe28489797e1104ecf517ffc07e9a1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1"
+    },
+    "sourceAfter": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "533bdae340b451839c3e2fc49fa43920defe28489797e1104ecf517ffc07e9a1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1"
+    },
+    "sourceUnchanged": true,
+    "log": {
+      "path": "/workspace/scratch/de9d4631e21c/finite-import-template-only-3b459631-20261119/factory-conversation-final-test.log",
+      "sha256": "23f1e21e532d7dd0a861473f078f14bfa6c02240c8fd34a47cd29dacaf06394c",
+      "bytes": 362
+    },
+    "initialSuccessfulResult": {
+      "path": "/workspace/scratch/de9d4631e21c/finite-import-template-only-3b459631-20261119/verification-initial-pass.json",
+      "sha256": "a697e7bac90fb64809e4f1b4004811807c1c4ac64a301fc8e65e54e0d61b362e"
+    },
+    "typeOnlyTestCorrection": "foreign-generation negative uses Object.assign on exact selected row; value and assertion unchanged",
+    "scope": "Two selected tests repeated once after exact TS2339 test correction; old3correlation cases not selected. Original20s factory/15s child limits unchanged."
+  },
+  "strictTypes": {
+    "kind": "finite-import-template-and-public-readback-scoped-types",
+    "sourceHead": "3b459631577f89145a55acfee275ade9780436e5",
+    "scope": "Five affected TypeScript entrypoints plus actual transitive closure; original strict script options. Not full workspace typecheck.",
+    "startedAt": "2026-11-19T12:32:54.398324+00:00",
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "node_modules/@typescript/native/bin/tsc",
+      "--noEmit",
+      "--singleThreaded",
+      "-p",
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/import-followup-types-3b459631/tsconfig.json"
+    ],
+    "project": {
+      "extends": "../../tsconfig.legacy-agent-host-scripts.json",
+      "files": [
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "../../scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+      ],
+      "include": []
+    },
+    "compilerProfile": {
+      "GOMEMLIMIT": "512MiB",
+      "GOGC": "50",
+      "GOMAXPROCS": "2"
+    },
+    "exitCode": 0,
+    "error": null,
+    "elapsedSeconds": 2.525,
+    "sourceBefore": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "533bdae340b451839c3e2fc49fa43920defe28489797e1104ecf517ffc07e9a1",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "sourceAfter": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "533bdae340b451839c3e2fc49fa43920defe28489797e1104ecf517ffc07e9a1",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "sourceUnchanged": true,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "initialVerification": {
+    "tests": {
+      "schemaVersion": 1,
+      "kind": "FOCUSED_NEW_FACTORY_AND_PUBLIC_CONVERSATION_TESTS",
+      "baseSourceHead": "3b459631577f89145a55acfee275ade9780436e5",
+      "command": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "--test",
+        "--test-name-pattern",
+        "^finite import (factory keeps only|conversation readback binds)",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+      ],
+      "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+      "startedAt": "2026-11-19T12:31:04.030760+00:00",
+      "finishedAt": "2026-11-19T12:31:06.793412+00:00",
+      "elapsedSeconds": 2.763,
+      "exitCode": 0,
+      "outerCollectionTimeout": false,
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "sourceBefore": {
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "4cdb2ec435af27114dfb4311d95446bc091680806ab02c95c3acde5eca70af8b",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1"
+      },
+      "sourceAfter": {
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "4cdb2ec435af27114dfb4311d95446bc091680806ab02c95c3acde5eca70af8b",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1"
+      },
+      "sourceUnchanged": true,
+      "log": {
+        "path": "/workspace/scratch/de9d4631e21c/finite-import-template-only-3b459631-20261119/factory-conversation-test.log",
+        "sha256": "2c42d931f85138c752df0597e1f05f44b47079747152e964a0bfc0dcb6fa0b30",
+        "bytes": 361
+      },
+      "scope": "Two new selected tests only. Factory keeps original20s test/15s child bound. No GUI, Host launch, build, provider or unchanged correlation-suite rerun."
+    },
+    "types": {
+      "kind": "finite-import-template-and-public-readback-scoped-types",
+      "sourceHead": "3b459631577f89145a55acfee275ade9780436e5",
+      "scope": "Five affected TypeScript entrypoints plus actual transitive closure; original strict script options. Not full workspace typecheck.",
+      "startedAt": "2026-11-19T12:31:26.426041+00:00",
+      "command": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "--singleThreaded",
+        "-p",
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/import-followup-types-3b459631/tsconfig.json"
+      ],
+      "project": {
+        "extends": "../../tsconfig.legacy-agent-host-scripts.json",
+        "files": [
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+          "../../scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+        ],
+        "include": []
+      },
+      "compilerProfile": {
+        "GOMEMLIMIT": "512MiB",
+        "GOGC": "50",
+        "GOMAXPROCS": "2"
+      },
+      "exitCode": 1,
+      "error": null,
+      "elapsedSeconds": 2.549,
+      "sourceBefore": {
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "4cdb2ec435af27114dfb4311d95446bc091680806ab02c95c3acde5eca70af8b",
+        "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+      },
+      "sourceAfter": {
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "4cdb2ec435af27114dfb4311d95446bc091680806ab02c95c3acde5eca70af8b",
+        "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+      },
+      "sourceUnchanged": true,
+      "logSha256": "d8f42abb25d62e0fbcdef092ce4d228f5321d8fcec20a788b003c7862ccfd578"
+    },
+    "typeDiagnostic": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts(108,66): error TS2339: Property 'leadSessionId' does not exist on type '{ from: string; to: string; text: string; timestamp: string; read: boolean; source: string; messageId: string; leadSessionId: string; } | { from: string; to: string; text: string; timestamp: string; read: boolean; source: string; messageId: `${string}-${string}-${string}-${string}-${string}`; }'.\n  Property 'leadSessionId' does not exist on type '{ from: string; to: string; text: string; timestamp: string; read: boolean; source: string; messageId: `${string}-${string}-${string}-${string}-${string}`; }'.\n",
+    "correction": "One negative test mutation changed to Object.assign on the same selected row to satisfy the product/lead union. Runtime value/label/cases preserved. Final2 selected cases and strict compiler PASS afterward; results are not summed."
+  },
+  "independentReview": {
+    "sourcePins": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "f2f2414074c416103439a356e39e5185c7ad6b674653267889e9c1fa59fbb2ed",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f7a0485c870bf94f24ff08126fd14ba993b6eb7289d57cc38bdf0e9c4296f4ca",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "533bdae340b451839c3e2fc49fa43920defe28489797e1104ecf517ffc07e9a1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1"
+    },
+    "templateReviewer": "root",
+    "conversationReviewer": "reviewflow",
+    "status": "PASS",
+    "preserved": [
+      "Original final sessions exactly [after]",
+      "Original sender/source/custody/currentness guards",
+      "Single existing read now canonical team.messages.page with same handle/command/payload",
+      "Original384KiB cap, complete page/no gaps and exact unique current-binding lead reply",
+      "No new UI actions/polls/replays/deadlines",
+      "Original input correlation helper body unchanged; previous3 checks not rerun"
+    ]
+  },
+  "reusedBuild": "Exact41ab Host build retained; no production or Host source changed.",
+  "remaining": "Publish exact source then original import lifecycle and retained UI, followed by authorized native V2 management and Main retained coexistence."
+}

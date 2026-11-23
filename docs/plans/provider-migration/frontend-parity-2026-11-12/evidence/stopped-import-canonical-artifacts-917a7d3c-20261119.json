@@ -1,0 +1,662 @@
+{
+  "schemaVersion": 1,
+  "kind": "stopped-import-canonical-main-artifacts-fix",
+  "baseHead": "917a7d3c3737904080da5abebb30d8f999d876eb",
+  "sourceQualification": "Exact unpublished source and test candidate; next original GUI pending.",
+  "observedOriginalFailure": {
+    "source": "application",
+    "phase": "prepare",
+    "category": "held",
+    "outcome": "not-dispatched",
+    "prepareBoundary": "snapshot-export",
+    "producerStatus": "PASS",
+    "consumerStatus": "INCOMPLETE"
+  },
+  "inventory": {
+    "schemaVersion": 1,
+    "sourceHead": "917a7d3c3737904080da5abebb30d8f999d876eb",
+    "scope": "Read-only retained actual producer inventory and canonical App writers. Host disposition defect and patch owned by root. No source files, producer inputs, or artifacts were modified.",
+    "producerReceipt": "/tmp/TEST-desktop-backend-aFJGuj/finite-stopped-import-producer.json",
+    "producerReceiptSha256": "2b9b7e525cee06cc3c53b28f6950f79c64a6afd7b90722a4fbfdc17bad99c3a5",
+    "producerStatus": "PASS",
+    "sourceKind": "actual-current-finite-solo",
+    "teamName": "test-stopped-legacy",
+    "sourceRoots": [
+      "/tmp/TEST-desktop-backend-aFJGuj/claude/teams/test-stopped-legacy",
+      "/tmp/TEST-desktop-backend-aFJGuj/claude/tasks/test-stopped-legacy",
+      "/tmp/TEST-desktop-backend-aFJGuj/claude/projects/-tmp-TEST-desktop-backend-aFJGuj-workspace"
+    ],
+    "absentRoots": [
+      "/tmp/TEST-desktop-backend-aFJGuj/userData/data/attachments/test-stopped-legacy",
+      "/tmp/TEST-desktop-backend-aFJGuj/userData/data/task-attachments/test-stopped-legacy"
+    ],
+    "nativeReleasePresent": true,
+    "postStopProductTaskPresent": true,
+    "ordinaryQuit": {
+      "requestedOnce": true,
+      "exitCode": 0,
+      "signalCode": null,
+      "originalGroupAbsent": true,
+      "listenerAbsent": true,
+      "sourcePeerAbsent": true
+    },
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": null
+    },
+    "sourceFiles": [
+      {
+        "relativePath": "claude/projects/-tmp-TEST-desktop-backend-aFJGuj-workspace/ec650a46-a014-488e-9344-55d3ae2494d1.jsonl",
+        "bytes": 10621,
+        "sha256": "aa33f371a90ed88b58b693706c0ed04248d6c8c463890af4585b609543d02a5e",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/tasks/test-stopped-legacy/f9bb229f-05c1-43d4-8de0-3b0d41613b33.json",
+        "bytes": 1026,
+        "sha256": "45c5d312ac27e54e69bb78648592c6f7cd264e75f7dface772097b576f22068e",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/.agent-teams-owner.json",
+        "bytes": 176,
+        "sha256": "375bb3b5fb2e39cebb0a90af516e0c7ac9cf2a2b79bcbc837b380bfdb1dace31",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/.team-runtime-recovery/state.json",
+        "bytes": 165,
+        "sha256": "fda3fdd2758b826ea39d50e271e2c8a84cbb89551a11d41900410cd255ef26d3",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/cache/transcript-affinity/-tmp-TEST-desktop-backend-aFJGuj-workspace.json",
+        "bytes": 775,
+        "sha256": "4f33fc063affa54a60a0f03bcf7a9fa52d67f58f778ca2f9469643549cfe393d",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/comment-notification-journal.json.sqlite-fallback-replica",
+        "bytes": 152,
+        "sha256": "952bf090d5b1f7158d62d32ed5b8022cc0a738d1a6e8d1b8c0fd124aa846fc1d",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/config.json",
+        "bytes": 823,
+        "sha256": "3674417212dd55667a24e633ee4dabc2accf849534e046df960191efc1676f34",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/launch-freshness.json",
+        "bytes": 346,
+        "sha256": "29e16c1ee92ba99deeca0c286b13e27415e73a028600e88074d4ba40fcdad68d",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/launch-stopped.json",
+        "bytes": 1070,
+        "sha256": "138f7e43af5d3d7ac2ccd1945a3cfe4979e05a890be4cda69baba952a5df4f8c",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/members.meta.json",
+        "bytes": 35,
+        "sha256": "e2fbfff9e76c9fc56bed458637c6904eb5d8f3d6bb9f536f8fe6e2bb2de77bea",
+        "matchesProducer": true
+      },
+      {
+        "relativePath": "claude/teams/test-stopped-legacy/team.meta.json",
+        "bytes": 891,
+        "sha256": "33a37d7a7bccf770a0be9a494fa07ff43a4b41163e901740631ef1bc71d212ae",
+        "matchesProducer": true
+      }
+    ],
+    "all11SourceFilesUnchanged": true,
+    "workSyncArtifactsPresent": false,
+    "firstHold": "Root source review identified first lexicographic unknown file .agent-teams-owner.json in snapshot disposition. No broadened runtime exclusion is inferred from this observation.",
+    "canonicalRoles": [
+      {
+        "relativePath": ".agent-teams-owner.json",
+        "role": "source-profile ownership marker",
+        "proposedDisposition": "excluded",
+        "writer": "src/main/services/team/provisioning/TeamProvisioningProfileOwnership.ts",
+        "writerEntry": "claimTeamForThisProfile",
+        "canonicalRule": "Exact root basename; ownership of original app profile is not transferred.",
+        "bytes": 176,
+        "sourceSha256": "375bb3b5fb2e39cebb0a90af516e0c7ac9cf2a2b79bcbc837b380bfdb1dace31",
+        "writerSha256": "7201f8b839a5baa032e6133a00b6ec671dc6400d236f071d9b8ff7158253c23f"
+      },
+      {
+        "relativePath": ".team-runtime-recovery/state.json",
+        "role": "native runtime recovery attempts and circuit state",
+        "proposedDisposition": "excluded",
+        "writer": "src/features/team-runtime-recovery/main/infrastructure/JsonTeamRuntimeRecoveryRepository.ts",
+        "writerEntry": "update",
+        "pathDefinition": "src/features/team-runtime-recovery/main/infrastructure/TeamRuntimeRecoveryStorePaths.ts",
+        "canonicalRule": "Exact state filename only; no recursive runtime directory allowance.",
+        "bytes": 165,
+        "sourceSha256": "fda3fdd2758b826ea39d50e271e2c8a84cbb89551a11d41900410cd255ef26d3",
+        "writerSha256": "b95ab4efaf270698ab52588a2234a679c1fbd5b01ba22721d6d2fdfb2ae0738b",
+        "pathDefinitionSha256": "8de3e000717404e7ee3bdc2b082625429fef2b9621ddd77874966b314b7587ec"
+      },
+      {
+        "relativePath": "cache/transcript-affinity/-tmp-TEST-desktop-backend-aFJGuj-workspace.json",
+        "role": "derived transcript affinity index",
+        "proposedDisposition": "excluded",
+        "writer": "src/main/services/team/cache/JsonTeamTranscriptAffinityIndexStore.ts",
+        "writerEntry": "upsertProjectEntries",
+        "canonicalRule": "One filename under exact cache/transcript-affinity, produced as encodeURIComponent(projectId)+.json; no general cache directory allowance.",
+        "bytes": 775,
+        "sourceSha256": "4f33fc063affa54a60a0f03bcf7a9fa52d67f58f778ca2f9469643549cfe393d",
+        "writerSha256": "f71db4db7a1c0218937b107f4123d1f0091d874554262348531f97d4a7ce6477"
+      },
+      {
+        "relativePath": "comment-notification-journal.json.sqlite-fallback-replica",
+        "role": "comment notification delivery journal replica",
+        "proposedDisposition": "archive",
+        "writer": "src/features/internal-storage/main/composition/BackendSelectingTaskCommentNotificationJournalStore.ts",
+        "writerEntry": "run -> replica.writeClean",
+        "pathDefinition": "src/main/services/team/JsonTaskCommentNotificationJournalStore.ts",
+        "canonicalRule": "Exact root basename; archive as history, never rehydrate delivery authority.",
+        "bytes": 152,
+        "sourceSha256": "952bf090d5b1f7158d62d32ed5b8022cc0a738d1a6e8d1b8c0fd124aa846fc1d",
+        "writerSha256": "8666716c3178538eab1a0ce35a898227dfe1e004ef82628dfb3221959cea664e",
+        "pathDefinitionSha256": "ca58e5897f285bd91887838787fbc9dd9524e8632e6ca7ab2829b1bb4546ce87"
+      }
+    ],
+    "boundedContentFacts": {
+      "profileMarker": {
+        "schemaVersion": 1,
+        "reason": "create"
+      },
+      "runtimeRecovery": {
+        "schemaVersion": 1,
+        "jobs": 0,
+        "circuits": 0,
+        "processedSignalIds": 0
+      },
+      "transcriptAffinity": {
+        "version": 1,
+        "entryCount": 1,
+        "teamAndProjectMatch": true
+      },
+      "commentReplica": {
+        "schemaVersion": 1,
+        "state": "clean",
+        "initialized": true,
+        "entryCount": 0
+      }
+    },
+    "limitations": [
+      "Consumer remains INCOMPLETE at snapshot-export; producer PASS is a separate original boundary.",
+      "Classifying excluded/archive paths must preserve original safe-walk, declared-root, size/type/link, source identity and freeze guards.",
+      "Do not add recursive wildcards for unknown owner/runtime/cache/replica files.",
+      "No additional native execution, tests, build or GUI retry performed."
+    ]
+  },
+  "before": {
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--test",
+      "--test-name-pattern=canonical Main",
+      "packages/legacy-agent-host/tests/stopped-team-import.test.ts"
+    ],
+    "exitCode": 1,
+    "elapsedSeconds": 1.221,
+    "sourceBase": "917a7d3c3737904080da5abebb30d8f999d876eb",
+    "scope": "New regression against unchanged original snapshot implementation"
+  },
+  "beforeLog": "\u2716 canonical Main source artifacts stay censused without transferring ownership or replay state (22.793904ms)\n\u2714 canonical Main artifact exceptions keep neighbouring unknown paths refused (17.943665ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 1\n\u2139 fail 1\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 1019.551044\n\n\u2716 failing tests:\n\ntest at packages/legacy-agent-host/tests/stopped-team-import.test.ts:399:1\n\u2716 canonical Main source artifacts stay censused without transferring ownership or replay state (22.793904ms)\n  Error: Team operation hold\n      at hold (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/stopped-team-import/snapshot.js:15:11)\n      at disposition (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/stopped-team-import/snapshot.js:109:12)\n      at visit (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/stopped-team-import/snapshot.js:187:92)\n      at captureFiles (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/stopped-team-import/snapshot.js:227:9)\n      at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/stopped-team-import/snapshot.js:337:27\n      at async exportStoppedTeam (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/stopped-team-import/snapshot.js:326:16)\n      at async TestContext.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/tests/stopped-team-import.test.ts:419:20)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    code: 'hold'\n  }\n",
+  "after": {
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--test",
+      "packages/legacy-agent-host/tests/stopped-team-import.test.ts",
+      "packages/legacy-agent-host/tests/stopped-team-import-rpc.test.ts"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 2.879,
+    "sourceBase": "917a7d3c3737904080da5abebb30d8f999d876eb",
+    "sourceBefore": {
+      "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts": "b978f770d30a1fad7595ad1fb3683f254b20ca23fad358995506a11d6f07f714",
+      "packages/legacy-agent-host/tests/stopped-team-import.test.ts": "6c98c0650869fccec4f605d710a1b40be6d076fb2ccd62f9d74c7fc2ab286868"
+    },
+    "sourceAfter": {
+      "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts": "b978f770d30a1fad7595ad1fb3683f254b20ca23fad358995506a11d6f07f714",
+      "packages/legacy-agent-host/tests/stopped-team-import.test.ts": "6c98c0650869fccec4f605d710a1b40be6d076fb2ccd62f9d74c7fc2ab286868"
+    },
+    "scope": "Original two stopped-import Node test files against strict-built exact Host candidate"
+  },
+  "afterLog": "\u2714 real Host NDJSON import publishes only exact private snapshot, then cold lookup reuses original source/Team without reread or native launch (236.402516ms)\n\u2714 reference scanning preserves qualified targets and holds malformed marker streams (39.719736ms)\n\u2714 actual saved-draft layout exports and detached-validates without manufacturing config (51.926624ms)\n\u2714 removed import rows reject active identity conflicts and source native authority (8.22407ms)\n\u2714 saved-draft layout rejects config presence, symlink config, or missing required metadata (7.053998ms)\n\u2714 complete detached snapshot preserves policy/content/blob/archive census without native credential bytes (100.029128ms)\n\u2714 canonical Main source artifacts stay censused without transferring ownership or replay state (80.513205ms)\n\u2714 canonical Main artifact exceptions keep neighbouring unknown paths refused (18.742904ms)\n\u2714 active/UNKNOWN closure, source changes/corrupt bytes, missing required blob and caps refuse before destination publication (19.495183ms)\n\u2714 changed original import conflicts; damaged detached snapshot never publishes a handle (32.250933ms)\n\u2714 cold retry uses only original detached bytes; no source reread or unfinished auto-publication (114.697504ms)\n\u2714 changed partial product and missing published owner remain held without overwrite/recreation (176.971937ms)\n\u2714 detached reference-map tampering, admission collision and capability refusal happen before intent/product writes (60.072315ms)\n\u2714 registry reserves published and held imports across contexts without weakening fresh create (52.964204ms)\n\u2714 private immutable snapshot transfer and finite original lookup survive loss of staging/source after publication (43.092121ms)\n\u2714 staging refuses symlink custody and altered detached map before a product namespace exists (3.600992ms)\n\u2714 import publication requires the exact new-owner bootstrap proof and never repairs missing proof on retry (16.090749ms)\n\u2139 tests 17\n\u2139 suites 0\n\u2139 pass 17\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 2740.219308\n",
+  "strictHostBuild": {
+    "kind": "strict-host-candidate-build",
+    "candidatePath": "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts",
+    "candidateBefore": "b978f770d30a1fad7595ad1fb3683f254b20ca23fad358995506a11d6f07f714",
+    "candidateAfter": "b978f770d30a1fad7595ad1fb3683f254b20ca23fad358995506a11d6f07f714",
+    "sourceHead": "917a7d3c3737904080da5abebb30d8f999d876eb",
+    "scope": "Exact one-file unpublished Host candidate on recorded917 parent; original strict build and60s bound. Final published GUI source must match candidate hash.",
+    "command": [
+      "pnpm",
+      "--config.verify-deps-before-run=false",
+      "exec",
+      "node",
+      "node_modules/@typescript/native/bin/tsc",
+      "-p",
+      "packages/legacy-agent-host/tsconfig.json",
+      "--singleThreaded"
+    ],
+    "compilerProfile": {
+      "GOMEMLIMIT": "512MiB",
+      "GOGC": "50",
+      "GOMAXPROCS": "2"
+    },
+    "timeoutSeconds": 60,
+    "exitCode": 0,
+    "error": null,
+    "elapsedSeconds": 9.73,
+    "before": [
+      {
+        "name": "Node",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "expected": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "actual": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      {
+        "name": "Host entry",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+        "expected": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+        "actual": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba"
+      },
+      {
+        "name": "Corepack pnpm",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "expected": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "actual": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+      },
+      {
+        "name": "Corepack package",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+        "expected": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "actual": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+      },
+      {
+        "name": "Corepack library",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+        "expected": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+        "actual": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      },
+      {
+        "name": "Linux child manifest",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/manifest.json",
+        "expected": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187",
+        "actual": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187"
+      },
+      {
+        "name": "Linux child binary",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/linux-child-exec",
+        "expected": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0",
+        "actual": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0"
+      },
+      {
+        "name": "Linux child source",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/native/linux-child-exec.c",
+        "expected": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "actual": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337"
+      },
+      {
+        "name": "Linux node launcher manifest",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/manifest.json",
+        "expected": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed",
+        "actual": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed"
+      },
+      {
+        "name": "Linux node launcher binary",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/node-exec",
+        "expected": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d",
+        "actual": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d"
+      },
+      {
+        "name": "Linux node launcher source",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/tools/linux-node-exec/close-fds-exec.c",
+        "expected": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+        "actual": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3"
+      },
+      {
+        "name": "Xvfb wrapper",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/xvfb-run",
+        "expected": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee",
+        "actual": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee"
+      },
+      {
+        "name": "Xvfb binary",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/Xvfb",
+        "expected": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce",
+        "actual": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce"
+      },
+      {
+        "name": "Shared post-exit collector",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/collect-gui-receipt.py",
+        "expected": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf",
+        "actual": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf"
+      }
+    ],
+    "after": [
+      {
+        "name": "Node",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "expected": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "actual": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      {
+        "name": "Host entry",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+        "expected": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+        "actual": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba"
+      },
+      {
+        "name": "Corepack pnpm",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "expected": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "actual": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+      },
+      {
+        "name": "Corepack package",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+        "expected": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "actual": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+      },
+      {
+        "name": "Corepack library",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+        "expected": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+        "actual": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      },
+      {
+        "name": "Linux child manifest",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/manifest.json",
+        "expected": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187",
+        "actual": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187"
+      },
+      {
+        "name": "Linux child binary",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/linux-child-exec",
+        "expected": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0",
+        "actual": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0"
+      },
+      {
+        "name": "Linux child source",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/native/linux-child-exec.c",
+        "expected": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "actual": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337"
+      },
+      {
+        "name": "Linux node launcher manifest",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/manifest.json",
+        "expected": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed",
+        "actual": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed"
+      },
+      {
+        "name": "Linux node launcher binary",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/node-exec",
+        "expected": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d",
+        "actual": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d"
+      },
+      {
+        "name": "Linux node launcher source",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/tools/linux-node-exec/close-fds-exec.c",
+        "expected": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+        "actual": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3"
+      },
+      {
+        "name": "Xvfb wrapper",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/xvfb-run",
+        "expected": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee",
+        "actual": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee"
+      },
+      {
+        "name": "Xvfb binary",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/Xvfb",
+        "expected": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce",
+        "actual": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce"
+      },
+      {
+        "name": "Shared post-exit collector",
+        "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/collect-gui-receipt.py",
+        "expected": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf",
+        "actual": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf"
+      }
+    ],
+    "all14PinsRetained": true,
+    "log": {
+      "path": "/workspace/scratch/de9d4631e21c/host-build-snapshot-candidate-917a.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "independentR2": {
+    "reviewer": "/root/reviewflow",
+    "verdict": "PASS",
+    "sourcePins": {
+      "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts": "b978f770d30a1fad7595ad1fb3683f254b20ca23fad358995506a11d6f07f714",
+      "packages/legacy-agent-host/tests/stopped-team-import.test.ts": "6c98c0650869fccec4f605d710a1b40be6d076fb2ccd62f9d74c7fc2ab286868"
+    },
+    "scope": "Exact Main owner/recovery paths, canonical URI-encoded flat affinity cache, archive-only notification replica. Eight unknown/alias neighbours still held; no ownership/native/replay/file-custody/cap/currentness relaxation."
+  },
+  "actualContentValidation": {
+    "schemaVersion": 1,
+    "kind": "actual-producer-content-only-stopped-export",
+    "status": "PASS_CONTENT_ONLY",
+    "sourceHead": "917a7d3c3737904080da5abebb30d8f999d876eb",
+    "candidateSourceSha256": "b978f770d30a1fad7595ad1fb3683f254b20ca23fad358995506a11d6f07f714",
+    "candidateCompiledSha256": "b272a0d969f3f2bd6675e717f1eeaf87187ec19f8e6a6f5afcaf3daacd97937a",
+    "nodeVersion": "24.21.0",
+    "scope": "Actual unchanged 917 producer bytes and exact six Main category roots. TEST header identity, no-op read fence and released obligations are deliberately artificial; no authority qualification or E2E PASS is inferred.",
+    "describeCalls": 2,
+    "fenceCalls": 1,
+    "originalProducerStatus": "PASS",
+    "originalConsumerStatus": "INCOMPLETE",
+    "headerAuthority": "ARTIFICIAL_TEST_ONLY",
+    "realMainFencesExercised": false,
+    "nativeActions": 0,
+    "sourceFilesUnchanged": true,
+    "originalFileCount": 11,
+    "originalDirectoryCount": 8,
+    "originalCensusSha256": "bd126f9ffa0b4ae48f9c53d55ff6f11db68661090da44bad85ede6608c4fab91",
+    "sourceFiles": [
+      {
+        "path": "claude/teams/test-stopped-legacy/.agent-teams-owner.json",
+        "sha256": "375bb3b5fb2e39cebb0a90af516e0c7ac9cf2a2b79bcbc837b380bfdb1dace31",
+        "sizeBytes": 176
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/.team-runtime-recovery/state.json",
+        "sha256": "fda3fdd2758b826ea39d50e271e2c8a84cbb89551a11d41900410cd255ef26d3",
+        "sizeBytes": 165
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/cache/transcript-affinity/-tmp-TEST-desktop-backend-aFJGuj-workspace.json",
+        "sha256": "4f33fc063affa54a60a0f03bcf7a9fa52d67f58f778ca2f9469643549cfe393d",
+        "sizeBytes": 775
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/comment-notification-journal.json.sqlite-fallback-replica",
+        "sha256": "952bf090d5b1f7158d62d32ed5b8022cc0a738d1a6e8d1b8c0fd124aa846fc1d",
+        "sizeBytes": 152
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/config.json",
+        "sha256": "3674417212dd55667a24e633ee4dabc2accf849534e046df960191efc1676f34",
+        "sizeBytes": 823
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/launch-freshness.json",
+        "sha256": "29e16c1ee92ba99deeca0c286b13e27415e73a028600e88074d4ba40fcdad68d",
+        "sizeBytes": 346
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/launch-stopped.json",
+        "sha256": "138f7e43af5d3d7ac2ccd1945a3cfe4979e05a890be4cda69baba952a5df4f8c",
+        "sizeBytes": 1070
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/members.meta.json",
+        "sha256": "e2fbfff9e76c9fc56bed458637c6904eb5d8f3d6bb9f536f8fe6e2bb2de77bea",
+        "sizeBytes": 35
+      },
+      {
+        "path": "claude/teams/test-stopped-legacy/team.meta.json",
+        "sha256": "33a37d7a7bccf770a0be9a494fa07ff43a4b41163e901740631ef1bc71d212ae",
+        "sizeBytes": 891
+      },
+      {
+        "path": "claude/tasks/test-stopped-legacy/f9bb229f-05c1-43d4-8de0-3b0d41613b33.json",
+        "sha256": "45c5d312ac27e54e69bb78648592c6f7cd264e75f7dface772097b576f22068e",
+        "sizeBytes": 1026
+      },
+      {
+        "path": "claude/projects/-tmp-TEST-desktop-backend-aFJGuj-workspace/ec650a46-a014-488e-9344-55d3ae2494d1.jsonl",
+        "sha256": "aa33f371a90ed88b58b693706c0ed04248d6c8c463890af4585b609543d02a5e",
+        "sizeBytes": 10621
+      }
+    ],
+    "declaredRoots": [
+      {
+        "category": "team",
+        "path": "claude/teams/test-stopped-legacy"
+      },
+      {
+        "category": "tasks",
+        "path": "claude/tasks/test-stopped-legacy"
+      },
+      {
+        "category": "attachments",
+        "path": "userData/data/attachments/test-stopped-legacy"
+      },
+      {
+        "category": "task-attachments",
+        "path": "userData/data/task-attachments/test-stopped-legacy"
+      },
+      {
+        "category": "history",
+        "path": "claude/teams/test-stopped-legacy/review-decisions"
+      },
+      {
+        "category": "evidence",
+        "path": "claude/teams/test-stopped-legacy/members"
+      }
+    ],
+    "result": {
+      "snapshotDigest": "3f12b6266815e540376f6d3f11404487dd7895af9747fb63890462526f7d7166",
+      "fileCount": 10,
+      "totalBytes": 5459,
+      "dispositions": {
+        "excluded": 5,
+        "archive": 4,
+        "product": 1
+      },
+      "files": [
+        {
+          "category": "team",
+          "path": ".agent-teams-owner.json",
+          "sha256": "375bb3b5fb2e39cebb0a90af516e0c7ac9cf2a2b79bcbc837b380bfdb1dace31",
+          "size": 176,
+          "disposition": "excluded"
+        },
+        {
+          "category": "team",
+          "path": ".team-runtime-recovery/state.json",
+          "sha256": "fda3fdd2758b826ea39d50e271e2c8a84cbb89551a11d41900410cd255ef26d3",
+          "size": 165,
+          "disposition": "excluded"
+        },
+        {
+          "category": "team",
+          "path": "cache/transcript-affinity/-tmp-TEST-desktop-backend-aFJGuj-workspace.json",
+          "sha256": "4f33fc063affa54a60a0f03bcf7a9fa52d67f58f778ca2f9469643549cfe393d",
+          "size": 775,
+          "disposition": "excluded"
+        },
+        {
+          "category": "team",
+          "path": "comment-notification-journal.json.sqlite-fallback-replica",
+          "sha256": "952bf090d5b1f7158d62d32ed5b8022cc0a738d1a6e8d1b8c0fd124aa846fc1d",
+          "size": 152,
+          "disposition": "archive"
+        },
+        {
+          "category": "team",
+          "path": "config.json",
+          "sha256": "3674417212dd55667a24e633ee4dabc2accf849534e046df960191efc1676f34",
+          "size": 823,
+          "disposition": "archive"
+        },
+        {
+          "category": "team",
+          "path": "launch-freshness.json",
+          "sha256": "29e16c1ee92ba99deeca0c286b13e27415e73a028600e88074d4ba40fcdad68d",
+          "size": 346,
+          "disposition": "excluded"
+        },
+        {
+          "category": "team",
+          "path": "launch-stopped.json",
+          "sha256": "138f7e43af5d3d7ac2ccd1945a3cfe4979e05a890be4cda69baba952a5df4f8c",
+          "size": 1070,
+          "disposition": "excluded"
+        },
+        {
+          "category": "team",
+          "path": "members.meta.json",
+          "sha256": "e2fbfff9e76c9fc56bed458637c6904eb5d8f3d6bb9f536f8fe6e2bb2de77bea",
+          "size": 35,
+          "disposition": "archive"
+        },
+        {
+          "category": "team",
+          "path": "team.meta.json",
+          "sha256": "33a37d7a7bccf770a0be9a494fa07ff43a4b41163e901740631ef1bc71d212ae",
+          "size": 891,
+          "disposition": "archive"
+        },
+        {
+          "category": "tasks",
+          "path": "f9bb229f-05c1-43d4-8de0-3b0d41613b33.json",
+          "sha256": "45c5d312ac27e54e69bb78648592c6f7cd264e75f7dface772097b576f22068e",
+          "size": 1026,
+          "disposition": "product"
+        }
+      ],
+      "gaps": [
+        {
+          "category": "attachments",
+          "resourceId": "root",
+          "reason": "already-missing"
+        },
+        {
+          "category": "task-attachments",
+          "resourceId": "root",
+          "reason": "already-missing"
+        },
+        {
+          "category": "history",
+          "resourceId": "root",
+          "reason": "already-missing"
+        },
+        {
+          "category": "evidence",
+          "resourceId": "root",
+          "reason": "already-missing"
+        }
+      ],
+      "referenceCount": 0,
+      "blobCount": 0,
+      "detachedValidation": "PASS"
+    },
+    "limitations": [
+      "No full snapshot or body content persisted; only hashes, counts and canonical path metadata.",
+      "The producer frozen project transcript is unchanged but is outside the original Main stopped-export roots.",
+      "No process launch, provider call, importer publication, source repair, or fixture mutation."
+    ]
+  }
+}

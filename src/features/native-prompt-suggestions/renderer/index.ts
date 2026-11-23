@@ -10,4 +10,5 @@ export {
 } from '../core/domain/policy';
 export { useComposerNativeNextPrompt } from './hooks/useComposerNativeNextPrompt';
 export { useNativeNextPrompt } from './hooks/useNativeNextPrompt';
+export { NativeNextPromptProviderSetting } from './NativeNextPromptProviderSetting';
 export { NativeNextPromptRow } from './ui/NativeNextPromptRow';

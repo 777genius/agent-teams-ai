@@ -1,0 +1,109 @@
+{
+  "schema": "current-head-original-selected-ui-lane-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682858,
+    "name": "Offline Host Desktop (linux-x64, import)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T00:11:26Z",
+    "completed_at": "2026-11-19T00:15:56Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682858",
+    "runner_name": "GitHub Actions 1000395594"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682858,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 00:19:56 UTC",
+    "bytes": 293765,
+    "sha256": "ced29e7c7e64440d708b335895aca9db5d2a5bc224dbf1bc0835762774597ac2",
+    "computedGitBlobSha": "10da2f693dd3ad8ca339e6f6af13a3bf2f58baec",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682858-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "10da2f693dd3ad8ca339e6f6af13a3bf2f58baec",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 31416.756271",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 183.075172"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-Mt8Em8/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-19T00:12:08Z",
+      "completed_at": "2026-11-19T00:12:08Z"
+    },
+    {
+      "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 19,
+      "started_at": "2026-11-19T00:14:25Z",
+      "completed_at": "2026-11-19T00:15:50Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-19T00:15:50Z",
+      "completed_at": "2026-11-19T00:15:50Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-import-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14485196753,
+    "bytes": 1176651,
+    "sha256": "863a751bb7e104c560b54e9c42d89be69579636c07f358f1978ec6e22edff99a",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original finite TEST stopped import frontend/Host scenario, original source/receipt/cleanup verification. Does not qualify the independently failed authentic finite stopped-producer import-lifecycle scenario.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt not separately downloaded. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

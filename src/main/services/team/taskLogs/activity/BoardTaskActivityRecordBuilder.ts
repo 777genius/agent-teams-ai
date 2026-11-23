@@ -161,6 +161,7 @@ function buildActionCategory(action: ParsedBoardTaskToolAction): BoardTaskActivi
     case 'review_start':
     case 'review_request':
     case 'review_approve':
+    case 'review_complete':
     case 'review_request_changes':
       return 'review';
     case 'task_add_comment':

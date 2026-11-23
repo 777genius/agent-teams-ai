@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
+import type { OpenCodeV2GraphPhase } from './OpenCodeV2EmbeddedGraph.js';
+import type { OpenCodeCurrentnessPhase, OpenCodeCurrentnessStats } from './OpenCodeCurrentnessTiming.js';
 
 const prefix = 'legacy-agent-host: claude-close ';
 let stderrObserved = false;
@@ -13,6 +15,26 @@ const writeDiagnostic = (line: string): void => {
   }
   process.stderr.write(line, () => { /* Async write failures are diagnostics only. */ });
 };
+
+const catalogRequestPhases = new Set(['queued', 'started', 'returned']);
+/** Only joins the original RPC to its existing catalog queue; never grants custody. */
+export function createOpenCodeCatalogDiagnostic(requestId: unknown,
+  input: { providerId?: string | undefined; includeModels?: boolean | undefined },
+  write: (line: string) => void = writeDiagnostic) {
+  let identity: { requestIdHash: string; inputKind: string } | undefined;
+  try {
+    if (typeof requestId === 'string') identity = {
+      requestIdHash: createHash('sha256').update(requestId, 'utf8').digest('hex'),
+      inputKind: input.providerId !== undefined ? 'explicit-provider' : input.includeModels === true ? 'include-models' : 'directory',
+    };
+  } catch { /* A diagnostic construction failure cannot reject the catalog. */ }
+  return (phase: 'queued' | 'started' | 'returned'): void => {
+    try {
+      if (identity && catalogRequestPhases.has(phase))
+        write(`legacy-agent-host: opencode-catalog ${JSON.stringify({ ...identity, phase })}\n`);
+    } catch { /* Observations never change the original queue or read outcome. */ }
+  };
+}
 
 /** Captures identifiers once; neither current selectors nor provider error text enter stderr. */
 export function createClaudeCloseDiagnostic(
@@ -124,4 +146,151 @@ export function createOpenCodeMetadataDiagnostic(
       emit(confirmed ? 'released' : 'cleanup-unknown');
     },
   });
+}
+
+export type OpenCodeProbePhase = OpenCodeV2GraphPhase | OpenCodeCurrentnessPhase | 'run' | 'graph-start' | 'graph-done' | 'native-launch'
+  | 'native-launch-returned' | 'native-endpoint-resolved' | 'startup-timer-aborted'
+  | 'startup-parent-aborted' | 'startup-lifecycle-aborted' | 'startup-failed'
+  | 'identity-start' | 'identity-request-start' | 'identity-custody-start' | 'identity-custody-returned' | 'identity-request-admitted'
+  | `catalog-${1 | 2 | 3}-${'request-start' | 'custody-start' | 'custody-returned' | 'request-admitted' | 'lease-released'}`
+  | `credential-${'catalog' | 'directory' | 'connect' | 'restore' | 'dispose'}-${'start' | 'returned'}`
+  | 'credential-returned' | 'catalog-read-returned' | 'catalog-current-returned' | 'catalog-repeat'
+  | 'attestation-observe-returned' | 'session-current-returned' | 'session-create-returned'
+  | 'native-ready' | 'credential' | 'attestation' | 'attestation-returned' | 'session-create' | 'driver-open' | 'first-submit';
+const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-done', 'native-launch',
+  'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
+  'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
+  'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
+  'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
+  'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
+  'catalog-1-request-start', 'catalog-1-custody-start', 'catalog-1-custody-returned', 'catalog-1-request-admitted', 'catalog-1-lease-released',
+  'catalog-2-request-start', 'catalog-2-custody-start', 'catalog-2-custody-returned', 'catalog-2-request-admitted', 'catalog-2-lease-released',
+  'catalog-3-request-start', 'catalog-3-custody-start', 'catalog-3-custody-returned', 'catalog-3-request-admitted', 'catalog-3-lease-released',
+  'credential-catalog-start', 'credential-catalog-returned', 'credential-directory-start', 'credential-directory-returned',
+  'credential-connect-start', 'credential-connect-returned', 'credential-restore-start', 'credential-restore-returned',
+  'credential-dispose-start', 'credential-dispose-returned', 'credential-returned',
+  'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
+  'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
+  'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
+const currentnessPhases = new Set<OpenCodeProbePhase>(['identity-currentness-summary',
+  'catalog-1-currentness-summary', 'catalog-2-currentness-summary', 'catalog-3-currentness-summary']);
+
+function currentnessStats(value: unknown): OpenCodeCurrentnessStats | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const fields = Object.getOwnPropertyDescriptors(value);
+  if (Reflect.ownKeys(fields).length !== 2 || !Object.hasOwn(fields, 'currentCalls') ||
+      !Object.hasOwn(fields, 'currentElapsedMs') || !fields.currentCalls || !fields.currentElapsedMs ||
+      !('value' in fields.currentCalls) || !('value' in fields.currentElapsedMs)) return;
+  const calls: unknown = fields.currentCalls.value, elapsed: unknown = fields.currentElapsedMs.value;
+  if (typeof calls !== 'number' || !Number.isSafeInteger(calls) || calls < 0 || calls > 1_000_000 ||
+      typeof elapsed !== 'number' || !Number.isSafeInteger(elapsed) || elapsed < 0 || elapsed > 3_600_000) return;
+  return { currentCalls: calls, currentElapsedMs: elapsed };
+}
+
+/** Last observed phase only: no readiness, failure, process identity or release authority. */
+export function createOpenCodeProbeDiagnostic(
+  selected: { profileId: string; configRevision: string },
+  commandId: string,
+  probeDigest: string,
+  write: (line: string) => void = writeDiagnostic,
+  now: () => number = () => performance.now()
+): (phase: OpenCodeProbePhase, currentness?: OpenCodeCurrentnessStats) => void {
+  try {
+    const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+    const identity = Object.freeze({ profileHash: hash([selected.profileId, selected.configRevision]),
+      commandHash: hash(commandId), probeDigest });
+    const valid = typeof probeDigest === 'string' && /^[a-f0-9]{64}$/.test(probeDigest);
+    const observed = new Set<OpenCodeProbePhase>();
+    const summaries = new Set<OpenCodeProbePhase>();
+    let started: number | undefined, count = 0;
+    return (phase, currentness) => {
+      try {
+        if (currentnessPhases.has(phase)) {
+          const stats = currentnessStats(currentness);
+          if (!valid || started === undefined || !stats || summaries.has(phase)) return;
+          summaries.add(phase);
+          const at = now(), elapsedMs = Math.round(at - started);
+          if (!Number.isFinite(at) || at < 0 || !Number.isSafeInteger(elapsedMs) ||
+              elapsedMs < 0 || elapsedMs > 3_600_000) return;
+          // Reference the last original phase; summaries never consume its sequence slots.
+          write('legacy-agent-host: opencode-probe ' + JSON.stringify({ ...identity,
+            phase, sequence: count, elapsedMs, ...stats }) + '\n');
+          return;
+        }
+        if (currentness !== undefined) return;
+        if (!valid || count >= probePhases.size || !probePhases.has(phase) || observed.has(phase)) return;
+        observed.add(phase); count++;
+        if (count > 1 && started === undefined) return;
+        const at = now();
+        if (!Number.isFinite(at) || at < 0) return;
+        started ??= at;
+        const elapsedMs = Math.round(at - started);
+        if (!Number.isSafeInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > 3_600_000) return;
+        write('legacy-agent-host: opencode-probe ' + JSON.stringify({ ...identity,
+          phase, sequence: count, elapsedMs }) + '\n');
+      } catch { /* Diagnostics cannot replace an original probe operation or error. */ }
+    };
+  } catch { return () => {}; }
+}
+
+const probeCloseRunStates = new Set(['not-started', 'pending', 'true', 'false', 'threw']);
+const probeCloseOutcomes = new Set(['unobserved', 'succeeded', 'failed', 'cancelled', 'unknown']);
+const probeCloseErrorClasses = new Set(['none', 'held', 'invalid', 'conflict', 'busy', 'unknown']);
+const probeCloseStages = new Set(['request-drain', 'owner-client', 'driver-close', 'server-stop', 'namespace', 'close-result']);
+const probeCloseReasons = new Set(['unconfirmed', 'threw', 'identity']);
+const probeCloseCodes = new Set(['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+  'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch', 'transport_failure',
+  'http_failure', 'invalid_response', 'disposed']);
+
+/** One already captured failed-close observation; no clock, authority read or error unwrapping. */
+export function createOpenCodeProbeCloseDiagnostic(
+  selected: { profileId: string; configRevision: string },
+  commandId: string,
+  probeDigest: string,
+  write: (line: string) => void = writeDiagnostic
+): (observation: unknown) => void {
+  try {
+    const profile = Object.getOwnPropertyDescriptor(selected, 'profileId');
+    const revision = Object.getOwnPropertyDescriptor(selected, 'configRevision');
+    if (!profile || !('value' in profile) || !revision || !('value' in revision) ||
+        ![profile.value, revision.value, commandId].every(value => typeof value === 'string' && value.length > 0 && value.length <= 256) ||
+        typeof probeDigest !== 'string' || !/^[a-f0-9]{64}$/.test(probeDigest)) return () => {};
+    const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+    const identity = Object.freeze({ profileHash: hash([profile.value, revision.value]),
+      commandHash: hash(commandId), probeDigest });
+    let emitted = false;
+    return observation => {
+      try {
+        if (emitted || !observation || typeof observation !== 'object' || Array.isArray(observation)) return;
+        const fields = Object.getOwnPropertyDescriptors(observation);
+        const read = (key: string): unknown => {
+          const field = fields[key]; return field && 'value' in field ? field.value : undefined;
+        };
+        const runState = read('runState'), outcome = read('outcome'), errorClass = read('errorClass');
+        const stage = read('stage'), reason = read('reason');
+        const keys = ['probeDigest', 'runState', 'outcome', 'errorClass', 'stage', 'reason',
+          ...(runState === 'threw' ? ['runErrorCode', 'runCauseCode'] : [])];
+        if (Reflect.ownKeys(fields).length !== keys.length || keys.some(key => {
+          const field = fields[key]; return !Object.hasOwn(fields, key) || !field || !('value' in field);
+        }) ||
+            read('probeDigest') !== probeDigest ||
+            typeof runState !== 'string' || !probeCloseRunStates.has(runState) ||
+            typeof outcome !== 'string' || !probeCloseOutcomes.has(outcome) ||
+            typeof errorClass !== 'string' || !probeCloseErrorClasses.has(errorClass) ||
+            typeof stage !== 'string' || !probeCloseStages.has(stage) ||
+            typeof reason !== 'string' || !probeCloseReasons.has(reason)) return;
+        const runErrorCode = read('runErrorCode'), runCauseCode = read('runCauseCode');
+        if (runState === 'threw' && ![runErrorCode, runCauseCode].every(value =>
+          value === null || typeof value === 'string' && probeCloseCodes.has(value))) return;
+        const line = 'legacy-agent-host: opencode-probe-close-failed ' + JSON.stringify({
+          ...identity, runState, outcome, errorClass, stage, reason,
+          ...(runState === 'threw' ? { runErrorCode, runCauseCode } : {}),
+        }) + '\n';
+        if (Buffer.byteLength(line) > 768) return;
+        emitted = true; // A lost sink write cannot select a later failure instead.
+        write(line);
+      } catch { /* Private observation cannot alter the original failed close or channel. */ }
+    };
+  } catch { return () => {}; }
 }

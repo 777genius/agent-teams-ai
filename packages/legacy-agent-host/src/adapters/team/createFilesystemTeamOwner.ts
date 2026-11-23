@@ -17,6 +17,8 @@ export type FilesystemTeamOwnerOptions = Omit<
   'store' | 'policy' | 'taskMutations'
 > & {
   root: string;
+  /** Captured app preference source, read-only; the Team still owns its override. */
+  reviewFlowDefaultsDirectory?: string;
   store?: TeamOwnerStore;
   taskMutations?: TeamOwnerOptions['taskMutations'];
 };
@@ -47,10 +49,11 @@ export function createFilesystemTeamOwner(options: FilesystemTeamOwnerOptions): 
       ? { crossTeamSourceAuthority: options.crossTeamSourceAuthority }
       : {}),
     policy: {
-      ...createTeamPolicy(options.root, options.binding.teamName),
+      ...createTeamPolicy(options.root, options.binding.teamName, options.reviewFlowDefaultsDirectory),
       attachments: new AttachmentArtifactStore(options.root, options.binding, store),
     },
     taskMutations:
-      options.taskMutations ?? new TaskEffectPlan(options.root, options.binding.teamName, store),
+      options.taskMutations ?? new TaskEffectPlan(options.root, options.binding.teamName, store,
+        options.reviewFlowDefaultsDirectory),
   });
 }

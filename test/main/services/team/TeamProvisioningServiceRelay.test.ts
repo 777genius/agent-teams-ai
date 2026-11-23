@@ -3603,7 +3603,9 @@ Messages:
       expect(relaySpy).toHaveBeenCalledWith('my-team', 'jack', {
         onlyMessageId: 'message-1',
         source: 'watchdog',
+        isCurrent: expect.any(Function),
       });
+      expect(relaySpy.mock.calls[0][2]?.isCurrent?.()).toBe(true);
     } finally {
       vi.useRealTimers();
     }
@@ -5551,6 +5553,7 @@ Messages:
       .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
       .mockImplementation(() => undefined);
     vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getByInboxMessage: vi.fn(async () => null),
       getActiveForMember: vi.fn(async () => ({
         id: 'ledger-foreground-message-1',
         teamName,

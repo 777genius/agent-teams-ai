@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+  "sourceTree": "716c54386d6b62567009a737cf963d1a8a744031",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "executionVenue": "local isolated detached producer checkouts; original repository build and packed-consumer tooling",
+  "sourceAncestry": [
+    "9423f600dfb04d04448326dbced89919924b0b5f",
+    "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+    "f5d632a6122df2f6995451bd33e6a0fbcda67680"
+  ],
+  "previousConsumer": {
+    "implementationSourceCommit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+    "implementationSha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+    "sessionContractsSourceCommit": "9423f600dfb04d04448326dbced89919924b0b5f"
+  },
+  "archiveCompatibility": {
+    "addedMembers": [],
+    "deletedMembers": [],
+    "changedImplementationMembers": [
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js"
+    ],
+    "packageManifestUnchanged": true,
+    "exportsUnchanged": true,
+    "dependenciesUnchanged": true,
+    "publicDeclarationsUnchanged": true,
+    "claudeCodexAndNativeSuggestionsMembersUnchanged": true,
+    "sessionContractsArchiveByteIdentical": true
+  },
+  "packages": {
+    "agent-teams-provider-implementations-0.0.0.tgz": {
+      "bytes": 186978,
+      "sha256": "b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a",
+      "integrity": "sha512-qTCPinI6Qni3K9ua/+i3j21PJFTTCBa4UCPJ2XhOvFOuoGnE+f9CS09oeESs3NMpe+QDJ93jP3UADuI2CbnVpQ==",
+      "gitBlob": "d5c9e316699728b3c865eb4434400eb8c0e3733e"
+    },
+    "agent-teams-provider-session-contracts-0.0.0.tgz": {
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+      "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+    }
+  },
+  "node24Node26ArchivesByteIdentical": true,
+  "checks": [
+    {
+      "sourceCommit": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+      "command": [
+        "pnpm",
+        "check"
+      ],
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "startedAt": "2026-11-17T19:12:09.272572+00:00",
+      "finishedAt": "2026-11-17T19:13:48.871084+00:00",
+      "elapsedSeconds": 99.599,
+      "exitCode": 1,
+      "logBytes": 69428,
+      "logSha256": "85903607add2fc771558b7fc2cf1e327407d94c477a049962ff494ea171e758f",
+      "realClaudeCodexExecuted": false,
+      "testGroupCounts": [
+        571,
+        1,
+        1
+      ],
+      "passedGroupCounts": [
+        571,
+        1,
+        0
+      ],
+      "failedGroupCounts": [
+        0,
+        0,
+        1
+      ],
+      "logFile": "check-node24.log"
+    },
+    {
+      "sourceCommit": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/provider-implementations",
+        "test:package"
+      ],
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "startedAt": "2026-11-17T19:15:27.151810+00:00",
+      "finishedAt": "2026-11-17T19:15:40.636994+00:00",
+      "elapsedSeconds": 13.485,
+      "exitCode": 0,
+      "logBytes": 987,
+      "logSha256": "fa1dbbe827674e7f7ccea84711702203ee903fb1005576de3f61092943b984b2",
+      "reason": "Retry only the failed original packed-consumer stage with the verified existing task dependency store after pnpm install SIGKILL; no source, deadline, assertion or test-selection edits.",
+      "testGroupCounts": [
+        1
+      ],
+      "passedGroupCounts": [
+        1
+      ],
+      "failedGroupCounts": [
+        0
+      ],
+      "logFile": "package-node24-store-correction.log"
+    },
+    {
+      "sourceCommit": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+      "command": [
+        "pnpm",
+        "check"
+      ],
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "startedAt": "2026-11-17T19:16:09.592706+00:00",
+      "finishedAt": "2026-11-17T19:17:38.039375+00:00",
+      "elapsedSeconds": 88.447,
+      "exitCode": 0,
+      "logBytes": 63844,
+      "logSha256": "f2ba21c6ad63367125e6b9e6d040acd804d4bff38e16f59eb6e240b347c71e54",
+      "realClaudeCodexExecuted": false,
+      "testGroupCounts": [
+        571,
+        1,
+        1
+      ],
+      "passedGroupCounts": [
+        571,
+        1,
+        1
+      ],
+      "failedGroupCounts": [
+        0,
+        0,
+        0
+      ],
+      "logFile": "check-node26.log"
+    }
+  ],
+  "node24Qualification": "Build, typecheck and all 571 source tests passed in original pnpm check. Contracts packed test passed. Implementation packed installation was SIGKILLed; the same original complete implementation packed test passed after selecting the already-warmed task pnpm store. The first full command remains failed.",
+  "node26Qualification": "One complete original pnpm check passed: build, typecheck, 571 source tests and both original packed consumers, with no skips.",
+  "installation": "pnpm11.18.0 install --frozen-lockfile --ignore-scripts in two clean detached worktrees; all source/dependency files unchanged.",
+  "storeCorrection": "PNPM_CONFIG_STORE_DIR selects the existing task store; lowercase npm_config_store_dir was ignored. The original SIGKILL cause is not independently established. No timeout, assertion or source edits.",
+  "executionLimits": "No real Claude/Codex CLI, vendor inference or native-provider qualification was run. Tests use controlled source fixtures, finite Node RPC peers and localhost HTTP. Host and packaged Electron qualification remain separate.",
+  "archiveCustody": "These exact Node 24 packed-consumer output bytes were retained and copied into this directory without editing or repacking. Original Node 26 full-check packed-consumer output was byte-identical."
+}

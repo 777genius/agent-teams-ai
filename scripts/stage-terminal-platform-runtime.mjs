@@ -231,6 +231,8 @@ function downloadReleaseAssetWithGh(lock, releaseTag, asset, destinationPath) {
 }
 
 function extractArchive(archivePath, extractDir, archiveKind) {
+  // Share the ZIP-entry-validated Windows reader with runtime staging.
+  // The legacy PowerShell archive API fails on hosted Windows runners before Electron E2E starts.
   extractRuntimeArchive(archivePath, extractDir, archiveKind, runOrThrow);
 }
 

@@ -93,7 +93,6 @@ function makeSafeConfig(): SafeConfig & AppConfig {
       theme: 'system',
       defaultTab: 'dashboard',
       multimodelEnabled: true,
-      nativeNextPromptSuggestionsEnabled: false,
       claudeRootPath: null,
       agentLanguage: 'system',
       appLocale: 'system',
@@ -139,6 +138,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
       anthropic: {
         authMode: 'auto',
         fastModeDefault: false,
+        nativeNextPromptSuggestionsEnabled: true,
         compatibleEndpoint: {
           enabled: false,
           baseUrl: '',
@@ -146,6 +146,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
       },
       codex: {
         preferredAuthMode: 'auto',
+        nativeNextPromptSuggestionsEnabled: true,
         customProvider: {
           enabled: false,
           baseUrl: '',

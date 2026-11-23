@@ -26,8 +26,11 @@ descendants inherit, so nothing flashes. The wrapper:
 - puts the real host in a kill-on-job-close job object, so the whole process tree
   dies with the wrapper rather than outliving it.
 
-Job creation, configuration and assignment must succeed before the suspended
-child resumes. A failure exits `112` and terminates only that invocation's owned
+Job creation and configuration must succeed before process creation. The Job
+is assigned atomically at `CreateProcessW` through `PROC_THREAD_ATTRIBUTE_JOB_LIST`
+(Windows 10+), alongside the restricted inheritable-handle list. This closes
+the suspended-target orphan gap if the wrapper is killed immediately after
+process creation. The child's thread resumes only after creation succeeds. A failure exits `112` and terminates only that invocation's owned
 child. The packaged Windows workflow compiles `WrapperNativeFixture.cs` and
 checks a real unrelated inheritable loopback socket is excluded, stdio and exit
 code survive, and terminating the fixture-owned wrapper drains its child tree.
@@ -77,3 +80,19 @@ real binary. Without the build, the runtime keeps launching the real binary
 directly.
 
 Set `AGENT_TEAMS_OPENCODE_CONSOLE_WRAPPER=0` to bypass the wrapper at runtime.
+
+## Windows teammate process containment
+
+The existing staging command also compiles the same qualified managed Job
+implementation to `resources/runtime/teammate-console/teammate.exe`. This
+separately named executable reads only the existing absolute
+`AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET` `.exe` target, not the OpenCode target
+variable or sidecar. Windows app-managed lead, direct member and auth-retry
+flows use it when staged. The original wrapper PID and process handle remain
+the app's Stop authority, while its no-breakaway kill-on-close Job contains
+the actual runtime and native tool descendants even if Electron Main crashes.
+The Windows product E2E requires both this wrapper and a native handle/Job
+fixture PASS, then tests actual cmd/git/PowerShell, Stop, HWND/focus and
+retirement of the active tool descendant following forced Electron Main exit.
+Packaged Windows release staging compiles both targets and PE validation
+admits only the exact new AnyCPU managed path.

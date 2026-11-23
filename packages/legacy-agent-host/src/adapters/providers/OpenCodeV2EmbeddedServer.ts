@@ -8,6 +8,8 @@ import { createWindowsJobCustody } from './WindowsJobCustody.js';
 import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey,
   openCodeV2SelectedSourceReference } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
+import { verifyOpenCodeV2MediaWitness } from './OpenCodeV2MediaReceipt.js';
+import type { OpenCodeV2MediaProof } from './OpenCodeV2MediaReceipt.js';
 import {
   verifyOpenCodeV2EmbeddedGraph,
   verifyOpenCodeV2EmbeddedManifest,
@@ -15,7 +17,7 @@ import {
 
 import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 import type { CapturedProcessProfile, CapturedProcessTreeSource } from './CapturedProcess.js';
-import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
+import type { OpenCodeV2EmbeddedSelection, OpenCodeV2GraphPhase } from './OpenCodeV2EmbeddedGraph.js';
 import type {
   RegistrarBinding,
   RegisteredProcessRootSource,
@@ -56,6 +58,12 @@ export interface OpenCodeV2EmbeddedServerOptions {
   startupTimeoutMs?: number;
   endpoint?: string;
   selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode }>;
+  /** Only this original child/session may attest its actual image normalization. */
+  mediaSessionId?: string;
+  /** Synchronous observation only; never an admission, timer or cleanup callback. */
+  observeStartupPhase?(phase: OpenCodeV2GraphPhase | 'graph-start' | 'graph-done' | 'native-launch' | 'native-launch-returned' |
+    'native-endpoint-resolved' | 'startup-timer-aborted' | 'startup-parent-aborted' |
+    'startup-lifecycle-aborted' | 'startup-failed'): void;
 }
 export interface OpenCodeV2EmbeddedReady {
   endpoint: string;
@@ -113,6 +121,16 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const startupTimeoutMs = options.startupTimeoutMs ?? 120_000;
   const requestedEndpoint = options.endpoint;
   const selectedFile = options.selectedFile;
+  const mediaSessionId = options.mediaSessionId;
+  if (mediaSessionId !== undefined && !/^ses_[A-Za-z0-9_-]+$/u.test(mediaSessionId)) return fail();
+  const mediaKey = mediaSessionId === undefined ? undefined : randomBytes(32).toString('hex');
+  let observeStartupPhase: OpenCodeV2EmbeddedServerOptions['observeStartupPhase'];
+  try { observeStartupPhase = options.observeStartupPhase; }
+  catch { /* An unavailable optional observer does not change startup. */ }
+  const observe = (phase: Parameters<NonNullable<typeof observeStartupPhase>>[0]): void => {
+    try { observeStartupPhase?.(phase); }
+    catch { /* An observer cannot change the original startup or cleanup outcome. */ }
+  };
   if (selectedFile && (!DeferredOpenCodeV2FileKey.is(selectedFile.source) ||
       !selectedFile.source.isCurrent() || selectedFile.source.descriptor.cwd !== profile.cwd ||
       !['fresh', 'restore', 'catalog'].includes(selectedFile.mode))) return fail();
@@ -246,12 +264,14 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         ...(signal ? [signal] : []),
       ]);
       try {
+        observe('graph-start');
         combined.throwIfAborted();
         if (process.platform === 'win32') {
           // The source verifies the selected graph before loading its exact
           // target N-API binary. Capture remains synchronous before private stdin.
           windowsCustody = await createWindowsJobCustody(embedded, combined);
-        } else await verifyOpenCodeV2EmbeddedGraph(embedded, combined);
+        } else await verifyOpenCodeV2EmbeddedGraph(embedded, combined, observe);
+        observe('graph-done');
         for (const directory of [configDirectory, path.dirname(databasePath)]) {
           if (
             !path.isAbsolute(directory) ||
@@ -283,9 +303,11 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           configDirectory,
           databasePath,
           config,
+          ...(mediaKey ? { media: { key: mediaKey, sessionId: mediaSessionId } } : {}),
           ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode } } : {}),
         });
         if (Buffer.byteLength(input) + 1 > 256 * 1024) return fail();
+        observe('native-launch');
         combined.throwIfAborted();
         child = custody.launch({
           command: profile.executable.path,
@@ -297,6 +319,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           ],
           cwd: profile.cwd,
         });
+        observe('native-launch-returned');
         child.stdin.on('error', () => {});
         const launched = child;
         const endpoint = await new Promise<string>((resolve, reject) => {
@@ -372,6 +395,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
             if (error) rejectReady();
           });
         });
+        observe('native-endpoint-resolved');
         launched.stdout.resume();
         const observed = await measure(combined);
         readyChild = launched;
@@ -382,6 +406,12 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         });
         return ready;
       } catch (error) {
+        // Observe existing flags before cleanup aborts lifecycle; this does not identify the cause.
+        try {
+          observe(startupController.signal.aborted ? 'startup-timer-aborted' :
+            signal?.aborted ? 'startup-parent-aborted' :
+            lifecycle.signal.aborted ? 'startup-lifecycle-aborted' : 'startup-failed');
+        } catch { /* A diagnostic property read cannot replace the original failure or cleanup. */ }
         const stopped = await stopOwned();
         if (!stopped) throw new Error('OpenCode V2 embedded cleanup unknown', { cause: error });
         throw error;
@@ -394,6 +424,11 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
 
   return {
     start,
+    verifyMediaReceipt(capture: Readonly<OpenCodeV2EmbeddedReady>, proof: OpenCodeV2MediaProof): boolean {
+      if (!mediaKey || proof.sessionId !== mediaSessionId || ready === undefined || capture !== ready ||
+          readyChild === undefined || child !== readyChild || stopping || lifecycle.signal.aborted || !alive()) return false;
+      return verifyOpenCodeV2MediaWitness(mediaKey, proof);
+    },
     /** Only the original catalog-selected relation and nonce-checked ready object can issue this reference. */
     selectedFileKey(capture: Readonly<OpenCodeV2EmbeddedReady>, integrationId: string) {
       const current = () => !!selectedFile && selectedFile.source.isCurrent() && ready !== undefined &&

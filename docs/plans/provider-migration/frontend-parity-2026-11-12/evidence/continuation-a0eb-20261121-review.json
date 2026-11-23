@@ -1,0 +1,1691 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "/root/restore_scope",
+  "reviewedAt": "2026-11-21T20:00:04.884315+00:00",
+  "verdict": "PASS_FOR_EXACT_ARCHIVE_INTEGRITY_AND_DECLARED_EVIDENCE_SCOPE",
+  "findings": [],
+  "blockingFindings": [],
+  "mode": "Independent read-only actual archive R2; full content prefix plus schema-correct terminal tail and semantic reference readback.",
+  "baselineSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+  "scope": "Exact continuation archive and outer index, all declared source/evidence cross-bindings and preserved qualification limits. This does not qualify new original E2E, whole-workspace execution, release or merge readiness.",
+  "archive": {
+    "path": "continuation-a0eb-20261121.tar.gz",
+    "bytes": 19563877,
+    "sha256": "1012766999eec5e7bc3b9163d9faf3cf4fecf60189ef64d5ef9e5e1438e9f857"
+  },
+  "outerIndex": {
+    "path": "continuation-a0eb-20261121.json",
+    "bytes": 28150,
+    "sha256": "3d6f719e4bcf3028c1482a4e7f838fe416254a185c93fa97c80cbc3227ec3658"
+  },
+  "finalPublicationPlan": {
+    "path": "ci-a0eb/next-publication-plan-final-v2.json",
+    "bytes": 26233,
+    "sha256": "85ca1b623e633e0b4e33201a74f9c138d6f695259eff678cdd56e6ad8a5708aa"
+  },
+  "integrity": {
+    "gzipCrcAndUncompressedSizeVerified": true,
+    "gzipMtime": 0,
+    "entries": 1294,
+    "allRegularFiles": true,
+    "safeNormalizedRelativePaths": true,
+    "duplicatePaths": 0,
+    "sortedPaths": true,
+    "tarMetadata": {
+      "uid": 0,
+      "gid": 0,
+      "uname": "",
+      "gname": "",
+      "mtime": 0,
+      "mode": "0644",
+      "paxHeaders": "Only path; each equals the validated member name",
+      "paxPathEntries": 367
+    },
+    "allPayloadsDecodeUtf8WithoutNul": true,
+    "textBytes": 135721606,
+    "innerInventory": {
+      "path": "MANIFEST.json",
+      "bytes": 3035894,
+      "sha256": "18ff53f2c89c322452af8035d4bd2086fe6f8a55400b65ff92abec4ff7037f95",
+      "listedEntries": 1293,
+      "allHashesAndSizesMatch": true,
+      "selfExcludedExplicitly": true,
+      "entrySetEqualsAllOtherArchiveMembers": true
+    },
+    "directEvidenceCopiesComparedToWorkspace": 1259,
+    "directEvidenceCopyMismatches": 0,
+    "explicitOmissions": 9782,
+    "omissionListDisjointFromIncludedPaths": true,
+    "fullLocalRootInventoryEquality": true,
+    "omittedRegularFilesLocallyHashed": 9781,
+    "omittedSymlinkTextsLocallyHashed": 1,
+    "omittedOriginalMismatches": 0,
+    "omissionReasons": {
+      "archive, screenshot, binary or unselected extension omitted": 365,
+      "non-UTF-8 bytes omitted": 29,
+      "reproducible cache/ephemeral compiler environment omitted": 9387,
+      "symlink omitted": 1
+    },
+    "symlinkOmission": {
+      "path": "renderer-warmup-proof/control/node_modules",
+      "bytes": 68,
+      "sha256": "9efa428e7039f749e4be4c5f02ff807b27812efa28354d9059c077732eac4eaf",
+      "hashKind": "symlink-text-not-referent",
+      "reason": "symlink omitted"
+    },
+    "symlinkReferentFollowed": false,
+    "archiveAndOuterIndexStableAtReviewCompletion": true
+  },
+  "sourceBindings": {
+    "candidateSourcePins": 16,
+    "allCandidateBytesEqualCurrentWorktreeAndOuterPins": true,
+    "sourcePins": {
+      ".github/workflows/ci.yml": {
+        "bytes": 200305,
+        "sha256": "2a83808852f92a202a899316ce0963eef5502bc4b02865a93615beff4a3fd4a7"
+      },
+      ".github/workflows/host-emulated-acceptance.yml": {
+        "bytes": 151149,
+        "sha256": "3fb5489ad460b944e5c2100350d66bbae1032fc0461523a2409e91d04d328691"
+      },
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts": {
+        "bytes": 21783,
+        "sha256": "4b833982ade46aec6a5243cde39662180432edf02ca70cfe056e0e7423b96e7c"
+      },
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts": {
+        "bytes": 6108,
+        "sha256": "a1181f28e9a6ad3b4ca559aeed253713c2da523997a299e11f106b7ebe277abe"
+      },
+      "packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts": {
+        "bytes": 41421,
+        "sha256": "6cbb0cb7755fc39afdb99a4e411bc8b67eadc0903c75d2f9825aa735971bf151"
+      },
+      "packages/legacy-agent-host/tests/opencode-v2-management-recovery.test.ts": {
+        "bytes": 20327,
+        "sha256": "5e39426da3c9248d902846ac00d3970b92839eeb916f3a9782f6526234170572"
+      },
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts": {
+        "bytes": 192399,
+        "sha256": "ba66ff77ad3cf87e96aff2497a70ce8de01e832fb938abce3cd224530e194926"
+      },
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": {
+        "bytes": 53051,
+        "sha256": "652a83efa6313175fb94d1784a3dbee8072ed629768956c1abdee7f352b4ecbd"
+      },
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts": {
+        "bytes": 45788,
+        "sha256": "0e84d27946a6c1f82028971106d0481705c8d94958e591afeedb2281059f2218"
+      },
+      "scripts/legacy-agent-host/desktop-retained-opencode-app.ts": {
+        "bytes": 53361,
+        "sha256": "354d15adea2b31966639ef72572249cdadafe808d3442dd0ed1ecdb3e98557ee"
+      },
+      "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts": {
+        "bytes": 17958,
+        "sha256": "6ead8b6635f89075d7c53863a1423784b781ee832382bfe426b74e7e669b9cfb"
+      },
+      "scripts/lib/desktop-finite-node-options.ts": {
+        "bytes": 5636,
+        "sha256": "0caaa6849c4752d00b559f52a4633c5d81b9efea944add6fb0d7e12b03b1a9a2"
+      },
+      "src/renderer/components/team/TeamDetailView.tsx": {
+        "bytes": 138117,
+        "sha256": "cb49077e29b062d4a4d5f644abf7d90e63b6377fdb70a1de682d8c62aa6c132d"
+      },
+      "test/renderer/components/team/members/MemberDetailDialog.test.ts": {
+        "bytes": 31153,
+        "sha256": "9ac8e39671ce6e76f6ac2883ab3224837780100802284020e7bb698f516012b5"
+      },
+      "test/renderer/hooks/useMemberStats.test.tsx": {
+        "bytes": 2781,
+        "sha256": "ecdb798a20fce19f9e50c1d40ef5903cb51b2e71e5f0c3f7a52f6e235b759304"
+      },
+      "test/scripts/retainedDonorFailureDiagnostics.test.ts": {
+        "bytes": 7243,
+        "sha256": "3c69b82ff42af6c4f2979e26b251449812e9620be7eab65a80c2aa7df60c3343"
+      }
+    },
+    "preimagesComparedToGitBaseline": 14,
+    "allPreimageBytesMatch": true,
+    "newFilesWithoutPreimage": [
+      "test/renderer/hooks/useMemberStats.test.tsx",
+      "test/scripts/retainedDonorFailureDiagnostics.test.ts"
+    ],
+    "changedNonDocSetExactlyEqualsSourcePins": true,
+    "status": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "bytes": 205554,
+      "sha256": "15c0b57fc17f40c31e7657fbce464731fcb1a8ae5054c91a9d1e26f1f5c2ecd8",
+      "archivePath": "STATUS.md",
+      "archiveAndCurrentBytesMatch": true
+    },
+    "rootAndIndependentIntegrationSourcePinsEqualOuterPins": true,
+    "finalManifest": {
+      "path": "ci-a0eb/next-source-manifest-final.json",
+      "bytes": 396720,
+      "sha256": "50f1a2446b7a26be7a5cf9787204edb4eaead7e2b9d51c9cba61f3c3e698401b",
+      "paths": 1985,
+      "unique": 1985,
+      "currentWorktreeMatches": 1985,
+      "missing": 0,
+      "drift": 0,
+      "relevantChanged": 14,
+      "separateGitPinnedWorkflowPaths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/host-emulated-acceptance.yml"
+      ]
+    },
+    "compiledCatalog": {
+      "count": 2,
+      "archiveBytesMatchRootR2PinsAndCurrentDist": true,
+      "pins": {
+        "packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2SessionCredential.js": {
+          "bytes": 5162,
+          "sha256": "87f7109f502cb96efa9253c1840788cc9fa17e987ee49062922afb6876348380"
+        },
+        "packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2ManagementHost.js": {
+          "bytes": 22787,
+          "sha256": "5c48ae041d93bb1c0ca9bae9cbba9c9b5c236feae90c92192c6df820882e2aed"
+        }
+      }
+    }
+  },
+  "evidenceBindings": {
+    "requiredPinnedInputs": 54,
+    "allRequiredArchivedPayloadPinsMatch": true,
+    "all43PriorRequiredPinsRetainedUnchanged": true,
+    "independentExactReviews": [
+      {
+        "path": "ci-a0eb/catalog-owner-reuse-final-r2.json",
+        "bytes": 23383,
+        "sha256": "022e5ef12d791416319cc121dc748a7cc45c21ebe3ee0e9fcababfa756825ec6"
+      },
+      {
+        "path": "membership-ready-plan/exact-r2-ci-audit.json",
+        "bytes": 3891,
+        "sha256": "5960a4afa021cebef6b2520ce9ac17fcc6da43a94a0cad045ec66fcf115777ab"
+      },
+      {
+        "path": "installer-sourcemap-plan/exact-r2-ci-audit.json",
+        "bytes": 4197,
+        "sha256": "0057488d2b46b7b9c51ec2804f67e3c1d5f469a6f2b7f6ec87c6d7362f5849b0"
+      },
+      {
+        "path": "team-import-graph/final-r2-test-oracle.json",
+        "bytes": 14084,
+        "sha256": "8b0397e9a3cde5c6a2acf3369708aed25c5656fbb60a299ff183fe9e5844c7e8"
+      },
+      {
+        "path": "retained-donor-analysis/final-r2-test-oracle.json",
+        "bytes": 7533,
+        "sha256": "9cf61803c44a6cfb858fed229abe67211049123dfe35442af59d48daa01ed6e7"
+      },
+      {
+        "path": "ci-a0eb/next-integration-r2.json",
+        "bytes": 17952,
+        "sha256": "197d8a0a7e7d63ab26bde6fd5bdaf3cde164c867ada0af8e2e31722f5b3aa557"
+      },
+      {
+        "path": "a0eb-archive-input-inventory/archive-scanner-v2-r2.json",
+        "bytes": 8701,
+        "sha256": "3cdf287c53dbc1dbb874a3e1bbe252d5ee4f0015159af0fb64c4cf0f42338ae8"
+      }
+    ],
+    "allExactReviewHashesMatch": true,
+    "rootSourceReview": {
+      "path": "ci-a0eb/next-root-source-review.json",
+      "bytes": 8749,
+      "sha256": "a2c64b260dbe5ab36b67181ae9d4d3f566b8d77b36cb9f14b78f4cafbebcbf27"
+    },
+    "rootReviewArchiveAndOuterCopiesEqualFinalConfig": true,
+    "fourFinalStaticChecks": [
+      {
+        "path": "ci-a0eb/next-final-source-size.json",
+        "bytes": 643,
+        "sha256": "2e2c5fbc6d9db8421fc55ecb28d3db8e77bcb2db2bbc2b5e1eafcdceb70f3f66"
+      },
+      {
+        "path": "ci-a0eb/next-final-provisioning.json",
+        "bytes": 658,
+        "sha256": "0995225869dc8174beced483d8d8655e29110a5e2b9809d16b04a89d5822c31b"
+      },
+      {
+        "path": "ci-a0eb/next-final-manifest-lint.json",
+        "bytes": 810,
+        "sha256": "f6c7cdf6c452aaf8012c48eb3acde6f0ea7242dc4ea8beffd743f6e9a8b9fbbd"
+      },
+      {
+        "path": "ci-a0eb/next-final-diff.json",
+        "bytes": 597,
+        "sha256": "c8e135e1754331f9d154a1205ffc42e59e11d2beba84b4ca78e3894f7f2025ff"
+      }
+    ],
+    "allFourSavedZeroExitsAndExactLogPinsMatch": true,
+    "originalSixRuns": {
+      "sourceHead": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+      "baseSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "mergeSha": "79ca55a62312144054c1b629f560dfba77402b78",
+      "sourceTreeSha": "b08ca7c9a618b0ace7896fbc94e0a0b0efe07f82",
+      "event": "pull_request",
+      "action": "synchronize",
+      "draft": true,
+      "attempt": 1,
+      "allTerminal": true,
+      "allMetadataArtifactListingAndFamilyReadbackPinsMatch": true,
+      "allJobRowsBoundToOriginalRunHeadAndAttempt": true,
+      "allJobAndArtifactPageCountsComplete": true,
+      "totalsRecomputed": {
+        "runs": 6,
+        "successfulRuns": 4,
+        "failedRuns": 2,
+        "jobs": 69,
+        "success": 50,
+        "failure": 8,
+        "skipped": 11,
+        "cancelled": 0,
+        "queued": 0,
+        "inProgress": 0,
+        "primaryFailures": 6,
+        "derivedAggregateFailures": 2
+      },
+      "families": [
+        {
+          "family": "Host",
+          "runId": 44926249301,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "jobs": {
+            "total": 30,
+            "success": 24,
+            "failure": 6,
+            "skipped": 0,
+            "cancelled": 0,
+            "queued": 0,
+            "inProgress": 0
+          },
+          "artifacts": 29,
+          "createdAt": "2026-11-21T16:44:55Z",
+          "updatedAt": "2026-11-21T18:30:09Z",
+          "terminalMetadata": {
+            "path": "ci-audit-run-44926249301-terminal.json",
+            "bytes": 395507,
+            "sha256": "6fd87e93aa3c691c1fb0fcab6167cc1a793cce5bf7922611750edae5d7ae462d"
+          },
+          "artifactListing": {
+            "path": "ci-audit-run-44926249301-artifacts.json",
+            "bytes": 27640,
+            "sha256": "d8d65b61a97b185b0e975a6f75310ad5f827ef3dda28f999506ce7e2124b3c2b"
+          },
+          "qualifiedReadback": "ci-a0eb/host-artifacts/qualification.json"
+        },
+        {
+          "family": "Source",
+          "runId": 44926249295,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "jobs": {
+            "total": 15,
+            "success": 2,
+            "failure": 2,
+            "skipped": 11,
+            "cancelled": 0,
+            "queued": 0,
+            "inProgress": 0
+          },
+          "artifacts": 1,
+          "createdAt": "2026-11-21T16:44:55Z",
+          "updatedAt": "2026-11-21T19:07:24Z",
+          "terminalMetadata": {
+            "path": "ci-audit-run-44926249295-terminal.json",
+            "bytes": 57321,
+            "sha256": "b751f3bcbc6a76ed8466efc8bb5f3c6661fb47723a21319e4950c9ec096cf2a1"
+          },
+          "artifactListing": {
+            "path": "ci-audit-run-44926249295-artifacts.json",
+            "bytes": 989,
+            "sha256": "c3b53ea1e024ee836b35c9883e0260f35e81dc5806732ec79edc8df59c32aea7"
+          },
+          "qualifiedReadback": "ci-a0eb/source-family-qualification.json"
+        },
+        {
+          "family": "Packaged",
+          "runId": 44926249318,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": {
+            "total": 7,
+            "success": 7,
+            "failure": 0,
+            "skipped": 0,
+            "cancelled": 0,
+            "queued": 0,
+            "inProgress": 0
+          },
+          "artifacts": 5,
+          "createdAt": "2026-11-21T16:44:55Z",
+          "updatedAt": "2026-11-21T19:26:42Z",
+          "terminalMetadata": {
+            "path": "ci-audit-run-44926249318-terminal.json",
+            "bytes": 96420,
+            "sha256": "3ed9aff46abccd1e286313688e5535b825e0292f715d4460681601b5590953b6"
+          },
+          "artifactListing": {
+            "path": "ci-audit-run-44926249318-artifacts.json",
+            "bytes": 4760,
+            "sha256": "d3a6c76eb2e3c4917530a79bf990b403b490a9bcf0d2a4ef5eb91dc874eebe1c"
+          },
+          "qualifiedReadback": "ci-a0eb/packaged-five-platforms-index.json"
+        },
+        {
+          "family": "Process",
+          "runId": 44926249189,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": {
+            "total": 5,
+            "success": 5,
+            "failure": 0,
+            "skipped": 0,
+            "cancelled": 0,
+            "queued": 0,
+            "inProgress": 0
+          },
+          "artifacts": 5,
+          "createdAt": "2026-11-21T16:44:55Z",
+          "updatedAt": "2026-11-21T17:10:31Z",
+          "terminalMetadata": {
+            "path": "ci-audit-run-44926249189-terminal.json",
+            "bytes": 63743,
+            "sha256": "4f592bf3929042d9724d58ea8b290421df99a1bc62f9b864bab9817221a50ee3"
+          },
+          "artifactListing": {
+            "path": "ci-audit-run-44926249189-artifacts.json",
+            "bytes": 4784,
+            "sha256": "b1e0b57dc12e100384754078ce7161afa2ebcb45a920b5790c6d226f40190209"
+          },
+          "qualifiedReadback": "ci-a0eb/process-artifacts/qualification.json"
+        },
+        {
+          "family": "Teams",
+          "runId": 44926249185,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": {
+            "total": 3,
+            "success": 3,
+            "failure": 0,
+            "skipped": 0,
+            "cancelled": 0,
+            "queued": 0,
+            "inProgress": 0
+          },
+          "artifacts": 3,
+          "createdAt": "2026-11-21T16:44:55Z",
+          "updatedAt": "2026-11-21T17:15:44Z",
+          "terminalMetadata": {
+            "path": "ci-audit-run-44926249185-terminal.json",
+            "bytes": 35334,
+            "sha256": "55f2182ab018748ac426217f5ee609cd1b4d5ad5feb0a55ce943616d9efbfbbb"
+          },
+          "artifactListing": {
+            "path": "ci-audit-run-44926249185-artifacts.json",
+            "bytes": 2888,
+            "sha256": "0816745e1f4f91d31aa4aca515f786493c7ab4c8964bb12ad3c4521560da7499"
+          },
+          "qualifiedReadback": "ci-a0eb/teams-artifacts/qualification.json"
+        },
+        {
+          "family": "Native V2",
+          "runId": 44926249322,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": {
+            "total": 9,
+            "success": 9,
+            "failure": 0,
+            "skipped": 0,
+            "cancelled": 0,
+            "queued": 0,
+            "inProgress": 0
+          },
+          "artifacts": 8,
+          "createdAt": "2026-11-21T16:44:55Z",
+          "updatedAt": "2026-11-21T17:42:09Z",
+          "terminalMetadata": {
+            "path": "ci-audit-run-44926249322-terminal.json",
+            "bytes": 95965,
+            "sha256": "bfd44d3c569eb401607f63d8f9aac8804abdbda4f60ede872128afbbd72f829c"
+          },
+          "artifactListing": {
+            "path": "ci-audit-run-44926249322-artifacts.json",
+            "bytes": 7344,
+            "sha256": "cf37551f8287204dabe90061824033a34bcda37c9f3bdbce308b9be09c382391"
+          },
+          "qualifiedReadback": "ci-a0eb/native-artifacts/qualification.json"
+        }
+      ],
+      "allEightFailedJobIdsMatchFailureLedger": true
+    },
+    "packagedFive": {
+      "path": "ci-a0eb/packaged-five-platforms-index.json",
+      "bytes": 25780,
+      "sha256": "aca2ca77ffc09065142db3846616728d7fdbec855a236c40fa8962749ccf4da5",
+      "allFiveJobArtifactNameIdSizeDigestAndSelectedStepBindingsMatch": true,
+      "platforms": [
+        {
+          "platform": "linux-x64",
+          "jobId": 136921485385,
+          "artifactId": 14720715175,
+          "artifactName": "packaged-v2-host-linux-x64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+          "archive": {
+            "path": "packaged-linux-14720715175.zip",
+            "bytes": 349594,
+            "sha256": "2a640e4c30ccf8a49e9d2649369dbcc81f82d7a866e3d738e81988bfff5f10bf"
+          },
+          "stepsBoundToOriginalJob": true
+        },
+        {
+          "platform": "darwin-x64",
+          "jobId": 136921485423,
+          "artifactId": 14719512518,
+          "artifactName": "packaged-v2-host-darwin-x64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+          "archive": {
+            "path": "packaged-darwin-x64-14719512518.zip",
+            "bytes": 829155,
+            "sha256": "197edc378e7a4ebcfec1956c063d8d7551a6af72200e13d81c6cc4bcfd612246"
+          },
+          "stepsBoundToOriginalJob": true
+        },
+        {
+          "platform": "darwin-arm64",
+          "jobId": 136921485456,
+          "artifactId": 14718064062,
+          "artifactName": "packaged-v2-host-darwin-arm64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+          "archive": {
+            "path": "packaged-darwin-arm64-14718064062.zip",
+            "bytes": 778277,
+            "sha256": "473f2663a35b34f73189af7e50ef0539e0203483707d5ca305a6acddbe35f789"
+          },
+          "stepsBoundToOriginalJob": true
+        },
+        {
+          "platform": "win32-x64",
+          "jobId": 136921485403,
+          "artifactId": 14720105169,
+          "artifactName": "packaged-v2-host-win32-x64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+          "archive": {
+            "path": "packaged-win32-x64-14720105169.zip",
+            "bytes": 833787,
+            "sha256": "6c478dac428c1b4ce1a12f9a56e6cac4f69781b127a5a370d225b9d30fe5e49f"
+          },
+          "stepsBoundToOriginalJob": true
+        },
+        {
+          "platform": "win32-arm64",
+          "jobId": 136921485421,
+          "artifactId": 14719089255,
+          "artifactName": "packaged-v2-host-win32-arm64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+          "archive": {
+            "path": "packaged-win32-arm64-14719089255.zip",
+            "bytes": 834811,
+            "sha256": "13d4255c3bd5dd28f1d14060b93497e83a1d2b7049da4687a46c651f930067b5"
+          },
+          "stepsBoundToOriginalJob": true
+        }
+      ],
+      "originalAggregateGateSuccessBoundToActualJobStep": true,
+      "producerHistoricalQueuedAggregateStateSupersededOnlyByFinalBinding": true
+    },
+    "newOriginalE2EQualified": false,
+    "mergeQualified": false
+  },
+  "publicDependencyMarkerException": {
+    "exactApprovedIdentity": {
+      "path": "ci-a0eb/host-artifacts/14718303773/TEST-desktop-backend-WfLmbW/emulated-cold-resume-epoch1-bundles/main/index.cjs",
+      "bytes": 11548308,
+      "sha256": "15a39d77213c230469a1e72bf09f0a3fc8688881db1e7fe3bbb00b2cdff77060",
+      "byteOffsets": [
+        6592490,
+        6707192,
+        7165141
+      ]
+    },
+    "fullArchivedBytesAndAllThreeUtf8ByteOffsetsIndependentlyVerified": true,
+    "onlyOneMatchingIncludedFile": true,
+    "all1294IncludedEntriesScannedWithTheThreeUnchangedPatterns": true,
+    "signedQueryMatches": 0,
+    "githubSecretMatches": 0,
+    "privateKeyMarkerMatches": 3,
+    "archivedBuilderHardcodedLiteralMatches": true,
+    "proofs": [
+      {
+        "path": "a0eb-archive-input-inventory/private-key-marker-inventory.json",
+        "bytes": 2555,
+        "sha256": "a8c1c2f621a3ebccd360bc71b06fcc9eb27ab9d0dedcaa9bf090098f7ba0f6fa"
+      },
+      {
+        "path": "a0eb-archive-input-inventory/private-key-marker-provenance.json",
+        "bytes": 9921,
+        "sha256": "b49753f1d1008cf40d395a75185871633100aebaa4895a825869784d51a68744"
+      },
+      {
+        "path": "a0eb-archive-input-inventory/archive-scanner-v2-r2.json",
+        "bytes": 8701,
+        "sha256": "3cdf287c53dbc1dbb874a3e1bbe252d5ee4f0015159af0fb64c4cf0f42338ae8"
+      }
+    ],
+    "classification": "One real static ssh2@1.17.0 Ed25519 capability-test fixture and two nonpayload OpenSSH parser/serializer syntax markers; not a marker-only classification.",
+    "provenanceReview": "Saved exact dependency/bundle literal and lexical-use source proof read. The capability result is boolean; the fixture literal is not exported or used for SSH authentication in that scope.",
+    "savedGuardControls": {
+      "receipt": {
+        "path": "a0eb-archive-input-inventory/archive-marker-guard-controls.json",
+        "bytes": 2048,
+        "sha256": "f85383ace09df442061612d6b3929132e03506ec5a772bcf45dcbad0d4c2a051"
+      },
+      "passed": 10,
+      "failed": 0,
+      "reexecuted": false
+    },
+    "initialFailedArchiveBuild": {
+      "path": "ci-a0eb/archive-build-attempt1.json",
+      "bytes": 1020,
+      "sha256": "ee827066bb6c1c043278de02eb686fffd1c729c54834301bf4826523149836a6"
+    },
+    "initialFailureRemainsNotPass": true,
+    "noBundledJavaScriptCryptoKeyUseOrProviderExecution": true,
+    "keyOrBase64PayloadPrintedOrCopiedIntoReview": false,
+    "limit": "Only the existing three scanner patterns and one exact full-file exception are qualified; no exhaustive secret-free certification."
+  },
+  "reviewExecutionProvenance": {
+    "fullReaderRuns": 1,
+    "fullPrefixRepeated": false,
+    "prefix": {
+      "schemaVersion": 1,
+      "recordedAtUtc": "2026-11-21T19:57:05.124741+00:00",
+      "command": "python a0eb-archive-readonly-review/verify_archive_v2.py",
+      "toolSessionId": 8163,
+      "exitCode": 1,
+      "result": "NOT_PASS",
+      "source": {
+        "path": "verify_archive_v2.py",
+        "bytes": 23563,
+        "sha256": "bf8181ff96f3ecf352fba97b85241f40079ccd0ca3c7be78e6181b5490577877"
+      },
+      "log": {
+        "path": "reader-v2-attempt1.log",
+        "bytes": 591,
+        "sha256": "121e8d3d84d403572b2e7d4d60ac1c9378068628e88f322cdaf49d5b368476f2"
+      },
+      "failedCheck": {
+        "sourceLine": 345,
+        "label": "Declared family terminal equality",
+        "cause": "Reader assumed previous4ec flat jobs count; actual a0eb family.jobs is a nested count object."
+      },
+      "lastCompletedCheck": {
+        "sourceLines": [
+          341,
+          342
+        ],
+        "label": "Allowed terminal job conclusion",
+        "family": "Host",
+        "completedForAll30OriginalHostJobs": true
+      },
+      "completedPrefix": [
+        "Exact outer archive hash binding and parent",
+        "Complete gzip CRC/ISIZE and deterministic metadata",
+        "Every tar payload UTF8/safe path/size/hash and exact MANIFEST membership",
+        "All direct copies and9782 omitted local objects including link text",
+        "Exact16 current sources and baseline preimages, STATUS,2 compiled,1985 manifest",
+        "All54 required evidence pins and4 scoped check exits",
+        "Original tuple/summary copies and complete30-job Host metadata/raw job bindings"
+      ],
+      "fullReaderReexecuted": false,
+      "archiveOrSourceEdited": false,
+      "archivedReaderPath": "a0eb-archive-input-inventory/verify-archive-independent-v2.py",
+      "logText": "Traceback (most recent call last):\n  File \"/workspace/scratch/82699181f7b2/a0eb-archive-readonly-review/verify_archive_v2.py\", line 413, in <module>\n    result = read_archive()\n             ^^^^^^^^^^^^^^\n  File \"/workspace/scratch/82699181f7b2/a0eb-archive-readonly-review/verify_archive_v2.py\", line 345, in read_archive\n    check(family['attempt'] == 1 and family['status'] == metadata['status']\n  File \"/workspace/scratch/82699181f7b2/a0eb-archive-readonly-review/verify_archive_v2.py\", line 55, in check\n    raise AssertionError(label)\nAssertionError: Declared family terminal equality\n"
+    },
+    "initialTail": {
+      "schemaVersion": 1,
+      "recordedAtUtc": "2026-11-21T19:57:05.125077+00:00",
+      "command": "python a0eb-archive-readonly-review/verify_actual_summary_tail.py",
+      "exitCode": 1,
+      "result": "NOT_PASS",
+      "source": {
+        "path": "verify_actual_summary_tail.py",
+        "bytes": 12790,
+        "sha256": "9ba022f4307ee8779814ca6b3fae7384732dcfa4b215e9de57e0ac76b94d83ab"
+      },
+      "log": {
+        "path": "tail-attempt1.log",
+        "bytes": 613,
+        "sha256": "643f622e648a80675806736e584482ac0487b63eaff3b56744c407de3336fb78"
+      },
+      "cause": "Additional chronological-order assertion incorrectly applied to skipped job metadata;3 skipped Source rows have pre-created completion timestamps.",
+      "correction": "Preserve raw skipped timestamps/anomalies without execution or timing qualification; require normal chronology and full timestamps for executed success/failure jobs.",
+      "correctedSource": {
+        "path": "verify_actual_summary_tail_v2.py",
+        "bytes": 13174,
+        "sha256": "4dcab41fb373c03f29afc52a4ac558fc6f0001a4e4248eecbaa12ca454139c3c"
+      },
+      "fullReaderReexecuted": false,
+      "archiveOrSourceEdited": false,
+      "logText": "Traceback (most recent call last):\n  File \"/workspace/scratch/82699181f7b2/a0eb-archive-readonly-review/verify_actual_summary_tail.py\", line 207, in <module>\n    result = main()\n             ^^^^^^\n  File \"/workspace/scratch/82699181f7b2/a0eb-archive-readonly-review/verify_actual_summary_tail.py\", line 114, in main\n    check(actual_times == sorted(actual_times), f'Original timestamp order: {job[\"id\"]}')\n  File \"/workspace/scratch/82699181f7b2/a0eb-archive-readonly-review/verify_actual_summary_tail.py\", line 30, in check\n    raise AssertionError(label)\nAssertionError: Original timestamp order: 136912878267\n"
+    },
+    "finalTail": {
+      "command": "python a0eb-archive-readonly-review/verify_actual_summary_tail_v2.py",
+      "exitCode": 0,
+      "source": {
+        "path": "a0eb-archive-readonly-review/verify_actual_summary_tail_v2.py",
+        "bytes": 13174,
+        "sha256": "4dcab41fb373c03f29afc52a4ac558fc6f0001a4e4248eecbaa12ca454139c3c"
+      },
+      "sourceText": "\"\"\"Finish the original read-only archive review against the actual a0eb summary schema.\n\nThe frozen v2 reader passed its full content checks before encountering the old\nfamily.jobs:number assumption. This tail does not repeat that full hash walk.\n\"\"\"\nfrom collections import Counter\nimport datetime\nimport hashlib\nimport json\nfrom pathlib import Path\nimport tarfile\n\nROOT = Path(__file__).resolve().parents[1]\nREPO = ROOT / 'agent-teams-ai-e2e-next'\nDEST = REPO / 'docs/plans/provider-migration/frontend-parity-2026-11-12/evidence'\nBASE = 'a0eb98f0775ca8499815c20d459e1c1037ef363d'\nARCHIVE = DEST / 'continuation-a0eb-20261121.tar.gz'\nINDEX = DEST / 'continuation-a0eb-20261121.json'\nEXPECTED_ARCHIVE = {'bytes': 19563877,\n                    'sha256': '1012766999eec5e7bc3b9163d9faf3cf4fecf60189ef64d5ef9e5e1438e9f857'}\nEXPECTED_INDEX_SHA = '3d6f719e4bcf3028c1482a4e7f838fe416254a185c93fa97c80cbc3227ec3658'\n\n\ndef pin(blob):\n    return {'bytes': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()}\n\n\ndef check(condition, label):\n    if not condition:\n        raise AssertionError(label)\n\n\ndef main():\n    check(pin(ARCHIVE.read_bytes()) == EXPECTED_ARCHIVE, 'Exact GO archive bytes')\n    index_blob = INDEX.read_bytes()\n    check(pin(index_blob)['sha256'] == EXPECTED_INDEX_SHA, 'Exact GO outer index bytes')\n    outer = json.loads(index_blob)\n    summary = outer['originalRunSummary']\n    check(summary['sourceHead'] == BASE and summary['allSixTerminal'] is True\n          and summary['allSelectedPrimaryPassed'] is False and summary['mergeQualified'] is False,\n          'Original observation is terminal and remains unqualified for merge')\n    records = {}\n    tar_metadata = []\n    with tarfile.open(ARCHIVE, 'r|gz') as archive:\n        for item in archive:\n            tar_metadata.append({'path': item.name, 'bytes': item.size})\n            # JSON evidence is sufficient for the unfinished summary and semantic bindings.\n            if item.name == 'MANIFEST.json' or item.name.endswith('.json'):\n                records[item.name] = archive.extractfile(item).read()\n    inner = json.loads(records['MANIFEST.json'])\n    inventory = {item['path']: item for item in inner['entries']}\n\n    def ref(record, prefix='ci-a0eb/'):\n        name = record['path']\n        if name not in inventory:\n            name = prefix + name\n        check(name in inventory, f'Referenced bytes absent from archive: {name}')\n        expected = {'bytes': record['bytes'], 'sha256': record['sha256']}\n        check({key: inventory[name][key] for key in expected} == expected,\n              f'Reference inventory mismatch: {name}')\n        if name in records:\n            check(pin(records[name]) == expected, f'Reference payload mismatch: {name}')\n        return name\n\n    def read(name):\n        return json.loads(records[name])\n\n    final_config = read('ci-a0eb/next-publication-plan-final-v2.json')\n    check(pin(records['ci-a0eb/next-publication-plan-final-v2.json']) ==\n          {'bytes': 26233, 'sha256': '85ca1b623e633e0b4e33201a74f9c138d6f695259eff678cdd56e6ad8a5708aa'},\n          'Exact final v2 config')\n    check(read(final_config['finalRuns']) == summary == inner['originalRunSummary'],\n          'Summary equality across archived config, outer and inner documents')\n    original_tuple = read(ref(summary['sourceTuple']))\n    for key in ('baseSha', 'mergeSha', 'event', 'action', 'draft', 'attempt'):\n        check(summary[key] == original_tuple[key], f'Original tuple field: {key}')\n    check(summary['sourceTreeSha'] == original_tuple['treeSha'], 'Original source tree')\n    for key in ('mergeSourceTreeProof', 'failureBoundaries', 'packagedFivePlatforms'):\n        ref(summary[key])\n    totals = Counter(runs=0, successfulRuns=0, failedRuns=0, jobs=0, success=0,\n                     failure=0, skipped=0, cancelled=0, queued=0, inProgress=0,\n                     primaryFailures=0, derivedAggregateFailures=0)\n    all_jobs, families, skipped_time_anomalies = {}, [], []\n    check(len(summary['families']) == len(original_tuple['runs']) == 6, 'Exactly6 original families')\n    tuple_runs = {item['id']: item for item in original_tuple['runs']}\n    for family in summary['families']:\n        terminal_name = ref(family['terminalMetadata'])\n        listing_name = ref(family['artifactListing'])\n        readback_name = ref(family['readback'])\n        terminal, listing = read(terminal_name), read(listing_name)\n        metadata, jobs = terminal['metadata'], terminal['jobs']['jobs']\n        run_id = family['runId']\n        original = tuple_runs[run_id]\n        check(metadata['id'] == run_id and metadata['head_sha'] == BASE\n              and family['headSha'] == BASE and family['attempt'] == metadata['run_attempt'] == 1\n              and family['status'] == metadata['status'] == 'completed'\n              and family['conclusion'] == metadata['conclusion']\n              and family['workflowPath'] == metadata['path'] == original['path']\n              and family['event'] == metadata['event'] == 'pull_request', 'Original terminal identity')\n        check(len(jobs) == terminal['jobs']['total_count'] <= 100, 'Complete jobs page')\n        counts = Counter(total=len(jobs), success=0, failure=0, skipped=0, cancelled=0,\n                         queued=0, inProgress=0)\n        times = []\n        for job in jobs:\n            check(job['id'] not in all_jobs and job['run_id'] == run_id\n                  and job['run_attempt'] == 1 and job['head_sha'] == BASE\n                  and job['status'] == 'completed', f'Original job identity: {job[\"id\"]}')\n            check(job['conclusion'] in ('success', 'failure', 'skipped', 'cancelled'), 'Terminal conclusion')\n            counts[job['conclusion']] += 1\n            all_jobs[job['id']] = job\n            observed = {k: job[k] for k in ('created_at', 'started_at', 'completed_at')}\n            actual_times = [datetime.datetime.fromisoformat(value.replace('Z', '+00:00'))\n                            for value in observed.values() if value is not None]\n            if actual_times != sorted(actual_times):\n                check(job['conclusion'] == 'skipped', f'Executed timestamp order: {job[\"id\"]}')\n                skipped_time_anomalies.append({'family': family['family'], 'jobId': job['id'],\n                                               'conclusion': 'skipped', **observed})\n            if job['conclusion'] in ('success', 'failure'):\n                check(all(observed.values()), f'Missing executed job timestamp: {job[\"id\"]}')\n            times.append({'jobId': job['id'], 'conclusion': job['conclusion'], **observed})\n        check(dict(counts) == family['jobs'], f'Actual a0eb nested job counts: {family[\"family\"]}')\n        artifacts = listing['artifacts']\n        check(len(artifacts) == listing['total_count'] <= 100, 'Complete artifact listing')\n        check(len({artifact['id'] for artifact in artifacts}) == len(artifacts), 'Unique artifact IDs')\n        for artifact in artifacts:\n            owner = artifact['workflow_run']\n            check(owner['id'] == run_id and owner['head_sha'] == BASE, 'Original artifact run/source binding')\n        totals['runs'] += 1\n        totals['jobs'] += len(jobs)\n        totals['successfulRuns' if metadata['conclusion'] == 'success' else 'failedRuns'] += 1\n        for key in ('success', 'failure', 'skipped', 'cancelled', 'queued', 'inProgress'):\n            totals[key] += counts[key]\n        for key in ('primaryFailures', 'derivedAggregateFailures'):\n            totals[key] += family[key]\n        families.append({'family': family['family'], 'runId': run_id, 'attempt': 1,\n                         'status': metadata['status'], 'conclusion': metadata['conclusion'],\n                         'jobs': dict(counts), 'artifacts': len(artifacts),\n                         'createdAt': metadata['created_at'], 'updatedAt': metadata['updated_at'],\n                         'terminalMetadata': family['terminalMetadata'],\n                         'artifactListing': family['artifactListing'],\n                         'qualifiedReadback': readback_name, 'jobTimestamps': times})\n    check(dict(totals) == summary['totals'], 'Recomputed full original totals')\n    failures = read(ref(summary['failureBoundaries']))\n    check(failures['sourceHead'] == BASE and failures['attempt'] == 1\n          and failures['allSixTerminal'] is True, 'Failure ledger identity')\n    primary, derived = failures['primaryFailures'], failures['derivedAggregateFailures']\n    check(len(primary) == totals['primaryFailures'] == 6\n          and len(derived) == totals['derivedAggregateFailures'] == 2, 'Failure classification counts')\n    check({item['jobId'] for item in primary + derived} ==\n          {job_id for job_id, job in all_jobs.items() if job['conclusion'] == 'failure'},\n          'Every and only original failed job classified')\n    for failure in primary + derived:\n        for field in ('analysis', 'originalJobLog', 'finalArtifactBinding', 'log'):\n            if field in failure:\n                ref(failure[field])\n    source_review = final_config['rootReview']\n    check(source_review['sourcePins'] == outer['sourcePins']\n          and source_review['compiledPins'] == outer['compiledPins'], 'Root exact source/compiled pins')\n    integration_name = ref(source_review['integrationReviewReceipt'], '')\n    integration = read(integration_name)\n    check(integration['sourcePins'] == outer['sourcePins']\n          and integration['compiledPins'] == outer['compiledPins']\n          and integration['findings'] == [] and integration['newOriginalE2EQualified'] is False,\n          'Independent exact integration correspondence')\n    for field in ('sourceReviewReceipt', 'manifest'):\n        ref(source_review[field], '')\n    for field in ('independentExactReviews', 'finalStaticChecks', 'sliceReadbacks'):\n        for record in source_review[field]:\n            ref(record, '')\n    for name in final_config['passedCheckReceipts']:\n        receipt = read(name)\n        check(receipt['exitCode'] == 0, f'Final scoped check exit: {name}')\n        log = receipt['log']\n        if log not in inventory:\n            log = str(Path(name).parent / log)\n        check(inventory[log]['sha256'] == receipt['logSha256']\n              and inventory[log]['bytes'] == receipt['logBytes'], f'Scoped gate log pin: {name}')\n    check(pin(ARCHIVE.read_bytes()) == EXPECTED_ARCHIVE and INDEX.read_bytes() == index_blob,\n          'Exact archive/index stable through final tail')\n    return {\n        'schemaVersion': 1, 'kind': 'INDEPENDENT_ACTUAL_SCHEMA_SUMMARY_TAIL_READBACK',\n        'recordedAtUtc': datetime.datetime.now(datetime.timezone.utc).isoformat(),\n        'baselineSha': BASE, 'reviewer': '/root/restore_scope',\n        'archive': {'path': ARCHIVE.name, **EXPECTED_ARCHIVE},\n        'outerIndex': {'path': INDEX.name, **pin(index_blob)},\n        'tail': {'path': str(Path(__file__).relative_to(ROOT)), **pin(Path(__file__).read_bytes())},\n        'priorReader': {'path': 'a0eb-archive-readonly-review/verify_archive_v2.py',\n                        'sha256': 'bf8181ff96f3ecf352fba97b85241f40079ccd0ca3c7be78e6181b5490577877',\n                        'exitCode': 1, 'result': 'NOT_PASS_SCHEMA_ASSUMPTION',\n                        'lastCompletedStage': 'All payload, omission, current-source, manifest, required evidence and first-family raw job checks',\n                        'error': 'family.jobs is an object in a0eb; old4ec reader expected a number'},\n        'schemaCorrection': {'familyCounts': 'family.jobs.total and family.jobs.<conclusion>',\n                             'referencePins': 'family.terminalMetadata/artifactListing/readback objects',\n                             'aggregateRuns': 'successfulRuns/failedRuns'},\n        'inventoryCounts': {'entries': len(tar_metadata), 'textBytes': sum(x['bytes'] for x in tar_metadata),\n                            'omissions': len(inner['omitted']),\n                            'omissionReasons': dict(Counter(item['reason'] for item in inner['omitted'])),\n                            'symlinks': [item for item in inner['omitted'] if item.get('hashKind') == 'symlink-text-not-referent']},\n        'totalsRecomputed': dict(totals), 'families': families,\n        'skippedTimestampOrderObservations': skipped_time_anomalies,\n        'skippedTimingAndExecutionQualified': False,\n        'failureLedgerAllJobIdsMatch': True, 'rootAndIntegrationSourceBindingsMatch': True,\n        'rootReviewReferencePinsMatch': True, 'fourStaticGateExitAndLogPinsMatch': True,\n        'operations': {'fullHashReaderReexecuted': False, 'builderExecuted': False,\n                       'testsOrCompilers': False, 'apiCallsOrDownloads': False,\n                       'repoOrArchiveOrIndexEdits': False},\n        'verdict': 'TAIL_CHECKS_MATCH_NOT_A_STANDALONE_ARCHIVE_VERDICT',\n    }\n\n\nif __name__ == '__main__':\n    result = main()\n    out = Path(__file__).with_name('actual-summary-tail-v2-readback.json')\n    check(not out.exists(), 'Preserve existing tail receipt')\n    out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\\n')\n    print(json.dumps({'path': str(out), **pin(out.read_bytes()), 'totals': result['totalsRecomputed']}))\n",
+      "initialTailToFinalTailPatch": "--- verify_actual_summary_tail.py\n+++ verify_actual_summary_tail_v2.py\n@@ -80,7 +80,7 @@\n     totals = Counter(runs=0, successfulRuns=0, failedRuns=0, jobs=0, success=0,\n                      failure=0, skipped=0, cancelled=0, queued=0, inProgress=0,\n                      primaryFailures=0, derivedAggregateFailures=0)\n-    all_jobs, families = {}, []\n+    all_jobs, families, skipped_time_anomalies = {}, [], []\n     check(len(summary['families']) == len(original_tuple['runs']) == 6, 'Exactly6 original families')\n     tuple_runs = {item['id']: item for item in original_tuple['runs']}\n     for family in summary['families']:\n@@ -111,7 +111,10 @@\n             observed = {k: job[k] for k in ('created_at', 'started_at', 'completed_at')}\n             actual_times = [datetime.datetime.fromisoformat(value.replace('Z', '+00:00'))\n                             for value in observed.values() if value is not None]\n-            check(actual_times == sorted(actual_times), f'Original timestamp order: {job[\"id\"]}')\n+            if actual_times != sorted(actual_times):\n+                check(job['conclusion'] == 'skipped', f'Executed timestamp order: {job[\"id\"]}')\n+                skipped_time_anomalies.append({'family': family['family'], 'jobId': job['id'],\n+                                               'conclusion': 'skipped', **observed})\n             if job['conclusion'] in ('success', 'failure'):\n                 check(all(observed.values()), f'Missing executed job timestamp: {job[\"id\"]}')\n             times.append({'jobId': job['id'], 'conclusion': job['conclusion'], **observed})\n@@ -194,6 +197,8 @@\n                             'omissionReasons': dict(Counter(item['reason'] for item in inner['omitted'])),\n                             'symlinks': [item for item in inner['omitted'] if item.get('hashKind') == 'symlink-text-not-referent']},\n         'totalsRecomputed': dict(totals), 'families': families,\n+        'skippedTimestampOrderObservations': skipped_time_anomalies,\n+        'skippedTimingAndExecutionQualified': False,\n         'failureLedgerAllJobIdsMatch': True, 'rootAndIntegrationSourceBindingsMatch': True,\n         'rootReviewReferencePinsMatch': True, 'fourStaticGateExitAndLogPinsMatch': True,\n         'operations': {'fullHashReaderReexecuted': False, 'builderExecuted': False,\n@@ -205,7 +210,7 @@\n \n if __name__ == '__main__':\n     result = main()\n-    out = Path(__file__).with_name('actual-summary-tail-readback.json')\n+    out = Path(__file__).with_name('actual-summary-tail-v2-readback.json')\n     check(not out.exists(), 'Preserve existing tail receipt')\n     out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\\n')\n     print(json.dumps({'path': str(out), **pin(out.read_bytes()), 'totals': result['totalsRecomputed']}))\n",
+      "result": {
+        "path": "a0eb-archive-readonly-review/actual-summary-tail-v2-readback.json",
+        "bytes": 25448,
+        "sha256": "9c4445c095179f04a7a5df2c9f5bbbc584a35b8c1a5e2b1b9bdcfd472efa3a45"
+      },
+      "resultData": {
+        "schemaVersion": 1,
+        "kind": "INDEPENDENT_ACTUAL_SCHEMA_SUMMARY_TAIL_READBACK",
+        "recordedAtUtc": "2026-11-21T19:57:10.486512+00:00",
+        "baselineSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "reviewer": "/root/restore_scope",
+        "archive": {
+          "path": "continuation-a0eb-20261121.tar.gz",
+          "bytes": 19563877,
+          "sha256": "1012766999eec5e7bc3b9163d9faf3cf4fecf60189ef64d5ef9e5e1438e9f857"
+        },
+        "outerIndex": {
+          "path": "continuation-a0eb-20261121.json",
+          "bytes": 28150,
+          "sha256": "3d6f719e4bcf3028c1482a4e7f838fe416254a185c93fa97c80cbc3227ec3658"
+        },
+        "tail": {
+          "path": "a0eb-archive-readonly-review/verify_actual_summary_tail_v2.py",
+          "bytes": 13174,
+          "sha256": "4dcab41fb373c03f29afc52a4ac558fc6f0001a4e4248eecbaa12ca454139c3c"
+        },
+        "priorReader": {
+          "path": "a0eb-archive-readonly-review/verify_archive_v2.py",
+          "sha256": "bf8181ff96f3ecf352fba97b85241f40079ccd0ca3c7be78e6181b5490577877",
+          "exitCode": 1,
+          "result": "NOT_PASS_SCHEMA_ASSUMPTION",
+          "lastCompletedStage": "All payload, omission, current-source, manifest, required evidence and first-family raw job checks",
+          "error": "family.jobs is an object in a0eb; old4ec reader expected a number"
+        },
+        "schemaCorrection": {
+          "familyCounts": "family.jobs.total and family.jobs.<conclusion>",
+          "referencePins": "family.terminalMetadata/artifactListing/readback objects",
+          "aggregateRuns": "successfulRuns/failedRuns"
+        },
+        "inventoryCounts": {
+          "entries": 1294,
+          "textBytes": 135721606,
+          "omissions": 9782,
+          "omissionReasons": {
+            "archive, screenshot, binary or unselected extension omitted": 365,
+            "non-UTF-8 bytes omitted": 29,
+            "reproducible cache/ephemeral compiler environment omitted": 9387,
+            "symlink omitted": 1
+          },
+          "symlinks": [
+            {
+              "path": "renderer-warmup-proof/control/node_modules",
+              "bytes": 68,
+              "sha256": "9efa428e7039f749e4be4c5f02ff807b27812efa28354d9059c077732eac4eaf",
+              "hashKind": "symlink-text-not-referent",
+              "reason": "symlink omitted"
+            }
+          ]
+        },
+        "totalsRecomputed": {
+          "runs": 6,
+          "successfulRuns": 4,
+          "failedRuns": 2,
+          "jobs": 69,
+          "success": 50,
+          "failure": 8,
+          "skipped": 11,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0,
+          "primaryFailures": 6,
+          "derivedAggregateFailures": 2
+        },
+        "families": [
+          {
+            "family": "Host",
+            "runId": 44926249301,
+            "attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "jobs": {
+              "total": 30,
+              "success": 24,
+              "failure": 6,
+              "skipped": 0,
+              "cancelled": 0,
+              "queued": 0,
+              "inProgress": 0
+            },
+            "artifacts": 29,
+            "createdAt": "2026-11-21T16:44:55Z",
+            "updatedAt": "2026-11-21T18:30:09Z",
+            "terminalMetadata": {
+              "path": "ci-audit-run-44926249301-terminal.json",
+              "bytes": 395507,
+              "sha256": "6fd87e93aa3c691c1fb0fcab6167cc1a793cce5bf7922611750edae5d7ae462d"
+            },
+            "artifactListing": {
+              "path": "ci-audit-run-44926249301-artifacts.json",
+              "bytes": 27640,
+              "sha256": "d8d65b61a97b185b0e975a6f75310ad5f827ef3dda28f999506ce7e2124b3c2b"
+            },
+            "qualifiedReadback": "ci-a0eb/host-artifacts/qualification.json",
+            "jobTimestamps": [
+              {
+                "jobId": 136912875592,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:00:53Z",
+                "completed_at": "2026-11-21T17:08:36Z"
+              },
+              {
+                "jobId": 136912875755,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:49:12Z",
+                "completed_at": "2026-11-21T16:55:55Z"
+              },
+              {
+                "jobId": 136912875784,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:06:41Z",
+                "completed_at": "2026-11-21T17:12:35Z"
+              },
+              {
+                "jobId": 136912875807,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:07:27Z",
+                "completed_at": "2026-11-21T17:15:01Z"
+              },
+              {
+                "jobId": 136912875815,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:10:46Z",
+                "completed_at": "2026-11-21T17:15:11Z"
+              },
+              {
+                "jobId": 136912875831,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:08:18Z",
+                "completed_at": "2026-11-21T17:16:26Z"
+              },
+              {
+                "jobId": 136912875886,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:19:43Z",
+                "completed_at": "2026-11-21T17:26:26Z"
+              },
+              {
+                "jobId": 136912875903,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:18:05Z",
+                "completed_at": "2026-11-21T17:25:46Z"
+              },
+              {
+                "jobId": 136912875962,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:32:54Z",
+                "completed_at": "2026-11-21T17:37:38Z"
+              },
+              {
+                "jobId": 136912876054,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:36:05Z",
+                "completed_at": "2026-11-21T17:43:09Z"
+              },
+              {
+                "jobId": 136912876059,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:04:32Z",
+                "completed_at": "2026-11-21T17:15:55Z"
+              },
+              {
+                "jobId": 136912876063,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:23:50Z",
+                "completed_at": "2026-11-21T17:27:30Z"
+              },
+              {
+                "jobId": 136912876078,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:37:37Z",
+                "completed_at": "2026-11-21T17:48:07Z"
+              },
+              {
+                "jobId": 136912876081,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:36:59Z",
+                "completed_at": "2026-11-21T17:45:12Z"
+              },
+              {
+                "jobId": 136912876082,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:29:46Z",
+                "completed_at": "2026-11-21T17:34:27Z"
+              },
+              {
+                "jobId": 136912876098,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:41:51Z",
+                "completed_at": "2026-11-21T17:47:35Z"
+              },
+              {
+                "jobId": 136912876111,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:51:07Z",
+                "completed_at": "2026-11-21T17:56:32Z"
+              },
+              {
+                "jobId": 136912876112,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:07:19Z",
+                "completed_at": "2026-11-21T17:16:04Z"
+              },
+              {
+                "jobId": 136912876135,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:06:51Z",
+                "completed_at": "2026-11-21T17:16:10Z"
+              },
+              {
+                "jobId": 136912876141,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:51:48Z",
+                "completed_at": "2026-11-21T17:55:31Z"
+              },
+              {
+                "jobId": 136912876164,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:15:46Z",
+                "completed_at": "2026-11-21T17:25:39Z"
+              },
+              {
+                "jobId": 136912876165,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:43:11Z",
+                "completed_at": "2026-11-21T17:54:49Z"
+              },
+              {
+                "jobId": 136912876166,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:56:09Z",
+                "completed_at": "2026-11-21T18:09:14Z"
+              },
+              {
+                "jobId": 136912876182,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:41:56Z",
+                "completed_at": "2026-11-21T17:46:47Z"
+              },
+              {
+                "jobId": 136912876204,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:50:48Z",
+                "completed_at": "2026-11-21T17:57:15Z"
+              },
+              {
+                "jobId": 136912876205,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:52:11Z",
+                "completed_at": "2026-11-21T17:57:43Z"
+              },
+              {
+                "jobId": 136912876229,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:57:46Z",
+                "completed_at": "2026-11-21T18:01:50Z"
+              },
+              {
+                "jobId": 136912876304,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:59:44Z",
+                "completed_at": "2026-11-21T18:05:15Z"
+              },
+              {
+                "jobId": 136912876330,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:17:53Z",
+                "completed_at": "2026-11-21T17:29:43Z"
+              },
+              {
+                "jobId": 136936358160,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T18:09:14Z",
+                "started_at": "2026-11-21T18:30:04Z",
+                "completed_at": "2026-11-21T18:30:08Z"
+              }
+            ]
+          },
+          {
+            "family": "Source",
+            "runId": 44926249295,
+            "attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "jobs": {
+              "total": 15,
+              "success": 2,
+              "failure": 2,
+              "skipped": 11,
+              "cancelled": 0,
+              "queued": 0,
+              "inProgress": 0
+            },
+            "artifacts": 1,
+            "createdAt": "2026-11-21T16:44:55Z",
+            "updatedAt": "2026-11-21T19:07:24Z",
+            "terminalMetadata": {
+              "path": "ci-audit-run-44926249295-terminal.json",
+              "bytes": 57321,
+              "sha256": "b751f3bcbc6a76ed8466efc8bb5f3c6661fb47723a21319e4950c9ec096cf2a1"
+            },
+            "artifactListing": {
+              "path": "ci-audit-run-44926249295-artifacts.json",
+              "bytes": 989,
+              "sha256": "c3b53ea1e024ee836b35c9883e0260f35e81dc5806732ec79edc8df59c32aea7"
+            },
+            "qualifiedReadback": "ci-a0eb/source-family-qualification.json",
+            "jobTimestamps": [
+              {
+                "jobId": 136912876967,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:17:42Z",
+                "completed_at": "2026-11-21T17:18:19Z"
+              },
+              {
+                "jobId": 136912878267,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T16:44:56Z",
+                "completed_at": "2026-11-21T16:44:55Z"
+              },
+              {
+                "jobId": 136912878553,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T16:44:56Z",
+                "completed_at": "2026-11-21T16:44:55Z"
+              },
+              {
+                "jobId": 136912902720,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T16:45:01Z",
+                "started_at": "2026-11-21T16:45:01Z",
+                "completed_at": "2026-11-21T16:44:55Z"
+              },
+              {
+                "jobId": 136922191507,
+                "conclusion": "success",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T18:21:35Z",
+                "completed_at": "2026-11-21T18:24:48Z"
+              },
+              {
+                "jobId": 136922191508,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T18:12:13Z",
+                "completed_at": "2026-11-21T18:24:48Z"
+              },
+              {
+                "jobId": 136922192654,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922192660,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922192792,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922193046,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922193237,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922193270,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922193296,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136922193692,
+                "conclusion": "skipped",
+                "created_at": "2026-11-21T17:18:20Z",
+                "started_at": "2026-11-21T17:18:20Z",
+                "completed_at": "2026-11-21T17:18:20Z"
+              },
+              {
+                "jobId": 136940747238,
+                "conclusion": "failure",
+                "created_at": "2026-11-21T18:24:48Z",
+                "started_at": "2026-11-21T19:07:02Z",
+                "completed_at": "2026-11-21T19:07:23Z"
+              }
+            ]
+          },
+          {
+            "family": "Packaged",
+            "runId": 44926249318,
+            "attempt": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "jobs": {
+              "total": 7,
+              "success": 7,
+              "failure": 0,
+              "skipped": 0,
+              "cancelled": 0,
+              "queued": 0,
+              "inProgress": 0
+            },
+            "artifacts": 5,
+            "createdAt": "2026-11-21T16:44:55Z",
+            "updatedAt": "2026-11-21T19:26:42Z",
+            "terminalMetadata": {
+              "path": "ci-audit-run-44926249318-terminal.json",
+              "bytes": 96420,
+              "sha256": "3ed9aff46abccd1e286313688e5535b825e0292f715d4460681601b5590953b6"
+            },
+            "artifactListing": {
+              "path": "ci-audit-run-44926249318-artifacts.json",
+              "bytes": 4760,
+              "sha256": "d3a6c76eb2e3c4917530a79bf990b403b490a9bcf0d2a4ef5eb91dc874eebe1c"
+            },
+            "qualifiedReadback": "ci-a0eb/packaged-five-platforms-index.json",
+            "jobTimestamps": [
+              {
+                "jobId": 136912875671,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:15:14Z",
+                "completed_at": "2026-11-21T17:15:47Z"
+              },
+              {
+                "jobId": 136921485385,
+                "conclusion": "success",
+                "created_at": "2026-11-21T17:15:47Z",
+                "started_at": "2026-11-21T18:12:56Z",
+                "completed_at": "2026-11-21T18:46:57Z"
+              },
+              {
+                "jobId": 136921485403,
+                "conclusion": "success",
+                "created_at": "2026-11-21T17:15:47Z",
+                "started_at": "2026-11-21T18:02:17Z",
+                "completed_at": "2026-11-21T18:36:51Z"
+              },
+              {
+                "jobId": 136921485421,
+                "conclusion": "success",
+                "created_at": "2026-11-21T17:15:47Z",
+                "started_at": "2026-11-21T17:49:00Z",
+                "completed_at": "2026-11-21T18:40:36Z"
+              },
+              {
+                "jobId": 136921485423,
+                "conclusion": "success",
+                "created_at": "2026-11-21T17:15:47Z",
+                "started_at": "2026-11-21T17:55:36Z",
+                "completed_at": "2026-11-21T18:28:30Z"
+              },
+              {
+                "jobId": 136921485456,
+                "conclusion": "success",
+                "created_at": "2026-11-21T17:15:47Z",
+                "started_at": "2026-11-21T17:50:33Z",
+                "completed_at": "2026-11-21T18:10:47Z"
+              },
+              {
+                "jobId": 136946884934,
+                "conclusion": "success",
+                "created_at": "2026-11-21T18:46:57Z",
+                "started_at": "2026-11-21T19:26:18Z",
+                "completed_at": "2026-11-21T19:26:42Z"
+              }
+            ]
+          },
+          {
+            "family": "Process",
+            "runId": 44926249189,
+            "attempt": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "jobs": {
+              "total": 5,
+              "success": 5,
+              "failure": 0,
+              "skipped": 0,
+              "cancelled": 0,
+              "queued": 0,
+              "inProgress": 0
+            },
+            "artifacts": 5,
+            "createdAt": "2026-11-21T16:44:55Z",
+            "updatedAt": "2026-11-21T17:10:31Z",
+            "terminalMetadata": {
+              "path": "ci-audit-run-44926249189-terminal.json",
+              "bytes": 63743,
+              "sha256": "4f592bf3929042d9724d58ea8b290421df99a1bc62f9b864bab9817221a50ee3"
+            },
+            "artifactListing": {
+              "path": "ci-audit-run-44926249189-artifacts.json",
+              "bytes": 4784,
+              "sha256": "b1e0b57dc12e100384754078ce7161afa2ebcb45a920b5790c6d226f40190209"
+            },
+            "qualifiedReadback": "ci-a0eb/process-artifacts/qualification.json",
+            "jobTimestamps": [
+              {
+                "jobId": 136912875268,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:51:45Z",
+                "completed_at": "2026-11-21T16:58:36Z"
+              },
+              {
+                "jobId": 136912875467,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:07:15Z",
+                "completed_at": "2026-11-21T17:10:30Z"
+              },
+              {
+                "jobId": 136912875468,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:49:24Z",
+                "completed_at": "2026-11-21T17:05:53Z"
+              },
+              {
+                "jobId": 136912875489,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:50:40Z",
+                "completed_at": "2026-11-21T16:55:04Z"
+              },
+              {
+                "jobId": 136912875571,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:50:49Z",
+                "completed_at": "2026-11-21T16:59:32Z"
+              }
+            ]
+          },
+          {
+            "family": "Teams",
+            "runId": 44926249185,
+            "attempt": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "jobs": {
+              "total": 3,
+              "success": 3,
+              "failure": 0,
+              "skipped": 0,
+              "cancelled": 0,
+              "queued": 0,
+              "inProgress": 0
+            },
+            "artifacts": 3,
+            "createdAt": "2026-11-21T16:44:55Z",
+            "updatedAt": "2026-11-21T17:15:44Z",
+            "terminalMetadata": {
+              "path": "ci-audit-run-44926249185-terminal.json",
+              "bytes": 35334,
+              "sha256": "55f2182ab018748ac426217f5ee609cd1b4d5ad5feb0a55ce943616d9efbfbbb"
+            },
+            "artifactListing": {
+              "path": "ci-audit-run-44926249185-artifacts.json",
+              "bytes": 2888,
+              "sha256": "0816745e1f4f91d31aa4aca515f786493c7ab4c8964bb12ad3c4521560da7499"
+            },
+            "qualifiedReadback": "ci-a0eb/teams-artifacts/qualification.json",
+            "jobTimestamps": [
+              {
+                "jobId": 136912875167,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:02:34Z",
+                "completed_at": "2026-11-21T17:07:15Z"
+              },
+              {
+                "jobId": 136912875478,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:04:26Z",
+                "completed_at": "2026-11-21T17:15:44Z"
+              },
+              {
+                "jobId": 136912875619,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:52:36Z",
+                "completed_at": "2026-11-21T17:00:53Z"
+              }
+            ]
+          },
+          {
+            "family": "Native V2",
+            "runId": 44926249322,
+            "attempt": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "jobs": {
+              "total": 9,
+              "success": 9,
+              "failure": 0,
+              "skipped": 0,
+              "cancelled": 0,
+              "queued": 0,
+              "inProgress": 0
+            },
+            "artifacts": 8,
+            "createdAt": "2026-11-21T16:44:55Z",
+            "updatedAt": "2026-11-21T17:42:09Z",
+            "terminalMetadata": {
+              "path": "ci-audit-run-44926249322-terminal.json",
+              "bytes": 95965,
+              "sha256": "bfd44d3c569eb401607f63d8f9aac8804abdbda4f60ede872128afbbd72f829c"
+            },
+            "artifactListing": {
+              "path": "ci-audit-run-44926249322-artifacts.json",
+              "bytes": 7344,
+              "sha256": "cf37551f8287204dabe90061824033a34bcda37c9f3bdbce308b9be09c382391"
+            },
+            "qualifiedReadback": "ci-a0eb/native-artifacts/qualification.json",
+            "jobTimestamps": [
+              {
+                "jobId": 136912875814,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:05:18Z",
+                "completed_at": "2026-11-21T17:06:56Z"
+              },
+              {
+                "jobId": 136912875965,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T16:56:34Z",
+                "completed_at": "2026-11-21T17:00:02Z"
+              },
+              {
+                "jobId": 136912876039,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:16:49Z",
+                "completed_at": "2026-11-21T17:18:16Z"
+              },
+              {
+                "jobId": 136912876066,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:55Z",
+                "started_at": "2026-11-21T17:17:43Z",
+                "completed_at": "2026-11-21T17:27:01Z"
+              },
+              {
+                "jobId": 136912876144,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T16:45:07Z",
+                "completed_at": "2026-11-21T16:57:07Z"
+              },
+              {
+                "jobId": 136912876168,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T17:37:41Z",
+                "completed_at": "2026-11-21T17:42:08Z"
+              },
+              {
+                "jobId": 136912876199,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T16:58:39Z",
+                "completed_at": "2026-11-21T17:04:27Z"
+              },
+              {
+                "jobId": 136912876206,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T16:56:54Z",
+                "completed_at": "2026-11-21T17:19:41Z"
+              },
+              {
+                "jobId": 136912876256,
+                "conclusion": "success",
+                "created_at": "2026-11-21T16:44:56Z",
+                "started_at": "2026-11-21T16:58:55Z",
+                "completed_at": "2026-11-21T17:06:39Z"
+              }
+            ]
+          }
+        ],
+        "skippedTimestampOrderObservations": [
+          {
+            "family": "Source",
+            "jobId": 136912878267,
+            "conclusion": "skipped",
+            "created_at": "2026-11-21T16:44:56Z",
+            "started_at": "2026-11-21T16:44:56Z",
+            "completed_at": "2026-11-21T16:44:55Z"
+          },
+          {
+            "family": "Source",
+            "jobId": 136912878553,
+            "conclusion": "skipped",
+            "created_at": "2026-11-21T16:44:56Z",
+            "started_at": "2026-11-21T16:44:56Z",
+            "completed_at": "2026-11-21T16:44:55Z"
+          },
+          {
+            "family": "Source",
+            "jobId": 136912902720,
+            "conclusion": "skipped",
+            "created_at": "2026-11-21T16:45:01Z",
+            "started_at": "2026-11-21T16:45:01Z",
+            "completed_at": "2026-11-21T16:44:55Z"
+          }
+        ],
+        "skippedTimingAndExecutionQualified": false,
+        "failureLedgerAllJobIdsMatch": true,
+        "rootAndIntegrationSourceBindingsMatch": true,
+        "rootReviewReferencePinsMatch": true,
+        "fourStaticGateExitAndLogPinsMatch": true,
+        "operations": {
+          "fullHashReaderReexecuted": false,
+          "builderExecuted": false,
+          "testsOrCompilers": false,
+          "apiCallsOrDownloads": false,
+          "repoOrArchiveOrIndexEdits": false
+        },
+        "verdict": "TAIL_CHECKS_MATCH_NOT_A_STANDALONE_ARCHIVE_VERDICT"
+      }
+    },
+    "semanticBindingReadback": {
+      "receipt": {
+        "path": "a0eb-archive-readonly-review/semantic-bindings.json",
+        "bytes": 2838,
+        "sha256": "9cd0737d7fc6ea19caeaae1e07f53c4a0ba0906aef6243622d1c805219a4580b"
+      },
+      "data": {
+        "old43RequiredPinsRetained": 43,
+        "finalRequiredPins": 54,
+        "sourceCompiledStatusAndOriginalReferencesUnchangedBetweenPlans": true,
+        "packagedFiveExactOriginalJobArtifactDigestAndStepBindings": [
+          {
+            "platform": "linux-x64",
+            "jobId": 136921485385,
+            "artifactId": 14720715175,
+            "artifactName": "packaged-v2-host-linux-x64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+            "archive": {
+              "path": "packaged-linux-14720715175.zip",
+              "bytes": 349594,
+              "sha256": "2a640e4c30ccf8a49e9d2649369dbcc81f82d7a866e3d738e81988bfff5f10bf"
+            },
+            "stepsBoundToOriginalJob": true
+          },
+          {
+            "platform": "darwin-x64",
+            "jobId": 136921485423,
+            "artifactId": 14719512518,
+            "artifactName": "packaged-v2-host-darwin-x64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+            "archive": {
+              "path": "packaged-darwin-x64-14719512518.zip",
+              "bytes": 829155,
+              "sha256": "197edc378e7a4ebcfec1956c063d8d7551a6af72200e13d81c6cc4bcfd612246"
+            },
+            "stepsBoundToOriginalJob": true
+          },
+          {
+            "platform": "darwin-arm64",
+            "jobId": 136921485456,
+            "artifactId": 14718064062,
+            "artifactName": "packaged-v2-host-darwin-arm64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+            "archive": {
+              "path": "packaged-darwin-arm64-14718064062.zip",
+              "bytes": 778277,
+              "sha256": "473f2663a35b34f73189af7e50ef0539e0203483707d5ca305a6acddbe35f789"
+            },
+            "stepsBoundToOriginalJob": true
+          },
+          {
+            "platform": "win32-x64",
+            "jobId": 136921485403,
+            "artifactId": 14720105169,
+            "artifactName": "packaged-v2-host-win32-x64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+            "archive": {
+              "path": "packaged-win32-x64-14720105169.zip",
+              "bytes": 833787,
+              "sha256": "6c478dac428c1b4ce1a12f9a56e6cac4f69781b127a5a370d225b9d30fe5e49f"
+            },
+            "stepsBoundToOriginalJob": true
+          },
+          {
+            "platform": "win32-arm64",
+            "jobId": 136921485421,
+            "artifactId": 14719089255,
+            "artifactName": "packaged-v2-host-win32-arm64-a0eb98f0775ca8499815c20d459e1c1037ef363d",
+            "archive": {
+              "path": "packaged-win32-arm64-14719089255.zip",
+              "bytes": 834811,
+              "sha256": "13d4255c3bd5dd28f1d14060b93497e83a1d2b7049da4687a46c651f930067b5"
+            },
+            "stepsBoundToOriginalJob": true
+          }
+        ],
+        "sourcePreimages": 14,
+        "sourceCandidates": 16,
+        "compiledCandidates": 2,
+        "newSourceFiles": [
+          "test/renderer/hooks/useMemberStats.test.tsx",
+          "test/scripts/retainedDonorFailureDiagnostics.test.ts"
+        ],
+        "status": {
+          "bytes": 205554,
+          "sha256": "15c0b57fc17f40c31e7657fbce464731fcb1a8ae5054c91a9d1e26f1f5c2ecd8"
+        },
+        "innerManifest": {
+          "path": "MANIFEST.json",
+          "bytes": 3035894
+        },
+        "paxPathOnlyCount": 367,
+        "directEvidenceCopies": 1259
+      }
+    },
+    "coverageConclusion": "The initial overall reader exit1 is NOT PASS. Its completed prefix is established by the frozen archived reader control flow and preserved traceback at the first family-summary check. The corrected tail independently covers all six families, every original job/listing/readback binding, all remaining root/integration/log references, and final archive/index stability. Together with the semantic readback this covers the original requested review scope without rerunning the full prefix."
+  },
+  "observations": {
+    "skippedTimestampOrderAnomalies": [
+      {
+        "family": "Source",
+        "jobId": 136912878267,
+        "conclusion": "skipped",
+        "created_at": "2026-11-21T16:44:56Z",
+        "started_at": "2026-11-21T16:44:56Z",
+        "completed_at": "2026-11-21T16:44:55Z"
+      },
+      {
+        "family": "Source",
+        "jobId": 136912878553,
+        "conclusion": "skipped",
+        "created_at": "2026-11-21T16:44:56Z",
+        "started_at": "2026-11-21T16:44:56Z",
+        "completed_at": "2026-11-21T16:44:55Z"
+      },
+      {
+        "family": "Source",
+        "jobId": 136912902720,
+        "conclusion": "skipped",
+        "created_at": "2026-11-21T16:45:01Z",
+        "started_at": "2026-11-21T16:45:01Z",
+        "completed_at": "2026-11-21T16:44:55Z"
+      }
+    ],
+    "interpretation": "These three raw skipped-job completion timestamps precede creation/start by1or6seconds. They are retained verbatim and do not qualify execution timing. All executed success/failure jobs retain complete chronological timestamps.",
+    "allElevenSkippedJobsRemainSkipped": true
+  },
+  "supersessions": [
+    {
+      "kind": "Archive marker resolution",
+      "initialPlan": {
+        "path": "ci-a0eb/next-publication-plan-final.json",
+        "bytes": 22669,
+        "sha256": "42679b2bc9b223b473817bb980d0804f8eaa9f23cf489330a3016c06b2854b56"
+      },
+      "authoritativePlan": {
+        "path": "ci-a0eb/next-publication-plan-final-v2.json",
+        "bytes": 26233,
+        "sha256": "85ca1b623e633e0b4e33201a74f9c138d6f695259eff678cdd56e6ad8a5708aa"
+      },
+      "old43PinsSource16Compiled2StatusAndOriginalRunReferencesUnchanged": true,
+      "oldBuilderAndFailedAttemptRetained": true
+    },
+    {
+      "kind": "Artifact terminal binding",
+      "historical": "Earlier producer and failed-artifact snapshots keep their pending/queued notes.",
+      "authoritative": [
+        "ci-a0eb/original-six-runs-final-summary.json",
+        "ci-a0eb/packaged-five-platforms-index.json",
+        "ci-a0eb/host-artifacts/qualification.json",
+        "ci-a0eb/retained-artifact-final-binding.json"
+      ],
+      "doesNotRewriteHistoricSnapshots": true
+    },
+    {
+      "kind": "Saved candidate finite checks",
+      "metadata": "Initial10/12 fixture-permission failure retained; final12/12 scoped evidence separately reviewed.",
+      "donor": "Initial5/9 loader/mock fixture failure retained; final9/9 actual helper write binding separately reviewed.",
+      "installer": "Initial missing tsgo alias lookup remains NOTPASS; explicit native7.0.2 scoped receipt is separate.",
+      "ui": "Analysis-only Python readback typo is retained; actual19/19 finite component checks remain scoped."
+    },
+    {
+      "kind": "Independent archive reader",
+      "initialFullReader": "Preserved exit1 for old4ec summary shape.",
+      "initialTail": "Preserved exit1 for overbroad skipped timestamp chronology assertion.",
+      "completion": "Separate final tail exit0; no failure is relabeled as an overall PASS."
+    }
+  ],
+  "limitationsPreserved": [
+    "Six terminal original workflows belong to a0eb; their successes do not qualify the new source candidate.",
+    "Original primary failures, derived aggregate failures and skipped jobs retain their original status.",
+    "Local candidate checks are scoped and independently reviewed; no new original E2E/full-workspace success is claimed.",
+    "Darwin Review retains its original90s readiness failure with no safe additional authority/currentness optimization selected.",
+    "Retained donor Create cause remains UNKNOWN; the added observer is diagnostic-only and cannot turn that failure into success.",
+    "Bounded diagnostics do not cancel an already-started file write; a late physical PNG with an unavailable receipt is unqualified.",
+    "Installer source-map omission is exact finiteDarwinARM-only; no measured startup speedup, optionalMainoffline symbolication omitted.",
+    "UI source graph reduction is static; actual cold/lazy-open latency and factory execution counts remain unqualified.",
+    "The rejected Vite warmup control failed; candidate was not run, no warmup source config was applied.",
+    "Archive contains selected UTF8 evidence/source/logs. Binary artifacts, screenshots, ZIPs and reproducible caches are omitted with explicit hashes or object metadata.",
+    "Source/digest/structural closure observations do not substitute for unavailable native executable bytes or custody/natural-exit evidence.",
+    "Fast feedback ran on merge79ca55 with the same complete tree as a0eb; checkout identity remains merge and missing runtime/compiler pins remain missing.",
+    "No genuineClaude/Codex execution, new UI retry, widened original deadline, app-main merge, release, defaultHost or Stage2 is authorized here.",
+    "PR remains Draft; subsequent full qualification and selected merge route retain their independent gates and execution restrictions.",
+    "One exact captured Main bundle contains a verified static ssh2 capability-test key and parser/serializer markers. Only its full path/bytes/SHA/offset set is excepted from the private-key-marker check; this is not a general secret-free certification. Initial archive build failure is retained.",
+    "The69 original jobs include50success,8failure and11skipped. Four successful workflow families do not erase failed Host/Source. The candidate16-file delta has no new original CI result in this archive.",
+    "Native/process/packaged qualification remains limited to its saved finite and trusted-writer scopes. Missing native/app.asar/full-package bytes remain missing; original runner digests are not a local executable-byte rehash.",
+    "Darwin successor public Quit remains unconfirmed where recorded; listener/PID/Host/writer-lock absence does not establish natural exit or successor native custody. Windows signalAccepted remains unknown where recorded.",
+    "Host frontend26783passed and38skipped assertions remain distinct;2215of2222selected files executed tests and7were entirely skipped. Their source binding is external checkout/job evidence, not an internal report source pin.",
+    "Teams remains original Electron creation/config/draft/copy/template/organization/schedule/zh-TW UI scope; no genuine runtime, Host/native, packaged or release qualification follows.",
+    "Raw ZIPs, screenshots, executables and caches are absent from the delivered tar despite local omission-pin comparison. Readers cannot reproduce those omitted bytes or visual/executable verification from this archive alone.",
+    "Reviewer scratch tail/check receipts are embedded in this sibling review for portability. They were created after the immutable archive, so they are not represented as entries of that tar.",
+    "Historic absolute paths remain provenance. No archived reproduction command, verifier, test, compiler, builder, bundle or provider was executed by this review."
+  ],
+  "additionalReviewBoundaries": [
+    "This is independent archive integrity and declared-evidence-scope R2, not a replacement for the named source/test independent reviews.",
+    "The complete full-prefix read was executed once. Its overall exit1 and both initial verification failures remain explicitly disclosed; the schema-correct tail and semantic checks close the remaining coverage.",
+    "No original verifier, app, build, runtime or native process was rerun. Qualitative assertions beyond byte/reference checking retain attribution to the named original qualification/source-review receipts.",
+    "Final review does not authorize a merge or change Draft status. Expected-head publication and the next original CI cycle remain parent-owned actions."
+  ],
+  "reviewActions": {
+    "archiveReadAndHash": true,
+    "safeInMemoryTarReadNoExtraction": true,
+    "savedJsonCrossBindingRead": true,
+    "readOnlyGitBaselineBlobComparison": true,
+    "localSourceAndOmittedBytesRead": true,
+    "testsOrCompilersExecuted": false,
+    "genuineProviderOrNativeExecuted": false,
+    "githubReadsOrMutations": false,
+    "builderExecuted": false,
+    "sourceDependencyArchiveOrOuterIndexEdited": false,
+    "repoFilesWritten": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-a0eb-20261121-review.json"
+    ]
+  }
+}

@@ -38,11 +38,14 @@ function sameRecordFile(before: BigIntStats, after: BigIntStats): boolean {
 const ordinaryReceiptBytes = 64 * 1024;
 // The source snapshot retains up to 256 original descriptor scopes; JSON string escaping can double it.
 const sourceReceiptBytes = 4 * 1024 * 1024 + ordinaryReceiptBytes;
+type DecodedCommand = { path: string; bytes: Buffer; value: StoredManagementCommand };
 
 /** One profile writer lease owns these atomic, private receipts. No auth values or native URLs. */
 export class FileManagementCommandStore implements ManagementCommandStore {
   private readonly directory: string;
   private readonly identity: { dev: number; ino: number };
+  // Two pure decodes share the original single-receipt byte budget; never filesystem authority.
+  private decoded: DecodedCommand[] = [];
 
   constructor(root: string, private readonly readOnly = false) {
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root)
@@ -64,13 +67,20 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   read(commandId: string): StoredManagementCommand | undefined {
-    this.checkDirectory();
-    const path = this.path(commandId);
+    let path: string;
+    try {
+      this.checkDirectory();
+      path = this.path(commandId);
+    } catch (error) {
+      this.decoded = [];
+      throw error;
+    }
     try {
       const parsed = this.parse(path);
       if (parsed.commandId !== commandId) throw new ManagementCommandError('held');
       return parsed;
     } catch (error) {
+      this.decoded = [];
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw new ManagementCommandError('held');
     }
@@ -136,19 +146,24 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   *list(): Iterable<StoredManagementCommand> {
-    this.checkDirectory();
-    for (const name of readdirSync(this.directory)) {
-      if (/^\.tmp-[a-f0-9-]{36}$/.test(name)) {
-        const temporary = lstatSync(join(this.directory, name));
-        if (!temporary.isFile() || temporary.isSymbolicLink())
-          throw new ManagementCommandError('held');
-        continue; // A pre-publication crash has no authoritative receipt.
+    try {
+      this.checkDirectory();
+      for (const name of readdirSync(this.directory)) {
+        if (/^\.tmp-[a-f0-9-]{36}$/.test(name)) {
+          const temporary = lstatSync(join(this.directory, name));
+          if (!temporary.isFile() || temporary.isSymbolicLink())
+            throw new ManagementCommandError('held');
+          continue; // A pre-publication crash has no authoritative receipt.
+        }
+        if (!/^[a-f0-9]{64}\.json$/.test(name)) throw new ManagementCommandError('held');
+        const path = join(this.directory, name);
+        const saved = this.parse(path);
+        if (this.path(saved.commandId) !== path) throw new ManagementCommandError('held');
+        yield saved;
       }
-      if (!/^[a-f0-9]{64}\.json$/.test(name)) throw new ManagementCommandError('held');
-      const path = join(this.directory, name);
-      const saved = this.parse(path);
-      if (this.path(saved.commandId) !== path) throw new ManagementCommandError('held');
-      yield saved;
+    } catch (error) {
+      this.decoded = [];
+      throw error;
     }
   }
 
@@ -156,6 +171,9 @@ export class FileManagementCommandStore implements ManagementCommandStore {
     return join(this.directory, managementDigest(commandId) + '.json');
   }
   private parse(path: string): StoredManagementCommand {
+    const previous = this.decoded;
+    this.decoded = [];
+    let completed: DecodedCommand[] = [];
     let fd: number | undefined;
     let observed = false;
     try {
@@ -183,19 +201,31 @@ export class FileManagementCommandStore implements ManagementCommandStore {
       )
         throw new ManagementCommandError('held');
       this.checkDirectory();
-      const raw = JSON.parse(
-        new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, length))
-      ) as Record<string, unknown>;
-      const { digest, ...body } = raw;
-      if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
-        throw new ManagementCommandError('held');
-      if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
-      return storedManagementCommandSchema.parse(body);
+      const bytes = buffer.subarray(0, length);
+      let decoded = previous.find(entry => entry.path === path && entry.bytes.equals(bytes));
+      if (!decoded) {
+        const raw = JSON.parse(
+          new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+        ) as Record<string, unknown>;
+        const { digest, ...body } = raw;
+        if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
+          throw new ManagementCommandError('held');
+        if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
+        decoded = { path, bytes, value: storedManagementCommandSchema.parse(body) };
+      }
+      const result = structuredClone(decoded.value);
+      completed = [decoded];
+      const retained = previous.find(entry => entry.path !== path);
+      if (retained && retained.bytes.length + decoded.bytes.length <= sourceReceiptBytes)
+        completed.push(retained);
+      return result;
     } catch (error) {
       if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
       throw new ManagementCommandError('held');
     } finally {
+      this.decoded = [];
       if (fd !== undefined) closeSync(fd);
+      this.decoded = completed;
     }
   }
   private checkDirectory(): void {

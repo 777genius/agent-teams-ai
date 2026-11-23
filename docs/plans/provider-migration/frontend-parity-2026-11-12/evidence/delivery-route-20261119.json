@@ -1,0 +1,465 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-11-19 17:29:49 UTC",
+  "kind": "READ_ONLY_STAGE1_DELIVERY_ROUTE",
+  "localSourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+  "method": {
+    "prMetadata": "GitHub get_pr_info; repository GET default branch; review thread lists; current PR changed filenames; frozen local source reads",
+    "ciPolled": false,
+    "testsRun": false,
+    "refsOrPrOrThreadsOrWorkflowsChanged": false,
+    "changedFileListing": {
+      "repository": "777genius/agent-teams-ai",
+      "number": 1192,
+      "returned": 3000,
+      "metadataChangedFiles": 3542,
+      "limitation": "Listing is not claimed exhaustive; explicitly returned workflow/package/lock paths suffice to establish the Codex Ready trigger."
+    }
+  },
+  "pullRequests": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "number": 1192,
+      "url": "https://github.com/777genius/agent-teams-ai/pull/1192",
+      "title": "fix: complete Host frontend parity with emulated provider checks",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergeable": true,
+      "head": "fix/frontend-parity-completion-20261113",
+      "headSha": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+      "base": "feat/provider-host-frontend-parity-20261112",
+      "baseSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "syntheticMergeSha": "d7d98f85757e38ad885bb2de1779bb8a881849c6",
+      "updatedAt": "2026-11-19T16:25:26Z"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "number": 1186,
+      "url": "https://github.com/777genius/agent-teams-ai/pull/1186",
+      "title": "feat: preserve existing frontend capabilities across Host providers",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "mergeable": true,
+      "head": "feat/provider-host-frontend-parity-20261112",
+      "headSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "base": "feat/provider-migration-stage-1",
+      "baseSha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "syntheticMergeSha": "d7cf00c411576571a644649d8b2a4e9377117a74",
+      "updatedAt": "2026-11-17T21:38:23Z"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "number": 982,
+      "url": "https://github.com/777genius/agent-teams-ai/pull/982",
+      "title": "feat(provider-migration): integrate isolated Host with existing Desktop workflows",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergeable": false,
+      "head": "feat/provider-migration-stage-1",
+      "headSha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "base": "main",
+      "baseSha": "0bda42478ae0ea1ec1727efa7dbd10a4dc970101",
+      "syntheticMergeSha": null,
+      "updatedAt": "2026-11-12T18:50:06Z"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "number": 8,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/8",
+      "title": "feat(codex): expose native account login for existing frontend workflows",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergeable": true,
+      "head": "feat/frontend-parity-20261112",
+      "headSha": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "base": "bootstrap",
+      "baseSha": "d58500bc983e897506e23d7b0bc8da1209864edd",
+      "syntheticMergeSha": "e5d11509ef075ebb4fac5d5ee6494998ab3b2820",
+      "updatedAt": "2026-11-18T21:01:01Z"
+    }
+  ],
+  "repositoryDefaults": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "defaultBranch": "main"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "defaultBranch": "bootstrap"
+    }
+  ],
+  "route": [
+    {
+      "edge": "#1192 -> #1186",
+      "recipientBranch": "feat/provider-host-frontend-parity-20261112",
+      "currentRecipientHead": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "scope": "App feature-branch integration after qualified current inputs and review; existing Ready-trigger automation must be reconciled with the no-real-Claude/Codex constraint before this transition."
+    },
+    {
+      "edge": "#1186 -> #982",
+      "recipientBranch": "feat/provider-migration-stage-1",
+      "currentRecipientHead": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "scope": "Stage1 integration destination after its updated-head qualification; no main merge."
+    },
+    {
+      "edge": "#982 -> main",
+      "recipientBranch": "main",
+      "scope": "Excluded. #982 remains Draft; its current mergeable=false is not a request to resolve main conflicts."
+    },
+    {
+      "edge": "provider #8 -> bootstrap",
+      "recipientBranch": "bootstrap",
+      "scope": "bootstrap is the provider repository default branch. Existing provider PR explicitly retains Draft/no default-branch merge; it is not an app feature-branch merge edge. Exact checked source/archive are already consumed without this merge."
+    }
+  ],
+  "qualification": {
+    "policy": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "docs/GIT_DELIVERY_POLICY.md",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/docs/GIT_DELIVERY_POLICY.md"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "docs/ci-qualification.md",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/docs/ci-qualification.md"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/README.md",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/docs/plans/provider-migration/frontend-parity-2026-11-12/README.md"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+        "lines": "section 4E",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md"
+      }
+    ],
+    "canonicalCurrentCode": {
+      "gate": "Full qualification",
+      "source": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": ".github/workflows/ci.yml",
+        "lines": "2878-2944",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/ci.yml"
+      },
+      "selector": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "scripts/ci/ci-feedback.mts",
+        "lines": "415-462",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/ci/ci-feedback.mts"
+      },
+      "fullScopeJobs": [
+        "validate",
+        "test (all four root shards)",
+        "lint (selected full scopes)",
+        "task-change-ledger-windows"
+      ],
+      "selectedExtraGate": "Codex login Desktop, including finite account/schedule peers, for Ready frontend-parity PRs; retained V1/V2 coexistence where its declared selector applies.",
+      "note": "Full qualification does not include stage1-desktop or stage1-process-qualification in needs. Those product proofs, when claimed, need separate exact-source evidence. Draft Fast feedback is not merge qualification. Scoped local compiler PASS and metadata-only packaged skips cannot replace full current-code/actual packaged gates."
+    },
+    "finiteAndApprovedNative": [
+      {
+        "workflow": {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": ".github/workflows/host-emulated-acceptance.yml",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/host-emulated-acceptance.yml"
+        },
+        "required": "Original 25 Desktop lanes, all four safe frontend shards, and Offline Host Desktop aggregate; original Team lane full workspace types and typed lint; native V2 settings/membership/Review/Resume/attachments/Stop/cold results remain separate from finite Claude/Codex proof."
+      },
+      {
+        "workflow": {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": ".github/workflows/host-process-acceptance.yml",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/host-process-acceptance.yml"
+        },
+        "required": "Host process fixtures on linux-x64, darwin-x64, darwin-arm64, win32-x64, win32-arm64 with source A/B readiness and original cleanup."
+      },
+      {
+        "workflow": {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/opencode-v2-stage1-preflight.yml"
+        },
+        "required": "Embedded V2.1.4 original Host on all five declared tuples; P09 A POSIX native test on Linux plus both Darwin architectures, with legacy strict verdicts retained separately."
+      },
+      {
+        "workflow": {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": ".github/workflows/electron-packaged-ci.yml",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/electron-packaged-ci.yml"
+        },
+        "required": "Actual five-platform packaged-smoke matrix and packaged-full-gate for selected changes; metadata-only preservation is not a newly executed package proof."
+      },
+      {
+        "workflow": {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": ".github/workflows/codeql.yml",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/codeql.yml"
+        },
+        "required": "Current-source Actions and JavaScript/TypeScript analyses when Ready policy selects them; Draft deferral does not assert PASS."
+      }
+    ],
+    "provider": {
+      "head": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "workflow": "https://github.com/agent-teams-ai/old-provider-implementations/blob/b19494fd2de47538a1c9315e338199ff41bbe497/.github/workflows/ci.yml",
+      "matrixNode": [
+        "24.21.0",
+        "26.11.1"
+      ],
+      "command": "pnpm check",
+      "scope": "Both builds/types, controlled source tests and both original packed consumers. Preserve actual Node24 checked archives; no repack or inferred native/UI result.",
+      "appReceipt": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "vendor/provider-migration/captured-config-b19494fd/source-receipt.json",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/vendor/provider-migration/captured-config-b19494fd/source-receipt.json"
+      },
+      "implementationArchive": {
+        "bytes": 191145,
+        "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7"
+      },
+      "sessionSpiSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "observedReceipt": "Recorded exact-head local Node24 canonical check PASS577 source tests /2 packed consumers; this task did not poll provider CI or assert a new Node26 result."
+    },
+    "evidenceRule": "Bind receipt to actual source head, source/artifact/runtime hashes and OS tuple. Changed receiving head/base/synthetic merge needs its current-code gate; unchanged native proof reuse requires explicit reviewed input equivalence, never prose-only transfer of old9ec/7fe/33 results."
+  },
+  "automationConflicts": [
+    {
+      "transition": "Make #1192 Ready for review",
+      "trigger": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "lines": "4-18, 49-85",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/codex-runtime-smoke.yml"
+      },
+      "exactMatchingPrPaths": [
+        ".github/workflows/codex-runtime-smoke.yml",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "condition": "pull_request [opened,synchronize,reopened,ready_for_review,converted_to_draft]; install if draft != true",
+      "command": "pnpm smoke:codex-runtime-install",
+      "endpoint": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "scripts/smoke/codex-runtime-install.ts",
+        "lines": "59-66,79-80,133-135",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/smoke/codex-runtime-install.ts"
+      },
+      "action": "Calls real CodexRuntimeInstallerService.install(), then execFileAsync(status.binaryPath, [--version]) and resolveVersion. It is not the finite Host login peer lane.",
+      "result": "Conflicts with current no-real-Claude/Codex-execution instruction even without a business model request."
+    },
+    {
+      "transition": "Merge/push #1192 into already-Ready #1186",
+      "trigger": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": ".github/workflows/ci.yml",
+        "lines": "1301-1308, 2746-2754",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/ci.yml"
+      },
+      "condition": "Ready pull_request whose base.ref == feat/provider-migration-stage-1 selects stage1-desktop and stage1-process-qualification.",
+      "nativeSetup": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": ".github/workflows/ci.yml",
+        "lines": "1429-1510",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/ci.yml"
+      },
+      "command": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": ".github/workflows/ci.yml",
+        "lines": "1829-1845",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/.github/workflows/ci.yml"
+      },
+      "chain": [
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "lines": "112-175",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/legacy-agent-host/desktop-backend-smoke.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+          "lines": "179-201",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/legacy-agent-host/desktop-proof-fixture.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+          "lines": "288-303,363-375",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/legacy-agent-host/desktop-backend-fixture.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": "scripts/legacy-agent-host/desktop-create-launch-ui-smoke.ts",
+          "lines": "104-106",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/legacy-agent-host/desktop-create-launch-ui-smoke.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+          "lines": "39-49,66-75,127-132",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+          "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+          "lines": "128-149",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts"
+        }
+      ],
+      "finiteBoundary": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+        "lines": "31-46",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/scripts/legacy-agent-host/desktop-live-membership-controlled.ts"
+      },
+      "action": "Native modes supply reviewed real Claude/Codex executable paths to production runtime members; ordinary launch reaches original CapturedProcess spawn. Finite membership requires an explicit flag absent here and is Linux-only. Localhost inference is not executable emulation.",
+      "result": "Configured automatic jobs require prohibited real executables; success of prior setup is not permission to execute them."
+    }
+  ],
+  "permittedWorkNow": [
+    "Keep #1192/provider8 Draft and #982 outside main delivery while completing independent current-source work.",
+    "Finish reviewed source fixes, existing canonical compiler/lint/architecture/source checks and independent exact-diff review.",
+    "Collect original automatic Draft-safe finite-peer Desktop/source jobs and approved pinned OpenCode TEST-local-model/native jobs without manual rerun/dispatch/cancel or duplicate CI polling.",
+    "Finish P09 A native qualification without changing old strict verdicts, custody/currentness/deadlines or cleanup.",
+    "Qualify retained-original UI/coexistence, V2 membership/Review/Resume/attachments and remaining Windows source readiness on their actual source.",
+    "Keep exact provider b194 checked archive/source pin; provider default-branch merge is unnecessary for consuming it.",
+    "Update STATUS/PR prose and receiving-branch review disposition truthfully after source qualification; this read-only audit makes no such mutations."
+  ],
+  "transitionBoundary": "The current workflows provide no ordinary Ready/parent-merge transition that both runs the existing selected gates and preserves the no-real-Claude/Codex constraint. Reconcile this specific automation scope before changing Ready/merge state. Do not use skipped jobs, peers relabelled as native, omitted original assertions, labels, retargeting, protection changes, or an admin bypass as substitutes. This is not a blocker on the independent work listed above and does not make the whole goal owner-required.",
+  "reviewThreads": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "number": 1192,
+      "total": 43,
+      "resolved": 43,
+      "unresolved": []
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "number": 1186,
+      "total": 45,
+      "resolved": 41,
+      "unresolved": [
+        {
+          "threadId": "PRRT_kwDORVTEtM622S0z",
+          "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+          "outdated": true,
+          "headSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "comments": [
+            {
+              "id": 4556836023,
+              "url": "https://github.com/777genius/agent-teams-ai/pull/1186#discussion_r4556836023"
+            }
+          ]
+        },
+        {
+          "threadId": "PRRT_kwDORVTEtM622S05",
+          "path": "packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+          "outdated": true,
+          "headSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "comments": [
+            {
+              "id": 4556836035,
+              "url": "https://github.com/777genius/agent-teams-ai/pull/1186#discussion_r4556836035"
+            }
+          ]
+        },
+        {
+          "threadId": "PRRT_kwDORVTEtM622S1t",
+          "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+          "outdated": true,
+          "headSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "comments": [
+            {
+              "id": 4556836119,
+              "url": "https://github.com/777genius/agent-teams-ai/pull/1186#discussion_r4556836119"
+            }
+          ]
+        },
+        {
+          "threadId": "PRRT_kwDORVTEtM622qol",
+          "path": "packages/legacy-agent-host/src/adapters/providers/RuntimeSourceNativeVersion.ts",
+          "outdated": true,
+          "headSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+          "comments": [
+            {
+              "id": 4556997490,
+              "url": "https://github.com/777genius/agent-teams-ai/pull/1186#discussion_r4556997490"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "number": 8,
+      "total": 0,
+      "resolved": 0,
+      "unresolved": []
+    }
+  ],
+  "staleMetadata": [
+    {
+      "source": "https://github.com/777genius/agent-teams-ai/pull/1192",
+      "fact": "Body still names7fe as latest, says neither P09 option selected and execution environment unavailable, although remote head is33ea and current reviewed source contains accepted A. STATUS is the newer living plan."
+    },
+    {
+      "source": {
+        "repository": "777genius/agent-teams-ai",
+        "sourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+        "path": "docs/plans/provider-migration/README.md",
+        "lines": "3-13",
+        "url": "https://github.com/777genius/agent-teams-ai/blob/f6c223c9f83224218214e6c79643588a3369e3ba/docs/plans/provider-migration/README.md"
+      },
+      "fact": "Calls1186 Draft; live PR metadata reports draft=false."
+    },
+    {
+      "source": "https://github.com/777genius/agent-teams-ai/pull/982",
+      "fact": "480c/ec787 accepted V1-only qualification is historical and does not qualify the current expanded frontend-parity stack. Current README expressly supersedes V1-only scope; no main merge is authorized."
+    }
+  ],
+  "scopeLimits": [
+    "No refs, PR states, review threads or workflows changed",
+    "No tests or real provider binaries executed",
+    "No CI runs polled/restarted/dispatched/cancelled",
+    "No unrelated PR/UAP audit",
+    "No approval request or scope expansion"
+  ],
+  "stage1CompletionCriteria": "Completion would mean: Existing frontend capabilities for Claude/Codex/OpenCodeV1/V2 are complete within the explicitly permitted finite-peer/native-OpenCode scope; source and immutable provider archive are separated from the old engine; exact-source code/UI/native/package proofs and review remarks are reconciled; changes can be integrated into feat/provider-migration-stage-1 only through an authorized automation path. #982 stays Draft, main/release/default Host activation/Stage2 remain excluded, and vendor authentication or real Claude/Codex qualification is not inferred."
+}

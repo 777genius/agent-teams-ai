@@ -10,6 +10,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
+import { originalRuntimeCacheKey } from './OriginalRuntimeScope';
 import {
   buildPassiveProviderStatusCliEnv,
   buildProviderAwareCliEnv,
@@ -65,7 +66,6 @@ const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const OPENCODE_PROJECT_STATUS_CACHE_TTL_MS = 10_000;
 
-// Summary updates are snapshots; asynchronous hydration updates contain one provider delta.
 type ProviderStatusesObserver = (
   providers: CliProviderStatus[],
   updatedProviderId?: CliProviderId
@@ -1258,7 +1258,7 @@ export class ClaudeMultimodelBridgeService {
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
     const projectPath = getProviderStatusCommandCwd(options.projectPath) ?? '';
-    const requestKey = JSON.stringify([
+    const requestKey = originalRuntimeCacheKey([
       path.resolve(binaryPath),
       providerId,
       options.summary === true,

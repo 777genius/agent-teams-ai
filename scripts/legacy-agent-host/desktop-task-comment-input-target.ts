@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
-import { desktopJsLiteral } from './desktop-ui-controls.ts';
+import { desktopJsLiteral, type createDesktopUiControls } from './desktop-ui-controls.ts';
 
 /** Read current owner/surface from the existing React dialog; return its actual input ID, never synthesize one. */
 export function desktopTaskCommentInputExpression(handleId: string, taskId: string): string {
@@ -53,7 +53,7 @@ export function desktopTaskBoardAssignmentReadyExpression(
   handleId: string,
   taskId: string,
   captured: { contextId: string; surfaceId: string },
-  stage?: 'in-progress-comment' | 'clarification'
+  stage?: 'in-progress-comment' | 'clarification' | 'clarification-cleared'
 ): string {
   assert.ok(captured.contextId && captured.surfaceId);
   return `(async()=>{
@@ -79,12 +79,46 @@ export function desktopTaskBoardAssignmentReadyExpression(
           token.scope.contextId!==scope.contextId||token.scope.teamName!==scope.teamName||
           token.scope.contextEpoch!==scope.contextEpoch||token.scope.teamStateEpoch!==scope.teamStateEpoch)return null;
       }
+    ` : stage === 'clarification-cleared' ? `
+      const key=JSON.stringify([i.contextId,i.teamName,i.taskId]),session=s.taskDetailSessionById?.[key];
+      if(!session||session.ownerSurfaceId!==owner.surfaceId||session.ownerRevision!==owner.ownerRevision||
+        detail.loading!==false||detail.refreshPending!==false||detail.error!==null||detail.deletionIntent!==null||
+        detail.full.needsClarification!==undefined||detail.full.deletedAt||detail.full.status==='deleted')return null;
     ` : ''}
     const input=document.getElementById(owner.inputId),dialog=input?.closest('[role="dialog"]');
     const triggers=dialog?.querySelectorAll('button[role="combobox"]');
     ${stage === 'in-progress-comment'
       ? "if(detail.full.status!=='in_progress'||triggers?.length!==0)return null;"
       : "if(triggers?.length!==1||triggers[0].disabled||triggers[0].getAttribute('aria-expanded')!=='false'||triggers[0].textContent.trim()!=='alice')return null;"}
-    return owner;
+    ${stage === 'clarification-cleared' ? `
+      const elements = [...dialog.querySelectorAll('button')].filter(e => {
+        const r=e.getBoundingClientRect(); return r.width>0&&r.height>0&&e.textContent.trim()==='Close';
+      });
+      if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};
+      const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
+      const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');
+      if(!hit||!(hit===e||e.contains(hit))||disabled)return {
+        unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',
+        pointerEventsNone:getComputedStyle(e).pointerEvents==='none',
+        centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)
+      };
+      return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
+    ` : 'return owner;'}
   })()`;
+}
+
+/** Close the original assigned Task only after its current owner and cleared detail are ready. */
+export function clickDesktopTaskBoardClearedClose(
+  ui: Pick<ReturnType<typeof createDesktopUiControls>, 'clickExpression'>,
+  handleId: string,
+  taskId: string,
+  captured: { contextId: string; surfaceId: string }
+): Promise<void> {
+  return ui.clickExpression(
+    desktopTaskBoardAssignmentReadyExpression(handleId, taskId, captured, 'clarification-cleared'),
+    'close original Task detail',
+    '[role="dialog"] button',
+    'Close',
+    { waitForFinalReadiness: true }
+  );
 }
