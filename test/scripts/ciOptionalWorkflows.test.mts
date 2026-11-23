@@ -174,7 +174,7 @@ test('Kanban-only changes trigger dedicated E2E, not unrelated create/template E
   const scenarios = [
     ['custom-team-templates-desktop-e2e', ['pull_request'] as const],
     ['teams-create-page-desktop-e2e', ['pull_request', 'push'] as const],
-  ];
+  ] as const;
   for (const [name, events] of scenarios) {
     for (const event of events) {
       const paths = pathsForTrigger(name, event);
