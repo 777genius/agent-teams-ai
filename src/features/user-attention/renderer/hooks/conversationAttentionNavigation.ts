@@ -7,14 +7,15 @@ interface NavigationIntent {
   teamName: string;
   scope: ConversationScope;
   nonce: number;
+  createdAt: number;
 }
 
 let latest: NavigationIntent | null = null;
 let nextNonce = 0;
 const subscribers = new Set<(intent: NavigationIntent) => void>();
 
-export function requestAttentionChatNavigation(input: Omit<NavigationIntent, 'nonce'>): void {
-  latest = { ...input, nonce: ++nextNonce };
+export function requestAttentionChatNavigation(input: Omit<NavigationIntent, 'nonce' | 'createdAt'>): void {
+  latest = { ...input, nonce: ++nextNonce, createdAt: Date.now() };
   for (const subscriber of subscribers) subscriber(latest);
 }
 
@@ -29,7 +30,12 @@ export function useAttentionConversationNavigation(
     const onIntent = (intent: NavigationIntent): void => {
       if (intent.contextId !== contextId || intent.teamName !== teamName ||
           intent.nonce === handledRef.current) return;
+      if (Date.now() - intent.createdAt > 30_000) {
+        if (latest?.nonce === intent.nonce) latest = null;
+        return;
+      }
       handledRef.current = intent.nonce;
+      if (latest?.nonce === intent.nonce) latest = null;
       open(intent.scope);
     };
     subscribers.add(onIntent);
