@@ -27,7 +27,7 @@ export function createExternalAgentConnectionBridge(
         id
       ) as Promise<void>,
     onConfirmation: (listener) => {
-      const handler = (_event: Electron.IpcRendererEvent, payload: ExternalAgentConfirmation) =>
+      const handler = (_event: Electron.IpcRendererEvent, payload: ExternalAgentConfirmation | null) =>
         listener(payload);
       ipcRenderer.on(EXTERNAL_AGENT_CONNECTION_CHANNELS.confirmation, handler);
       return () => {
