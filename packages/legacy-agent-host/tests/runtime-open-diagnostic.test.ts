@@ -13,6 +13,7 @@ import { runInNewContext } from 'node:vm';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { createRuntimeMemberProviderFactory } from '../dist/composition/createRuntimeMemberProviderFactory.js';
+import { inspectInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { beginModelReadinessAuthorityTiming, beginModelReadinessNamespaceTiming, createModelReadinessTiming } from '../dist/diagnostics/modelReadinessTiming.js';
 import * as runtimeOpenDiagnostics from '../dist/diagnostics/runtimeOpenDiagnostic.js';
@@ -647,7 +648,7 @@ function capture(t: TestContext, event?: (record: Record<string, unknown>) => vo
 }
 
 /** Execute the complete original factory/inspection bodies with finite storage and endpoint ports. */
-function readinessFixture() {
+function readinessFixture(initialProfile = false) {
   const readinessSource = readFileSync(new URL('../src/composition/prepareTeamModelReadiness.ts', import.meta.url), 'utf8');
   const factorySource = readFileSync(new URL('../src/composition/createRuntimeMemberProviderFactory.ts', import.meta.url), 'utf8');
   const begin = 'export function inspectMemberModelReadiness(', end = '\n/** The existing Runtime checkpoint validator';
@@ -664,7 +665,8 @@ function readinessFixture() {
   const entry = { config, binding, profile: selectedProfile, baseProfile: selectedProfile, team,
     delivery: { ...binding, teamName: 'TEST-team' } };
   const originalReadiness = { consumer: { consumerId: 'TEST-consumer',
-    baseConfigurationDigest: runtimeDigest(selectedProfile), cutoff: 100 },
+    baseConfigurationDigest: runtimeDigest(selectedProfile), cutoff: 100,
+    ...(initialProfile ? { initialProfile: { kind: 'native-bootstrap' } } : {}) },
     reference: { commandId: 'TEST-probe', context: 'TEST-context' } };
   const launch = {
     readModelReadiness() { reads++; return originalReadiness; },
@@ -682,7 +684,7 @@ function readinessFixture() {
     Date: { now: () => now }, structuredClone, runtimeDigest, ManagementCommandError, RuntimeOwnerError,
     held: () => { throw new ManagementCommandError('held'); },
     readinessRefusal: channel('agent-teams.legacy-host.first-refusal'),
-    createModelReadinessTiming, beginModelReadinessAuthorityTiming,
+    createModelReadinessTiming, beginModelReadinessAuthorityTiming, inspectInitialRuntimeModelAdmission,
     ...runtimeOpenDiagnostics,
     readPreparedModelReference() { references++; return originalReadiness.reference; },
     captureMemberProviderAuthority: () => authority,
@@ -694,8 +696,8 @@ function readinessFixture() {
     createMemberAttachmentPort: () => ({ port: undefined, prepareInput: (value: unknown) => value }),
     memberInitialInstructions: () => 'TEST instructions',
   }) as {
-    inspect(options: Record<string, unknown>): { assertCurrent(): void };
-    consume(options: Record<string, unknown>): { assertCurrent(): void };
+    inspect(options: Record<string, unknown>, observer?: Record<string, unknown>): { assertCurrent(): void };
+    consume(options: Record<string, unknown>, observer?: Record<string, unknown>): { assertCurrent(): void };
     factory(options: Record<string, unknown>): ReturnType<typeof createRuntimeMemberProviderFactory>;
   };
   const inspection = { launch, entry, management: {}, hostIncarnation: 'TEST-host', assertCurrent: authority.assertCurrent };
@@ -713,41 +715,185 @@ function readinessFixture() {
     counts: () => ({ consumed, reads, references }) };
 }
 
-test('actual readiness inspection captures only its first original refusal without enabling timing or replacing errors', async t => {
+test('actual readiness inspection and consumption capture only the first original refusal without observer interference', async t => {
   let clocks = 0;
   t.mock.method(performance, 'now', () => { clocks++; return 0; });
   assert.equal(channel('agent-teams.legacy-host.first-refusal').hasSubscribers, false);
-  for (const mode of ['absent', 'capture', 'throw', 'reject', 'getter'] as const) {
+  for (const route of ['inspect', 'consume'] as const) for (const mode of [
+    'absent', 'capture', 'hidden-capture', 'throw', 'reject', 'getter', 'hidden-getter',
+  ] as const) {
     const f = readinessFixture(), observations: unknown[] = [];
     let observerReads = 0;
     const options: Record<string, unknown> = { ...f.inspection };
-    if (mode !== 'absent' && mode !== 'getter') options.onFirstRefusal = (value: unknown) => {
-      observations.push(value);
-      if (mode === 'throw') throw Error('TEST diagnostic failure');
-      if (mode === 'reject') return Promise.reject(Error('TEST diagnostic rejection'));
-      return undefined;
-    };
-    if (mode === 'getter') Object.defineProperty(options, 'onFirstRefusal', {
-      get() { observerReads++; throw Error('TEST observer getter'); },
+    const observer: Record<string, unknown> | undefined = mode === 'absent' ? undefined : {};
+    const getter = mode === 'getter' || mode === 'hidden-getter';
+    if (observer) Object.defineProperty(observer, 'onFirstRefusal', getter ? {
+      enumerable: mode === 'getter', get() { observerReads++; throw Error('TEST observer getter'); },
+    } : {
+      enumerable: mode !== 'hidden-capture', writable: true,
+      value(this: unknown, value: unknown) {
+        assert.equal(this, observer, 'the separate capability is the captured callback receiver');
+        observations.push(value);
+        if (mode === 'throw') throw Error('TEST diagnostic failure');
+        if (mode === 'reject') return Promise.reject(Error('TEST diagnostic rejection'));
+        return undefined;
+      },
     });
-    const inspected = f.compiled.inspect(options);
+    const inspected = f.compiled[route](options, observer);
     assert.deepEqual<unknown[]>(observations, []); assert.equal(clocks, 0);
-    if (mode !== 'getter') options.onFirstRefusal = () => assert.fail('must retain original callback');
+    if (observer && !getter) observer.onFirstRefusal = () => assert.fail('must retain original callback');
     f.deny();
     assert.throws(inspected.assertCurrent, error => error === f.originalAuthority);
     assert.throws(inspected.assertCurrent, error => error === f.originalAuthority);
     await new Promise<void>(resolve => setImmediate(resolve));
     assert.equal(observerReads, 0);
-    assert.equal(observations.length, mode === 'absent' || mode === 'getter' ? 0 : 1);
+    assert.equal(observations.length, mode === 'absent' || getter ? 0 : 1);
     if (observations.length) {
       const observed = observations[0];
       assert.ok(observed && typeof observed === 'object');
       assert.deepEqual({ ...observed }, { phase: 'initial-authority', reason: 'threw', cutoff: null, observedAt: null });
       assert.ok(Object.isFrozen(observations[0]));
     }
-    assert.deepEqual(f.counts(), { consumed: 0, reads: 2, references: 1 });
+    assert.deepEqual(f.counts(), { consumed: route === 'consume' ? 1 : 0, reads: 2, references: 1 });
     assert.equal(f.calls.length, 4, 'one success and two failures retain exactly the original authority calls');
     assert.equal(clocks, 0, 'the private observer does not subscribe to the timing channel');
+  }
+});
+
+test('actual readiness consumption ignores an enumerable observer capability getter before original authority refusal', () => {
+  const f = readinessFixture();
+  let observerReads = 0;
+  const observer = {};
+  Object.defineProperty(observer, 'onFirstRefusal', {
+    enumerable: true,
+    get() { observerReads++; throw Error('TEST observer getter must not replace authority'); },
+  });
+  f.deny();
+  assert.throws(() => f.compiled.consume(f.inspection, observer), error => error === f.originalAuthority);
+  assert.equal(observerReads, 0);
+  assert.deepEqual(f.calls, ['authority']);
+  assert.deepEqual(f.counts(), { consumed: 0, reads: 1, references: 0 });
+});
+
+function readinessOptionsWithGetters(inspection: Record<string, unknown>, symbol: symbol, prototypeValue: object) {
+  const reads: PropertyKey[] = [];
+  const options: Record<PropertyKey, unknown> = Object.create({
+    get inherited() { return assert.fail('must not copy inherited options'); },
+  });
+  for (const [key, value] of Object.entries(inspection)) Object.defineProperty(options, key, {
+    enumerable: true, configurable: true,
+    get() {
+      assert.equal(this, options); reads.push(key);
+      if (key === 'entry') {
+        Object.defineProperty(options, 'skippedAfterEntry', { enumerable: false });
+        options.addedAfterEntry = 'TEST new key after the original key census';
+      }
+      return value;
+    },
+  });
+  Object.defineProperty(options, 'skippedAfterEntry', {
+    enumerable: true, configurable: true, get() { assert.fail('must observe the later descriptor'); },
+  });
+  Object.defineProperty(options, 'hidden', { get() { assert.fail('must not copy non-enumerable options'); } });
+  let phaseReads = 0;
+  for (const [key, read] of [
+    ['__proto__', () => prototypeValue], [symbol, () => symbol],
+    ['phase', () => ++phaseReads === 1 ? 'preclaim' : 'allocation'],
+  ] as const) Object.defineProperty(options, key, {
+    enumerable: true, configurable: true,
+    get() { assert.equal(this, options); reads.push(key); return read(); },
+  });
+  return { options, reads };
+}
+
+test('readiness consumption preserves native spread getter order, receiver and own data semantics', () => {
+  const f = readinessFixture(), symbol = Symbol('TEST own option'), prototypeValue = { marker: 'TEST proto data' };
+  const observed: { options?: Record<PropertyKey, unknown> } = {};
+  const assertCurrent = f.inspection.assertCurrent;
+  f.inspection.assertCurrent = function (this: Record<PropertyKey, unknown>) {
+    observed.options = this; Reflect.apply(assertCurrent, this, []);
+  };
+  const diagnostic: { receiver?: unknown } = {};
+  const observer = { onFirstRefusal(this: unknown) { diagnostic.receiver = this; } };
+  const oracle = readinessOptionsWithGetters(f.inspection, symbol, prototypeValue);
+  const expected = { ...oracle.options, phase: 'allocation' };
+  void oracle.options.launch; // The original consume reads its launch again after successful inspection.
+  const actual = readinessOptionsWithGetters(f.inspection, symbol, prototypeValue);
+  const captured = f.compiled.consume(actual.options, observer);
+  assert.deepEqual(actual.reads, oracle.reads);
+  assert.deepEqual(f.counts(), { consumed: 1, reads: 2, references: 1 });
+  assert.deepEqual(f.calls, ['authority', 'authority']);
+  f.deny();
+  assert.throws(captured.assertCurrent, error => error === f.originalAuthority);
+  assert.equal(diagnostic.receiver, observer);
+  assert.ok(observed.options);
+  assert.deepEqual(Reflect.ownKeys(observed.options), Reflect.ownKeys(expected));
+  assert.equal(Object.getPrototypeOf(observed.options), Object.getPrototypeOf(captured));
+  assert.equal(Object.hasOwn(observed.options, '__proto__'), true);
+  assert.equal(observed.options.__proto__, prototypeValue);
+  assert.equal(observed.options[symbol], symbol);
+  assert.equal(observed.options.phase, 'allocation');
+  assert.equal(Object.hasOwn(observed.options, 'addedAfterEntry'), false);
+  assert.equal(Object.hasOwn(observed.options, 'onFirstRefusal'), false);
+  assert.deepEqual(actual.reads, oracle.reads, 'retained checks must use the original consume copy');
+});
+
+test('initial readiness delegation ignores the observer getter and preserves the later phase read', () => {
+  for (const route of ['inspect', 'consume'] as const) {
+    const f = readinessFixture(true), symbol = Symbol('TEST initial option'), prototypeValue = {};
+    const oracle = readinessOptionsWithGetters(f.inspection, symbol, prototypeValue);
+    if (route === 'consume') {
+      const expected = { ...oracle.options, phase: 'allocation' };
+      assert.equal(expected.phase, 'allocation');
+    } else {
+      const { entry, launch } = oracle.options;
+      void entry; void launch; // The original inspect reads these before the initial-profile transfer.
+      const expected = { ...oracle.options, phase: oracle.options.phase ?? 'preclaim' };
+      assert.equal(expected.phase, 'allocation');
+    }
+    const actual = readinessOptionsWithGetters(f.inspection, symbol, prototypeValue), observer = {};
+    let observerReads = 0;
+    Object.defineProperty(observer, 'onFirstRefusal', {
+      enumerable: true, get() { observerReads++; throw Error('TEST initial observer getter'); },
+    });
+    assert.throws(() => f.compiled[route](actual.options, observer),
+      error => error instanceof RuntimeOwnerError && error.code === 'hold');
+    assert.equal(observerReads, 0);
+    assert.deepEqual(actual.reads, oracle.reads);
+    assert.equal(actual.reads.filter(key => key === 'phase').length, route === 'consume' ? 1 : 2);
+    assert.deepEqual(f.calls, []);
+    assert.deepEqual(f.counts(), { consumed: 0, reads: 2, references: 0 });
+  }
+});
+
+test('readiness observer descriptor failure is isolated while original option errors are preserved', () => {
+  for (const mode of ['observer-descriptor', 'other-descriptor', 'other-getter', 'operational-hook-getter'] as const) {
+    const f = readinessFixture(), original = Error('TEST original option error');
+    const target: Record<string, unknown> = { ...f.inspection };
+    if (mode === 'other-getter' || mode === 'operational-hook-getter') Object.defineProperty(target,
+      mode === 'other-getter' ? 'management' : 'onFirstRefusal', {
+      enumerable: true, get() { throw original; },
+    });
+    const options = new Proxy(target, {
+      getOwnPropertyDescriptor(value, key) {
+        if (mode === 'other-descriptor' && key === 'entry') throw original;
+        return Reflect.getOwnPropertyDescriptor(value, key);
+      },
+    });
+    const observer = new Proxy({ onFirstRefusal() {} }, {
+      getOwnPropertyDescriptor(value, key) {
+        if (mode === 'observer-descriptor') throw original;
+        return Reflect.getOwnPropertyDescriptor(value, key);
+      },
+    });
+    if (mode === 'observer-descriptor') {
+      f.compiled.consume(options, observer);
+      assert.deepEqual(f.counts(), { consumed: 1, reads: 2, references: 1 });
+    } else {
+      assert.throws(() => f.compiled.consume(options, observer), error => error === original);
+      assert.deepEqual(f.counts(), { consumed: 0, reads: 0, references: 0 });
+      assert.deepEqual(f.calls, []);
+    }
   }
 });
 

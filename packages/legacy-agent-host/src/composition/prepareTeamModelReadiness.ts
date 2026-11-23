@@ -345,16 +345,19 @@ export async function prepareCapturedLaunchReadiness(options: {
       ({ principalId: options.principalId, revision }))), inputDigest: runtimeDigest(options.payload), cutoff: capture.cutoff });
 }
 
+/** Keep private diagnostics outside operational options and their original native spreads. */
+type ReadinessObserver = {
+  readonly onFirstRefusal?: (observation: RuntimeReadinessRefusal) => unknown;
+};
+
 /** Synchronous allocation check; no preparation/native effects are allowed at this boundary. */
 export function inspectMemberModelReadiness(options: {
   management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
   withAccountRead?: <T>(read: () => T) => T;
   authorityTiming?: ModelReadinessAuthorityTiming;
-  /** Private observation of the original first refusal; never enables timing or rechecks authority. */
-  onFirstRefusal?(observation: RuntimeReadinessRefusal): unknown;
   hostIncarnation: string; phase?: 'preclaim' | 'allocation';
-}): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
+}, observer?: ReadinessObserver): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
   const { entry, launch } = options;
   const selected = { binding: entry.binding, configRevision: entry.profile.configRevision,
@@ -366,9 +369,9 @@ export function inspectMemberModelReadiness(options: {
   let refusalObserved = false;
   let onFirstRefusal: ((observation: RuntimeReadinessRefusal) => unknown) | undefined;
   try {
-    const field = Object.getOwnPropertyDescriptor(options, 'onFirstRefusal');
+    const field = observer && Object.getOwnPropertyDescriptor(observer, 'onFirstRefusal');
     const callback: unknown = field && 'value' in field ? field.value : undefined;
-    if (typeof callback === 'function') onFirstRefusal = observation => Reflect.apply(callback, options, [observation]);
+    if (typeof callback === 'function') onFirstRefusal = observation => Reflect.apply(callback, observer, [observation]);
   } catch { /* A missing diagnostic callback cannot replace the original inspection. */ }
   const timings = createModelReadinessTiming(readinessRefusal);
   let authorityTiming: ModelReadinessAuthorityTiming | undefined;
@@ -451,8 +454,9 @@ export function inspectMemberModelReadiness(options: {
     } : {}) };
 }
 
-export function consumeMemberModelReadiness(options: Parameters<typeof inspectMemberModelReadiness>[0]) {
-  const captured = inspectMemberModelReadiness({ ...options, phase: 'allocation' });
+export function consumeMemberModelReadiness(options: Parameters<typeof inspectMemberModelReadiness>[0],
+  observer?: Parameters<typeof inspectMemberModelReadiness>[1]) {
+  const captured = inspectMemberModelReadiness({ ...options, phase: 'allocation' }, observer);
   options.launch.consumeModelReadiness(captured.consumerId);
   return captured;
 }

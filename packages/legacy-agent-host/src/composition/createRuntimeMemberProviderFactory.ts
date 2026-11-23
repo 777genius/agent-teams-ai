@@ -193,7 +193,7 @@ export function createRuntimeMemberProviderFactory(options: {
           };
           // Generic allocation may read a separate Launch store; only the nominal default guard joins Team.
           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming, onFirstRefusal });
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming }, { onFirstRefusal });
         })();
         const setupCurrent = () => {
           try {

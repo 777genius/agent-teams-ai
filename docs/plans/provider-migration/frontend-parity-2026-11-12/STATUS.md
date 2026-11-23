@@ -21,6 +21,23 @@ native Launch: точная первичная ветка `driver-open/unknown` 
 артефакт не разделяет эти интервалы на currentness work и HTTP, поэтому новые
 закрытые счётчики измеряют существующие вызовы без изменения порядка и бюджета.
 
+Original [Darwin Resume job 137433007367](https://github.com/777genius/agent-teams-ai/actions/runs/45095083101/job/137433007367)
+на том же source остановился после original `readProfile`, до следующего DOM read
+и до первого Launch. Все 2005 source pins совпадают с Git `6791c558`, before/after
+идентичны. Здесь acquisition ceiling равен 100s с минимумом original probe cutoff,
+а не 120s ожиданию Review. Последний `catalog-current-returned` в 04:57:46.707 UTC
+оставлял 353ms до неизменённого cutoff 04:57:47.060. Четыре прежних identity/catalog
+окна содержат 128 currentness calls и 37.939s; `attestation-returned`, Stop и cold
+Resume не достигнуты. В отличие от Review, `catalog-repeat` не сохранён: конкретный
+отсутствующий provider/model или точная внутренняя причина не доказаны. Новые три
+credential summaries здесь не добавят данных, поскольку соответствующие native
+credential phases отсутствуют. Original Quit завершён exit 0, application group
+пуст и captured Host отсутствует; отдельный model-probe остаётся held/resourceHeld
+с close unconfirmed. Этот census не превращает его custody в подтверждённый PASS.
+Failure screenshot снят позже cutoff и не является доказательством своевременного
+Launch. Pure cache затрагивает saved-currentness путь, но Linux профиль не
+квалифицирует Darwin timing или Resume.
+
 Измеренный повторный pure work уменьшен отдельным cache публикаций RuntimeSource.
 Ключ — полная неизменённая строка publication JSON; cache принадлежит одному index,
 содержит не более двух entries и суммарно не более 2 MiB UTF-8. Внутри остаются только
@@ -47,6 +64,26 @@ strict TS7 и fast lint PASS. Readiness diagnostic сохраняет первы
 baseline два ожидаемых RED, candidate Host 25/25 и Main 18/18 PASS. Повторные два
 focused checks входят в эти 25 и отдельно к сумме не прибавляются. Диагностика нужна
 для будущего original failure и не объясняет прежний unknown задним числом.
+
+Последующее ревью `67a26825` обнаружило узкую ошибку самого private observer:
+enumerable getter в operational options мог выполниться при исходном native
+spread до descriptor-safe capture и подменить исходный отказ. Factory использует
+обычный closed callback; связь с original CI failures не установлена. Observer
+перенесён в отдельный optional второй аргумент inspect/consume, factory передаёт
+тот же closed callback через отдельный объект. Оба исходных operational spreads,
+phase evaluation, authority calls, consume, exceptions и deadlines сохранены.
+Descriptor capture читает только observer, сохраняет один own data callback и
+его receiver; initial-profile delegation не получает observer effects.
+
+Существующий runtime-open suite после исправления проходит 29/29, включая прежнее
+покрытие и native-spread oracle для getter order, receiver, symbols, own proto data,
+descriptor changes и исходных exceptions. Узкие source/test strict TS7 и fast lint
+трёх paths PASS; production files 758/407 строк, caps не повышены. Первый baseline
+RED воспроизведён один раз на прежнем private API `67a26825`; итоговые тесты используют
+новый второй аргумент, поэтому это не побайтно одинаковый red/green replay.
+Промежуточный ручной copier не прошёл сохранённый native-spread oracle и удалён.
+Этот follow-up устраняет вмешательство диагностики, не квалифицирует новый E2E
+и остаётся только в main review, вне narrow #1220 route.
 
 ### Состав кандидатов и граница публикации
 
@@ -81,9 +118,10 @@ Narrow follow-up уже включён в main review обычным merge
 acbf068128c7a86ec3468b9811ccd1d3bc289fdc, parents 8ea42bd7 и e06c8023.
 Readiness six-file delta добавляется только к main review и предназначен для
 проверенного допустимого Draft #1192 маршрута. Изменений workflow для обхода
-границы нет. Актуальные #1220/#1192 сохраняют прежние source commits, пока
-все их original runs не завершены; эти review публикации не являются merge PR
-или E2E qualification.
+границы нет. Актуальный #1220 сохраняет прежний source commit до завершения всех
+его original и metadata runs. Original runs #1192 уже завершены; его head/base
+сохраняются для последовательного квалифицированного merge стека. Эти review
+публикации не являются merge PR или E2E qualification.
 
 ### Подтверждённый static Import на `6791c558`
 
@@ -105,11 +143,27 @@ Original receipt фиксирует штатный Quit exit 0 и очистку
 **Create → Stop → Import**, genuine vendor qualification и итоговая готовность
 #982 этим статическим сценарием не подтверждены.
 
-Срез original CI #1220 на 04:26:41 UTC: Teams Desktop прошёл на всех трёх OS,
-V2 preflight — 9/9, Process acceptance — 5/5. В Host matrix 11 success,
-3 ранее разобранных failure, Cross-team выполняется, 14 jobs в очереди;
-полный Create → Stop → Import ещё ожидается. Готовность нового source и #982
-остаётся неподтверждённой.
+Срез original CI #1220 на 05:09:34 UTC: Teams Desktop прошёл на всех трёх OS,
+V2 preflight — 9/9, Process acceptance — 5/5. В Host matrix 16 success,
+4 разобранных failure, Darwin chat/attachments выполняется, 8 jobs в очереди.
+Host Team включает успешные полные workspace typecheck и typed lint исходного
+`6791c558`; они не квалифицируют подготовленный новый source. Полный
+Create → Stop → Import ещё ожидается. Все десять original/metadata runs сохранены
+без отмены или rerun; итоговая готовность #982 остаётся неподтверждённой.
+
+Original [packaged macOS x64 job 137472284818](https://github.com/777genius/agent-teams-ai/actions/runs/45095083239/job/137472284818)
+напечатал PASS qualification в 04:53:05 UTC: native exit 0, cleanup true,
+source/bundle/legacy runtime восстановлены. Затем обязательный шаг сохранения
+доказательств завершился CreateArtifact request timeout после пяти исходных
+попыток upload-artifact. Artifact не создан; общий job остаётся FAIL. Сохранённая
+в log квитанция явно имеет desktopJourneyQualified, vendorAuthQualified и
+releaseQualified равными false. Это отказ загрузки обязательных доказательств,
+а не новая успешная packaged квалификация; workflow и gate не ослаблены.
+
+Original #1192 на `bb13cc19` завершён к 04:49:18 UTC: packaged 7/7 SUCCESS,
+основной CI FAIL. Его final aggregate отказал на прежнем retained-coexistence
+result=failure, без новой самостоятельной product ошибки. Retained primary и
+другие исходные failures сохраняются; наблюдение завершённых runs остановлено.
 
 ## Текущее продолжение: интеграция стека и актуального frontend
 
