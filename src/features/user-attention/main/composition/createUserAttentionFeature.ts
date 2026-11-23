@@ -1,11 +1,12 @@
-import {
-  type AttentionSnapshot,
-  type AttentionTeamSnapshot,
-  type UserAttentionApi,
-} from '../../contracts';
+import type { TeamDataService } from '@main/services/team/TeamDataService';
+
 import { projectAttentionMessage, projectAttentionTasks } from '../../core/domain/projectAttention';
 
-import type { TeamDataService } from '@main/services/team/TeamDataService';
+import type {
+  AttentionSnapshot,
+  AttentionTeamSnapshot,
+  UserAttentionApi,
+} from '../../contracts';
 
 export type UserAttentionFeatureFacade = UserAttentionApi;
 
