@@ -42,6 +42,7 @@ const chat: AttentionChat = {
     to: 'user',
     text: 'Project B asks for input',
     timestamp: '2026-11-23T12:00:00.000Z',
+    read: false,
     messageId: 'attention-preload-b',
   },
 };
