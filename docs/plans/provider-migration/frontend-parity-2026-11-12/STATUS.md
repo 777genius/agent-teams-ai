@@ -2,6 +2,36 @@
 
 Обновлено: **23 ноября 2026**. Единственный текущий рабочий план.
 
+## Уточнение 23 ноября: retained fork в receiving CI #1192
+
+Последний аудит исходной маршрутизации нашёл более раннюю границу авторизации,
+чем перенос полной main-интеграции. Обычный merge #1220 → Draft #1192 вызывает
+специальный `retained-opencode-coexistence` в
+[неизменённом ci.yml e11](https://github.com/777genius/agent-teams-ai/blob/e11db70761eef5f920c2dbaafd706fb216c78a39/.github/workflows/ci.yml).
+[Исходный retained harness](https://github.com/777genius/agent-teams-ai/blob/e11db70761eef5f920c2dbaafd706fb216c78a39/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts)
+проверяет настоящий исторический `resources/runtime/claude-multimodel` 0.0.158,
+вызывает его с `--version` (CLI 2.777.777) и выбирает его OpenCode supervisor;
+последующий donor `4a0e062` также использует настоящий fork 0.0.160.
+Это не сгенерированные finite metadata peers. Localhost-модель, отдельные TEST
+Claude/Codex sentinels и `OPENCODE_DISABLE_CLAUDE_CODE` ограничивают provider route,
+но не заменяют реальные fork executables.
+
+Для настоящего retained fork и его version probe отдельное исключение из
+действующего запрета genuine Claude/Codex не установлено. Общее разрешение
+OpenCode-сценариев само по себе не разрешает считать эту конкретную границу закрытой.
+Поэтому прежний безусловный вывод о разрешённости receiving merge в Draft #1192
+ниже требует уточнения **до выполнения merge**. Полная main-интеграция дополнительно
+сохраняет уже описанную Windows Anthropic boundary. Guards, filters и проверки
+ради обхода ограничений не меняются.
+
+Узкий путь e11 → фактический #1220 → Ready #1220 остаётся разрешённым после
+завершения соответствующих исходных CI: полный diff bb13 → e11 содержит 41 путь,
+не меняет workflows/package/lock и не совпадает с genuine-native path filters;
+branch predicates Stage1, retained и Codex login для #1220 ложны. Сначала завершаются
+все эти разрешённые действия и квалификация #1220, затем уточняется разрешение
+на конкретные настоящие fork/native executions перед следующей мутацией стека.
+Фактический #1192 не менялся, новых genuine runtime executions этот аудит не делал.
+
 ## Контрольная точка 23 ноября 2026: WorkSync, актуальный main и конечные E2E fixtures
 
 Узкое исправление cold WorkSync опубликовано обычным коммитом
