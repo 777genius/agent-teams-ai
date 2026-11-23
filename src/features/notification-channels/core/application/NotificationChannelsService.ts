@@ -68,6 +68,8 @@ function toDto(channel: StoredDeliveryChannel): DeliveryChannelDto {
 /** Application use cases only; no Electron, HTTP, filesystem or React dependencies. */
 export class NotificationChannelsService {
   private transaction: Promise<void> = Promise.resolve();
+  private activeDispatches = 0;
+  private static readonly MAX_CONCURRENT_DISPATCHES = 4;
 
   constructor(private readonly deps: NotificationChannelsDependencies) {}
 
@@ -170,16 +172,23 @@ export class NotificationChannelsService {
   async dispatch(notification: DetectedError): Promise<void> {
     if (this.deps.canDeliver && !this.deps.canDeliver()) return;
     const outbound = toOutboundNotification(notification);
-    if (!outbound) return;
-    const channels = (await this.deps.repository.read()).filter((channel) =>
-      channel.enabled && channel.events.includes(outbound.event)
-    );
-    // No backlog, no retry: avoid duplicate third-party messages after a restart.
-    await Promise.allSettled(channels.map(async (channel) => {
-      const secret = await this.deps.credentials.read(channel.credentialId);
-      if (!secret) return;
-      await this.safeSend(channel, secret, outbound.message);
-    }));
+    if (!outbound || this.activeDispatches >= NotificationChannelsService.MAX_CONCURRENT_DISPATCHES) {
+      return;
+    }
+    this.activeDispatches++;
+    try {
+      const channels = (await this.deps.repository.read()).filter((channel) =>
+        channel.enabled && channel.events.includes(outbound.event)
+      );
+      // Bound simultaneous provider requests; no backlog or retry after uncertain outcomes.
+      await Promise.allSettled(channels.map(async (channel) => {
+        const secret = await this.deps.credentials.read(channel.credentialId);
+        if (!secret) return;
+        await this.safeSend(channel, secret, outbound.message);
+      }));
+    } finally {
+      this.activeDispatches--;
+    }
   }
 
   private async safeSend(channel: StoredDeliveryChannel, secret: string, message: string): Promise<{

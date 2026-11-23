@@ -124,6 +124,20 @@ describe('Notification Channels application', () => {
     expect(records[0].provider).toBe('telegram');
   });
 
+  it('bounds dispatch fan-out during a burst without buffering stale notifications', async () => {
+    await add(true);
+    let release!: (value: { success: boolean }) => void;
+    const pending = new Promise<{ success: boolean }>((resolve) => { release = resolve; });
+    sent.mockImplementation(() => pending);
+    const running = Array.from({ length: 4 }, () => service.dispatch(event));
+    await service.dispatch(event);
+    expect(sent).toHaveBeenCalledTimes(4);
+    release({ success: true });
+    await Promise.all(running);
+    await service.dispatch(event);
+    expect(sent).toHaveBeenCalledTimes(5);
+  });
+
   it('does not expose vendor secrets or throw on failed sends', async () => {
     const id = await add(true);
     sent.mockRejectedValue(new Error('token=' + TOKEN));
