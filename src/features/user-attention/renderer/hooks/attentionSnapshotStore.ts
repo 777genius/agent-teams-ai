@@ -22,6 +22,7 @@ let state: AttentionStoreState = {
 let currentContextId = '';
 let epoch = 0;
 let fullLoading = false;
+let flushing = false;
 let queuedFull = false;
 let queuedTeams = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -37,7 +38,7 @@ function publish(changes: Partial<AttentionStoreState> = {}): void {
 function queue(teamName?: string): void {
   if (!teamName) queuedFull = true;
   else if (!queuedFull) queuedTeams.add(teamName);
-  if (flushTimer || listeners.size === 0) return;
+  if (flushTimer || flushing || listeners.size === 0) return;
   flushTimer = setTimeout(() => {
     flushTimer = null;
     void flush();
@@ -87,19 +88,26 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
 }
 
 async function flush(): Promise<void> {
-  if (fullLoading || !currentContextId) return;
-  if (queuedFull || !state.snapshot) {
-    queuedFull = false;
-    queuedTeams.clear();
-    await fetchSnapshot();
-    return;
-  }
-  const names = [...queuedTeams];
-  queuedTeams.clear();
-  // A bounded fan-out; team events cannot start N copies of the global scan.
-  for (const name of names) {
-    if (!currentContextId) return;
-    await fetchSnapshot(name);
+  if (flushing || fullLoading || !currentContextId) return;
+  flushing = true;
+  try {
+    if (queuedFull || !state.snapshot) {
+      queuedFull = false;
+      queuedTeams.clear();
+      await fetchSnapshot();
+    } else {
+      const names = [...queuedTeams];
+      queuedTeams.clear();
+      // A bounded fan-out; team events cannot start N copies of the global scan.
+      for (const name of names) {
+        if (!currentContextId || queuedFull) break;
+        await fetchSnapshot(name);
+      }
+    }
+  } finally {
+    flushing = false;
+    // Only one global drain; updates arriving during in-flight reads get a trailing pass.
+    if (queuedFull || queuedTeams.size > 0) queue();
   }
 }
 
