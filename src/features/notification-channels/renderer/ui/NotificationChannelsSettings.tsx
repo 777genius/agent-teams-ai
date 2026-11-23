@@ -21,10 +21,10 @@ import type { ChannelTestStatus, DeliveryProvider } from '../../contracts';
 
 function displayTest(status?: ChannelTestStatus): string {
   if (!status) return 'Not tested';
-  return status.success ? 'Test delivered' : 'Test failed: ' + (status.code ?? 'delivery_failed');
+  return status.success ? 'Provider accepted test message' : 'Test failed: ' + (status.code ?? 'delivery_failed');
 }
 
-export function NotificationChannelsSettings(): React.JSX.Element {
+export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { autoDeliveryPaused?: boolean }): React.JSX.Element {
   const {
     channels, draft, loading, busy, deletePending, error,
     save, edit, toggle, remove, test, providerChanged, updateDraft, toggleEvent, start, cancel,
@@ -41,6 +41,12 @@ export function NotificationChannelsSettings(): React.JSX.Element {
             Optional Telegram, Discord, Slack and other destinations. Desktop alerts stay unchanged.
             Only the event type is sent, never agent messages.
           </p>
+          {autoDeliveryPaused && (
+            <p className="mt-2 text-xs text-amber-500" role="status">
+              Automatic external delivery is paused by global notifications or snooze.
+              You can still test a destination manually.
+            </p>
+          )}
         </div>
         <Button type="button" size="sm" variant="outline"
           disabled={busy || draft !== null || channels.length >= 20}

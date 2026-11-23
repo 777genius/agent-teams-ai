@@ -264,7 +264,7 @@ export const NotificationsSection = ({
         />
       </SettingRow>
 
-      <NotificationChannelsSettings />
+      <NotificationChannelsSettings autoDeliveryPaused={!safeConfig.notifications.enabled || isSnoozed} />
 
       {/* Notification Settings */}
       <SettingsSectionHeader
