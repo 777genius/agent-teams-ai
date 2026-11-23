@@ -21,7 +21,16 @@ import type { ChannelTestStatus, DeliveryProvider } from '../../contracts';
 
 function displayTest(status?: ChannelTestStatus): string {
   if (!status) return 'Not tested';
-  return status.success ? 'Provider accepted test message' : 'Test failed: ' + (status.code ?? 'delivery_failed');
+  if (status.success) return 'Provider accepted test message';
+  const descriptions: Record<string, string> = {
+    credentials_missing: 'Saved credential is missing',
+    authentication_failed: 'Check the bot token or webhook URL',
+    invalid_recipient: 'Check recipient permissions or chat ID',
+    rate_limited: 'Provider rate limit; try later',
+    network_error: 'Network or provider unavailable',
+    delivery_failed: 'Provider rejected the test or request failed',
+  };
+  return descriptions[status.code ?? 'delivery_failed'];
 }
 
 export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { autoDeliveryPaused?: boolean }): React.JSX.Element {

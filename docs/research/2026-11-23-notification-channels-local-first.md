@@ -1,9 +1,9 @@
 # Notification Channels — local-first research and choice gate
 
-Status: **Research only / DECISION REQUIRED** · 2026-11-23
+Status: **Implementation Draft — Thinwrap selected by owner, release checks pending** · 2026-11-23
 Repository baseline: `main` at `e876918f362e2fad55dbf47996e3ba346dbc22b9`.
 Independent companion: `docs/plans/2026-11-23-user-attention-inbox-mvp.md` (in another Draft PR).
-**No provider, dependency, runtime, authentication design or implementation is approved by this PR.**
+**Historical research below preceded implementation.** The owner subsequently approved autonomous delivery; §13 records the Thinwrap selection and the security scope. Draft code is not yet a release or verified multi-platform E2E.
 
 ## 1. Requirement and invariants
 

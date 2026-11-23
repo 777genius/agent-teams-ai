@@ -47,6 +47,7 @@ export const DELIVERY_EVENT_LABELS: Record<DeliveryEvent, string> = {
 export type DeliveryFailureCode =
   | 'credentials_missing'
   | 'authentication_failed'
+  | 'invalid_recipient'
   | 'rate_limited'
   | 'network_error'
   | 'delivery_failed';

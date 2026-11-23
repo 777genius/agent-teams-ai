@@ -103,6 +103,16 @@ describe('Thinwrap transport adapter', () => {
     expect(JSON.stringify(result)).not.toContain(TELEGRAM);
   });
 
+  it('preserves Telegram blocked-recipient classification without leaking secrets', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ ok: false, error_code: 403, description: 'Forbidden: bot blocked by the user' }),
+      { status: 403, headers: { 'content-type': 'application/json' } }
+    )));
+    expect(await new ThinwrapDeliverySender().send(
+      makeChannel('telegram'), TELEGRAM, 'Agent Teams: Message for you.'
+    )).toEqual({ success: false, code: 'invalid_recipient' });
+  });
+
   it('refuses local/webhook impostors without making a request', async () => {
     const network = vi.fn(async () => new Response('ok', { status: 200 }));
     vi.stubGlobal('fetch', network);

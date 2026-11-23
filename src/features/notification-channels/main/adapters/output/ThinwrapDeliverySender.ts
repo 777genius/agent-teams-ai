@@ -39,6 +39,7 @@ function classifyFailure(error: unknown): DeliveryFailureCode {
     // while Teams may classify a 400 webhook error as auth_failed.
     switch (error.providerCode) {
       case 'auth_failed': return 'authentication_failed';
+      case 'invalid_recipient': return 'invalid_recipient';
       case 'rate_limited': return 'rate_limited';
       case 'provider_unavailable': return 'network_error';
       default: return 'delivery_failed';
