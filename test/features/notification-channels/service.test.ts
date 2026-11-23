@@ -92,6 +92,17 @@ describe('Notification Channels application', () => {
     expect(secrets.size).toBe(0);
   });
 
+  it('invalidates a previous successful test when Telegram chat ID changes', async () => {
+    const id = await add();
+    await service.test(id);
+    expect((await service.list())[0].lastTest?.success).toBe(true);
+    await service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: true,
+      events: ['user_inbox'], chatId: '654321',
+    });
+    expect((await service.list())[0].lastTest).toBeUndefined();
+  });
+
   it('rejects provider change without new credential', async () => {
     const id = await add();
     await expect(service.save({

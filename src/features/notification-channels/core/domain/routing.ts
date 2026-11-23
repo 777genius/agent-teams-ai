@@ -28,7 +28,7 @@ export function normalizeChannelInput(value: unknown): SaveDeliveryChannelReques
     throw new Error('Invalid notification events');
   }
   const chatId = typeof input.chatId === 'string' ? input.chatId.trim() : '';
-  if (provider === 'telegram' && !/^(-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{3,})$/.test(chatId)) {
+  if (provider === 'telegram' && !/^(-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,})$/.test(chatId)) {
     throw new Error('Telegram requires a valid chat ID or channel username');
   }
   if (input.id !== undefined &&

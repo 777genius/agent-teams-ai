@@ -112,7 +112,9 @@ export class NotificationChannelsService {
         events: input.events,
         chatId: input.chatId,
         credentialId,
-        lastTest: secret ? undefined : previous?.lastTest,
+        lastTest: secret || previous?.chatId !== input.chatId || previous?.provider !== input.provider
+          ? undefined
+          : previous?.lastTest,
       };
       try {
         await this.deps.repository.write([
