@@ -157,7 +157,6 @@ import {
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
 import {
-  addIgnoredTeamRun,
   getCurrentProvisioningProgressForTeam,
   isTeamRunIgnored,
   projectMissingProvisioningRunCleanup,
@@ -192,6 +191,7 @@ import {
 import {
   buildTeamScopedProgressTombstones,
   collectFailedProvisioningAttemptCleanup,
+  collectStartedProvisioningAttemptCleanup,
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
   teamProvisioningAttemptTracker,
@@ -1274,21 +1274,29 @@ function recordTeamLaunchIpcFailure(
   });
 }
 
-function refreshAdoptedProvisioningRun(getState: () => TeamSlice, runId: string): void {
+function refreshAdoptedProvisioningRun(getState: () => AppState, runId: string): void {
   if (Object.hasOwn(getState().provisioningRuns, runId)) return;
+  const requestScope = captureContextRequestScope(getState);
   void getState().getProvisioningStatus(runId).catch((error: unknown) => {
-    if (isUnknownProvisioningRunError(error)) getState().clearMissingProvisioningRun(runId);
+    if (
+      isContextRequestScopeCurrent(getState, requestScope) &&
+      isUnknownProvisioningRunError(error)
+    ) {
+      getState().clearMissingProvisioningRun(runId);
+    }
   });
 }
 
 async function pollProvisioningStatus(
-  getState: () => TeamSlice,
+  getState: () => AppState,
   runId: string,
+  requestScope: ContextRequestScope,
   opts?: { maxAttempts?: number; initialDelayMs?: number }
 ): Promise<void> {
   const maxAttempts = opts?.maxAttempts ?? 12;
   let delayMs = opts?.initialDelayMs ?? 150;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (!isContextRequestScopeCurrent(getState, requestScope)) return;
     const state = getState();
     const current = state.provisioningRuns[runId];
     if (current && isTerminalProvisioningState(current.state)) {
@@ -1296,10 +1304,14 @@ async function pollProvisioningStatus(
     }
     try {
       const progress = await state.getProvisioningStatus(runId);
-      if (isTerminalProvisioningState(progress.state)) {
+      if (
+        !isContextRequestScopeCurrent(getState, requestScope) ||
+        isTerminalProvisioningState(progress.state)
+      ) {
         return;
       }
     } catch (error) {
+      if (!isContextRequestScopeCurrent(getState, requestScope)) return;
       if (isUnknownProvisioningRunError(error)) {
         state.clearMissingProvisioningRun(runId);
         return;
@@ -4201,6 +4213,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName, get);
+    const requestScope = captureContextRequestScope(get);
     const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
@@ -4210,49 +4223,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: floor,
       },
     }));
-    set((state) => {
-      const cleaned = { ...state.provisioningRuns };
-      for (const [runId, run] of Object.entries(cleaned)) {
-        if (run.teamName === request.teamName) {
-          delete cleaned[runId];
-        }
-      }
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      delete nextErrors[request.teamName];
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      delete nextSpawnStatuses[request.teamName];
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      delete nextSpawnSnapshots[request.teamName];
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      delete nextRuntime[request.teamName];
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      delete nextActiveTools[request.teamName];
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      delete nextFinishedVisible[request.teamName];
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      delete nextToolHistory[request.teamName];
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
-      delete nextRuntimeRunIdByTeam[request.teamName];
-      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
-        ? addIgnoredTeamRun(state.ignoredRuntimeRunIds, previousRuntimeRunId, request.teamName)
-        : state.ignoredRuntimeRunIds;
-      const visibleLoadingResets = collectTeamScopedVisibleLoadingResets(state, request.teamName);
-      return {
-        provisioningRuns: cleaned,
-        provisioningErrorByTeam: nextErrors,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        ignoredProvisioningRunIds: state.ignoredProvisioningRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-        ...visibleLoadingResets,
-      };
-    });
+    set((state) => ({
+      ...collectStartedProvisioningAttemptCleanup(state, request.teamName),
+      ...collectTeamScopedVisibleLoadingResets(state, request.teamName),
+    }));
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
     const pendingRunId = `pending:${request.teamName}:${attemptId}`;
@@ -4316,6 +4290,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       const response = await unwrapIpc('team:create', () => api.teams.createTeam(request));
       responseRunId = response.runId;
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
+        return response.runId;
+      }
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
       recordTeamCreate({
         source: 'dialog',
@@ -4360,7 +4338,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       } catch {
         // ignore — polling below will retry
       }
-      void pollProvisioningStatus(get, response.runId);
+      void pollProvisioningStatus(get, response.runId, requestScope);
       teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       return response.runId;
     } catch (error) {
@@ -4372,6 +4350,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             : 'Failed to create team';
       const isCurrentAttempt = teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       set((state) => {
+        if (!isContextRequestScopeCurrent(get, requestScope)) return {};
         const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
           state,
           request.teamName,
@@ -4419,6 +4398,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName, get);
+    const requestScope = captureContextRequestScope(get);
     const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
@@ -4429,49 +4409,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       },
     }));
     // Clear stale provisioning runs for this team so the banner starts fresh
-    set((state) => {
-      const cleaned = { ...state.provisioningRuns };
-      for (const [runId, run] of Object.entries(cleaned)) {
-        if (run.teamName === request.teamName) {
-          delete cleaned[runId];
-        }
-      }
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      delete nextErrors[request.teamName];
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      delete nextSpawnStatuses[request.teamName];
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      delete nextSpawnSnapshots[request.teamName];
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      delete nextRuntime[request.teamName];
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      delete nextActiveTools[request.teamName];
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      delete nextFinishedVisible[request.teamName];
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      delete nextToolHistory[request.teamName];
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
-      delete nextRuntimeRunIdByTeam[request.teamName];
-      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
-        ? addIgnoredTeamRun(state.ignoredRuntimeRunIds, previousRuntimeRunId, request.teamName)
-        : state.ignoredRuntimeRunIds;
-      const visibleLoadingResets = collectTeamScopedVisibleLoadingResets(state, request.teamName);
-      return {
-        provisioningRuns: cleaned,
-        provisioningErrorByTeam: nextErrors,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        ignoredProvisioningRunIds: state.ignoredProvisioningRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-        ...visibleLoadingResets,
-      };
-    });
+    set((state) => ({
+      ...collectStartedProvisioningAttemptCleanup(state, request.teamName),
+      ...collectTeamScopedVisibleLoadingResets(state, request.teamName),
+    }));
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
     const pendingRunId = `pending:${request.teamName}:${attemptId}`;
@@ -4516,14 +4457,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // launch/progress uses the logical team. Reset its persisted policy before
       // native launch; otherwise an old "allow all" selection survives relaunch.
       const context = await api.teams.getProjectContextView(request.teamName, request.cwd);
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        throw new Error('The project context changed before the team could launch. Try again.');
+      }
       if (context.mode === 'per_project' && context.state === 'ready') {
         set((state) =>
           projectToolApprovalSettings(state, context.executionTeamName, launchSettings)
         );
         await persistAndAwaitToolApprovalSettingsSync(context.executionTeamName, launchSettings);
       }
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        throw new Error('The project context changed before the team could launch. Try again.');
+      }
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
       responseRunId = response.runId;
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
+        return response.runId;
+      }
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
       saveTeamLaunchParams(request.teamName, optimisticLaunchParams);
       set((state) => ({
@@ -4562,7 +4513,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       } catch {
         // ignore — polling below will retry
       }
-      void pollProvisioningStatus(get, response.runId);
+      void pollProvisioningStatus(get, response.runId, requestScope);
       teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       return response.runId;
     } catch (error) {
@@ -4574,6 +4525,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             : 'Failed to launch team';
       const isCurrentAttempt = teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       set((state) => {
+        if (!isContextRequestScopeCurrent(get, requestScope)) return {};
         const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
           state,
           request.teamName,
@@ -4608,10 +4560,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   getProvisioningStatus: async (runId: string) => {
+    const requestScope = captureContextRequestScope(get);
     const progress = await unwrapIpc('team:provisioningStatus', () =>
       api.teams.getProvisioningStatus(runId)
     );
-    get().onProvisioningProgress(progress);
+    if (isContextRequestScopeCurrent(get, requestScope)) get().onProvisioningProgress(progress);
     return progress;
   },
   clearMissingProvisioningRun: (runId: string) => {

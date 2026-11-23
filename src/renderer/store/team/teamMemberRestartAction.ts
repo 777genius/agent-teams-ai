@@ -91,8 +91,14 @@ export function createTeamMemberRestartAction<TScope>(options: {
                 }
                 adopted = true;
                 const nextPins = { ...state.currentRuntimeRunIdByTeam, [teamName]: successor };
+                const nextProvisioningOwners = {
+                  ...state.currentProvisioningRunIdByTeam,
+                  [teamName]: successor,
+                };
                 const nextRuns = { ...state.provisioningRuns };
-                delete nextRuns[predecessor];
+                if (!Object.values(nextProvisioningOwners).includes(predecessor)) {
+                  delete nextRuns[predecessor];
+                }
                 return {
                   ...projectIncomingMemberSpawnSnapshot({
                     teamName,
@@ -101,10 +107,7 @@ export function createTeamMemberRestartAction<TScope>(options: {
                     onEqualSuppressed: options.onEqualSuppressed,
                   }),
                   currentRuntimeRunIdByTeam: nextPins,
-                  currentProvisioningRunIdByTeam: {
-                    ...state.currentProvisioningRunIdByTeam,
-                    [teamName]: successor,
-                  },
+                  currentProvisioningRunIdByTeam: nextProvisioningOwners,
                   provisioningRuns: nextRuns,
                   ignoredRuntimeRunIds: addIgnoredTeamRun(
                     state.ignoredRuntimeRunIds,

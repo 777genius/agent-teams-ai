@@ -176,3 +176,55 @@ Follow-up validation:
   again. The wider 67-entry and merged-UI 20-entry attempts were killed with exit 137 and are not
   counted as passes; whole workspace qualification remains the required PR gate. Both store and bridge changes received
   an independent final source review with no remaining correctness finding.
+
+## PR #1267 second review follow-up — 2026-11-23
+
+The review of `2aec7b607a6eee647a7b2fad1b9530648df394ec` identified one inline
+context-isolation defect, two additional shared-owner cleanup defects outside the diff, and
+two regression-test improvements. An independent audit checked the same invariants at the
+other asynchronous and cleanup boundaries before implementation.
+
+- Provisioning status requests capture both the context ID and its invalidation epoch. A
+  delayed result still returns to its caller, but cannot update a different context or a new
+  incarnation of the original context after A → B → A navigation.
+- Successor hydration and polling apply the same scope check to missing-run failures. A poll
+  retains its initiating scope across requests and delays; a stale initial response cannot
+  start another poll in the newly selected context.
+- Create and launch completions and failures cannot mutate the new context. Launch also
+  revalidates its scope after project lookup and approval-policy synchronization, before
+  calling the native launcher.
+- Create, launch, member restart, team removal, and failed-attempt cleanup detach only the
+  initiating provisioning owner and preserve progress still referenced by another alias.
+  Synthetic pending attempts retain their existing cleanup behavior. Confirmed missing-run
+  cleanup still invalidates every owner of that exact missing run.
+- Stale-replay assertions check progress and errors for all three aliases after each replay.
+  A separate delayed agent-runtime snapshot test verifies that missing-run cleanup cannot be
+  undone by an earlier in-flight read.
+
+Validation against the same production/test diff:
+
+- Before production changes: **18 expected failures and 14 passing controls**.
+- After the fixes: **32 focused cases passed**. The complete affected run passed **363 tests
+  across seven suites**, including all 283 team-slice cases, with no failures or skips.
+- The pinned TypeScript **7.0.2** scoped check passed for all 19 follow-up source/test entry
+  points and ambient declarations, including transitive imports. The whole-workspace command
+  did not complete when the executor disconnected; it is not counted as a pass. The scoped
+  check was completed after the executor recovered and the preserved diff was inspected.
+- Shared initialization cleanup removes duplication from the frozen team slice. Its size cap
+  is lowered from 4,957 to **4,910** lines; no cap is raised.
+- Final changed-file fast lint, source-size and provisioning-architecture guards, and
+  `git diff --check` passed. Independent review of the complete five-file production/test diff
+  found no remaining correctness issue in the addressed boundaries.
+
+The seven affected suites are `teamSlice`, `teamProvisioningRunIdentity`,
+`teamRuntimeRunAdoption`, `teamScopedStateCleanup`, `teamSliceContextRace`,
+`contextSliceTeamReset`, and `teamProvisioningStateRules` under `test/renderer/store/`.
+No workflow was manually dispatched, rerun, or cancelled for these fixes. Required PR
+qualification is checked separately against the published current head before merge.
+
+The earlier integration through `a89e81b85a0f5c91e36d1592e381957b3ecae9f2` retained the
+upstream SQLite migration and external-agent connection changes. The real Electron bridge
+fixture and two selected built MCP stdio cases passed on that integrated head. The subsequent
+`main` delta to `bb6b7682d6071cd1a41d5f009f85e602d9e5bab9` changes only the announcement
+validation runner and its static workflow test. It does not overlap this feature's source or
+tests; it is integrated as an ordinary merge without changing workflow policy in this patch.

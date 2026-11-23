@@ -23,6 +23,7 @@ import {
   getTeamRefreshFanoutSnapshotForTests,
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
+import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
 
 import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
 import type { TeamLaunchParams } from '../../../src/renderer/store/team/teamLaunchParams';
@@ -6363,6 +6364,7 @@ describe('teamSlice actions', () => {
     expect(store.getState().provisioningRuns['run-new']?.message).toContain('restart is ready');
     expect(store.getState().teamAgentRuntimeByTeam['my-team']?.runId).toBe('run-new');
     expect(store.getState().ignoredRuntimeRunIds['run-old']).toBe('my-team');
+    expect(store.getState().provisioningRuns['run-old']).toBeUndefined();
     store
       .getState()
       .onProvisioningProgress({ ...oldProgress, updatedAt: '2099-01-01T00:00:00.000Z' });
@@ -9098,6 +9100,454 @@ describe('teamSlice actions', () => {
         updatedAt: startedAt,
       };
 
+      it.each(['different-context', 'same-context-after-switch'] as const)(
+        'returns a delayed status without applying it in a %s',
+        async (contextChange) => {
+          const store = createSliceStore();
+          const pending = createDeferredPromise<typeof old>();
+          const onProgress = vi.fn(store.getState().onProvisioningProgress);
+          store.setState({ onProvisioningProgress: onProgress });
+          hoisted.getProvisioningStatus.mockReturnValueOnce(pending.promise);
+
+          const request = store.getState().getProvisioningStatus(old.runId);
+          store.setState({ activeContextId: 'remote' });
+          if (contextChange === 'same-context-after-switch') {
+            invalidateContextScopedRequestEpoch();
+            store.setState({ activeContextId: 'local' });
+          }
+          const current = {
+            ...old,
+            message: 'Current context failure',
+            error: 'Current context failure',
+          };
+          const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: current.runId });
+          store.setState({
+            provisioningRuns: { [current.runId]: current },
+            currentProvisioningRunIdByTeam: { builders: current.runId, 'ptc-a': current.runId },
+            currentRuntimeRunIdByTeam: { builders: current.runId, 'ptc-a': current.runId },
+            provisioningErrorByTeam: { builders: current.error, 'ptc-a': current.error },
+            teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+          });
+
+          pending.resolve(old);
+
+          await expect(request).resolves.toBe(old);
+          expect(onProgress).not.toHaveBeenCalled();
+          for (const owner of ['builders', 'ptc-a']) {
+            expect(getCurrentProvisioningProgressForTeam(store.getState(), owner)).toBe(current);
+            expect(store.getState().provisioningErrorByTeam[owner]).toBe(current.error);
+            expect(store.getState().currentRuntimeRunIdByTeam[owner]).toBe(current.runId);
+          }
+          expect(store.getState().teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+        }
+      );
+
+      it.each(['fetchTeamAgentRuntime', 'fetchMemberSpawnStatuses'] as const)(
+        'keeps the new context intact when adopted status from %s rejects with Unknown runId',
+        async (refresh) => {
+          const store = createSliceStore();
+          const status = createDeferredPromise<typeof old>();
+          const successorId = 'project-r2';
+          const cleanup = vi.fn(store.getState().clearMissingProvisioningRun);
+          store.setState({
+            clearMissingProvisioningRun: cleanup,
+            provisioningRuns: { [old.runId]: old },
+            currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+            currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+            memberSpawnStatusesByTeam: {
+              'ptc-a': { alice: createMemberSpawnStatus({ status: 'error', runtimeAlive: false }) },
+            },
+          });
+          hoisted.getProvisioningStatus.mockReturnValueOnce(status.promise);
+          hoisted.getTeamAgentRuntime.mockResolvedValue(
+            createRuntimeSnapshot({ teamName: 'ptc-a', runId: successorId })
+          );
+          hoisted.getMemberSpawnStatuses.mockResolvedValue(
+            createMemberSpawnSnapshot({ runId: successorId })
+          );
+
+          await store.getState()[refresh]('ptc-a');
+          expect(hoisted.getProvisioningStatus).toHaveBeenCalledExactlyOnceWith(successorId);
+          store.setState({ activeContextId: 'remote' });
+          invalidateContextScopedRequestEpoch();
+          const current = { ...old, runId: successorId, error: 'Current context failure' };
+          const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: successorId });
+          const spawn = createMemberSpawnSnapshot({ runId: successorId });
+          store.setState({
+            activeContextId: 'local',
+            provisioningRuns: { [successorId]: current },
+            currentProvisioningRunIdByTeam: { builders: successorId, 'ptc-a': successorId },
+            currentRuntimeRunIdByTeam: { builders: successorId, 'ptc-a': successorId },
+            provisioningErrorByTeam: { builders: current.error, 'ptc-a': current.error },
+            memberSpawnStatusesByTeam: { 'ptc-a': spawn.statuses },
+            memberSpawnSnapshotsByTeam: { 'ptc-a': spawn },
+            teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+            ignoredProvisioningRunIds: {},
+            ignoredRuntimeRunIds: {},
+          });
+
+          status.reject(new Error(`Unknown runId: ${successorId}`));
+          await flushMicrotasks();
+
+          expect(cleanup).not.toHaveBeenCalled();
+          for (const owner of ['builders', 'ptc-a']) {
+            expect(getCurrentProvisioningProgressForTeam(store.getState(), owner)).toBe(current);
+            expect(store.getState().provisioningErrorByTeam[owner]).toBe(current.error);
+            expect(store.getState().currentRuntimeRunIdByTeam[owner]).toBe(successorId);
+          }
+          expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBe(spawn.statuses);
+          expect(store.getState().memberSpawnSnapshotsByTeam['ptc-a']).toBe(spawn);
+          expect(store.getState().teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+          expect(store.getState().ignoredProvisioningRunIds).toEqual({});
+          expect(store.getState().ignoredRuntimeRunIds).toEqual({});
+        }
+      );
+
+      it.each(['createTeam', 'launchTeam'] as const)(
+        '%s preserves a shared predecessor for the physical owner when the logical owner relaunches',
+        async (operation) => {
+          vi.useFakeTimers();
+          const store = createSliceStore();
+          const response = createDeferredPromise<{ runId: string }>();
+          const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: old.runId });
+          const spawn = createMemberSpawnSnapshot({ runId: old.runId });
+          store.setState({
+            provisioningRuns: { [old.runId]: old },
+            currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+            currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+            provisioningErrorByTeam: { builders: old.error, 'ptc-a': old.error },
+            memberSpawnStatusesByTeam: { 'ptc-a': spawn.statuses },
+            memberSpawnSnapshotsByTeam: { 'ptc-a': spawn },
+            teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+          });
+          hoisted[operation].mockReturnValueOnce(response.promise);
+          const successor = {
+            ...old,
+            runId: 'project-r2',
+            state: 'ready' as const,
+            error: undefined,
+            startedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          hoisted.getProvisioningStatus.mockResolvedValue(successor);
+
+          const launching = store.getState()[operation]({
+            teamName: 'builders',
+            cwd: '/tmp/shared-run-relaunch-fixture',
+            members: [],
+          });
+          const starting = store.getState();
+          response.resolve({ runId: successor.runId });
+          await launching;
+
+          expect(starting.currentProvisioningRunIdByTeam.builders).toMatch(/^pending:/);
+          expect(starting.currentRuntimeRunIdByTeam.builders).toBeUndefined();
+          expect(store.getState().currentProvisioningRunIdByTeam.builders).toBe(successor.runId);
+          expect(store.getState().currentRuntimeRunIdByTeam.builders).toBe(successor.runId);
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toEqual(successor);
+          for (const state of [starting, store.getState()]) {
+            expect(getCurrentProvisioningProgressForTeam(state, 'ptc-a')).toBe(old);
+            expect(state.currentRuntimeRunIdByTeam['ptc-a']).toBe(old.runId);
+            expect(state.provisioningErrorByTeam['ptc-a']).toBe(old.error);
+            expect(state.memberSpawnStatusesByTeam['ptc-a']).toBe(spawn.statuses);
+            expect(state.memberSpawnSnapshotsByTeam['ptc-a']).toBe(spawn);
+            expect(state.teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+          }
+        }
+      );
+
+      it('retains the predecessor progress for another alias when a member restart adopts its successor', async () => {
+        const store = createSliceStore();
+        const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: old.runId });
+        const spawn = createMemberSpawnSnapshot({ runId: old.runId });
+        const successor = { ...old, runId: 'project-r2', state: 'ready' as const, error: undefined };
+        store.setState({
+          provisioningRuns: { [old.runId]: old },
+          currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          provisioningErrorByTeam: { builders: old.error, 'ptc-a': old.error },
+          memberSpawnStatusesByTeam: { builders: spawn.statuses, 'ptc-a': spawn.statuses },
+          memberSpawnSnapshotsByTeam: { builders: spawn, 'ptc-a': spawn },
+          teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+        });
+        hoisted.getProvisioningStatus.mockResolvedValue(successor);
+        hoisted.getMemberSpawnStatuses.mockResolvedValue(
+          createMemberSpawnSnapshot({ runId: successor.runId })
+        );
+        hoisted.getTeamAgentRuntime.mockResolvedValue(
+          createRuntimeSnapshot({ teamName: 'builders', runId: successor.runId })
+        );
+
+        await store.getState().restartMember('builders', 'alice');
+
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toEqual(successor);
+        expect(store.getState().currentRuntimeRunIdByTeam.builders).toBe(successor.runId);
+        expect(store.getState().provisioningErrorByTeam.builders).toBeUndefined();
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toBe(old);
+        expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe(old.runId);
+        expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe(old.error);
+        expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBe(spawn.statuses);
+        expect(store.getState().memberSpawnSnapshotsByTeam['ptc-a']).toBe(spawn);
+        expect(store.getState().teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+      });
+
+      it('preserves a shared run when only the logical team local state is cleared', () => {
+        const store = createSliceStore();
+        const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: old.runId });
+        const spawn = createMemberSpawnSnapshot({ runId: old.runId });
+        store.setState({
+          provisioningRuns: { [old.runId]: old },
+          currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          provisioningErrorByTeam: { builders: old.error, 'ptc-a': old.error },
+          memberSpawnStatusesByTeam: { 'ptc-a': spawn.statuses },
+          memberSpawnSnapshotsByTeam: { 'ptc-a': spawn },
+          teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+        });
+
+        store.getState().clearDeletedTeamLocalState('builders');
+
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toBe(old);
+        expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe(old.runId);
+        expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe(old.error);
+        expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBe(spawn.statuses);
+        expect(store.getState().memberSpawnSnapshotsByTeam['ptc-a']).toBe(spawn);
+        expect(store.getState().teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+        expect(store.getState().currentProvisioningRunIdByTeam.builders).toBeUndefined();
+        expect(store.getState().currentRuntimeRunIdByTeam.builders).toBeUndefined();
+        expect(store.getState().provisioningErrorByTeam.builders).toBeUndefined();
+      });
+
+      it('preserves promoted launch progress still owned by a physical alias after the launch rejects', async () => {
+        const store = createSliceStore();
+        const response = createDeferredPromise<{ runId: string }>();
+        hoisted.launchTeam.mockReturnValueOnce(response.promise);
+        const launching = store.getState().launchTeam({
+          teamName: 'builders',
+          cwd: '/tmp/shared-failed-launch-fixture',
+        });
+        const rejection = expect(launching).rejects.toThrow('Launch failed');
+        await flushMicrotasks();
+        const promoted = {
+          ...old,
+          state: 'assembling' as const,
+          error: undefined,
+          startedAt: store.getState().provisioningStartedAtFloorByTeam.builders,
+          updatedAt: store.getState().provisioningStartedAtFloorByTeam.builders,
+        };
+        const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: old.runId });
+        const spawn = createMemberSpawnSnapshot({ runId: old.runId });
+        store.setState({ currentRuntimeRunIdByTeam: { 'ptc-a': old.runId } });
+        store.getState().onProvisioningProgress(promoted);
+        store.setState({
+          memberSpawnStatusesByTeam: { 'ptc-a': spawn.statuses },
+          memberSpawnSnapshotsByTeam: { 'ptc-a': spawn },
+          teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+        });
+        expect(store.getState().currentProvisioningRunIdByTeam['ptc-a']).toBe(old.runId);
+
+        response.reject(new Error('Launch failed'));
+        await rejection;
+
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toBe(promoted);
+        expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe(old.runId);
+        expect(store.getState().provisioningErrorByTeam['ptc-a']).toBeUndefined();
+        expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBe(spawn.statuses);
+        expect(store.getState().memberSpawnSnapshotsByTeam['ptc-a']).toBe(spawn);
+        expect(store.getState().teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+        expect(store.getState().currentProvisioningRunIdByTeam.builders).toBeUndefined();
+        expect(store.getState().currentRuntimeRunIdByTeam.builders).toBeUndefined();
+        expect(store.getState().provisioningErrorByTeam.builders).toBe('Launch failed');
+      });
+
+      it.each([
+        { operation: 'createTeam', outcome: 'success' },
+        { operation: 'createTeam', outcome: 'failure' },
+        { operation: 'launchTeam', outcome: 'success' },
+        { operation: 'launchTeam', outcome: 'failure' },
+      ] as const)(
+        'does not apply a stale $operation $outcome after returning to the same context id',
+        async ({ operation, outcome }) => {
+          const store = createSliceStore();
+          const response = createDeferredPromise<{ runId: string }>();
+          hoisted[operation].mockReturnValueOnce(response.promise);
+          hoisted.getProvisioningStatus.mockResolvedValue({
+            ...old,
+            runId: 'old-context-result',
+            state: 'ready',
+            error: undefined,
+          });
+          const launching = store.getState()[operation]({
+            teamName: 'builders',
+            cwd: '/tmp/context-launch-fixture',
+            members: [],
+          });
+          const completion =
+            outcome === 'success'
+              ? expect(launching).resolves.toBe('old-context-result')
+              : expect(launching).rejects.toThrow('Old context failed');
+          await flushMicrotasks();
+          expect(hoisted[operation]).toHaveBeenCalledOnce();
+          store.setState({ activeContextId: 'remote' });
+          invalidateContextScopedRequestEpoch();
+          const current = { ...old, runId: 'current-context-run', error: 'Current context failure' };
+          const params = { model: 'current-context-model' };
+          store.setState({
+            activeContextId: 'local',
+            provisioningRuns: { [current.runId]: current },
+            currentProvisioningRunIdByTeam: { builders: current.runId },
+            currentRuntimeRunIdByTeam: { builders: current.runId },
+            provisioningErrorByTeam: { builders: current.error },
+            provisioningStartedAtFloorByTeam: { builders: current.startedAt },
+            launchParamsByTeam: { builders: params },
+            ignoredProvisioningRunIds: {},
+            ignoredRuntimeRunIds: {},
+          });
+
+          if (outcome === 'success') response.resolve({ runId: 'old-context-result' });
+          else response.reject(new Error('Old context failed'));
+          await completion;
+
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toBe(current);
+          expect(store.getState().currentRuntimeRunIdByTeam.builders).toBe(current.runId);
+          expect(store.getState().provisioningErrorByTeam.builders).toBe(current.error);
+          expect(store.getState().launchParamsByTeam.builders).toBe(params);
+          expect(store.getState().provisioningStartedAtFloorByTeam.builders).toBe(current.startedAt);
+          expect(store.getState().ignoredProvisioningRunIds).toEqual({});
+          expect(store.getState().ignoredRuntimeRunIds).toEqual({});
+          expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+        }
+      );
+
+      it('does not launch natively when the context changes during project preflight', async () => {
+        const store = createSliceStore();
+        const preflight = createDeferredPromise<{
+          mode: 'shared';
+          state: 'ready';
+          executionTeamName: string;
+        }>();
+        hoisted.getProjectContextView.mockReturnValueOnce(preflight.promise);
+        hoisted.getProvisioningStatus.mockResolvedValue({ ...old, runId: 'run-1', state: 'ready' });
+        const launching = store.getState().launchTeam({
+          teamName: 'builders',
+          cwd: '/tmp/context-preflight-fixture',
+        });
+        const rejection = expect(launching).rejects.toThrow(/context changed/i);
+        store.setState({ activeContextId: 'remote' });
+        invalidateContextScopedRequestEpoch();
+        store.setState({
+          activeContextId: 'local',
+          provisioningRuns: { [old.runId]: old },
+          currentProvisioningRunIdByTeam: { builders: old.runId },
+          currentRuntimeRunIdByTeam: { builders: old.runId },
+          provisioningErrorByTeam: { builders: old.error },
+        });
+
+        preflight.resolve({ mode: 'shared', state: 'ready', executionTeamName: 'builders' });
+        await rejection;
+
+        expect(hoisted.launchTeam).not.toHaveBeenCalled();
+        expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toBe(old);
+        expect(store.getState().provisioningErrorByTeam.builders).toBe(old.error);
+      });
+
+      it.each(['createTeam', 'launchTeam'] as const)(
+        'does not start polling when %s initial status completes after a context switch',
+        async (operation) => {
+          vi.useFakeTimers();
+          const store = createSliceStore();
+          const initial = {
+            ...old,
+            state: 'assembling' as const,
+            error: undefined,
+            startedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          const status = createDeferredPromise<typeof initial>();
+          hoisted[operation].mockResolvedValueOnce({ runId: old.runId });
+          hoisted.getProvisioningStatus
+            .mockReturnValueOnce(status.promise)
+            .mockResolvedValue({ ...initial, state: 'ready' });
+          const launching = store.getState()[operation]({
+            teamName: 'builders',
+            cwd: '/tmp/context-status-fixture',
+            members: [],
+          });
+          await flushMicrotasks();
+          expect(hoisted.getProvisioningStatus).toHaveBeenCalledOnce();
+          store.setState({ activeContextId: 'remote' });
+          invalidateContextScopedRequestEpoch();
+          const current = { ...initial, message: 'Current context assembling' };
+          store.setState({
+            activeContextId: 'local',
+            provisioningRuns: { [current.runId]: current },
+            currentProvisioningRunIdByTeam: { builders: current.runId },
+            currentRuntimeRunIdByTeam: { builders: current.runId },
+            provisioningStartedAtFloorByTeam: {},
+          });
+
+          status.resolve(initial);
+          await expect(launching).resolves.toBe(old.runId);
+          await vi.advanceTimersByTimeAsync(2_000);
+
+          expect(hoisted.getProvisioningStatus).toHaveBeenCalledOnce();
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toBe(current);
+        }
+      );
+
+      it.each(['nonterminal-success', 'unknown-run'] as const)(
+        'stops background polling after a stale %s without altering the new context',
+        async (outcome) => {
+          vi.useFakeTimers();
+          const store = createSliceStore();
+          const initial = {
+            ...old,
+            state: 'assembling' as const,
+            error: undefined,
+            startedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          const status = createDeferredPromise<typeof initial>();
+          const cleanup = vi.fn(store.getState().clearMissingProvisioningRun);
+          store.setState({ clearMissingProvisioningRun: cleanup });
+          hoisted.launchTeam.mockResolvedValueOnce({ runId: old.runId });
+          hoisted.getProvisioningStatus
+            .mockResolvedValueOnce(initial)
+            .mockReturnValueOnce(status.promise)
+            .mockResolvedValue({ ...initial, state: 'ready' });
+          await store.getState().launchTeam({
+            teamName: 'builders',
+            cwd: '/tmp/context-poll-fixture',
+          });
+          expect(hoisted.getProvisioningStatus).toHaveBeenCalledTimes(2);
+          store.setState({ activeContextId: 'remote' });
+          invalidateContextScopedRequestEpoch();
+          const current = { ...initial, message: 'Current context assembling' };
+          store.setState({
+            activeContextId: 'local',
+            provisioningRuns: { [current.runId]: current },
+            currentProvisioningRunIdByTeam: { builders: current.runId },
+            currentRuntimeRunIdByTeam: { builders: current.runId },
+            provisioningStartedAtFloorByTeam: {},
+            ignoredProvisioningRunIds: {},
+            ignoredRuntimeRunIds: {},
+          });
+
+          if (outcome === 'unknown-run') status.reject(new Error(`Unknown runId: ${old.runId}`));
+          else status.resolve(initial);
+          await flushMicrotasks();
+          await vi.advanceTimersByTimeAsync(2_000);
+
+          expect(cleanup).not.toHaveBeenCalled();
+          expect(hoisted.getProvisioningStatus).toHaveBeenCalledTimes(2);
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toBe(current);
+          expect(store.getState().currentRuntimeRunIdByTeam.builders).toBe(current.runId);
+          expect(store.getState().ignoredProvisioningRunIds).toEqual({});
+          expect(store.getState().ignoredRuntimeRunIds).toEqual({});
+        }
+      );
+
       it('keeps a rejected equal-timestamp run while another alias still owns its record', () => {
         const store = createSliceStore();
         const current = { ...old, runId: 'project-r2', state: 'ready' as const, error: undefined };
@@ -9290,6 +9740,33 @@ describe('teamSlice actions', () => {
         expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBeUndefined();
       });
 
+      it('does not restore a missing run from an agent runtime snapshot requested before cleanup', async () => {
+        const store = createSliceStore();
+        const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: old.runId });
+        const response = createDeferredPromise<TeamAgentRuntimeSnapshot>();
+        store.setState({
+          provisioningRuns: { [old.runId]: old },
+          currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+        });
+        hoisted.getTeamAgentRuntime.mockReturnValueOnce(response.promise);
+        const fetching = store.getState().fetchTeamAgentRuntime('ptc-a');
+
+        store.getState().clearMissingProvisioningRun(old.runId);
+        response.resolve(runtime);
+        await fetching;
+
+        expect(store.getState().provisioningRuns[old.runId]).toBeUndefined();
+        for (const owner of ['builders', 'ptc-a']) {
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), owner)).toBeNull();
+          expect(store.getState().currentProvisioningRunIdByTeam[owner]).toBeUndefined();
+          expect(store.getState().currentRuntimeRunIdByTeam[owner]).toBeUndefined();
+          expect(store.getState().teamAgentRuntimeByTeam[owner]).toBeUndefined();
+        }
+        expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+      });
+
       it.each(['agent-first', 'member-first'] as const)(
         'hydrates adopted R2 exactly once when snapshots arrive %s',
         async (order) => {
@@ -9349,7 +9826,13 @@ describe('teamSlice actions', () => {
           startedAt: '2026-03-12T10:00:00.000Z',
           updatedAt: '2026-03-12T10:00:01.000Z',
         };
-        const other = { ...old, runId: 'project-b-r1', teamName: 'ptc-b', message: 'B failure' };
+        const other = {
+          ...old,
+          runId: 'project-b-r1',
+          teamName: 'ptc-b',
+          message: 'B failure',
+          error: 'B failure',
+        };
         store.setState({
           currentProvisioningRunIdByTeam: {
             builders: 'project-r1',
@@ -9407,16 +9890,20 @@ describe('teamSlice actions', () => {
         expect(store.getState().currentProvisioningRunIdByTeam['ptc-b']).toBe(other.runId);
 
         // Both possible transports of R1 are stale even if their event arrives last.
-        store.getState().onProvisioningProgress({ ...old, teamName: 'ptc-a', updatedAt: '2026-03-12T11:00:00.000Z' });
-        store
-          .getState()
-          .onProvisioningProgress({
+        for (const teamName of ['ptc-a', 'builders']) {
+          store.getState().onProvisioningProgress({
             ...old,
-            teamName: 'builders',
+            teamName,
             updatedAt: '2026-03-12T11:00:00.000Z',
           });
-        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toEqual(successor);
-        expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe('project-r2');
+          for (const owner of ['builders', 'ptc-a']) {
+            expect(getCurrentProvisioningProgressForTeam(store.getState(), owner)).toEqual(successor);
+            expect(store.getState().provisioningErrorByTeam[owner]).toBe(successor.error);
+          }
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-b')).toEqual(other);
+          expect(store.getState().provisioningErrorByTeam['ptc-b']).toBe(other.error);
+          expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe('project-r2');
+        }
       }
     );
 

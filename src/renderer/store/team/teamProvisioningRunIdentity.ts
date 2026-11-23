@@ -161,11 +161,11 @@ export function projectProvisioningProgressOwners(
 }
 
 /** Keep an old attempt until every alias that still presents it can reconcile its terminal state. */
-export function pruneProvisioningRuns(
-  runs: Record<string, TeamProvisioningProgress>,
-  owners: Record<string, string | null>,
-  progress: TeamProvisioningProgress
-): Record<string, TeamProvisioningProgress> {
+export function pruneProvisioningRuns<TRun extends { teamName: string }>(
+  runs: Record<string, TRun>,
+  owners: Record<string, string | null | undefined>,
+  progress: { teamName: string; runId?: string }
+): Record<string, TRun> {
   const referenced = new Set(Object.values(owners));
   return Object.fromEntries(
     Object.entries(runs).filter(
