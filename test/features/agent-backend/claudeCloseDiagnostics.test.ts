@@ -219,7 +219,8 @@ const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'nativ
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', ...credentialPhases, 'credential-returned', 'attestation', ...catalogPhases,
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat', 'attestation-returned',
-  'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit'] as const;
+  'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit',
+  'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned'] as const;
 const startupFailurePhases = ['startup-timer-aborted', 'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed'] as const;
 const allowedProbePhases = [...probePhases, ...startupFailurePhases];
 
@@ -236,7 +237,7 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   assert.equal(clockReads, 0, 'unknown phases cannot consume a sequence slot or read the clock');
   for (const phase of allowedProbePhases) { observe(phase); clock += 7; }
   for (let repeat = 0; repeat < 20; repeat++) for (const phase of allowedProbePhases) observe(phase);
-  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 61);
+  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 64);
   assert.equal(clockReads, allowedProbePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
@@ -249,6 +250,7 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   assert.deepEqual(retained, allowedProbePhases.map((phase, index) => ({
     profileHash: hash([original.profileId, original.configRevision]), commandHash: hash(secret),
     probeDigest: 'a'.repeat(64), phase, sequence: index + 1, elapsedMs: index * 7,
+    ...(phase === 'first-submit-returned' ? { submitStatus: 'unclassified', submitCode: null, submitDelivery: 'unobserved' } : {}),
   })));
   assert.ok(retained.every(Object.isFrozen));
   assert.ok(retained.every(value => !Object.hasOwn(value, 'pid') && !Object.hasOwn(value, 'ready') &&
@@ -336,11 +338,11 @@ test('summary decoder rejects missing, extra, nonfinite, unbounded or authority-
     { ...valid, currentElapsedMs: null }, { ...valid, pid: 31 }, { ...valid, ready: true },
     { ...valid, phase: 'catalog-4-currentness-summary' }, { ...valid, phase: 'identity-currentness-summary-extra' },
     { ...valid, phase: 'credential-dispose-currentness-summary' }, { ...valid, phase: 'credential-restore-currentness-summary' },
-    { ...valid, phase: 'run' }, { ...valid, sequence: 62 },
+    { ...valid, phase: 'run' }, { ...valid, sequence: 65 },
   ]) decode(frame(unsafe));
   assert.deepEqual(values, []);
   decode(frame(valid));
-  const maximum = { ...valid, phase: 'catalog-3-currentness-summary', sequence: 61,
+  const maximum = { ...valid, phase: 'catalog-3-currentness-summary', sequence: 64,
     elapsedMs: 3_600_000, currentCalls: 1_000_000, currentElapsedMs: 3_600_000 };
   decode(frame(maximum));
   assert.deepEqual(values, [valid, maximum]);
@@ -558,4 +560,68 @@ test('probe close decoder rejects noncanonical shapes and oversized raw frames w
   assert.doesNotThrow(() => broken(Buffer.from(frame(valid) + frame(nonthrowing))));
   await new Promise<void>(resolve => setImmediate(resolve));
   assert.equal(attempts, 2);
+});
+
+test('passive probe handoff projects only bounded own SPI fields without getters or proxy traps', () => {
+  const secret = 'TEST-private-payload-token-and-path';
+  const codes = ['invalid-config', 'unavailable', 'dependency-unavailable', 'backpressure', 'stale', 'unsupported',
+    'checkpoint-incompatible', 'checkpoint-missing', 'provider-failure', 'output-limit', 'unknown'];
+  let forbiddenReads = 0;
+  const getter = () => { forbiddenReads++; throw new Error(secret); };
+  const trapped = new Proxy({}, { get: getter, ownKeys: getter, getOwnPropertyDescriptor: getter,
+    getPrototypeOf: getter, has: getter });
+  const opaque = { submitStatus: 'unclassified', submitCode: null, submitDelivery: 'unobserved' };
+  const cases: [unknown, Record<string, unknown>][] = [
+    ...codes.map(code => [{ ok: false, code, delivery: 'known-not-sent', value: secret },
+      { submitStatus: 'refused', submitCode: code, submitDelivery: 'known-not-sent' }] as [unknown, Record<string, unknown>]),
+    [{ ok: false, code: secret }, { submitStatus: 'refused', submitCode: null, submitDelivery: 'unobserved' }],
+    [{ ok: false, code: 'stale' }, { submitStatus: 'refused', submitCode: 'stale', submitDelivery: 'unobserved' }],
+    [{ ok: false, code: 'unknown', delivery: secret }, { submitStatus: 'refused', submitCode: 'unknown', submitDelivery: 'unobserved' }],
+    [Object.defineProperties({ ok: false }, { code: { get: getter }, delivery: { get: getter }, value: { get: getter } }),
+      { submitStatus: 'refused', submitCode: null, submitDelivery: 'unobserved' }],
+    [Object.defineProperties({ ok: true }, { code: { get: getter }, delivery: { get: getter }, value: { get: getter } }),
+      { submitStatus: 'ok', submitCode: null, submitDelivery: 'unobserved' }],
+    [Object.create({ ok: false, code: 'stale', delivery: 'known-not-sent' }), opaque],
+    [Object.defineProperty({}, 'ok', { get: getter }), opaque], [trapped, opaque], [null, opaque],
+  ];
+  for (const [reply, expected] of cases) {
+    const lines: string[] = [], retained: OpenCodeProbeDiagnostic[] = [];
+    const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST', configRevision: 'TEST' }, secret,
+      'a'.repeat(64), line => lines.push(line), () => 50);
+    observe('run');
+    const submit = observe as (phase: string, reply?: unknown) => void;
+    submit('first-submit-returned', reply); submit('first-submit-returned', reply);
+    assert.equal(lines.length, 2, 'one immediate reply snapshot, independent of cleanup');
+    assert.ok(lines.every(line => Buffer.byteLength(line) < 512));
+    const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { retained.push(value); });
+    for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
+    assert.equal(retained.length, 2);
+    assert.deepEqual(retained[1], { profileHash: retained[0]!.profileHash, commandHash: retained[0]!.commandHash,
+      probeDigest: 'a'.repeat(64), phase: 'first-submit-returned', sequence: 2, elapsedMs: 0, ...expected });
+    assert.ok(Object.isFrozen(retained[1]));
+    assert.equal(lines.join('').includes(secret), false);
+  }
+  assert.equal(forbiddenReads, 0, 'projection never invokes accessors or Proxy reflection');
+});
+
+test('passive probe handoff decoder accepts the exact reply shape only at the reply phase', () => {
+  const values: OpenCodeProbeDiagnostic[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { values.push(value); });
+  const base = { profileHash: 'a'.repeat(64), commandHash: 'b'.repeat(64), probeDigest: 'c'.repeat(64),
+    phase: 'first-submit-returned', sequence: 64, elapsedMs: 3_600_000 };
+  const valid = { ...base, submitStatus: 'refused', submitCode: 'checkpoint-incompatible', submitDelivery: 'known-not-sent' };
+  const frame = (value: unknown) => Buffer.from(probePrefix + JSON.stringify(value) + '\n');
+  for (const invalid of [base, { ...valid, submitCode: undefined }, { ...valid, submitStatus: undefined },
+    { ...valid, submitDelivery: undefined }, { ...valid, submitStatus: 'TEST-private' },
+    { ...valid, submitCode: 'TEST-private' }, { ...valid, submitDelivery: 'unknown' },
+    { ...valid, submitStatus: 'ok' }, { ...valid, submitStatus: 'unclassified' },
+    { ...valid, phase: 'run' }, { ...valid, phase: 'first-submit-current-returned' },
+    { ...valid, phase: 'identity-currentness-summary', currentCalls: 1, currentElapsedMs: 0 },
+    { ...valid, currentCalls: 1, currentElapsedMs: 0 }, { ...valid, sequence: 65 },
+    { ...valid, value: 'TEST-private' }]) decode(frame(invalid));
+  assert.deepEqual(values, []);
+  decode(frame(valid));
+  const unknown = { ...base, submitStatus: 'unclassified', submitCode: null, submitDelivery: 'unobserved' };
+  decode(frame(unknown));
+  assert.deepEqual(values, [valid, unknown]);
 });
