@@ -48,6 +48,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb fonts-noto-cjk
+      - name: Verify Thinwrap registry tarball integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(npm view '@thinwrap/notifications@1.2.0' dist.integrity --registry=https://registry.npmjs.org)"
+          [[ "$expected" =~ ^sha512-[A-Za-z0-9+/]{86}==$ ]]
+          archive="$(mktemp)"
+          trap 'rm -f "$archive"' EXIT
+          curl --fail --silent --show-error --proto '=https' --connect-timeout 15 --max-time 120 \
+            'https://registry.npmjs.org/@thinwrap/notifications/-/notifications-1.2.0.tgz' -o "$archive"
+          actual="sha512-$(openssl dgst -sha512 -binary "$archive" | openssl base64 -A)"
+          test "$actual" = "$expected"
+          printf 'Verified @thinwrap/notifications@1.2.0 integrity: %s\n' "$actual"
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Ensure Electron binary
