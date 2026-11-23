@@ -111,7 +111,7 @@ export async function fixture(repo: string) {
     await chmod(runtime, 0o755);
     env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = runtime;
     env.CLAUDE_TERMINAL_DAEMON_BINARY = runtime;
-    env.CLAUDE_TEAM_OPENCODE_MCP_HTTP = '0';
+    env.AGENT_TEAMS_MCP_HTTP = '0';
     if (process.getuid?.() === 0) env.NO_SANDBOX = '1';
     const members = [
       {

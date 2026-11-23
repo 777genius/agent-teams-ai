@@ -4085,6 +4085,22 @@ export default interface Resources {
       }
     },
     "customTemplates": {
+      "bulk": {
+        "create": "Create Template",
+        "createTitle": "Create template",
+        "chooseTemplate": "Choose a template",
+        "invalidEditorJson": "Use a JSON object with name, description, teamPrompt and members. Each member accepts only name, role and workflow as text.",
+        "createDescription": "Choose a name and add instructions and members for this reusable template.",
+        "createUnresolved": "The template may have been saved. Close this dialog and check your library before trying again.",
+        "exportAll": "Export All",
+        "exporting": "Exporting…",
+        "exported": "All templates exported.",
+        "exportFailed": "Could not export templates. Please try again.",
+        "tooLarge": "The library is too large to export as one file. Export templates individually instead.",
+        "importDone": "Template import finished",
+        "importSummary": "{{imported}} imported, {{skipped}} skipped because their names already exist.",
+        "importStopped": "Import stopped because an item could not be imported; check your library before trying again."
+      },
       "actions": {
         "addMember": "Add member",
         "copyToMyTemplates": "Copy to My Templates",

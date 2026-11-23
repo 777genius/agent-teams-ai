@@ -1,6 +1,9 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { MembersJsonEditor } from '@renderer/components/team/dialogs/MembersJsonEditor';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
+import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -13,20 +16,63 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
-import { AlertTriangle, CheckCircle2, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { AlertTriangle, CheckCircle2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 
 import { useEditTemplate } from '../hooks/useEditTemplate';
+import { parseTemplateEditorJson } from '../utils/templateEditorJson';
 
 import type {
   CustomTeamTemplateV1,
   CustomTeamTemplateValidationIssue,
 } from '@features/custom-team-templates/contracts';
 
+const TemplateRoleSelect = ({
+  role,
+  disabled,
+  onChange,
+  id,
+  invalid,
+}: {
+  role: string;
+  disabled: boolean;
+  onChange: (role: string) => void;
+  id: string;
+  invalid: boolean;
+}): React.JSX.Element => {
+  const [custom, setCustom] = React.useState(false);
+  const preset = PRESET_ROLES.find((value) => value === role);
+  const selection = custom || (role && !preset) ? CUSTOM_ROLE : (preset ?? NO_ROLE);
+  return (
+    <RoleSelect
+      id={id}
+      aria-invalid={invalid || undefined}
+      aria-describedby={invalid ? `${id}-error` : undefined}
+      value={selection}
+      disabled={disabled}
+      customRole={selection === CUSTOM_ROLE ? role : ''}
+      multilineCustomRole
+      onValueChange={(value) => {
+        setCustom(value === CUSTOM_ROLE);
+        onChange(value === CUSTOM_ROLE || value === NO_ROLE ? '' : value);
+      }}
+      onCustomRoleChange={(nextRole) => {
+        // Editing custom text must not change the selected mode when the role
+        // temporarily becomes empty or happens to match a preset.
+        setCustom(true);
+        onChange(nextRole);
+      }}
+    />
+  );
+};
+
 export interface EditCustomTemplateDialogProps {
   open: boolean;
   template: CustomTeamTemplateV1 | null;
   onClose: () => void;
   onSaved?: (updated: CustomTeamTemplateV1) => void;
+  creating?: boolean;
 }
 
 export const EditCustomTemplateDialog = ({
@@ -34,6 +80,7 @@ export const EditCustomTemplateDialog = ({
   template,
   onClose,
   onSaved,
+  creating = false,
 }: EditCustomTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -54,6 +101,7 @@ export const EditCustomTemplateDialog = ({
     addMember,
     updateMember,
     removeMember,
+    replaceMembers,
     save,
     recheck,
     acceptRevisionConflict,
@@ -61,8 +109,46 @@ export const EditCustomTemplateDialog = ({
   } = useEditTemplate({
     open,
     template,
+    creating,
     onSaved,
   });
+
+  const [jsonOpen, setJsonOpen] = React.useState(false);
+  const [jsonText, setJsonText] = React.useState('');
+  const [jsonError, setJsonError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setJsonOpen(false);
+    setJsonText('');
+    setJsonError(null);
+  }, [open, template?.templateId]);
+
+  const openJson = (): void => {
+    setJsonText(JSON.stringify({ name, description, teamPrompt, members }, null, 2));
+    setJsonError(null);
+    setJsonOpen(true);
+  };
+  const changeJson = (text: string): void => {
+    setJsonText(text);
+    try {
+      const next = parseTemplateEditorJson(text);
+      setName(next.name);
+      setDescription(next.description);
+      setTeamPrompt(next.teamPrompt);
+      replaceMembers(next.members);
+      setJsonError(null);
+    } catch {
+      setJsonError(t('customTemplates.bulk.invalidEditorJson'));
+    }
+  };
+
+  const handleAcceptRevisionConflict = (): void => {
+    acceptRevisionConflict();
+    // The hook has loaded a newer revision. Do not let the previously opened
+    // JSON document silently write its stale fields back on the next edit.
+    setJsonOpen(false);
+    setJsonText('');
+    setJsonError(null);
+  };
 
   if (!template) return null;
 
@@ -150,8 +236,14 @@ export const EditCustomTemplateDialog = ({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{t('customTemplates.edit.title')}</DialogTitle>
-          <DialogDescription>{t('customTemplates.edit.description')}</DialogDescription>
+          <DialogTitle>
+            {creating ? t('customTemplates.bulk.createTitle') : t('customTemplates.edit.title')}
+          </DialogTitle>
+          <DialogDescription>
+            {creating
+              ? t('customTemplates.bulk.createDescription')
+              : t('customTemplates.edit.description')}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -188,7 +280,7 @@ export const EditCustomTemplateDialog = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={acceptRevisionConflict}
+                    onClick={handleAcceptRevisionConflict}
                   >
                     {t('customTemplates.edit.conflictReload')}
                   </Button>
@@ -258,20 +350,26 @@ export const EditCustomTemplateDialog = ({
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
-                <p>{t('customTemplates.states.unresolvedMutationBody')}</p>
-                <div className="pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    data-testid="edit-template-recheck"
-                    disabled={!canRecheck}
-                    onClick={() => void handleRecheck()}
-                  >
-                    <RefreshCw className="size-3.5" />
-                    {t('customTemplates.actions.recheck')}
-                  </Button>
-                </div>
+                <p>
+                  {creating
+                    ? t('customTemplates.bulk.createUnresolved')
+                    : t('customTemplates.states.unresolvedMutationBody')}
+                </p>
+                {(!creating || canRecheck) && (
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="edit-template-recheck"
+                      disabled={!canRecheck}
+                      onClick={() => void handleRecheck()}
+                    >
+                      <RefreshCw className="size-3.5" />
+                      {t('customTemplates.actions.recheck')}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ) : null}
@@ -297,136 +395,159 @@ export const EditCustomTemplateDialog = ({
             </div>
           ) : null}
 
-          {/* Name Field */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-template-name">{t('customTemplates.edit.nameFieldLabel')}</Label>
-            <Input
-              id="edit-template-name"
-              value={name}
-              disabled={locked}
-              aria-invalid={nameIssues.length > 0 || undefined}
-              aria-describedby={nameIssues.length > 0 ? 'edit-template-name-error' : undefined}
-              onChange={(e) => setName(e.target.value)}
-            />
-            {nameIssues.length > 0 ? (
-              <p id="edit-template-name-error" role="alert" className="text-xs text-red-300">
-                {nameIssues.map(issueMessage).join(' ')}
-              </p>
-            ) : null}
-          </div>
-
-          {/* Description Field */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-template-description">
-              {t('customTemplates.edit.descriptionLabel')}
-            </Label>
-            <Textarea
-              id="edit-template-description"
-              value={description}
-              disabled={locked}
-              aria-invalid={descriptionIssues.length > 0 || undefined}
-              aria-describedby={
-                descriptionIssues.length > 0 ? 'edit-template-description-error' : undefined
-              }
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            {descriptionIssues.length > 0 ? (
-              <p id="edit-template-description-error" role="alert" className="text-xs text-red-300">
-                {descriptionIssues.map(issueMessage).join(' ')}
-              </p>
-            ) : null}
-          </div>
-
-          {/* Team Prompt Field */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-template-prompt">{t('customTemplates.edit.promptLabel')}</Label>
-            <Textarea
-              id="edit-template-prompt"
-              value={teamPrompt}
-              rows={3}
-              disabled={locked}
-              placeholder={t('customTemplates.edit.promptPlaceholder')}
-              aria-invalid={promptIssues.length > 0 || undefined}
-              aria-describedby={promptIssues.length > 0 ? 'edit-template-prompt-error' : undefined}
-              onChange={(e) => setTeamPrompt(e.target.value)}
-            />
-            {promptIssues.length > 0 ? (
-              <p id="edit-template-prompt-error" role="alert" className="text-xs text-red-300">
-                {promptIssues.map(issueMessage).join(' ')}
-              </p>
-            ) : null}
-          </div>
-
-          {/* Members Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>{t('customTemplates.edit.membersLabel')}</Label>
+          <div className="flex justify-end">
+            {!jsonOpen && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-1 text-xs"
                 disabled={locked}
-                onClick={() => addMember()}
+                onClick={openJson}
+                data-testid="template-edit-json"
               >
-                <Plus className="size-3.5" />
-                {t('customTemplates.actions.addMember')}
+                <Pencil className="size-3.5" />
+                {t('members.editor.editAsJson')}
               </Button>
+            )}
+          </div>
+          {jsonOpen && (
+            <div inert={locked}>
+              <MembersJsonEditor
+                value={jsonText}
+                onChange={changeJson}
+                error={jsonError}
+                onClose={() => {
+                  setJsonOpen(false);
+                  setJsonError(null);
+                }}
+              />
+              {issues.length > 0 && (
+                <p role="alert" className="text-xs text-red-300">
+                  {issues.map(issueMessage).join(' ')}
+                </p>
+              )}
+            </div>
+          )}
+          <div className={jsonOpen ? 'hidden' : 'space-y-4'}>
+            {/* Name Field */}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-template-name">{t('customTemplates.edit.nameFieldLabel')}</Label>
+              <Input
+                id="edit-template-name"
+                value={name}
+                disabled={locked}
+                aria-invalid={nameIssues.length > 0 || undefined}
+                aria-describedby={nameIssues.length > 0 ? 'edit-template-name-error' : undefined}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {nameIssues.length > 0 ? (
+                <p id="edit-template-name-error" role="alert" className="text-xs text-red-300">
+                  {nameIssues.map(issueMessage).join(' ')}
+                </p>
+              ) : null}
             </div>
 
-            {memberGeneralIssues.length > 0 ? (
-              <p role="alert" className="text-xs text-red-300">
-                {memberGeneralIssues.map(issueMessage).join(' ')}
-              </p>
-            ) : null}
+            {/* Description Field */}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-template-description">
+                {t('customTemplates.edit.descriptionLabel')}
+              </Label>
+              <Textarea
+                id="edit-template-description"
+                value={description}
+                disabled={locked}
+                aria-invalid={descriptionIssues.length > 0 || undefined}
+                aria-describedby={
+                  descriptionIssues.length > 0 ? 'edit-template-description-error' : undefined
+                }
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              {descriptionIssues.length > 0 ? (
+                <p
+                  id="edit-template-description-error"
+                  role="alert"
+                  className="text-xs text-red-300"
+                >
+                  {descriptionIssues.map(issueMessage).join(' ')}
+                </p>
+              ) : null}
+            </div>
 
-            {members.length === 0 ? (
-              <p className="rounded border border-dashed border-[var(--color-border)] p-3 text-center text-xs text-[var(--color-text-muted)]">
-                {t('customTemplates.edit.membersEmpty')}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {members.map((member, index) => {
-                  const mIssues = getMemberIssues(index);
-                  return (
-                    <div
-                      key={`member-${index}`}
-                      className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[var(--color-text)]">
-                          {t('customTemplates.edit.memberHeader', { index: index + 1 })}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1.5 text-red-400 hover:text-red-300"
-                          disabled={locked}
-                          aria-label={t('customTemplates.actions.removeMember')}
-                          onClick={() => removeMember(index)}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
+            {/* Team Prompt Field */}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-template-prompt">{t('customTemplates.edit.promptLabel')}</Label>
+              <Textarea
+                id="edit-template-prompt"
+                value={teamPrompt}
+                rows={3}
+                disabled={locked}
+                placeholder={t('customTemplates.edit.promptPlaceholder')}
+                aria-invalid={promptIssues.length > 0 || undefined}
+                aria-describedby={
+                  promptIssues.length > 0 ? 'edit-template-prompt-error' : undefined
+                }
+                onChange={(e) => setTeamPrompt(e.target.value)}
+              />
+              {promptIssues.length > 0 ? (
+                <p id="edit-template-prompt-error" role="alert" className="text-xs text-red-300">
+                  {promptIssues.map(issueMessage).join(' ')}
+                </p>
+              ) : null}
+            </div>
 
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <div>
-                          <Label
-                            htmlFor={`member-${index}-name`}
-                            className="text-[11px] text-[var(--color-text-muted)]"
-                          >
+            {/* Members Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>{t('customTemplates.edit.membersLabel')}</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  disabled={locked}
+                  onClick={() => addMember()}
+                >
+                  <Plus className="size-3.5" />
+                  {t('customTemplates.actions.addMember')}
+                </Button>
+              </div>
+
+              {memberGeneralIssues.length > 0 ? (
+                <p role="alert" className="text-xs text-red-300">
+                  {memberGeneralIssues.map(issueMessage).join(' ')}
+                </p>
+              ) : null}
+
+              {members.length === 0 ? (
+                <p className="rounded border border-dashed border-[var(--color-border)] p-3 text-center text-xs text-[var(--color-text-muted)]">
+                  {t('customTemplates.edit.membersEmpty')}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {members.map((member, index) => {
+                    const mIssues = getMemberIssues(index);
+                    return (
+                      <div
+                        key={`member-${index}`}
+                        className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ParticipantAvatar
+                            src={agentAvatarUrl(member.name || `member-${index}`)}
+                            alt=""
+                            className="size-8 shrink-0 rounded-full"
+                          />
+                          <Label htmlFor={`member-${index}-name`} className="sr-only">
                             {t('customTemplates.edit.memberNameLabel')}
                           </Label>
                           <Input
                             id={`member-${index}-name`}
+                            className="min-w-0 flex-1"
                             value={member.name}
                             disabled={locked}
                             placeholder={t('customTemplates.edit.memberNamePlaceholder')}
                             aria-invalid={
-                              mIssues.some((i) => i.field === `members[${index}].name`)
-                                ? true
-                                : undefined
+                              mIssues.some((i) => i.field === `members[${index}].name`) || undefined
                             }
                             aria-describedby={
                               mIssues.some((i) => i.field === `members[${index}].name`)
@@ -435,83 +556,85 @@ export const EditCustomTemplateDialog = ({
                             }
                             onChange={(e) => updateMember(index, { name: e.target.value })}
                           />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-red-400 hover:text-red-300"
+                            disabled={locked}
+                            aria-label={t('customTemplates.actions.removeMember')}
+                            onClick={() => removeMember(index)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
                         </div>
 
-                        <div>
-                          <Label
-                            htmlFor={`member-${index}-role`}
-                            className="text-[11px] text-[var(--color-text-muted)]"
-                          >
-                            {t('customTemplates.edit.memberRoleLabel')}
-                          </Label>
-                          <Textarea
-                            id={`member-${index}-role`}
-                            rows={2}
-                            value={member.role ?? ''}
-                            disabled={locked}
-                            placeholder={t('customTemplates.edit.memberRolePlaceholder')}
-                            aria-invalid={
-                              mIssues.some((i) => i.field === `members[${index}].role`)
-                                ? true
-                                : undefined
-                            }
-                            aria-describedby={
-                              mIssues.some((i) => i.field === `members[${index}].role`)
-                                ? `member-${index}-role-error`
-                                : undefined
-                            }
-                            onChange={(e) => updateMember(index, { role: e.target.value })}
-                          />
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                          <div>
+                            <Label
+                              htmlFor={`member-${index}-role`}
+                              className="text-[11px] text-[var(--color-text-muted)]"
+                            >
+                              {t('customTemplates.edit.memberRoleLabel')}
+                            </Label>
+                            <TemplateRoleSelect
+                              id={`member-${index}-role`}
+                              invalid={mIssues.some((i) => i.field === `members[${index}].role`)}
+                              role={member.role ?? ''}
+                              disabled={locked}
+                              onChange={(role) => updateMember(index, { role })}
+                            />
+                          </div>
+
+                          <div>
+                            <Label
+                              htmlFor={`member-${index}-workflow`}
+                              className="text-[11px] text-[var(--color-text-muted)]"
+                            >
+                              {t('customTemplates.edit.memberWorkflowLabel')}
+                            </Label>
+                            <Textarea
+                              id={`member-${index}-workflow`}
+                              rows={2}
+                              value={member.workflow ?? ''}
+                              disabled={locked}
+                              placeholder={t('customTemplates.edit.memberWorkflowPlaceholder')}
+                              aria-invalid={
+                                mIssues.some((i) => i.field === `members[${index}].workflow`)
+                                  ? true
+                                  : undefined
+                              }
+                              aria-describedby={
+                                mIssues.some((i) => i.field === `members[${index}].workflow`)
+                                  ? `member-${index}-workflow-error`
+                                  : undefined
+                              }
+                              onChange={(e) => updateMember(index, { workflow: e.target.value })}
+                            />
+                          </div>
                         </div>
 
-                        <div>
-                          <Label
-                            htmlFor={`member-${index}-workflow`}
-                            className="text-[11px] text-[var(--color-text-muted)]"
-                          >
-                            {t('customTemplates.edit.memberWorkflowLabel')}
-                          </Label>
-                          <Textarea
-                            id={`member-${index}-workflow`}
-                            rows={2}
-                            value={member.workflow ?? ''}
-                            disabled={locked}
-                            placeholder={t('customTemplates.edit.memberWorkflowPlaceholder')}
-                            aria-invalid={
-                              mIssues.some((i) => i.field === `members[${index}].workflow`)
-                                ? true
-                                : undefined
-                            }
-                            aria-describedby={
-                              mIssues.some((i) => i.field === `members[${index}].workflow`)
-                                ? `member-${index}-workflow-error`
-                                : undefined
-                            }
-                            onChange={(e) => updateMember(index, { workflow: e.target.value })}
-                          />
-                        </div>
+                        {(['name', 'role', 'workflow'] as const).map((field) => {
+                          const fieldIssues = mIssues.filter(
+                            (issue) => issue.field === `members[${index}].${field}`
+                          );
+                          return fieldIssues.length > 0 ? (
+                            <p
+                              key={field}
+                              id={`member-${index}-${field}-error`}
+                              role="alert"
+                              className="text-xs text-red-300"
+                            >
+                              {fieldIssues.map(issueMessage).join(' ')}
+                            </p>
+                          ) : null;
+                        })}
                       </div>
-
-                      {(['name', 'role', 'workflow'] as const).map((field) => {
-                        const fieldIssues = mIssues.filter(
-                          (issue) => issue.field === `members[${index}].${field}`
-                        );
-                        return fieldIssues.length > 0 ? (
-                          <p
-                            key={field}
-                            id={`member-${index}-${field}-error`}
-                            role="alert"
-                            className="text-xs text-red-300"
-                          >
-                            {fieldIssues.map(issueMessage).join(' ')}
-                          </p>
-                        ) : null;
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -519,8 +642,16 @@ export const EditCustomTemplateDialog = ({
           <Button variant="outline" disabled={closeDisabled} onClick={onClose}>
             {tCommon('actions.cancel')}
           </Button>
-          <Button disabled={!canSave} aria-busy={saving} onClick={() => void handleSave()}>
-            {saving ? t('customTemplates.edit.saving') : t('customTemplates.edit.save')}
+          <Button
+            disabled={!canSave || jsonError !== null}
+            aria-busy={saving}
+            onClick={() => void handleSave()}
+          >
+            {saving
+              ? t('customTemplates.edit.saving')
+              : creating
+                ? t('customTemplates.actions.save')
+                : t('customTemplates.edit.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -41,6 +41,7 @@ export function createCustomTeamTemplatesBridge(): CustomTeamTemplatesApi {
       importFromFile: () => ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.importFromFile),
       exportToFile: (request) =>
         ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.exportToFile, request),
+      exportAllToFile: () => ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.exportAllToFile),
     },
   };
 }

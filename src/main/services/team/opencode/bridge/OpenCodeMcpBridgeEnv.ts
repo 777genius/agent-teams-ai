@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto';
 
-const DISABLED_HTTP_MCP_VALUES = new Set(['0', 'false', 'no', 'off']);
-
 const LOCAL_MCP_LAUNCH_ENV_KEYS = [
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND',
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY',
@@ -143,11 +141,6 @@ export function prepareOpenCodeShutdownStopEnvironment(
   const prepared = { ...previous };
   applyOpenCodeBoundControlEnvironment(prepared, currentBoundChildEnv);
   return prepared;
-}
-
-export function isOpenCodeMcpHttpBridgeEnabled(env: OpenCodeMcpBridgeEnv = process.env): boolean {
-  const rawValue = env.CLAUDE_TEAM_OPENCODE_MCP_HTTP?.trim().toLowerCase();
-  return rawValue ? !DISABLED_HTTP_MCP_VALUES.has(rawValue) : true;
 }
 
 export function hasOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): boolean {

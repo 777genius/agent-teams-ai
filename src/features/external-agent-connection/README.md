@@ -21,6 +21,10 @@ rebinds the existing supervisor. Child binding is immutable and controller
 requests cannot fall back to another app or data root. Loopback identity is an
 expectation contract, not authentication.
 
+Desktop MCP HTTP is enabled by default. `AGENT_TEAMS_MCP_HTTP=0` disables it;
+the older `CLAUDE_TEAM_OPENCODE_MCP_HTTP` name remains a fallback for existing
+configurations. When both have values, the new name takes precedence.
+
 CDP startup switches are set before Electron readiness. Discovery identifies the
 main renderer through Electron's target ownership API, never window titles.
 Saved toggles require restart; disabling a preference cannot revoke an already

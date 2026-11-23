@@ -273,3 +273,25 @@ test('updater contract-only PR jobs do not reserve native Linux E2E runners', ()
   assert.match(workflow('updater-windows-ota'), /  windows-ota:/);
   assert.match(workflow('updater-linux-packages'), /  native:/);
 });
+
+test('updater E2E launch environments disable MCP HTTP for current and legacy builds', () => {
+  for (const name of [
+    'mac-updater.mts',
+    'mac-old-updater.mts',
+    'mac-manual-migration.mts',
+    'linux-feasibility.mts',
+    'linux-ota.mts',
+    'linux-packages.mts',
+    'windows-ota-profile.mts',
+  ]) {
+    const source = readFileSync(
+      new URL(`../../scripts/e2e/release-updater/${name}`, import.meta.url),
+      'utf8'
+    );
+    assert.match(
+      source,
+      /AGENT_TEAMS_MCP_HTTP: '0',\r?\n[ \t]*CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',/,
+      `${name} must disable current and predecessor MCP HTTP`
+    );
+  }
+});

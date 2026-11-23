@@ -17,6 +17,8 @@ export interface ComboboxOption {
 
 interface ComboboxProps {
   id?: string;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
   options: ComboboxOption[];
   value: string;
   onValueChange: (value: string) => void;
@@ -37,6 +39,8 @@ interface ComboboxProps {
 
 export const Combobox = ({
   id,
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   options,
   value,
   onValueChange,
@@ -69,6 +73,8 @@ export const Combobox = ({
       <PopoverTrigger asChild>
         <button
           id={id}
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           type="button"
           role="combobox"
           aria-expanded={open}

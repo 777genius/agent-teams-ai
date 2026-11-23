@@ -17,6 +17,9 @@ export function registerCustomTeamTemplatesFileIpc(
   service: CustomTeamTemplateDesktopFileService
 ): void {
   ipcMain.handle(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.importFromFile, () => service.importFromFile());
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.exportAllToFile, () =>
+    service.exportAllToFile()
+  );
   ipcMain.handle(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.exportToFile, (_event, request: unknown) =>
     service.exportToFile(request)
   );
