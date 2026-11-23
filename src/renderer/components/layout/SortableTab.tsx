@@ -18,6 +18,7 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   Activity,
   Bell,
+  Inbox,
   Calendar,
   FileText,
   Gauge,
@@ -51,6 +52,7 @@ interface SortableTabProps {
 const TAB_ICONS = {
   dashboard: LayoutDashboard,
   notifications: Bell,
+  attention: Inbox,
   settings: Settings,
   session: FileText,
   teams: Users,
