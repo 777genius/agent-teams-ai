@@ -175,3 +175,171 @@ Definition of Done: exact, actionable live view and reliable direct/group naviga
 Implementation agent should start by reading the named source files and rechecking HEAD for parallel PRs (especially team messages/notifications, task projections and UI refactor). Do a 1-2 hour equivalent **small evidence spike** in its working environment before changing multiple surfaces: enumerate >500 task case and an older unread case. Commit/push each meaningful slice to its own **Draft** implementation PR; keep this planning PR docs-only and do not merge it as evidence of completed feature. Prefer 2-4 iterations of focused technical critique during code work.
 
 Open implementation choice: **how to compute exact cross-team unread counts without a duplicate persisted read model**. The plan deliberately requires empirical verification instead of claiming that one paginated head is sufficient.
+
+
+---
+
+## 8. Deep implementation pass — exact boundaries and non-obvious edge cases (2026-11-23)
+
+This section refines sections 1–7 **without expanding scope**. Implementation is still NOT part of this PR. New code source facts were inspected from `main`.
+
+### 8.1 New facts that change the previous design
+
+1. `src/renderer/store/index.ts` only refreshes chat message heads for `isTeamVisibleInAnyPane(teamName) || hasActiveTeamPendingReplyWait(teamName)`. A global Dashboard cannot rely on those cached heads for other teams. **New attention candidate projection needs its own bounded, source-backed read contract** — but not a second on-disk store or file watcher.
+2. `src/main/index.ts` forwards `TeamChangeEvent` both to IPC and the existing HTTP `team-change` SSE channel; `src/renderer/api/httpClient.ts` already exposes `teams.onTeamChange` using `EventSource`. Reuse this exact event surface; no new SSE topic, WebSocket or polling subsystem.
+3. `src/renderer/utils/teamMessageReadStorage.ts` uses bare `teamName` in legacy direct-message `localStorage` keys; `useMessagesReadState` context-scopes **group** reads but passes legacy direct reads without `contextId`. Same-named teams under different roots can currently alias local read state; **attention must not silently propagate or amplify this bug**.
+4. `src/renderer/components/team/messages/MessagesPanel.tsx` uses `useTeamConversationSurface`, which initializes a conversation from `teamSidebarUiState`. The team tab may already be mounted; writing a key to the sidebar map alone is **not** sufficient to navigate a live mounted pane. A small consumed navigation intent is needed.
+5. `src/features/team-direct-chats/core/domain/countUnreadByConversation.ts` includes `team-feed` in scopes alongside direct conversations. Counting both as independent user chats would double-count the same message. Group message identity requires `message.groupMessageId===message.messageId`; duplicates must be collapsed before counting.
+6. `src/features/team-group-chats/renderer/hooks/useTeamGroupChats.ts` has an independent 5-second visible polling interval. **Never mount one of these hooks per team in global Attention**; use existing main-owned group catalog/message contracts instead.
+7. `src/renderer/utils/teamMessageFiltering.ts` includes important relay/noise/automation dedupe, but imports renderer-specific utils. Don't call it from main or duplicate its policy wholesale. Extract only a **pure, tested relevant predicate** to an existing appropriate shared/domain entrypoint if necessary.
+8. `src/main/services/team/TeamTaskWriter.ts` writes `needsClarification` without transition timestamp; controller `agent-teams-controller/src/internal/taskStore.js` has its own setter. Some agents may write task files externally. Time must be authoritative **when recorded**, unknown for legacy/external direct writes.
+9. `src/main/services/team/TeamMessageFeedService.ts` has cache/revision mechanics and the paginated message path `TeamMessagePageRead` already exists. A naive fetch of every team on every inbox event, or an arbitrary 50-message head, is both expensive and incomplete.
+
+### 8.2 Recommended data algorithm, with one explicit spike decision
+
+**Do not build a persisted global inbox.** The canonical task files, normalized message feed, and existing local read keys remain authoritative. Compute a read-only **derived projection**.
+
+**P0 spike selects one of two small strategies** (no UI or new persistent state during the spike):
+
+- **A — compact candidate projection (preferred if bounded):** main-owned service enumerates all eligible task rows **before** global 500-task truncation and normalized human-directed message candidates from existing readers. It returns only identity, context, scope, timestamp and **short sanitized preview** (no entire message feed). Renderer combines with the **existing** direct/group read key sets, groups by canonical conversation and computes counts.
+- **B — query with read keys (fallback when candidate payload too large):** renderer passes existing context-scoped read-key snapshots per affected team to a validated `GetAttention` request; main-owned service computes and returns bounded unread aggregates, eliminating large candidate payloads. Read keys remain client-owned; never persist the same unread state a second time. HTTP uses an authenticated POST for request body if this strategy is chosen.
+
+**Acceptance constraint:** show counts as authoritative only when full relevant candidate space was actually examined. With unlimited old message histories, bounded pages without proof of completeness are NOT correct. A request may be paged, but **header 0 cannot be shown until aggregation is complete**. Do not add a giant message index just to meet an optimistic performance goal; instead measure P0 and document a separate small prerequisite if needed.
+
+Minimal protocol shape to decide in P0:
+
+```ts
+type AttentionScope = { contextId: string; teamName: string };
+type AttentionTaskCandidate = {
+  taskId: string; subject: string; displayId?: string;
+  requestedAt: string | null; preview?: string;
+};
+type AttentionMessageCandidate = {
+  identityKey: string; scope: ConversationScope;
+  observedAt: string | null; preview?: string; from: string;
+};
+type AttentionTeamResult = {
+  scope: AttentionScope; tasks: AttentionTaskCandidate[];
+  messages: AttentionMessageCandidate[];
+  completeness: 'complete' | 'partial' | 'unavailable';
+  reason?: string;
+};
+```
+
+These are **illustrative DTOs, not a second chat-domain model**. Use the existing `ConversationScope` semantics and stable task/message keys; choose the actual JSON DTO contract after the source spike. Avoid storing raw user tokens/credentials in any projection.
+
+### 8.3 Filtering, grouping and duplicates — deterministic rules
+
+**Tasks**
+- Filter by `needsClarification === 'user'`; exclude `status==='deleted'`, `deletedAt`, and deleted teams; **do not require team liveness**.
+- A completed/review task with explicit human clarification flag is still visible (surface "state inconsistent" only in detail/diagnostics). Ignore `needsClarification==='lead'` and normal `blockedBy` for the human count.
+- Key by `(contextId, teamName, taskId)`; never rely on display ID uniqueness. Renames, deletes/recreates, root changes and returned out-of-order snapshots must be fenced.
+- Determine reason preview only from a proven clarification comment/request; do not use arbitrary **latest** task comment as the requested question. Fallback to subject. Strip agent-only blocks and bound lengths.
+
+**Chats**
+- Keep only visible, genuine **user-attention unread** messages, according to the same published `team-direct-chats` semantics (`isUserAttentionMessage` + `isUserUnreadMessage`). Ignore agent→lead messages, user-sent/outbound copies, internal control, idle/status noise, automation nudges, and relayed duplicates.
+- Canonical attribution: a canonical `groupChatId`/`groupMessageId` (explicit `@user`) belongs to **group**; normal message with recipient `user` belongs to **one direct conversation** with real sender (lead aliases normalized). `team-feed` is not an additional chat in the global attention list. If sender cannot be resolved, provide one named team-level fallback **not** an invented DM.
+- Unique message identity is first normalized/deduplicated from existing feed, then keyed by `(contextId,teamName,messageKey)`. Do not count the same user-directed content once in group, once in team-feed, and once in relay.
+- For each chat row, preview/timestamp reflect the **newest relevant unread** user message, not the newest outgoing or agent-to-agent chatter. Existing `ChatListRow` visual presentation is reused with this projected view model.
+- Groups are allowed only if actual stored group metadata and user-directed mention are proven. Archived groups: preserve explicit unread @user unless existing Messenger semantics prove archive suppresses them; otherwise show the conversation as archived in a detail view rather than silently losing it.
+- Older unread messages beyond first page, invalid timestamp, duplicate IDs, deleted member, renamed member, cross-team qualified participant, and out-of-order file timestamps require dedicated test fixtures.
+
+**Read state**
+- Reuse `teamMessageReadStorage` / `useTeamMessagesRead` storage keys and public policies. Dashboard subscription MUST NOT call `markRead` or `markAllRead`, nor seed read backfill from truncated candidate history.
+- Resolve the cross-root legacy direct read key collision before E2E signoff: either an **in-scope minimal compatibility fix** to the existing Messenger read key scope, with careful one-time migration only where ownership is unambiguous, or explicit release gate proving existing context isolation is correct in the selected modes. Never create a second new attention-only read store.
+- Read updates must immediately rederive attention from local read subscription, even if no `TeamChangeEvent` occurs. Other browser windows may require the native `storage` event; don't rely solely on same-process listener if multiple windows are in scope.
+- If localStorage is disabled/full/corrupt, reflect degraded state or safe fallback; do not tell user the messages were successfully marked read.
+
+### 8.4 Live subscription: one owner, not N component effects
+
+Single `useAttentionSnapshot` / query coordinator shared across header, compact Dashboard, full tab and Running Teams. Prefer one app-lifetime existing store/composition event owner (or a thin feature-local singleton) over **four** unrelated refresh hooks.
+
+| Trigger | Work | Refresh strategy |
+| --- | --- | --- |
+| App init / active context switch | enumerate scope and fetch initial summary | request epoch fenced, no old-root content leakage |
+| `task` change, known `taskId` | invalidate affected team task candidates | coalesce/re-read affected team only |
+| `inbox` / `lead-message` | invalidate candidate messages for affected team | coalesce per team, use source revision; no N-way full history requests |
+| `config` / team deletion, restore, rename | update team identity/scope, visibility, route | discard removed team candidates; full team membership reconcile |
+| Local read-set change | recompute affected chat counts | **client-only**, no task I/O |
+| Focus/resume / SSE reconnect | bounded reconciliation | one shared catch-up; no timer per mounted widget |
+| Last tab closes | release full-detail subscriptions | header summary only; no stale live UI badge |
+
+**Important:** existing central store intentionally ignores messages from untracked hidden teams. The feature must subscribe once to the shared `api.teams.onTeamChange` without re-enabling heavyweight hidden `refreshTeamData` globally. Existing main FileWatcher may watch only active/recent team directories, so measure old/stopped team freshness and enable bounded catch-up **only where needed**; do not pretend old-team filesystem events are guaranteed.
+
+Acceptance recommendation (measure, do not claim without E2E): under regular fs.watch, local UI visibly updates on user-attention events promptly (target p95 ≤2s); under watcher polling fallback, target ≤5s plus measured debounce/catch-up. For slow/offline sources, show partial/stale indicator and retry; never silently claim zero.
+
+### 8.5 Exact navigation and tab lifecycle
+
+- Header icon opens/focuses `Attention` tab as **per-pane singleton**, like `openNotificationsTab`. Tabs can remain mounted but hidden; opening focus must refresh stale snapshot once, without doubling the global subscriber. Update tab union, icon, lazy pane content, and tab tests in one integration lane.
+- Task row invokes existing `openGlobalTaskDetail` with context guard and task ID. No new task detail modal.
+- Chat row calls a **narrow** `openTeamConversation({contextId,teamName,scope,nonce})` (name illustrative): activate existing team tab or open it; send one-time intent consumed by the **already-mounted or newly-mounted** MessagesPanel; set conversation surface to thread and exact scope; optionally expand messages area. Do not mutate `teamSidebarUiState` alone as a shortcut.
+- Navigate once per nonce, preserve pinned chat order and drafts, and avoid `markRead` before actual view/visibility. Test clicking the same chat twice, chat B after A, cross-team, group ID, pane focus changes, slow team loading, deleted target, same team-name across roots and multiple tabs.
+- Running team card either has **read-only badge indicators** on existing root button (recommended v1), or needs a valid sibling action layout. **No nested interactive buttons**.
+
+### 8.6 No overengineering: out-of-scope explicitly enforced
+
+Do not introduce a generic distributed event ledger, new DB tables, plugin platform, a second message feed, server push broker, global durable read index, a new Redux/Zustand store with duplicated source arrays, new cron/scheduler, per-team `useTeamGroupChats` hooks, platform-wide team ID migration, automatic agent response detection, tool approvals, notification-channel settings, or a general HTTP chat backend.
+
+Allowed narrow adjacent fixes **only** when required for truthful Attention Inbox: task waiting transition timestamp; small read-key workspace-scope compatibility fix; pure message visibility predicate extraction; exact-conversation navigation intent; one small attention IPC/HTTP read endpoint.
+
+### 8.7 Concrete phases and safe parallel work (implementation agent handoff)
+
+| Phase | Owner / main files | Independent work / prerequisite | Deliverable |
+| --- | --- | --- | --- |
+| **P0 — proof and interfaces** | 1 integrator: inspect `TeamTaskReader`, `TeamMessageFeedService`, `useMessagesReadState`, existing HTTP/SSE, measure >500 tasks and unread beyond 50 messages | **Blocking** for aggregate implementation; no speculative implementation yet | Choose candidate/read-key join A/B; signed-off DTO & scope rules, known perf budget |
+| **P1A — task semantics** | Agent A: `agent-teams-controller/src/internal/taskStore.js`, `TeamTaskWriter`, `TeamTaskReader`, `TeamDataService` and relevant shared types | After P0; **parallel** with P1B/P1C | Durable optional `clarificationRequestedAt` from authoritative transitions, pure filtering, tests |
+| **P1B — chat/read semantics** | Agent B: `team-direct-chats` pure domain, existing message filter/read-key entrypoints, source candidate projection | After P0; **parallel** with P1A/P1C | No copied chat logic; correct user-only unread and root-scope handling, tests |
+| **P1C — UI isolated** | Agent C: new `user-attention/renderer/ui`, view models; shared Radix visual primitives; localization keys | After DTO agreement; **parallel** with P1A/P1B; avoid touching shell | Pure compact/full panel with fixture-only stories/tests, 3-row scroll |
+| **P2A — service and transport** | Integrator: `user-attention/core/application`, source adapters, `main/composition`, IPC/preload/HTTP route and client | Depends on P1A & P1B | One read facade/contract, no new backend daemon |
+| **P2B — navigation and shell** | Agent D: `tabSlice`, `tabs.ts`, `PaneContent`, `TabBarActions`, `DashboardView`, `RunningTeamsSection` | Can begin after DTO agreement, parallel to P2A; **one shell owner** to avoid conflicts | Exact navigation action and badges, no nested buttons |
+| **P3 — integration/E2E** | Integrator + independent reviewer | After P2A/P2B; not parallel to uncontrolled branch mutations | E2E on one final HEAD, CI, review, screenshot check |
+
+**Parallel boundaries:** A writes task/domain reader paths, B chat/read domain paths, C new UI paths, D existing shell/tab paths. The **integrator owns** composition/bridges and shared contract changes; other agents propose contract changes instead of independently editing the same `index.ts` or root store. No 4-way parallel edits to `src/renderer/store/index.ts`, `src/main/index.ts`, `src/shared/types` or localization same files. Use one Draft implementation PR/branch for this one feature (separate from this docs PR and from Notification Channels). Each resolved lane commit is pushed immediately; rebase/merge carefully and run final tests on the actual merged HEAD.
+
+### 8.8 Revised per-phase LOC, time and confidence
+
+Replaces the rough `4` estimate if P0 uncovers read-scope migration and exact global projection work:
+
+| Phase | Production LOC | Test/E2E LOC | Difficulty 1–10 (10 hardest) | Confidence |
+| --- | ---: | ---: | ---: | ---: |
+| P0 source/proof/fixtures | 0-100 | 120-250 | 6 | 8/10 |
+| P1A task timestamp + projection | 250-500 | 160-320 | 5 | 7/10 |
+| P1B candidate/read semantics, scope fixes | 300-650 | 250-500 | **8** | **5/10** |
+| P1C presentation components | 300-550 | 170-280 | 4 | 8/10 |
+| P2A IPC/HTTP/fanout coordinator | 400-750 | 250-420 | 7 | 6/10 |
+| P2B header/dashboard/tab/nav | 350-650 | 230-390 | 6 | 7/10 |
+| **Total (approx., overlap avoided)** | **1,600-3,200** | **1,180-2,210** | **7** | **6/10** |
+
+No wall-clock guarantee: P0 proof can reduce or increase this range. Complexity and fidelity matter more than impressive LOC minima.
+
+### 8.9 E2E regression matrix — add these beyond `5`
+
+| Scenario | Required observation |
+| --- | --- |
+| 501+ tasks: oldest awaiting human | exact task still appears, not truncated |
+| Oldest unread before first 50 messages | chat count nonzero after complete projection |
+| Inbox group copy without `@user` | **not** attention |
+| Group canonical reply with `@user` | appears once in correct group and opens group |
+| Lead alias / duplicated relay vs direct user message | one conversation + one message count |
+| Hidden team receives direct message | Dashboard/header update without opening team |
+| Stopped team, no current watch event | focus/reconnect catch-up eventually shows task/message |
+| Same-named team in two context roots | no cross-root read-key or snapshot leakage |
+| Empty/invalid `requestedAt`; older task | label "time unknown", never fabricated "2h" |
+| Repeated `needsClarification=user` write/unrelated comments | timestamp preserved; no notification re-created by new widget |
+| Read conversation in Messenger | existing read-store event reduces Attention immediately without network resend |
+| Dashboard mount with unread | does **not** mark read |
+| Same chat clicked again when team tab already mounted | exact thread focus again; no stale other conversation |
+| Rapid A→B root switch during response | old response dropped, zero cross-context leak |
+| Many team events while multiple tabs mounted | bounded/collapsed fetch count; no per-panel polls |
+| HTTP browser client + SSE | real typed read endpoint, response with completeness; no silent fake empty |
+| Partial failure / no storage / offline | explicit degradation, Retry, no false "nothing needs attention" |
+| Light/dark + narrow layout + keyboard | accessible title, badge, three-row viewport + scroll, tooltips Radix |
+
+### 8.10 Additional four rounds of critique and corrections
+
+1. **Real data-flow audit:** read `shouldRefreshTeamMessages` and identified **hidden-team starvation**; corrected plan from "use store cache everywhere" to a single bounded source-backed projection, reusing existing watcher/SSE.
+2. **Read-state identity audit:** examined `useMessagesReadState` and found direct keys are legacy teamName-scoped while groups are context-scoped; made cross-root collision an explicit acceptance gate rather than introducing a new, inconsistent inbox-only read database.
+3. **Interaction / consistency audit:** checked `useTeamConversationSurface` and `MessagesPanel`; a prefilled sidebar map cannot reliably navigate an already mounted pane; added consumed nonce navigation intent. Also excluded duplicate team-feed scope and unrelated newest chat activity from previews.
+4. **Scope / performance audit:** rejected mounting all group hooks (each polls) and reading full history per event, or pushing all 500-task-limited legacy snapshots. Defined P0 performance proof, separated tasks/chat/UI/shell owners, and retained one shared IPC+HTTP feature API with no general platform rewrite.
+
+**Status:** Plan refined and ready for implementation handoff **subject to P0 correctness spike**. This documentation PR is not implementing the feature and should not be merged as a completed E2E feature.
