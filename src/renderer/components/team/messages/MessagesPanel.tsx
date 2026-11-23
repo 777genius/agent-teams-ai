@@ -467,9 +467,16 @@ export const MessagesPanel = memo(function MessagesPanel({
       setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
       bottomSheetRef.current?.snapTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
     }
-    handleOpenChat(target);
+    if (position === 'floating-composer') {
+      // Floating mode presents a synthetic team-feed scope; never shortcut based
+      // on that masked value when a different direct thread is actually selected.
+      revisionNavigationGenerationRef.current += 1;
+      openChat(target);
+    } else {
+      handleOpenChat(target);
+    }
     setMessagesCollapsed(false);
-  }, [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat]);
+  }, [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat, openChat]);
   useAttentionConversationNavigation(activeContextId, teamName, handleAttentionOpenChat);
 
   const handleExpandedChange = useCallback(

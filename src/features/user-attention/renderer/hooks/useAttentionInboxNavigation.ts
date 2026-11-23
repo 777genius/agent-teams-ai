@@ -23,8 +23,11 @@ export function useAttentionInboxNavigation() {
   }, [openGlobalTaskDetail, openTeamTab]);
 
   const onOpenChat = useCallback((chat: AttentionChat, scope: ConversationScope) => {
-    requestAttentionChatNavigation({ contextId, teamName: chat.teamName, scope });
+    // ProjectScopedTeamDetailView opens a logical tab, but its ready project
+    // mounts MessagesPanel for the *physical* execution team. Match that panel,
+    // not its logical parent, otherwise the requested conversation is lost.
     openTeamTab(chat.logicalTeamName || chat.teamName, chat.projectPath);
+    requestAttentionChatNavigation({ contextId, teamName: chat.teamName, scope });
   }, [contextId, openTeamTab]);
 
   const onOpenFull = useCallback(() => {

@@ -40,18 +40,17 @@ function publish(changes: Partial<AttentionStoreState> = {}): void {
 }
 
 function scheduleFlush(): void {
-  scheduleFlush();
-}
-
-function queue(teamName?: string): void {
-  if (!teamName) queuedFull = true;
-  else if (!queuedFull) queuedTeams.add(teamName);
   if (flushTimer || flushing || listeners.size === 0) return;
   flushTimer = setTimeout(() => {
     flushTimer = null;
     void flush();
   }, 250);
 }
+
+function queue(teamName?: string): void {
+  if (!teamName) queuedFull = true;
+  else if (!queuedFull) queuedTeams.add(teamName);
+  scheduleFlush();
 
 async function fetchSnapshot(teamName?: string): Promise<void> {
   if (!currentContextId) return;
