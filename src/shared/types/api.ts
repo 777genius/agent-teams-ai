@@ -141,7 +141,6 @@ import type {
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
-import type { UserAttentionApi } from '@features/user-attention/contracts';
 import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
@@ -154,6 +153,7 @@ import type {
 } from '@features/team-read-recovery/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
+import type { UserAttentionApi } from '@features/user-attention/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
 import type {
   ConversationGroup,
