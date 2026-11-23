@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
 import { useStore } from '@renderer/store';
+import {
+  captureContextScopedRequestEpoch,
+  subscribeContextScopedRequestEpoch,
+} from '@renderer/store/utils/contextScopedRequestEpoch';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { getReadSetSnapshot } from '@renderer/utils/teamMessageReadStorage';
 
@@ -16,26 +20,31 @@ import type { AttentionReads } from '../../core/domain/buildAttention';
 
 export function useAttentionInbox() {
   const contextId = useStore((state) => state.activeContextId);
+  const contextEpoch = useSyncExternalStore(
+    subscribeContextScopedRequestEpoch,
+    captureContextScopedRequestEpoch,
+    captureContextScopedRequestEpoch
+  );
   const state = useSyncExternalStore(
     subscribeAttention,
     getAttentionStoreState,
     getAttentionStoreState
   );
-  useEffect(() => setAttentionContext(contextId), [contextId]);
+  useEffect(() => setAttentionContext(contextId, contextEpoch), [contextId, contextEpoch]);
 
   const model = useMemo(() => {
-    if (state.contextId !== contextId || !state.snapshot) return null;
+    if (state.contextId !== contextId || state.contextEpoch !== contextEpoch || !state.snapshot) return null;
     const getReads = (teamName: string): AttentionReads => ({
       // Keep the exact current Messenger read keys; group scope is root-aware.
       direct: getReadSetSnapshot(teamName),
       group: getReadSetSnapshot(JSON.stringify(['group', contextId, teamName])),
     });
     return buildAttentionModel(state.snapshot, getReads, toMessageKey);
-  }, [contextId, state]);
+  }, [contextId, contextEpoch, state]);
 
   return {
     model,
-    loading: state.loading || state.contextId !== contextId,
+    loading: state.loading || state.contextId !== contextId || state.contextEpoch !== contextEpoch,
     error: state.error,
     refresh: refreshAttention,
   };

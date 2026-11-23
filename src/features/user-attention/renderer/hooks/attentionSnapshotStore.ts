@@ -6,6 +6,7 @@ import type { TeamChangeEvent } from '@shared/types/team';
 
 export interface AttentionStoreState {
   contextId: string;
+  contextEpoch: number;
   snapshot: AttentionSnapshot | null;
   loading: boolean;
   error: string | null;
@@ -14,12 +15,14 @@ export interface AttentionStoreState {
 
 let state: AttentionStoreState = {
   contextId: '',
+  contextEpoch: 0,
   snapshot: null,
   loading: false,
   error: null,
   version: 0,
 };
 let currentContextId = '';
+let currentContextEpoch = 0;
 let epoch = 0;
 let fullLoading = false;
 let flushing = false;
@@ -168,15 +171,17 @@ export function getAttentionStoreState(): AttentionStoreState {
   return state;
 }
 
-export function setAttentionContext(contextId: string): void {
-  if (currentContextId === contextId) return;
+export function setAttentionContext(contextId: string, contextEpoch: number): void {
+  if (currentContextId === contextId && currentContextEpoch === contextEpoch) return;
   currentContextId = contextId;
+  currentContextEpoch = contextEpoch;
   epoch += 1;
   fullLoading = false;
   queuedFull = false;
   queuedTeams.clear();
   publish({
     contextId,
+    contextEpoch,
     snapshot: null,
     loading: Boolean(contextId),
     error: null,
