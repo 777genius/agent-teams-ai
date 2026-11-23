@@ -2,7 +2,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { useAttentionInbox } from '@features/user-attention/renderer';
 import { TeamTaskStatusSummary } from '@renderer/components/team/TeamTaskStatusSummary';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';
-import { FolderOpen, UsersRound } from 'lucide-react';
+import { AlertCircle, FolderOpen, MessageCircle, UsersRound } from 'lucide-react';
 
 import { useRunningTeamsSection } from '../hooks/useRunningTeamsSection';
 
@@ -64,8 +64,17 @@ export function RunningTeamsSection({
                 ((model.countsByTeam.get(row.teamName)?.tasks ?? 0) > 0 ||
                   (model.countsByTeam.get(row.teamName)?.chats ?? 0) > 0) ? (
                 <span className="mt-1.5 block text-[10px] font-medium text-red-400">
-                  {commonT('attention.teamAttention')}: {model.countsByTeam.get(row.teamName)?.tasks ?? 0} tasks ·{' '}
-                  {model.countsByTeam.get(row.teamName)?.chats ?? 0} chats
+                  {commonT('attention.teamAttention')}:{' '}
+                  <span className="inline-flex items-center gap-1"
+                    aria-label={commonT('attention.tasks')}>
+                    <AlertCircle size={11} aria-hidden="true" />
+                    {model.countsByTeam.get(row.teamName)?.tasks ?? 0}
+                  </span>{' · '}
+                  <span className="inline-flex items-center gap-1"
+                    aria-label={commonT('attention.chats')}>
+                    <MessageCircle size={11} aria-hidden="true" />
+                    {model.countsByTeam.get(row.teamName)?.chats ?? 0}
+                  </span>
                 </span>
               ) : null}
               <TeamTaskStatusSummary

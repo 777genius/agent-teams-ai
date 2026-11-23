@@ -224,26 +224,53 @@ async function checkDesktop() {
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()');
   await cdp.evaluate('window.__agentTeamsDevStore.getState().setMessagesPanelMode("sidebar")');
+
+  // Prove the two unread conversations before opening one (opening may mark it read).
+  const bothUnread = await cdp.evaluate(`(() => {
+    const panel = document.querySelector('[data-testid=user-attention-inbox]');
+    if (!panel) return false;
+    const labels = [...panel.querySelectorAll('button[aria-label]')]
+      .map((button) => button.getAttribute('aria-label') || '');
+    return labels.some((label) => label.includes('alice')) &&
+      labels.some((label) => label.includes('bob'));
+  })()`);
+  assert(bothUnread, 'two unread user-directed conversation rows exist');
+
+  await cdp.evaluate(`(async () => {
+    const reads = await import('/utils/teamMessageReadStorage.ts');
+    reads.markRead(${JSON.stringify(first)}, ${JSON.stringify('attention-dm-' + first)});
+  })()`);
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = document.querySelector('[data-testid=user-attention-inbox]');
+    if (!panel) return false;
+    const labels = [...panel.querySelectorAll('button[aria-label]')]
+      .map((button) => button.getAttribute('aria-label') || '');
+    return !labels.some((label) => label.includes('alice')) &&
+      labels.some((label) => label.includes('bob'));
+  })()`), 'alice disappears after reading while bob stays unread');
+  evidence.checks.push('same Messenger read storage updates the exact chat row');
+
   const clickedChat = await cdp.evaluate(`(() => {
     const panel = document.querySelector('[data-testid=user-attention-inbox]');
     const button = [...panel.querySelectorAll('button')].find((b) =>
-      b.getAttribute('aria-label')?.includes('alice'));
+      b.getAttribute('aria-label')?.includes('bob'));
     if (!button) return false;
     button.click();
     return true;
   })()`);
-  assert(clickedChat, 'user-addressed chat is clickable');
+  assert(clickedChat, 'unread bob chat is clickable');
   await cdp.waitFor(
-    `window.__agentTeamsDevStore.getState().openTabs.some((tab) => tab.type === "team" && tab.teamName === ${JSON.stringify(first)})`,
-    'exact team tab opened for chat');
+    `window.__agentTeamsDevStore.getState().openTabs.some((tab) =>
+      tab.type === "team" && tab.teamName === ${JSON.stringify(second)})`,
+    'exact second team tab opened for chat');
   await until(async () => cdp.evaluate(`(async () => {
     const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
     const scope = ui.getTeamMessagesSidebarUiState(
-      JSON.stringify(['local', ${JSON.stringify(first)}])
+      JSON.stringify(['local', ${JSON.stringify(second)}])
     ).conversationScope;
-    return scope?.kind === 'direct' && scope.participant === 'alice';
-  })()`), 'exact direct thread opened', 60000);
-  evidence.checks.push('exact Messenger conversation navigation');
+    return scope?.kind === 'direct' && scope.participant === 'bob';
+  })()`), 'exact bob thread opened', 60000);
+  evidence.checks.push('cross-team Messenger conversation navigation');
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
 
@@ -264,16 +291,6 @@ async function checkDesktop() {
   await until(async () => (await getSnapshot()).teams.find((t) => t.teamName === first)
     ?.tasks.every((t) => t.taskId !== '2'), 'cleared clarification removed');
   evidence.checks.push('controller transition / repeated setter / clear');
-
-  // Read-state change is local and must not issue another backend task mutation.
-  await cdp.evaluate(`(async () => {
-    const reads = await import('/utils/teamMessageReadStorage.ts');
-    reads.markRead(${JSON.stringify(first)}, ${JSON.stringify('attention-dm-' + first)});
-  })()`);
-  await cdp.waitFor(
-    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Unread chats")',
-    'attention UI survives read update');
-  evidence.checks.push('same Messenger read storage');
 
   await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
 }

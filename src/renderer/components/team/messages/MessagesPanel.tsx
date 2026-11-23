@@ -459,9 +459,17 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   const handleAttentionOpenChat = useCallback((target: typeof scope) => {
+    // A floating composer has no thread surface. Expand the existing bottom sheet
+    // before navigating so the destination is actually visible to the user.
+    if (position === 'floating-composer') onPositionChange('sidebar');
+    if (position === 'bottom-sheet' &&
+        bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX) {
+      setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+      bottomSheetRef.current?.snapTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+    }
     handleOpenChat(target);
     setMessagesCollapsed(false);
-  }, [handleOpenChat]);
+  }, [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat]);
   useAttentionConversationNavigation(activeContextId, teamName, handleAttentionOpenChat);
 
   const handleExpandedChange = useCallback(

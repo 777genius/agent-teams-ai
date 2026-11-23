@@ -60,6 +60,34 @@ describe('Attention Inbox pure domain', () => {
     }))).not.toBeNull();
   });
 
+  it('retains unread group mentions beyond the 240-character preview', () => {
+    const original = message('late-mention', 'alice', 'user', `${'a'.repeat(290)} @user choose one`, {
+      groupChatId: 'design', groupMessageId: 'late-mention',
+    });
+    const candidate = projectAttentionMessage(original);
+    expect(candidate?.text.length).toBe(240);
+    const snapshot: AttentionSnapshot = {
+      contextId: 'local', complete: true,
+      teams: [{ teamName: 'team', teamDisplayName: 'Team',
+        tasks: [], messages: candidate ? [candidate] : [] }],
+    };
+    const result = buildAttentionModel(snapshot, () => ({
+      direct: new Set(), group: new Set(),
+    }), (item) => item.messageId ?? '');
+    expect(result.chatCount).toBe(1);
+    expect(result.chats[0]?.scope).toEqual({ kind: 'group', groupChatId: 'design' });
+  });
+
+  it('keeps direct attachment-only messages without exposing attachment paths', () => {
+    const candidate = projectAttentionMessage(message('file-only', 'alice', 'user', '', {
+      attachments: [{ id: 'file1', filename: 'picture.png', mimeType: 'image/png', size: 42,
+        filePath: '/private/hidden/path' }],
+    }));
+    expect(candidate?.text).toBe('Attachment (1)');
+    expect(candidate?.attachments).toBeUndefined();
+    expect(JSON.stringify(candidate)).not.toContain('/private/hidden/path');
+  });
+
   it('does not double count team feed vs direct, and honors the existing read set', () => {
     const dm = message('dm1', 'alice', 'user', 'Please approve');
     const group = message('group1', 'alice', 'user', '@user please respond', {
