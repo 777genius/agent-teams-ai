@@ -28,6 +28,7 @@ let queuedTeams = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let stopEvents: (() => void) | null = null;
 let stopReadState: (() => void) | null = null;
+let reconcileTimer: ReturnType<typeof setInterval> | null = null;
 const listeners = new Set<() => void>();
 
 function publish(changes: Partial<AttentionStoreState> = {}): void {
@@ -96,11 +97,12 @@ async function flush(): Promise<void> {
       queuedTeams.clear();
       await fetchSnapshot();
     } else {
+      const startedEpoch = epoch;
       const names = [...queuedTeams];
       queuedTeams.clear();
       // A bounded fan-out; team events cannot start N copies of the global scan.
       for (const name of names) {
-        if (!currentContextId || queuedFull) break;
+        if (!currentContextId || queuedFull || epoch !== startedEpoch) break;
         await fetchSnapshot(name);
       }
     }
@@ -128,6 +130,10 @@ function connect(): void {
   }
   stopReadState = subscribeTeamMessageReadStore(() => publish());
   window.addEventListener('focus', onFocus);
+  // One application-wide catch-up, not a timer per team/component.
+  reconcileTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') queue();
+  }, 60_000);
   if (currentContextId) queue();
 }
 
@@ -141,6 +147,8 @@ function disconnect(): void {
   stopReadState?.();
   stopReadState = null;
   window.removeEventListener('focus', onFocus);
+  if (reconcileTimer) clearInterval(reconcileTimer);
+  reconcileTimer = null;
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;
   queuedFull = false;
