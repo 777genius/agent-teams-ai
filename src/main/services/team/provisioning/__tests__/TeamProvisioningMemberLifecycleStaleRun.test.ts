@@ -1443,6 +1443,68 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     });
   });
 
+  it('restarts a pure OpenCode isolated member using the original project for worktree validation', async () => {
+    const projectPath = '/safe-test-project';
+    const memberCwd = '/safe-test-project/worker-worktree';
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'opencode',
+      isolation: 'worktree',
+      cwd: memberCwd,
+    };
+    const run = createRun(member);
+    const { config } = createPureOpenCodeConfig(member);
+    const runtimeAdapterRunByTeam = new Map([
+      [
+        'team-a',
+        { providerId: 'opencode' as const, runId: 'adapter-run-1', cwd: memberCwd },
+      ],
+    ]);
+    const resolveWorkspaces = vi.fn(async (input: {
+      teamName: string;
+      baseCwd: string;
+      leadProviderId?: 'opencode';
+      members: TeamCreateRequest['members'];
+    }) => input.members);
+    const adapterLaunches: Array<{ request: TeamCreateRequest }> = [];
+    const host = createHost(run, {
+      runtimeAdapterRunByTeam,
+      getAliveRunId: () => null,
+      getTrackedRunId: () => runtimeAdapterRunByTeam.get('team-a')?.runId ?? null,
+      getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode' }),
+      async readConfigForStrictDecision() {
+        return config;
+      },
+      teamMetaStore: {
+        async getMeta() {
+          return { providerId: 'opencode', cwd: projectPath, prompt: 'Continue' };
+        },
+      },
+      resolveOpenCodeMemberWorkspacesForRuntime: resolveWorkspaces,
+      async runOpenCodeTeamRuntimeAdapterLaunch(input) {
+        adapterLaunches.push({ request: input.request });
+        return { runId: 'new-run' };
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases
+    );
+
+    await controller.restartMember('team-a', 'Worker');
+
+    expect(resolveWorkspaces).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName: 'team-a',
+        baseCwd: projectPath,
+        members: [expect.objectContaining({ name: 'Worker', cwd: memberCwd, isolation: 'worktree' })],
+      })
+    );
+    expect(adapterLaunches).toHaveLength(1);
+    expect(adapterLaunches[0]?.request.cwd).toBe(memberCwd);
+  });
+
   it('does not confirm or notify a retry whose run is replaced while reading its outcome', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',
