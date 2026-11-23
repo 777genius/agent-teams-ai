@@ -116,7 +116,7 @@ async function launch() {
   const lock = JSON.parse(await readFile(path.join(repo, 'runtime.lock.json'), 'utf8'));
   await writeFile(runtime, '#!' + process.execPath + '\n' +
     'if(process.argv.slice(2).join(" ")==="--version") console.log(' +
-    JSON.stringify(lock.version) + '); else process.exitCode=77;\n');
+    JSON.stringify(lock.cliVersion ?? lock.version) + '); else process.exitCode=77;\n');
   await chmod(runtime, 0o755);
 
   const env = {
