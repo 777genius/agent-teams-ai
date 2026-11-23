@@ -6,8 +6,10 @@ Base: `ba1b357c466a6373b9cdd99467b16bea8c5e8467` (`main`).
 
 Implement the four reproduced bugs (preflight before persistence, actionable interrupted launch,
 attempt-scoped provisioning errors, authored role readback) and supported HTTP/MCP live edits.
-The user explicitly assigned CI/CD qualification to another agent. This change uses local checks
-and independent source reviews only; do not dispatch workflows or merge on those checks alone.
+The user explicitly assigned CI/CD qualification to another agent. The initial delivery used local
+checks and independent source reviews. On 2026-11-23 the user also authorized finishing and merging
+the existing PR. Do not manually dispatch or rerun workflows, or merge on local checks alone;
+the normal protected-branch qualification still applies.
 External trash, automatic team stop/relaunch, new storage, and new recovery queues are excluded.
 
 ## Implementation decisions
@@ -31,14 +33,14 @@ External trash, automatic team stop/relaunch, new storage, and new recovery queu
 ## Plan / sizing
 
 The original handoff estimated 270–470 production lines and 300–500 test lines. The shared native
-operation is extracted from the large IPC file rather than duplicated. Measured final code diff
+operation is extracted from the large IPC file rather than duplicated. Measured initial code diff
 (including moved code and existing test-file formatting):
 
-| Category | Files | Added | Removed |
-| --- | ---: | ---: | ---: |
-| Production TypeScript, excluding generated localization | 34 | 1,444 | 700 |
-| Tests | 14 | 1,606 | 243 |
-| Locale files and generated keys | 31 | 272 | 34 |
+| Category                                                | Files | Added | Removed |
+| ------------------------------------------------------- | ----: | ----: | ------: |
+| Production TypeScript, excluding generated localization |    34 | 1,444 |     700 |
+| Tests                                                   |    14 | 1,606 |     243 |
+| Locale files and generated keys                         |    31 |   272 |      34 |
 
 The extracted native roster operation is 324 lines. `teams.ts` shrinks from 5,402 to 4,941 lines,
 and its frozen size cap is lowered to match. No cap is raised. The broader regression matrix
@@ -47,7 +49,7 @@ covers cross-project attempts and both API team modes, including real transport 
 Complexity: 6/10. Reliability target: 9/10. Initial confidence: 8/10, dependent on race and partial
 failure checks. Provider-backed proof is distinct from finite lifecycle fixtures.
 
-## Review and validation record
+## Initial implementation review and validation record
 
 - R1: confirmed the authored-role read mismatch; minimal field-only fix.
 - R1: caught logical readback incorrectly masking failed live effects; typed failures now survive.
@@ -83,11 +85,11 @@ failure checks. Provider-backed proof is distinct from finite lifecycle fixtures
   Existing broad formatting drift in frozen legacy files is preserved rather than expanding
   this behavior change into an unrelated reformat.
 
-## Qualification handoff
+## Initial qualification handoff
 
-CI/CD belongs to the other agent at the user's request. Publish only the feature branch; opening
-a PR would start the repository's automatic qualification workflows. Do not merge from these
-local checks alone.
+The initial handoff published only the feature branch because CI/CD belonged to the other agent.
+That agent subsequently opened PR #1267 and recorded additional source and provider validation.
+Those results and the later authorization to merge do not replace the normal required checks.
 
 Reproduce the transport cases locally with:
 
@@ -97,11 +99,80 @@ pnpm --filter agent-teams-mcp build
 pnpm --filter agent-teams-mcp exec vitest run --config vitest.e2e.config.ts test/stdio.e2e.test.ts --maxWorkers=1 -t 'preserves .* through the MCP stdio serializer'
 ```
 
-The provider-backed Electron A → B → A cycle has **not** been rerun in this executor: it has no
+The initial executor did **not** rerun the provider-backed Electron A → B → A cycle: it had no
 desktop display or access to the saved Hetzner provider profile. The older handoff's successful
-provider answers are baseline evidence, not evidence for this patch. Run the fresh cycle using
+provider answers were baseline evidence, not evidence for the initial patch. The handoff requested
+a fresh cycle using
 Electron CDP and new sandbox projects on the existing authorized test host. Verify unsupported
 live edits leave both files and marker unchanged; supported-provider edits reach the current
 participant; interrupted launch names the correct project; successful R2 stays clear of a late
 R1 error; displayed role survives reload; and each project's tasks/messages remain separate.
 Do not transfer credentials manually or use real user projects.
+
+## PR #1267 follow-up — 2026-11-23
+
+The follow-up starts from `05bb7fe49c9d863d00895eaf456a6478e675f50b`, which includes `main`
+at `9d96267e7e387e28dcc944b05eb0971e4566ecff`. All 15 inline review threads were resolved,
+but the full review also contained three store findings outside the diff and one minor preload
+finding. Source inspection and failing local regressions confirmed that all four still applied.
+
+- Preserve a rejected predecessor's progress record while any provisioning alias still owns
+  that run. Equal timestamps must not allow one view to delete another view's current progress.
+- Clearing a missing run removes every matching provisioning/runtime pointer and its stale
+  snapshots, even when the progress record is already absent. Owners that have advanced to a
+  successor retain their state. Existing ignored-run maps retain all affected owners so delayed
+  events cannot resurrect the invalidated alias; raw run IDs remain the map keys.
+- When agent runtime refresh adopts a successor before member-spawn refresh, request its missing
+  provisioning status. Only the refresh that actually adopts the run starts the request, so the
+  two response orders do not duplicate it.
+- Real Electron `contextBridge` discards custom properties on a rejected `Error`. A headless
+  sandbox BrowserWindow using the production preload reproduced the lost `failure.code` and
+  missing recovery action. The six existing definition-edit methods now also expose an optional,
+  typed transport that returns the specific recovery refusal as a plain tagged value. The
+  renderer adapter constructs its local `Error` after the bridge. Existing raw methods preserve
+  their rejection messages and successful return values, and unrelated failures remain errors.
+
+The [PR description](https://github.com/777genius/agent-teams-ai/pull/1267) records the other agent's
+provider-backed qualification on `5267d64` and follow-up launch/deferred-role checks on `fbf57edf`,
+plus a full pinned-compiler typecheck on `fbf57edf`. These are evidence for those recorded heads;
+they are not fresh provider runs of this follow-up. The six-file merge delta from `fbf57edf` to
+`05bb7fe` imported existing main workflow-policy changes and Ukrainian translations, without a
+feature runtime change. This follow-up does not change workflow policy or provider credentials.
+
+Before publication, `main` advanced to `cc02c007e2ed2de979ba73fbb6b6434276bf16a8` (PR #1269).
+It is integrated through an ordinary merge. The three overlapping files (`CreateTeamDialog.tsx`,
+English team translations and generated translation types) merged cleanly; the new template
+controls and this feature's launch-error presentation are both retained. The store and definition
+edit transport fixes do not overlap that main change.
+
+Follow-up validation:
+
+- The initial store regression set failed before the fix (5 failures, 1 pass). Independent review
+  also found redundant status fetches for cached progress and inherited-property lookups in the
+  new owner helper; their focused before-fix set had 5 failures and 12 passes. Both were fixed.
+- Final store/event/runtime/cleanup run: **355 tests, 5 suites, zero failures or skips**. It covers
+  both response orders, cached terminal progress, shared aliases, missing records, split run
+  authorities and raw-ID collisions. Independent final source review found no remaining issue
+  in the six changed store files.
+- Preload/renderer transport and existing queued-message tests: **15 tests, 3 suites passed**.
+- `node scripts/e2e/team-definition-edit-bridge.mjs`: **passed** against the production preload
+  and renderer adapter in a real isolated Electron BrowserWindow. It verifies configuration and
+  void success, the known recovery refusal, unrelated failures and raw API compatibility, with
+  exactly one existing-channel IPC per call (nine total). It uses disposable local data, removes
+  its sandbox, and needs no provider connection or new dependency.
+- After integrating `main` at `cc02c007`, the same unmodified Electron regression passed again.
+  The template picker and template-to-team application tests also passed: **20 tests, 2 suites**.
+  The normal Electron bootstrap is `node scripts/ensure-electron-install.cjs --strict` after
+  the frozen dependency installation. An intermediate local dependency-installation failure and
+  one timed-out Electron attempt are not counted as successful verification.
+- Scoped fast lint passed for all changed production sources and bridge tests/script with zero
+  errors or warnings. Formatting of the bridge files and `git diff --check` passed; frozen store
+  files retain unrelated existing formatting. Source-size and provisioning architecture guards
+  passed. The four affected legacy caps are lowered to their resulting sizes: preload 2,058,
+  store index 2,535, team slice 4,957, and shared API types 1,063 lines.
+- Final TypeScript **7.0.2** check passed for every changed production/test TypeScript entry point
+  and ambient declarations (19 entries, including their transitive imports). Three incomplete
+  transport test fixtures were corrected to use a full typed fixture, and their four tests passed
+  again. The wider 67-entry and merged-UI 20-entry attempts were killed with exit 137 and are not
+  counted as passes; whole workspace qualification remains the required PR gate. Both store and bridge changes received
+  an independent final source review with no remaining correctness finding.

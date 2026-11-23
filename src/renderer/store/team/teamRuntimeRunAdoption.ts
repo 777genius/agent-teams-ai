@@ -1,6 +1,8 @@
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
+import { isTeamRunIgnored } from './teamProvisioningRunIdentity';
 import { isTerminalProvisioningState } from './teamProvisioningStateRules';
 
+import type { IgnoredTeamRunOwners } from './teamProvisioningRunIdentity';
 import type {
   LeadActivityState,
   MemberSpawnStatus,
@@ -36,12 +38,15 @@ export function resolveIncomingRuntimeRunAdoption(input: {
   teamName: string;
   snapshotRunId?: string | null;
   currentRuntimeRunId?: string | null;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   leadActivity?: string;
   pinnedSpawnStatuses?: Record<string, SpawnStatusLike>;
 }): IncomingRuntimeRunAdoption {
   const snapshotRunId = input.snapshotRunId?.trim() || null;
-  if (snapshotRunId && input.ignoredRuntimeRunIds[snapshotRunId] === input.teamName) {
+  if (
+    snapshotRunId &&
+    isTeamRunIgnored(input.ignoredRuntimeRunIds, snapshotRunId, input.teamName)
+  ) {
     return 'reject';
   }
 
@@ -73,11 +78,11 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
   nextRunObserved?: boolean;
   nextRunId?: string | null;
   currentRuntimeRunId?: string | null;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   pinnedSpawnStatuses?: Record<string, SpawnStatusLike>;
 }): boolean {
   const nextRunId = input.nextRunId?.trim() || null;
-  if (!nextRunId || input.ignoredRuntimeRunIds[nextRunId] === input.teamName) {
+  if (!nextRunId || isTeamRunIgnored(input.ignoredRuntimeRunIds, nextRunId, input.teamName)) {
     return false;
   }
 
@@ -128,7 +133,7 @@ export function nextRuntimeRunIdByTeamAfterAdoption(
 }
 
 export interface IncomingMemberSpawnProjectionState {
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;

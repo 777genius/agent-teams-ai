@@ -1,5 +1,6 @@
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
+import { addIgnoredTeamRun, isTeamRunIgnored } from './teamProvisioningRunIdentity';
 import { projectIncomingMemberSpawnSnapshot } from './teamRuntimeRunAdoption';
 
 import type { AppState } from '../types';
@@ -34,11 +35,11 @@ export function createTeamMemberRestartAction<TScope>(options: {
         isCurrent() &&
         state.currentRuntimeRunIdByTeam[teamName] === predecessor &&
         state.currentProvisioningRunIdByTeam[teamName] === previousProvisioning &&
-        state.ignoredRuntimeRunIds[predecessor] !== teamName &&
-        state.ignoredProvisioningRunIds[predecessor] !== teamName &&
+        !isTeamRunIgnored(state.ignoredRuntimeRunIds, predecessor, teamName) &&
+        !isTeamRunIgnored(state.ignoredProvisioningRunIds, predecessor, teamName) &&
         (!successor ||
-          (state.ignoredRuntimeRunIds[successor] !== teamName &&
-            state.ignoredProvisioningRunIds[successor] !== teamName))
+          (!isTeamRunIgnored(state.ignoredRuntimeRunIds, successor, teamName) &&
+            !isTeamRunIgnored(state.ignoredProvisioningRunIds, successor, teamName)))
       );
 
     try {
@@ -105,11 +106,16 @@ export function createTeamMemberRestartAction<TScope>(options: {
                     [teamName]: successor,
                   },
                   provisioningRuns: nextRuns,
-                  ignoredRuntimeRunIds: { ...state.ignoredRuntimeRunIds, [predecessor]: teamName },
-                  ignoredProvisioningRunIds: {
-                    ...state.ignoredProvisioningRunIds,
-                    [predecessor]: teamName,
-                  },
+                  ignoredRuntimeRunIds: addIgnoredTeamRun(
+                    state.ignoredRuntimeRunIds,
+                    predecessor,
+                    teamName
+                  ),
+                  ignoredProvisioningRunIds: addIgnoredTeamRun(
+                    state.ignoredProvisioningRunIds,
+                    predecessor,
+                    teamName
+                  ),
                 };
               });
             }
@@ -135,10 +141,10 @@ export function createTeamMemberRestartAction<TScope>(options: {
       const currentRun = state.currentRuntimeRunIdByTeam[teamName];
       const stoppedPredecessor =
         predecessor &&
-        state.ignoredRuntimeRunIds[predecessor] === teamName &&
+        isTeamRunIgnored(state.ignoredRuntimeRunIds, predecessor, teamName) &&
         (!currentRun ||
           currentRun === predecessor ||
-          state.ignoredRuntimeRunIds[currentRun] === teamName);
+          isTeamRunIgnored(state.ignoredRuntimeRunIds, currentRun, teamName));
       await Promise.allSettled([
         ...(isCurrent() && !stoppedPredecessor ? [get().refreshTeamData(teamName)] : []),
         get().refreshTeamMessagesHead(teamName),

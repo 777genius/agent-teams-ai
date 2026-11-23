@@ -55,7 +55,6 @@ import type {
 } from './schedule';
 import type { SshAPI } from './ssh';
 import type {
-  AddMemberRequest,
   AddTaskCommentRequest,
   AttachmentFileData,
   BoardTaskActivityDetailResult,
@@ -80,7 +79,6 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
-  ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
   SendMessageResult,
@@ -92,7 +90,6 @@ import type {
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
-  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -109,13 +106,13 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
   ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
+import type { TeamDefinitionEditApi, TeamDefinitionEditsTransport } from './teamDefinitionEdit';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
@@ -451,7 +448,13 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, TeamProjectContextViewApi {
+export interface TeamsAPI
+  extends
+    TeamMemberSettingsApi,
+    TeamReadLegacyApi,
+    TeamProjectContextViewApi,
+    TeamDefinitionEditApi {
+  definitionEdits?: TeamDefinitionEditsTransport;
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamSummary[]>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -540,16 +543,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, Team
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
   getAllTasks: () => Promise<GlobalTask[]>;
-  updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
-  addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
-  replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
-  removeMember: (teamName: string, memberName: string) => Promise<void>;
-  restoreMember: (teamName: string, memberName: string) => Promise<void>;
-  updateMemberRole: (
-    teamName: string,
-    memberName: string,
-    role: string | undefined
-  ) => Promise<void>;
   addTaskComment: (
     teamName: string,
     taskId: string,

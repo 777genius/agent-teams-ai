@@ -1,3 +1,7 @@
+import { addIgnoredTeamRun } from './teamProvisioningRunIdentity';
+
+import type { IgnoredTeamRunOwners } from './teamProvisioningRunIdentity';
+
 interface TeamMessagesLoadingEntry {
   loadingHead: boolean;
   loadingOlder: boolean;
@@ -44,8 +48,8 @@ type TeamScopedStateRemovalKey = keyof TeamScopedStateRemovalState;
 interface TeamScopedProgressTombstoneState {
   currentProvisioningRunIdByTeam: Record<string, string | null | undefined>;
   currentRuntimeRunIdByTeam: Record<string, string | null | undefined>;
-  ignoredProvisioningRunIds: Record<string, string>;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   provisioningStartedAtFloorByTeam: Record<string, string>;
 }
 
@@ -55,8 +59,8 @@ interface FailedProvisioningAttemptState {
   currentRuntimeRunIdByTeam: Record<string, string | null | undefined>;
   provisioningStartedAtFloorByTeam: Record<string, string>;
   provisioningSnapshotByTeam: TeamScopedRecord;
-  ignoredProvisioningRunIds: Record<string, string>;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   memberSpawnStatusesByTeam: TeamScopedRecord;
   memberSpawnSnapshotsByTeam: TeamScopedRecord;
   teamAgentRuntimeByTeam: TeamScopedRecord;
@@ -201,16 +205,24 @@ export function buildTeamScopedProgressTombstones<TState extends TeamScopedProgr
   TState,
   'ignoredProvisioningRunIds' | 'ignoredRuntimeRunIds' | 'provisioningStartedAtFloorByTeam'
 > {
-  const nextIgnoredProvisioningRunIds = { ...state.ignoredProvisioningRunIds };
-  const nextIgnoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
+  let nextIgnoredProvisioningRunIds = state.ignoredProvisioningRunIds;
+  let nextIgnoredRuntimeRunIds = state.ignoredRuntimeRunIds;
 
   const currentProvisioningRunId = state.currentProvisioningRunIdByTeam[teamName];
   const currentRuntimeRunId = state.currentRuntimeRunIdByTeam[teamName];
   if (currentProvisioningRunId) {
-    nextIgnoredProvisioningRunIds[currentProvisioningRunId] = teamName;
+    nextIgnoredProvisioningRunIds = addIgnoredTeamRun(
+      nextIgnoredProvisioningRunIds,
+      currentProvisioningRunId,
+      teamName
+    );
   }
   if (currentRuntimeRunId) {
-    nextIgnoredRuntimeRunIds[currentRuntimeRunId] = teamName;
+    nextIgnoredRuntimeRunIds = addIgnoredTeamRun(
+      nextIgnoredRuntimeRunIds,
+      currentRuntimeRunId,
+      teamName
+    );
   }
 
   return {
@@ -247,19 +259,19 @@ export function collectFailedProvisioningAttemptCleanup<
   }
 
   const provisioningRuns = { ...state.provisioningRuns };
-  const ignoredProvisioningRunIds = { ...state.ignoredProvisioningRunIds };
+  let ignoredProvisioningRunIds = state.ignoredProvisioningRunIds;
   for (const runId of failedRunIds) {
     delete provisioningRuns[runId];
-    ignoredProvisioningRunIds[runId] = teamName;
+    ignoredProvisioningRunIds = addIgnoredTeamRun(ignoredProvisioningRunIds, runId, teamName);
   }
 
   const clearsProvisioning =
     typeof currentProvisioningRunId === 'string' && failedRunIds.has(currentProvisioningRunId);
   const clearsRuntime =
     typeof currentRuntimeRunId === 'string' && failedRunIds.has(currentRuntimeRunId);
-  const ignoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
+  let ignoredRuntimeRunIds = state.ignoredRuntimeRunIds;
   if (clearsRuntime && currentRuntimeRunId) {
-    ignoredRuntimeRunIds[currentRuntimeRunId] = teamName;
+    ignoredRuntimeRunIds = addIgnoredTeamRun(ignoredRuntimeRunIds, currentRuntimeRunId, teamName);
   }
 
   const memberSpawnStatusesByTeam = omitTeamKey(state.memberSpawnStatusesByTeam, teamName);

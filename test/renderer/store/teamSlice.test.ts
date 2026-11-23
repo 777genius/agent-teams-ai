@@ -9086,6 +9086,256 @@ describe('teamSlice actions', () => {
       expect(store.getState().provisioningRuns['run-new']?.state).toBe('assembling');
     });
 
+    describe('run identity recovery regressions', () => {
+      const startedAt = '2026-03-12T10:00:00.000Z';
+      const old = {
+        runId: 'project-r1',
+        teamName: 'builders',
+        state: 'failed' as const,
+        message: 'Old project failure',
+        error: 'Old project failure',
+        startedAt,
+        updatedAt: startedAt,
+      };
+
+      it('keeps a rejected equal-timestamp run while another alias still owns its record', () => {
+        const store = createSliceStore();
+        const current = { ...old, runId: 'project-r2', state: 'ready' as const, error: undefined };
+        store.setState({
+          provisioningRuns: { [old.runId]: old, [current.runId]: current },
+          currentProvisioningRunIdByTeam: { builders: current.runId, 'ptc-a': old.runId },
+          currentRuntimeRunIdByTeam: { builders: current.runId, 'ptc-a': old.runId },
+          provisioningStartedAtFloorByTeam: { builders: startedAt },
+          provisioningErrorByTeam: { 'ptc-a': old.error },
+        });
+
+        store.getState().onProvisioningProgress({ ...old, updatedAt: '2026-03-12T11:00:00.000Z' });
+
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toEqual(old);
+        expect(getCurrentProvisioningProgressForTeam(store.getState(), 'builders')).toEqual(current);
+        expect(store.getState().provisioningErrorByTeam).toEqual({ 'ptc-a': old.error });
+      });
+
+      it.each(['present', 'missing'] as const)(
+        'clears every missing-run owner with its record %s while preserving owners on R3',
+        (record) => {
+          const store = createSliceStore();
+          const next = { ...old, runId: 'project-r3', error: 'Current R3 failure' };
+          const owners = {
+            builders: next.runId,
+            'ptc-a': old.runId,
+            'ptc-shadow': old.runId,
+            'ptc-b': next.runId,
+          };
+          const statuses = { alice: createMemberSpawnStatus({ status: 'error', runtimeAlive: false }) };
+          const runtime = Object.fromEntries(
+            Object.entries(owners).map(([teamName, runId]) => [
+              teamName,
+              createRuntimeSnapshot({ teamName, runId }),
+            ])
+          );
+          const snapshots = Object.fromEntries(
+            Object.entries(owners).map(([teamName, runId]) => [
+              teamName,
+              createMemberSpawnSnapshot({ runId, statuses }),
+            ])
+          );
+          store.setState({
+            provisioningRuns: {
+              ...(record === 'present' ? { [old.runId]: old } : {}),
+              [next.runId]: next,
+            },
+            currentProvisioningRunIdByTeam: owners,
+            currentRuntimeRunIdByTeam: owners,
+            provisioningErrorByTeam: {
+              builders: next.error,
+              'ptc-b': next.error,
+              'ptc-a': old.error,
+              'ptc-shadow': old.error,
+            },
+            memberSpawnStatusesByTeam: Object.fromEntries(
+              Object.keys(owners).map((owner) => [owner, statuses])
+            ),
+            memberSpawnSnapshotsByTeam: snapshots,
+            teamAgentRuntimeByTeam: runtime,
+            activeToolsByTeam: { builders: {}, 'ptc-a': {}, 'ptc-shadow': {}, 'ptc-b': {} },
+            finishedVisibleByTeam: { builders: {}, 'ptc-a': {}, 'ptc-shadow': {}, 'ptc-b': {} },
+            toolHistoryByTeam: { builders: {}, 'ptc-a': {}, 'ptc-shadow': {}, 'ptc-b': {} },
+          });
+
+          store.getState().clearMissingProvisioningRun(old.runId);
+
+          const state = store.getState();
+          expect(state.provisioningRuns).toEqual({ [next.runId]: next });
+          expect(state.currentProvisioningRunIdByTeam).toEqual({
+            builders: next.runId,
+            'ptc-b': next.runId,
+          });
+          expect(state.currentRuntimeRunIdByTeam).toEqual({
+            builders: next.runId,
+            'ptc-b': next.runId,
+          });
+          expect(state.provisioningErrorByTeam).toEqual({ builders: next.error, 'ptc-b': next.error });
+          for (const owner of ['ptc-a', 'ptc-shadow']) {
+            expect(state.memberSpawnStatusesByTeam[owner]).toBeUndefined();
+            expect(state.memberSpawnSnapshotsByTeam[owner]).toBeUndefined();
+            expect(state.teamAgentRuntimeByTeam[owner]).toBeUndefined();
+            expect(state.activeToolsByTeam[owner]).toBeUndefined();
+            expect(state.finishedVisibleByTeam[owner]).toBeUndefined();
+            expect(state.toolHistoryByTeam[owner]).toBeUndefined();
+          }
+          for (const owner of ['builders', 'ptc-b']) {
+            expect(state.memberSpawnStatusesByTeam[owner]).toBe(statuses);
+            expect(state.memberSpawnSnapshotsByTeam[owner]).toBe(snapshots[owner]);
+            expect(state.teamAgentRuntimeByTeam[owner]).toBe(runtime[owner]);
+            expect(state.activeToolsByTeam[owner]).toEqual({});
+            expect(state.finishedVisibleByTeam[owner]).toEqual({});
+            expect(state.toolHistoryByTeam[owner]).toEqual({});
+          }
+        }
+      );
+
+      it.each(['provisioning', 'runtime'] as const)(
+        'preserves R3 caches when only the %s authority still points to missing R1',
+        (authority) => {
+          const store = createSliceStore();
+          const runtime = createRuntimeSnapshot({ teamName: 'ptc-a', runId: 'project-r3' });
+          const spawn = createMemberSpawnSnapshot({ runId: 'project-r3' });
+          store.setState({
+            provisioningRuns: { [old.runId]: old },
+            currentProvisioningRunIdByTeam: {
+              'ptc-a': authority === 'provisioning' ? old.runId : 'project-r3',
+            },
+            currentRuntimeRunIdByTeam: { 'ptc-a': authority === 'runtime' ? old.runId : 'project-r3' },
+            provisioningErrorByTeam: { 'ptc-a': 'Current error' },
+            teamAgentRuntimeByTeam: { 'ptc-a': runtime },
+            memberSpawnStatusesByTeam: { 'ptc-a': spawn.statuses },
+            memberSpawnSnapshotsByTeam: { 'ptc-a': spawn },
+          });
+
+          store.getState().clearMissingProvisioningRun(old.runId);
+
+          expect(store.getState().currentProvisioningRunIdByTeam['ptc-a']).toBe(
+            authority === 'provisioning' ? undefined : 'project-r3'
+          );
+          expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBe(
+            authority === 'runtime' ? undefined : 'project-r3'
+          );
+          expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe(
+            authority === 'provisioning' ? undefined : 'Current error'
+          );
+          expect(store.getState().teamAgentRuntimeByTeam['ptc-a']).toBe(runtime);
+          expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBe(spawn.statuses);
+          expect(store.getState().memberSpawnSnapshotsByTeam['ptc-a']).toBe(spawn);
+        }
+      );
+
+      it.each(['ready', 'failed'] as const)(
+        'reuses already cached %s R2 progress without fetching or applying status twice',
+        async (state) => {
+          const store = createSliceStore();
+          const successor = {
+            ...old,
+            runId: 'project-r2',
+            state,
+            error: state === 'failed' ? 'Current R2 failure' : undefined,
+          };
+          const onProgress = vi.fn(store.getState().onProvisioningProgress);
+          store.setState({
+            onProvisioningProgress: onProgress,
+            provisioningRuns: { [old.runId]: old, [successor.runId]: successor },
+            currentProvisioningRunIdByTeam: { builders: successor.runId, 'ptc-a': old.runId },
+            currentRuntimeRunIdByTeam: { builders: successor.runId, 'ptc-a': old.runId },
+            provisioningErrorByTeam: { 'ptc-a': old.error },
+            memberSpawnStatusesByTeam: {
+              'ptc-a': { alice: createMemberSpawnStatus({ status: 'error', runtimeAlive: false }) },
+            },
+          });
+          hoisted.getProvisioningStatus.mockResolvedValue(successor);
+          hoisted.getTeamAgentRuntime.mockResolvedValue(
+            createRuntimeSnapshot({ teamName: 'ptc-a', runId: successor.runId })
+          );
+          hoisted.getMemberSpawnStatuses.mockResolvedValue(
+            createMemberSpawnSnapshot({ runId: successor.runId })
+          );
+
+          await store.getState().fetchTeamAgentRuntime('ptc-a');
+          await store.getState().fetchMemberSpawnStatuses('ptc-a');
+          await flushMicrotasks();
+
+          expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+          expect(onProgress).not.toHaveBeenCalled();
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toEqual(successor);
+          expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe(successor.error);
+        }
+      );
+
+      it('does not revive a missing run through a late alias event or runtime snapshot', async () => {
+        const store = createSliceStore();
+        store.setState({
+          provisioningRuns: { [old.runId]: old },
+          currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+          currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+        });
+        store.getState().clearMissingProvisioningRun(old.runId);
+        store.getState().onProvisioningProgress({ ...old, teamName: 'ptc-a' });
+        hoisted.getMemberSpawnStatuses.mockResolvedValue(
+          createMemberSpawnSnapshot({ runId: old.runId })
+        );
+        await store.getState().fetchMemberSpawnStatuses('ptc-a');
+
+        expect(store.getState().provisioningRuns[old.runId]).toBeUndefined();
+        expect(store.getState().currentProvisioningRunIdByTeam['ptc-a']).toBeUndefined();
+        expect(store.getState().currentRuntimeRunIdByTeam['ptc-a']).toBeUndefined();
+        expect(store.getState().memberSpawnStatusesByTeam['ptc-a']).toBeUndefined();
+      });
+
+      it.each(['agent-first', 'member-first'] as const)(
+        'hydrates adopted R2 exactly once when snapshots arrive %s',
+        async (order) => {
+          const store = createSliceStore();
+          const successor = {
+            ...old,
+            runId: 'project-r2',
+            error: 'Current R2 failure',
+            startedAt: '2026-03-12T10:01:00.000Z',
+          };
+          const status = createDeferredPromise<typeof successor>();
+          const onProgress = vi.fn(store.getState().onProvisioningProgress);
+          store.setState({
+            onProvisioningProgress: onProgress,
+            provisioningRuns: { [old.runId]: old },
+            currentProvisioningRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+            currentRuntimeRunIdByTeam: { builders: old.runId, 'ptc-a': old.runId },
+            provisioningErrorByTeam: { builders: old.error, 'ptc-a': old.error },
+            memberSpawnStatusesByTeam: {
+              'ptc-a': { alice: createMemberSpawnStatus({ status: 'error', runtimeAlive: false }) },
+            },
+          });
+          hoisted.getProvisioningStatus.mockReturnValue(status.promise);
+          hoisted.getTeamAgentRuntime.mockResolvedValue(
+            createRuntimeSnapshot({ teamName: 'ptc-a', runId: successor.runId })
+          );
+          hoisted.getMemberSpawnStatuses.mockResolvedValue(
+            createMemberSpawnSnapshot({ runId: successor.runId })
+          );
+          const first = order === 'agent-first' ? 'fetchTeamAgentRuntime' : 'fetchMemberSpawnStatuses';
+          const second = order === 'agent-first' ? 'fetchMemberSpawnStatuses' : 'fetchTeamAgentRuntime';
+
+          await store.getState()[first]('ptc-a');
+          await store.getState()[second]('ptc-a');
+          expect(hoisted.getProvisioningStatus).toHaveBeenCalledExactlyOnceWith(successor.runId);
+          status.resolve(successor);
+          await flushMicrotasks();
+
+          expect(onProgress).toHaveBeenCalledExactlyOnceWith(successor);
+          expect(getCurrentProvisioningProgressForTeam(store.getState(), 'ptc-a')).toEqual(successor);
+          expect(store.getState().provisioningErrorByTeam['ptc-a']).toBe(successor.error);
+          expect(store.getState().provisioningErrorByTeam.builders).toBe(successor.error);
+        }
+      );
+    });
+
     it.each(['ready', 'failed'] as const)(
       'binds a project alias banner after logical successor progress has arrived as %s',
       async (nextState) => {

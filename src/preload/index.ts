@@ -25,8 +25,12 @@ import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/prel
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
-import { WINDOW_SET_ZOOM_FACTOR_CHANNEL, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import {
+  WINDOW_SET_ZOOM_FACTOR_CHANNEL,
+  WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
+} from '@shared/constants';
 import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
+import { toTeamDefinitionEditRefusal } from '@shared/utils/teamDefinitionEditRefusal';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -182,7 +186,6 @@ import {
   SSH_SAVE_LAST_CONNECTION,
   SSH_STATUS,
   SSH_TEST,
-  TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_ALIVE_LIST,
@@ -237,13 +240,10 @@ import {
   TEAM_PROJECT_BRANCH_CHANGE,
   TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
-  TEAM_REMOVE_MEMBER,
   TEAM_REMOVE_TASK_RELATIONSHIP,
-  TEAM_REPLACE_MEMBERS,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
-  TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
   TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -263,10 +263,8 @@ import {
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
   TEAM_TOOL_APPROVAL_SETTINGS,
-  TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
-  TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
@@ -290,6 +288,7 @@ import {
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
+import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
@@ -300,7 +299,6 @@ import type {
   ReviewDraftHistorySnapshot,
 } from '@features/change-review-history/contracts';
 import type {
-  AddMemberRequest,
   AddTaskCommentRequest,
   AgentChangeSet,
   AppConfig,
@@ -353,7 +351,6 @@ import type {
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
   RejectResult,
-  ReplaceMembersRequest,
   RestoreReviewHistoryRequest,
   RestoreReviewHistoryResult,
   RetryFailedOpenCodeSecondaryLanesResult,
@@ -388,7 +385,6 @@ import type {
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
-  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -409,7 +405,6 @@ import type {
   TeamTaskChangeSummaryRequest,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
@@ -459,6 +454,7 @@ import type {
   SkillUpsertRequest,
   SkillWatcherEvent,
 } from '@shared/types/extensions';
+import type { TeamDefinitionEditRefusal } from '@shared/types/teamDefinitionEdit';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
@@ -481,12 +477,27 @@ interface IpcFileChangePayload {
   isSubagent: boolean;
 }
 
-async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
-  const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
+function unwrapIpcResult<T>(result: IpcResult<T>): T {
   if (!result.success) {
     throw Object.assign(new Error(result.error ?? 'Unknown error'), { failure: result.failure });
   }
   return result.data as T;
+}
+
+async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
+  return unwrapIpcResult((await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>);
+}
+
+async function invokeDefinitionEdit<T>(
+  channel: string,
+  ...args: unknown[]
+): Promise<T | TeamDefinitionEditRefusal> {
+  const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
+  if (!result.success) {
+    const refusal = toTeamDefinitionEditRefusal(result.error ?? 'Unknown error', result.failure);
+    if (refusal) return refusal;
+  }
+  return unwrapIpcResult(result);
 }
 
 installRendererLogForwarding();
@@ -770,7 +781,8 @@ const electronAPI: ElectronAPI = {
 
   // Zoom factor sync (used for traffic-light-safe layout)
   getZoomFactor: async (): Promise<number> => currentZoomFactor,
-  setZoomFactor: (factor: number): Promise<number> => ipcRenderer.invoke(WINDOW_SET_ZOOM_FACTOR_CHANNEL, factor),
+  setZoomFactor: (factor: number): Promise<number> =>
+    ipcRenderer.invoke(WINDOW_SET_ZOOM_FACTOR_CHANNEL, factor),
   onZoomFactorChanged: (callback: (zoomFactor: number) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, zoomFactor: unknown): void => {
       if (typeof zoomFactor !== 'number' || !Number.isFinite(zoomFactor)) return;
@@ -933,7 +945,9 @@ const electronAPI: ElectronAPI = {
     },
     getProjectContextView: async (logicalName: string, projectPath?: string | null) =>
       invokeIpcWithResult<TeamProjectContextView>(
-        TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, logicalName, projectPath ?? null
+        TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+        logicalName,
+        projectPath ?? null
       ),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
@@ -1203,26 +1217,11 @@ const electronAPI: ElectronAPI = {
     getAllTasks: async () => {
       return invokeIpcWithResult<GlobalTask[]>(TEAM_GET_ALL_TASKS);
     },
-    updateConfig: async (teamName: string, updates: TeamUpdateConfigRequest) => {
-      return invokeIpcWithResult<TeamConfig>(TEAM_UPDATE_CONFIG, teamName, updates);
-    },
+    ...createTeamDefinitionEditBridge<never>(invokeIpcWithResult),
+    definitionEdits:
+      createTeamDefinitionEditBridge<TeamDefinitionEditRefusal>(invokeDefinitionEdit),
     addTaskComment: async (teamName: string, taskId: string, request: AddTaskCommentRequest) => {
       return invokeIpcWithResult<TaskComment>(TEAM_ADD_TASK_COMMENT, teamName, taskId, request);
-    },
-    addMember: async (teamName: string, request: AddMemberRequest) => {
-      return invokeIpcWithResult<void>(TEAM_ADD_MEMBER, teamName, request);
-    },
-    replaceMembers: async (teamName: string, request: ReplaceMembersRequest) => {
-      return invokeIpcWithResult<void>(TEAM_REPLACE_MEMBERS, teamName, request);
-    },
-    removeMember: async (teamName: string, memberName: string) => {
-      return invokeIpcWithResult<void>(TEAM_REMOVE_MEMBER, teamName, memberName);
-    },
-    restoreMember: async (teamName: string, memberName: string) => {
-      return invokeIpcWithResult<void>(TEAM_RESTORE_MEMBER, teamName, memberName);
-    },
-    updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
-      return invokeIpcWithResult<void>(TEAM_UPDATE_MEMBER_ROLE, teamName, memberName, role);
     },
     getProjectBranch: async (projectPath: string) => {
       return invokeIpcWithResult<string | null>(TEAM_GET_PROJECT_BRANCH, projectPath);

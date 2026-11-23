@@ -157,7 +157,10 @@ import {
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
 import {
+  addIgnoredTeamRun,
   getCurrentProvisioningProgressForTeam,
+  isTeamRunIgnored,
+  projectMissingProvisioningRunCleanup,
   projectProvisioningProgressOwners,
   projectProvisioningRuntimeAdoption,
   pruneProvisioningRuns,
@@ -231,6 +234,7 @@ import type {
   RefreshTeamMessagesHeadResult,
   TeamMessagesCacheEntry,
 } from '../team/teamMessagesCache';
+import type { IgnoredTeamRunOwners } from '../team/teamProvisioningRunIdentity';
 import type { AppState } from '../types';
 import type { GraphLayoutMode, GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
@@ -1270,6 +1274,13 @@ function recordTeamLaunchIpcFailure(
   });
 }
 
+function refreshAdoptedProvisioningRun(getState: () => TeamSlice, runId: string): void {
+  if (Object.hasOwn(getState().provisioningRuns, runId)) return;
+  void getState().getProvisioningStatus(runId).catch((error: unknown) => {
+    if (isUnknownProvisioningRunError(error)) getState().clearMissingProvisioningRun(runId);
+  });
+}
+
 async function pollProvisioningStatus(
   getState: () => TeamSlice,
   runId: string,
@@ -1411,9 +1422,9 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   currentProvisioningRunIdByTeam: Record<string, string | null>;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
-  ignoredProvisioningRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
   /** Runtime runs explicitly tombstoned after stop/offline so late events cannot resurrect UI state. */
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   /**
    * Per-team lower bound for provisioning progress timestamps.
    * Used to ignore late progress events from a previous run after stop→launch.
@@ -1836,7 +1847,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         nextRuntimeRunId === snapshot.runId &&
         previousRuntimeRunId !== snapshot.runId
       ) {
-        void get().getProvisioningStatus(snapshot.runId);
+        refreshAdoptedProvisioningRun(get, snapshot.runId);
       }
     } catch (error) {
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
@@ -1860,6 +1871,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         return;
       }
+      const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
       set((prev) => {
         const adoption = resolveIncomingRuntimeRunAdoption({
           teamName,
@@ -1905,6 +1917,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           },
         };
       });
+      if (
+        snapshot.runId && previousRuntimeRunId && previousRuntimeRunId !== snapshot.runId &&
+        get().currentRuntimeRunIdByTeam[teamName] === snapshot.runId
+      ) {
+        refreshAdoptedProvisioningRun(get, snapshot.runId);
+      }
     } catch {
       // ignore — runtime snapshots are best-effort
     }
@@ -4217,10 +4235,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
       delete nextRuntimeRunIdByTeam[request.teamName];
       const nextIgnoredRuntimeRunIds = previousRuntimeRunId
-        ? {
-            ...state.ignoredRuntimeRunIds,
-            [previousRuntimeRunId]: request.teamName,
-          }
+        ? addIgnoredTeamRun(state.ignoredRuntimeRunIds, previousRuntimeRunId, request.teamName)
         : state.ignoredRuntimeRunIds;
       const visibleLoadingResets = collectTeamScopedVisibleLoadingResets(state, request.teamName);
       return {
@@ -4439,10 +4454,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
       delete nextRuntimeRunIdByTeam[request.teamName];
       const nextIgnoredRuntimeRunIds = previousRuntimeRunId
-        ? {
-            ...state.ignoredRuntimeRunIds,
-            [previousRuntimeRunId]: request.teamName,
-          }
+        ? addIgnoredTeamRun(state.ignoredRuntimeRunIds, previousRuntimeRunId, request.teamName)
         : state.ignoredRuntimeRunIds;
       const visibleLoadingResets = collectTeamScopedVisibleLoadingResets(state, request.teamName);
       return {
@@ -4606,64 +4618,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     teamLaunchAnalyticsByRunId.delete(runId);
     clearTeamLaunchStepTracking(runId);
     set((state) => {
-      const existing = state.provisioningRuns[runId];
-      if (!existing) {
-        return {};
-      }
-
-      const nextRuns = { ...state.provisioningRuns };
-      delete nextRuns[runId];
-      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
-      const isCanonicalRun = nextCurrentRunIdByTeam[existing.teamName] === runId;
-      if (isCanonicalRun) {
-        delete nextCurrentRunIdByTeam[existing.teamName];
-      }
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      if (nextRuntimeRunIdByTeam[existing.teamName] === runId) {
-        delete nextRuntimeRunIdByTeam[existing.teamName];
-      }
-      const nextIgnoredRunIds = {
-        ...state.ignoredProvisioningRunIds,
-        [runId]: existing.teamName,
-      };
-      const nextIgnoredRuntimeRunIds =
-        state.currentRuntimeRunIdByTeam[existing.teamName] === runId
-          ? {
-              ...state.ignoredRuntimeRunIds,
-              [runId]: existing.teamName,
-            }
-          : state.ignoredRuntimeRunIds;
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      if (isCanonicalRun) {
-        delete nextSpawnStatuses[existing.teamName];
-        delete nextSpawnSnapshots[existing.teamName];
-        delete nextRuntime[existing.teamName];
-        clearTeamAgentRuntimeFreshnessSnapshot(existing.teamName);
-      }
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      if (isCanonicalRun) {
-        delete nextActiveTools[existing.teamName];
-        delete nextFinishedVisible[existing.teamName];
-        delete nextToolHistory[existing.teamName];
-      }
-
-      return {
-        provisioningRuns: nextRuns,
-        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        ignoredProvisioningRunIds: nextIgnoredRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-      };
+      const cleanup = projectMissingProvisioningRunCleanup(state, runId);
+      cleanup.clearedRuntimeTeams.forEach(clearTeamAgentRuntimeFreshnessSnapshot);
+      return cleanup.state;
     });
   },
 
@@ -4672,10 +4629,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
-    if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
+    if (isTeamRunIgnored(get().ignoredProvisioningRunIds, progress.runId, progress.teamName)) {
       return;
     }
-    if (get().ignoredRuntimeRunIds[progress.runId] === progress.teamName) {
+    if (isTeamRunIgnored(get().ignoredRuntimeRunIds, progress.runId, progress.teamName)) {
       return;
     }
 
@@ -4754,7 +4711,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         ) {
           nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
           isCanonicalRun = true;
-        } else if (!(progress.runId in state.provisioningRuns)) {
+        } else if (
+          !(progress.runId in state.provisioningRuns) ||
+          Object.values(state.currentProvisioningRunIdByTeam).includes(progress.runId)
+        ) {
           return {};
         } else {
           delete nextRuns[progress.runId];

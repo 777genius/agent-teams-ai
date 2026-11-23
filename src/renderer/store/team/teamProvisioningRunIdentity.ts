@@ -3,14 +3,65 @@ import {
   isTerminalProvisioningState,
 } from './teamProvisioningStateRules';
 
-import type { TeamProvisioningProgress } from '@shared/types';
+import type {
+  ActiveToolCall,
+  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  TeamAgentRuntimeSnapshot,
+  TeamProvisioningProgress,
+  TeamSummary,
+} from '@shared/types';
+
+/** Keep raw run IDs as keys; one native run can have logical and physical owners. */
+export type IgnoredTeamRunOwners = Record<string, string | readonly string[]>;
+
+export function isTeamRunIgnored(
+  ignored: IgnoredTeamRunOwners,
+  runId: string,
+  teamName: string
+): boolean {
+  const owners = Object.hasOwn(ignored, runId) ? ignored[runId] : undefined;
+  return typeof owners === 'string' ? owners === teamName : owners?.includes(teamName) === true;
+}
+
+export function addIgnoredTeamRun(
+  ignored: IgnoredTeamRunOwners,
+  runId: string,
+  teamName: string
+): IgnoredTeamRunOwners {
+  if (isTeamRunIgnored(ignored, runId, teamName)) return ignored;
+  const owners = Object.hasOwn(ignored, runId) ? ignored[runId] : undefined;
+  return {
+    ...ignored,
+    [runId]:
+      owners === undefined
+        ? teamName
+        : [...(typeof owners === 'string' ? [owners] : owners), teamName],
+  };
+}
+
+export function removeIgnoredTeamRunOwner(
+  ignored: IgnoredTeamRunOwners,
+  teamName: string
+): IgnoredTeamRunOwners {
+  return Object.fromEntries(
+    Object.entries(ignored).flatMap(([runId, owners]) => {
+      const remaining = (typeof owners === 'string' ? [owners] : owners).filter(
+        (owner) => owner !== teamName
+      );
+      return remaining.length === 0
+        ? []
+        : [[runId, remaining.length === 1 ? remaining[0] : remaining]];
+    })
+  );
+}
 
 interface ProvisioningState {
   provisioningRuns: Record<string, TeamProvisioningProgress>;
   currentProvisioningRunIdByTeam: Record<string, string | null>;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   provisioningErrorByTeam: Record<string, string | null>;
-  ignoredProvisioningRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
   provisioningStartedAtFloorByTeam: Record<string, string>;
 }
 
@@ -56,10 +107,11 @@ export function projectProvisioningRuntimeAdoption(
     provisioningErrorByTeam: errors,
     ...(previousRunId && previousRunId !== runId
       ? {
-          ignoredProvisioningRunIds: {
-            ...state.ignoredProvisioningRunIds,
-            [previousRunId]: state.ignoredProvisioningRunIds[previousRunId] ?? teamName,
-          },
+          ignoredProvisioningRunIds: addIgnoredTeamRun(
+            state.ignoredProvisioningRunIds,
+            previousRunId,
+            teamName
+          ),
         }
       : {}),
   };
@@ -121,4 +173,80 @@ export function pruneProvisioningRuns(
         runId === progress.runId || run.teamName !== progress.teamName || referenced.has(runId)
     )
   );
+}
+
+interface MissingProvisioningRunState extends ProvisioningState {
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
+  provisioningSnapshotByTeam: Record<string, TeamSummary>;
+  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
+  memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
+  teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
+  activeToolsByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
+  finishedVisibleByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
+  toolHistoryByTeam: Record<string, Record<string, ActiveToolCall[]>>;
+}
+
+function omitOwners<T>(record: Record<string, T>, owners: ReadonlySet<string>): Record<string, T> {
+  const next = { ...record };
+  for (const owner of owners) delete next[owner];
+  return next;
+}
+
+/** Missing status is a run-level result, even when its cached progress has already disappeared. */
+export function projectMissingProvisioningRunCleanup(
+  state: MissingProvisioningRunState,
+  runId: string
+): { state: Partial<MissingProvisioningRunState>; clearedRuntimeTeams: string[] } {
+  const existing = state.provisioningRuns[runId];
+  const provisioningOwners = new Set(
+    Object.entries(state.currentProvisioningRunIdByTeam)
+      .filter(([, current]) => current === runId)
+      .map(([teamName]) => teamName)
+  );
+  const runtimeOwners = new Set(
+    Object.entries(state.currentRuntimeRunIdByTeam)
+      .filter(([, current]) => current === runId)
+      .map(([teamName]) => teamName)
+  );
+  const owners = new Set([...provisioningOwners, ...runtimeOwners]);
+  if (!existing && owners.size === 0) return { state: {}, clearedRuntimeTeams: [] };
+
+  // Untagged per-team caches must survive if either authority already belongs to another run.
+  const cacheOwners = new Set(
+    [...owners].filter((teamName) => {
+      const provisioning = state.currentProvisioningRunIdByTeam[teamName];
+      const runtime = state.currentRuntimeRunIdByTeam[teamName];
+      return (!provisioning || provisioning === runId) && (!runtime || runtime === runId);
+    })
+  );
+  if (existing) owners.add(existing.teamName);
+  let ignoredProvisioningRunIds = state.ignoredProvisioningRunIds;
+  let ignoredRuntimeRunIds = state.ignoredRuntimeRunIds;
+  for (const owner of owners) {
+    ignoredProvisioningRunIds = addIgnoredTeamRun(ignoredProvisioningRunIds, runId, owner);
+    ignoredRuntimeRunIds = addIgnoredTeamRun(ignoredRuntimeRunIds, runId, owner);
+  }
+  const provisioningRuns = { ...state.provisioningRuns };
+  delete provisioningRuns[runId];
+  return {
+    clearedRuntimeTeams: [...cacheOwners],
+    state: {
+      provisioningRuns,
+      currentProvisioningRunIdByTeam: omitOwners(
+        state.currentProvisioningRunIdByTeam,
+        provisioningOwners
+      ),
+      currentRuntimeRunIdByTeam: omitOwners(state.currentRuntimeRunIdByTeam, runtimeOwners),
+      provisioningErrorByTeam: omitOwners(state.provisioningErrorByTeam, provisioningOwners),
+      provisioningSnapshotByTeam: omitOwners(state.provisioningSnapshotByTeam, provisioningOwners),
+      memberSpawnStatusesByTeam: omitOwners(state.memberSpawnStatusesByTeam, cacheOwners),
+      memberSpawnSnapshotsByTeam: omitOwners(state.memberSpawnSnapshotsByTeam, cacheOwners),
+      teamAgentRuntimeByTeam: omitOwners(state.teamAgentRuntimeByTeam, cacheOwners),
+      activeToolsByTeam: omitOwners(state.activeToolsByTeam, cacheOwners),
+      finishedVisibleByTeam: omitOwners(state.finishedVisibleByTeam, cacheOwners),
+      toolHistoryByTeam: omitOwners(state.toolHistoryByTeam, cacheOwners),
+      ignoredProvisioningRunIds,
+      ignoredRuntimeRunIds,
+    },
+  };
 }
