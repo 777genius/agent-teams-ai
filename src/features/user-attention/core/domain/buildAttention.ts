@@ -46,7 +46,7 @@ export function conversationForAttentionMessage(message: InboxMessage): {
   if (message.groupChatId) {
     return {
       scope: { kind: 'group', groupChatId: message.groupChatId },
-      name: 'Group chat',
+      name: groupName || `Group ${message.groupChatId}`,
     };
   }
   const sender = normalizeConversationParticipant(message.from);
@@ -84,7 +84,9 @@ export function buildAttentionModel(
       const readSet = message.groupChatId ? reads.group : reads.direct;
       if (!isAttentionUnread(message, readSet, toMessageKey)) continue;
 
-      const conversation = conversationForAttentionMessage(message);
+      const conversation = conversationForAttentionMessage(
+        message, message.groupChatId ? team.groupNames?.[message.groupChatId] : undefined
+      );
       const scopeKey = conversationScopeKey(conversation.scope);
       const entry = chatMap.get(scopeKey);
       if (!entry) {
