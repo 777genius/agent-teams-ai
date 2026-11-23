@@ -33,6 +33,7 @@ concurrency:
 
 jobs:
   profile-path-regressions:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     name: Profile isolation (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
