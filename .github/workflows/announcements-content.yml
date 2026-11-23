@@ -17,7 +17,8 @@ concurrency:
 jobs:
   content-check:
     name: announcements-content-check
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
+    # Pure content validation: leave scarce Linux native CI slots for real E2E.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
