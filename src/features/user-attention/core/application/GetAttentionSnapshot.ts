@@ -27,12 +27,18 @@ export class GetAttentionSnapshot implements UserAttentionApi {
         if (!unique.has(key)) unique.set(key, candidate);
       }
     }
+    // Group names come from the existing group catalog, only when needed.
+    const needsGroups = [...unique.values()].some((message) => Boolean(message.groupChatId));
+    const groupNames = needsGroups && this.source.listGroupNames
+      ? await this.source.listGroupNames(team.teamName).catch(() => ({}))
+      : {};
     return {
       teamName: team.teamName,
       teamDisplayName: team.displayName,
       projectPath: team.projectPath,
       tasks: tasksResult.status === 'fulfilled' ? projectAttentionTasks(tasksResult.value, team) : [],
       messages: [...unique.values()],
+      groupNames,
       ...(tasksResult.status === 'rejected' || messagesResult.status === 'rejected'
         ? { error: 'Some attention sources are unavailable' }
         : {}),
