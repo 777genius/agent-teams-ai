@@ -206,7 +206,7 @@ async function run() {
   const metadataPath = path.join(userData, 'data', 'notification-channels.json');
   const metadata = await readFile(metadataPath, 'utf8');
   assert(!metadata.includes(TOKEN), 'Credential leaked into settings JSON');
-  const vaultPath = path.join(claude, 'api-keys.json');
+  const vaultPath = path.join(userData, 'data', 'notification-channel-credentials', 'api-keys.json');
   const vaultOnDisk = await readFile(vaultPath, 'utf8');
   assert(!vaultOnDisk.includes(TOKEN), 'Credential must be encrypted at rest');
   assert.equal((await stat(vaultPath)).mode & 0o077, 0, 'Secret file must be owner-only');
