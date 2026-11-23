@@ -26,9 +26,25 @@ function displayTest(status?: ChannelTestStatus): string {
 
 export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { autoDeliveryPaused?: boolean }): React.JSX.Element {
   const {
-    channels, draft, loading, busy, deletePending, error,
+    channels, draft, loading, busy, deletePending, error, localSettingsUrl,
     save, edit, toggle, remove, test, providerChanged, updateDraft, toggleEvent, start, cancel,
   } = useNotificationChannelsSettings();
+  if (localSettingsUrl) {
+    return (
+      <section aria-label="Delivery channels" className="my-5 rounded-lg border p-4"
+        style={{ borderColor: 'var(--color-border)' }}>
+        <h3 className="text-sm font-semibold">Delivery Channels</h3>
+        <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          Secure channel settings require a page served from the same local address as the app API.
+          Open the local app to manage destinations.
+        </p>
+        <a className="mt-2 inline-block text-xs underline" href={localSettingsUrl}>
+          Open local app
+        </a>
+      </section>
+    );
+  }
+
   return (
     <section aria-label="Delivery channels" className="my-5 rounded-lg border p-4"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-raised)' }}>

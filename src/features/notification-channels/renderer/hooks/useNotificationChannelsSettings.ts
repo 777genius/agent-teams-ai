@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
+import { resolveLocalSettingsUrl } from '../utils/localSettingsOrigin';
 
 import type { DeliveryChannelDto, DeliveryEvent, SaveDeliveryChannelRequest } from '../../contracts';
 
@@ -18,6 +19,10 @@ function newChannel(): SaveDeliveryChannelRequest {
 }
 
 export function useNotificationChannelsSettings() {
+  const [localSettingsUrl] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    return resolveLocalSettingsUrl(window.location.origin, window.location.search, isElectronMode());
+  });
   const [channels, setChannels] = useState<DeliveryChannelDto[]>([]);
   const [draft, setDraft] = useState<SaveDeliveryChannelRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,13 +31,17 @@ export function useNotificationChannelsSettings() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (localSettingsUrl) {
+      setLoading(false);
+      return;
+    }
     let active = true;
     api.notificationChannels.list()
       .then((items) => { if (active) setChannels(items); })
       .catch(() => { if (active) setError('Could not load notification destinations.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [localSettingsUrl]);
 
   const refresh = async (): Promise<void> => {
     setChannels(await api.notificationChannels.list());
@@ -128,7 +137,7 @@ export function useNotificationChannelsSettings() {
   const cancel = (): void => setDraft(null);
 
   return {
-    channels, draft, loading, busy, deletePending, error,
+    channels, draft, loading, busy, deletePending, error, localSettingsUrl,
     save, edit, toggle, remove, test, providerChanged, updateDraft, toggleEvent, start, cancel,
   };
 }
