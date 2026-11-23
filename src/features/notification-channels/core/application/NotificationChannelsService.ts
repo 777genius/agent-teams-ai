@@ -69,7 +69,10 @@ function toDto(channel: StoredDeliveryChannel): DeliveryChannelDto {
 export class NotificationChannelsService {
   private transaction: Promise<void> = Promise.resolve();
   private activeDispatches = 0;
+  private activeAutomaticSends = 0;
   private static readonly MAX_CONCURRENT_DISPATCHES = 4;
+  // One full set of configured destinations; overlapping events share this budget.
+  private static readonly MAX_CONCURRENT_AUTOMATIC_SENDS = 20;
 
   constructor(private readonly deps: NotificationChannelsDependencies) {}
 
@@ -185,11 +188,19 @@ export class NotificationChannelsService {
       const channels = (await this.deps.repository.read()).filter((channel) =>
         channel.enabled && channel.events.includes(outbound.event)
       );
-      // Bound simultaneous provider requests; no backlog or retry after uncertain outcomes.
+      // Overlapping dispatches share one provider-request budget. Drop excess
+      // automatic sends rather than queueing stale notifications. Manual Test
+      // remains independently available (serialized by the mutation lock).
       await Promise.allSettled(channels.map(async (channel) => {
         const secret = await this.readSecret(channel.credentialId);
-        if (!secret) return;
-        await this.safeSend(channel, secret, outbound.message);
+        if (!secret || this.activeAutomaticSends >=
+          NotificationChannelsService.MAX_CONCURRENT_AUTOMATIC_SENDS) return;
+        this.activeAutomaticSends++;
+        try {
+          await this.safeSend(channel, secret, outbound.message);
+        } finally {
+          this.activeAutomaticSends--;
+        }
       }));
     } finally {
       this.activeDispatches--;
