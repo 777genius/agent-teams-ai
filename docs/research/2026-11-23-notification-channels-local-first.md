@@ -325,3 +325,35 @@ Gate `N2` packaging (~150-250 E2E lines): actual Electron pack/dev renderer and 
 4. **Packaging/security review:** Shoutrrr needs Go for building but **not** for end user; Apprise CLI needs a bundled Python runtime; local Apprise API must remain running if it sends. Reconfirmed encrypted secret handles and explicit offline limitations.
 
 **Provisional research recommendation (still requires product owner's choice):** favor **Notifly** with a strict security + maintenance spike for a light, native, no-backend first release; keep **Shoutrrr** as a proven functional fallback for broader catalog, subject to its own packaging evidence. Initial rollout only 2 event types: `user_inbox`, `task_clarification`. Do not merge decision into production before approval.
+
+
+---
+
+## 12. Confirmed functional blocker in Notifly 0.7.2 — Telegram token format
+
+**Evidence (23 Nov 2026):** actual source and tests:
+- `src/builder/url-builder.ts` returns `tgram://\${fields['bot_token']}/\${fields['chat_id']}` without encoding.
+- `src/url-parser.ts` passes this string to standard `new URL(urlString)`.
+- `src/services/telegram.ts` reads `url.hostname` as `botToken`.
+- `src/builder/url-builder.test.ts` expects `tgram://bot123:ABC/-1001234` but **does not parse it**.
+- `src/services/telegram.test.ts` / `src/url-parser.test.ts` only parse stand-in tokens **without a colon**; they call `send` separately with injected plain config.
+
+A real Telegram Bot API token conventionally looks like `123456789:AA...` (colon in token). Node's URL parser rejects the exact URL that the library's builder emits:
+
+```js
+new URL('tgram://123456789:AAexample/987654321');
+// TypeError: Invalid URL
+```
+
+This was directly reproduced with the built-in Node WHATWG URL parser (without network or a real credential). Therefore the library's documented **Telegram build → parse → notify path cannot be counted as working for normal bot tokens in v0.7.2**. Encoding the colon as `%3A` changes `url.hostname` to contain encoded text and is **not** evidence of a successful end-to-end Telegram API call.
+
+**Revised status:** `@ambersecurityinc/notifly@0.7.2` is a **promising UI-builder concept but NOT an acceptable default notification engine for this requested Telegram MVP** until an upstream version fixes the issue and proves a real-format token round-trip with a mocked `fetch` and packaged E2E. Do **not** privately fork or patch the library in our app without separately approved, tiny, well-tested scope. Its SSRF/redirect and low-maintenance issues remain additional blockers.
+
+### Decision update after failure of N0 reasoning check
+
+- **Recommendation #1 for ready many channels with no hosted backend:** pinned **nicholas-fedor/Shoutrrr** CLI after packaged binary/secret-handling spike. It has built-in CLI URL generation/verification, including Telegram-specific interactive setup; a native Radix settings screen need only offer a few preset fields plus a secure Advanced URL entry, not recreate provider protocols.
+- **Recommendation #2 for an all-TypeScript release without binaries:** `@thinwrap/notifications`, especially if 9 chat plus email/SMS API integrations are enough. Requires our own small setup schema for the first 3-4 services, but sends via a ready OSS facade.
+- **Recommendation #3 conditional:** Notifly **only after an upstream fix and independent security review**, because its headless builder could reduce future UI work.
+- **Maximum catalog alternative:** Apprise CLI/API if user deliberately accepts Python packaging or a local server.
+
+**No implementation decision made here:** the owner still chooses, now with a verified reason Notifly should not be the default **today**. The reported `11.4` LOC estimate for Notifly is valid only after the blocking upstream version exists; it does not include fixing third-party code. Updated recommendation overrides the provisional text at the end of `11.7`.
