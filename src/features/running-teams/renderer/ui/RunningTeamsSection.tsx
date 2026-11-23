@@ -21,6 +21,7 @@ export function RunningTeamsSection({
   searchQuery,
 }: Readonly<RunningTeamsSectionProps>): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
+  const { t: commonT } = useAppTranslation('common');
   const { rows, hidden, openRunningTeam } = useRunningTeamsSection(searchQuery);
   const { model } = useAttentionInbox();
 
@@ -63,7 +64,7 @@ export function RunningTeamsSection({
                 ((model.countsByTeam.get(row.teamName)?.tasks ?? 0) > 0 ||
                   (model.countsByTeam.get(row.teamName)?.chats ?? 0) > 0) ? (
                 <span className="mt-1.5 block text-[10px] font-medium text-red-400">
-                  Attention: {model.countsByTeam.get(row.teamName)?.tasks ?? 0} tasks ·{' '}
+                  {commonT('attention.teamAttention')}: {model.countsByTeam.get(row.teamName)?.tasks ?? 0} tasks ·{' '}
                   {model.countsByTeam.get(row.teamName)?.chats ?? 0} chats
                 </span>
               ) : null}
