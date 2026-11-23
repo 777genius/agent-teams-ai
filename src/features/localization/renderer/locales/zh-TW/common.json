@@ -1009,5 +1009,21 @@
     "resetDescription": "移除所有資料夾整理。任務、釘選、封存和任務名稱都會保留。",
     "organizationDescription": "整理任務，不會變更它們的團隊、專案或狀態。",
     "counts": "{{active}} 個進行中、{{archived}} 個已封存、{{unavailable}} 個無法使用"
+  },
+  "attention": {
+    "title": "需要您處理",
+    "tab": "待處理",
+    "viewAll": "查看全部",
+    "refresh": "重新整理狀態",
+    "loading": "載入中…",
+    "loadFailed": "無法載入待處理狀態",
+    "retry": "重試",
+    "partial": "部分團隊無法載入，計數可能不完整。",
+    "nothing": "目前沒有需要您處理的項目。",
+    "tasks": "等待您的決定",
+    "chats": "未讀聊天",
+    "openTask": "開啟任務：{{subject}}（{{team}}）",
+    "timeUnknown": "時間不明",
+    "teamAttention": "待處理"
   }
 }
