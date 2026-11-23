@@ -20,6 +20,8 @@ export interface AttentionTeamSnapshot {
   tasks: AttentionTaskCandidate[];
   /** Canonical, user-addressed message candidates. Read state remains client-owned. */
   messages: InboxMessage[];
+  /** Optional labels from the existing group-chat catalog; no second group model. */
+  groupNames?: Record<string, string>;
   error?: string;
 }
 
