@@ -57,7 +57,12 @@ function legacySlugify(value: string): string {
 }
 
 function slugify(value: string): string {
-  const full = value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'member';
+  const full =
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'member';
   // Long names must not share a checkout or branch just because their prefixes match.
   return full.length <= 48 ? full : `${full.slice(0, 37)}-${shortHash(full)}`;
 }
@@ -111,7 +116,12 @@ export class TeamMemberWorktreeManager {
   async ensureMemberWorktree(
     request: TeamMemberWorktreeRequest
   ): Promise<TeamMemberWorktreeResolution> {
-    const key = JSON.stringify([request.baseCwd, request.teamName, request.memberName, request.existingCwd]);
+    const key = JSON.stringify([
+      request.baseCwd,
+      request.teamName,
+      request.memberName,
+      request.existingCwd,
+    ]);
     const ongoing = TeamMemberWorktreeManager.inFlight.get(key);
     if (ongoing) return ongoing;
     const pending = this.ensureMemberWorktreeInternal(request);
@@ -133,7 +143,8 @@ export class TeamMemberWorktreeManager {
     }
     const baseRepoPath = await this.resolveBaseRepoPath(request.baseCwd);
     const repoHash = shortHash(baseRepoPath);
-    const projectSlug = slugify(path.basename(baseRepoPath));
+    // The repository hash already disambiguates long project directory names.
+    const projectSlug = legacySlugify(path.basename(baseRepoPath));
     const teamSlug = slugify(request.teamName);
     const memberSlug = slugify(request.memberName);
     const branchName = `agent-teams/${teamSlug}/${memberSlug}-${repoHash}`;
@@ -155,14 +166,20 @@ export class TeamMemberWorktreeManager {
     const existingCwd = request.existingCwd?.trim();
     if (existingCwd) {
       if (!path.isAbsolute(existingCwd)) {
-        throw new Error(`Worktree path for member "${request.memberName}" must be absolute: ${existingCwd}`);
+        throw new Error(
+          `Worktree path for member "${request.memberName}" must be absolute: ${existingCwd}`
+        );
       }
       const existingCwdStat = await fs.promises.stat(existingCwd).catch(() => null);
       if (existingCwdStat) {
         if (!existingCwdStat.isDirectory()) {
           throw new Error(`Worktree path exists but is not a directory: ${existingCwd}`);
         }
-        const branch = await this.validateExistingWorktreeAndGetBranch(existingCwd, baseRepoPath, request.memberName);
+        const branch = await this.validateExistingWorktreeAndGetBranch(
+          existingCwd,
+          baseRepoPath,
+          request.memberName
+        );
         return { baseRepoPath, worktreePath: existingCwd, branchName: branch };
       }
     }
@@ -199,12 +216,20 @@ export class TeamMemberWorktreeManager {
     const oldMemberSlug = legacySlugify(request.memberName);
     if (oldTeamSlug !== teamSlug || oldMemberSlug !== memberSlug) {
       const oldPaths = [
-        path.join(getAppDataPath(), 'team-worktrees', `${projectSlug}-${repoHash}`, oldTeamSlug, oldMemberSlug),
+        path.join(
+          getAppDataPath(),
+          'team-worktrees',
+          `${projectSlug}-${repoHash}`,
+          oldTeamSlug,
+          oldMemberSlug
+        ),
         path.join(getClaudeBasePath(), 'team-worktrees', repoHash, oldTeamSlug, oldMemberSlug),
       ];
       for (const oldPath of oldPaths) {
         if (await fs.promises.stat(oldPath).catch(() => null)) {
-          throw new Error(`An older worktree with an ambiguous truncated name exists at ${oldPath}. Restore its saved member cwd explicitly before continuing.`);
+          throw new Error(
+            `An older worktree with an ambiguous truncated name exists at ${oldPath}. Restore its saved member cwd explicitly before continuing.`
+          );
         }
       }
     }
