@@ -610,16 +610,20 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         const observed = records.map(record => record.phase).filter(phase => catalogPhases.includes(phase));
         const second = fault === 'custody' ? [0, 1, 4] : fault === 'mismatch' ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
         expect(observed).toEqual(sink === 'absent' ? [] : fault === 'complete' ? catalogPhases
-          : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
+          : fault === 'http' ? catalogPhases.slice(0, 5)
+            : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
         assertCurrentnessSummaries(records, sink === 'absent' ? [] : fault === 'complete'
-          ? currentnessPhases : currentnessPhases.slice(0, 3));
+          ? currentnessPhases : currentnessPhases.slice(0, fault === 'http' ? 2 : 3));
         for (const record of records.filter(record => currentnessPhases.includes(record.phase)))
           expect(record.currentCalls).toBe(originalCalls.get(record.phase));
         expect(records.map(record => record.phase).filter(phase =>
           ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'].includes(phase)))
           .toEqual(sink !== 'absent' && fault === 'complete'
             ? ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'] : []);
-        expect(routes.length).toBe(fault === 'complete' ? 7 : fault === 'http' ? 3 : 2);
+        expect(routes).toEqual(fault === 'complete'
+          ? ['/api/info', '/api/model', '/api/provider', '/api/model/default',
+            '/api/model', '/api/provider', '/api/model/default']
+          : ['/api/info', '/api/model']);
         const phaseCount = records.length, release = await admission!(controller.signal);
         assert.ok(typeof release === 'function'); release(); release();
         expect(records).toHaveLength(phaseCount); // finally disables catalog marks, even after failure.
