@@ -51,6 +51,7 @@ function queue(teamName?: string): void {
   if (!teamName) queuedFull = true;
   else if (!queuedFull) queuedTeams.add(teamName);
   scheduleFlush();
+}
 
 async function fetchSnapshot(teamName?: string): Promise<void> {
   if (!currentContextId) return;
