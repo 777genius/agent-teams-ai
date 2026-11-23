@@ -274,15 +274,24 @@ async function run() {
   evidence.checks.push('Real team notification → sanitized outbound event, no private content');
 
   // Source-hidden notifications remain in local history but never leave the app.
+  const hidden = { ...secretPayload, dedupeKey: 'delivery-hidden-' + randomUUID(),
+    suppressToast: true };
   await rendererCall('window.electronAPI.teams.showMessageNotification(' +
-    JSON.stringify({ ...secretPayload, dedupeKey: 'delivery-hidden-' + randomUUID(),
-      suppressToast: true }) + ')');
-  await safeDelay(600);
+    JSON.stringify(hidden) + ')');
+  await until(async () => {
+    const history = await rendererCall('window.electronAPI.notifications.get({limit:100})');
+    return history.notifications.some((item) => item.dedupeKey === hidden.dedupeKey);
+  }, 'source-hidden notification committed to history');
+  await safeDelay(250);
   assert.equal((await readAudit()).length, 2, 'Source-suppressed event leaked externally');
-  // The same committed event must never be delivered twice.
+
+  // The duplicate must not create a second persisted event or an outbound POST.
+  const beforeDuplicate = await rendererCall('window.electronAPI.notifications.get({limit:100})');
   await rendererCall('window.electronAPI.teams.showMessageNotification(' +
     JSON.stringify(secretPayload) + ')');
   await safeDelay(600);
+  const afterDuplicate = await rendererCall('window.electronAPI.notifications.get({limit:100})');
+  assert.equal(afterDuplicate.total, beforeDuplicate.total, 'Duplicate persisted twice');
   assert.equal((await readAudit()).length, 2, 'Duplicate event delivered twice');
   evidence.checks.push('Source suppression and persisted event dedupe prevent external delivery');
 
@@ -291,9 +300,14 @@ async function run() {
     const list = await rendererCall('window.electronAPI.notificationChannels.list()');
     return list[0]?.enabled === false;
   }, 'channel disabled');
+  const disabledEvent = { ...secretPayload, dedupeKey: 'delivery-off-' + randomUUID() };
   await rendererCall('window.electronAPI.teams.showMessageNotification(' +
-    JSON.stringify({ ...secretPayload, dedupeKey: 'delivery-off-' + randomUUID() }) + ')');
-  await safeDelay(1200);
+    JSON.stringify(disabledEvent) + ')');
+  await until(async () => {
+    const history = await rendererCall('window.electronAPI.notifications.get({limit:100})');
+    return history.notifications.some((item) => item.dedupeKey === disabledEvent.dedupeKey);
+  }, 'disabled-channel notification committed to history');
+  await safeDelay(250);
   assert.equal((await readAudit()).length, 2, 'Disabled channel must not deliver');
   evidence.checks.push('Disabled destination suppresses external delivery');
 
