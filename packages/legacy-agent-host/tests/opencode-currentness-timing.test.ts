@@ -11,25 +11,27 @@ function call<T>(timing: Timing, original: () => T): T {
   try { return original(); } finally { finish(); }
 }
 
-test('timing is lazy, bounded to four original windows and closes each once', () => {
+test('timing is lazy, bounded to four request and three credential windows and closes each once', () => {
   const records: Record[] = [];
   let at = 100, reads = 0, calls = 0;
   const timing = createOpenCodeCurrentnessTiming((phase, stats) => records.push({ phase, stats }),
     () => { reads++; return at; });
   call(timing, () => { calls++; });
   timing.begin('catalog-4' as OpenCodeCurrentnessWindow)();
+  timing.begin('credential-dispose' as OpenCodeCurrentnessWindow)();
   assert.equal(reads, 0);
-  for (const window of ['identity', 'catalog-1', 'catalog-2', 'catalog-3'] as const) {
+  for (const window of ['identity', 'catalog-1', 'catalog-2', 'catalog-3',
+    'credential-catalog', 'credential-directory', 'credential-connect'] as const) {
     const end = timing.begin(window);
     call(timing, () => { calls++; at += 7; });
     end(); end(); timing.begin(window)();
   }
-  assert.equal(calls, 5); assert.equal(reads, 8); assert.equal(records.length, 4);
-  assert.deepEqual(records.map(record => record.stats), Array.from({ length: 4 }, () => ({
+  assert.equal(calls, 8); assert.equal(reads, 14); assert.equal(records.length, 7);
+  assert.deepEqual(records.map(record => record.stats), Array.from({ length: 7 }, () => ({
     currentCalls: 1, currentElapsedMs: 7,
   })));
   call(timing, () => { calls++; });
-  assert.equal(reads, 8, 'closed windows perform no diagnostic clock reads');
+  assert.equal(reads, 14, 'closed windows perform no diagnostic clock reads');
 });
 
 test('nested calls count separately while their elapsed wall time is charged once', () => {

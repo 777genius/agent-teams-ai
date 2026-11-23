@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { channel } from 'node:diagnostics_channel';
 import { EventEmitter, once } from 'node:events';
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -616,6 +616,121 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         expect(records).toHaveLength(phaseCount); // finally disables catalog marks, even after failure.
         await expect(probe.close()).resolves.toBe(true);
         await expect(probe.close()).resolves.toBe(true); expect(stops).toBe(1);
+      } finally {
+        await probe.close(); fetch.mockRestore(); credential.mockRestore(); diagnostic.mockRestore();
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  }
+);
+
+test.each(['connected', 'directory', 'catalog-failed', 'directory-failed', 'connect-failed'] as const)(
+  'credential timing preserves original request order and closes every started window for %s', async mode => {
+    const originalDiagnostic = probeDiagnostics.createOpenCodeProbeDiagnostic;
+    const originalCredential = sessionCredential.captureOpenCodeV2SessionCredential;
+    const credentialWindows = ['credential-catalog', 'credential-directory', 'credential-connect'];
+    let baseline: unknown;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-credential-currentness-')));
+      const management = openCodeManagementProfileSchema.parse(
+        teamModelProbeProfile(runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root))));
+      const authDirectory = join(root, 'opencode'), authFile = join(authDirectory, 'auth.json');
+      mkdirSync(authDirectory, { mode: 0o700 });
+      const authBytes = JSON.stringify({ 'TEST-provider': { type: 'api', key: 'TEST-private-key' } });
+      writeFileSync(authFile, authBytes, { mode: 0o600 });
+      const records: OpenCodeProbeDiagnostic[] = [], routes: string[] = [];
+      const starts = new Map<string, number>(), callsAtSummary = new Map<string, number>();
+      let guards = 0, custody = 0, passwordReads = 0, stops = 0, connected = false;
+      const failure = new Error('TEST original operation failure'), attested = new Error('TEST stop after original attestation');
+      const parent = new AbortController();
+      let admission: Parameters<ReturnType<typeof originalCredential>['prepare']>[0]['beforeRequest'];
+      const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+        .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
+          : originalDiagnostic(selected, command, digest, line => {
+            const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+            records.push(record);
+            for (const window of credentialWindows) {
+              if (record.phase === window + '-start') starts.set(window, guards);
+              if (record.phase === window + '-currentness-summary')
+                callsAtSummary.set(window, guards - starts.get(window)!);
+            }
+            if (sink === 'throws') throw new Error('TEST diagnostic write failed');
+          }));
+      const credential = vi.spyOn(sessionCredential, 'captureOpenCodeV2SessionCredential').mockImplementation((...args) => {
+        const original = originalCredential(...args);
+        return { ...original, prepare(wire, ...rest) { admission = wire.beforeRequest; return original.prepare(wire, ...rest); } };
+      });
+      const identity = { pid: 48101, startIdentity: 'TEST-original-root', version: '2.1.4' };
+      controlled.create = () => ({
+        start: async () => ({ ...identity, endpoint: management.endpoint }),
+        readPassword: () => { passwordReads++; return 'TEST-private-password'; },
+        readNativeCustody: async () => { custody++; return { ...identity }; },
+        stopOwned: async () => { stops++; return true; },
+      });
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async request => {
+        const native = request instanceof Request ? request : new Request(String(request));
+        const path = new URL(native.url).pathname;
+        routes.push(native.method + ' ' + path); expect(routes.length).toBeLessThanOrEqual(14);
+        if (mode === 'catalog-failed' && path === '/api/model'
+            || mode === 'directory-failed' && path === '/api/integration'
+            || mode === 'connect-failed' && native.method === 'POST') throw failure;
+        if (native.method === 'POST') {
+          expect(path).toBe('/api/integration/TEST-provider/connect/key');
+          expect(connected).toBe(false); expect(await native.json()).toEqual({ key: 'TEST-private-key' });
+          connected = true; return new Response(null, { status: 204 });
+        }
+        const location = { directory: root };
+        const integration = { id: 'TEST-provider', name: 'TEST integration', methods: [{ type: 'key' }],
+          connections: connected ? [{ type: 'credential', method: 'key', id: 'cred_TEST' }] : [] };
+        const data: Record<string, unknown> = {
+          '/api/provider': [{ id: 'TEST-provider', name: 'TEST provider', activation: 'enabled',
+            ...(mode === 'connected' ? { integrationID: 'TEST-provider' } : {}) }],
+          '/api/model': [{ id: 'TEST-model', providerID: 'TEST-provider', name: 'TEST model',
+            enabled: true, limit: { context: 4096, output: 512 },
+            capabilities: { tools: false, input: ['text'] }, variants: [{ id: 'high' }] }],
+          '/api/model/default': { providerID: 'TEST-provider', id: 'TEST-model' },
+          '/api/integration': [integration], '/api/integration/TEST-provider': integration,
+        };
+        expect(path === '/api/info' || Object.hasOwn(data, path)).toBe(true);
+        return new Response(JSON.stringify(path === '/api/info'
+          ? { pid: identity.pid, version: identity.version } : { location, data: data[path] }),
+        { headers: { 'content-type': 'application/json' } });
+      });
+      const probe = createOpenCodeV2ModelProbe(management, { commandId: 'TEST-credential-timing',
+        profileId: management.profileId, configRevision: management.configRevision,
+        providerId: 'TEST-provider', modelId: 'TEST-model' }, () => { guards++; return true; },
+      { readiness: { observeProvider: () => { throw attested; } } });
+      try {
+        const running = probe.run(parent.signal, Date.now() + 30000);
+        expect(probe.run(parent.signal)).toBe(running);
+        if (mode === 'connected' || mode === 'directory') await expect(running).rejects.toBe(attested);
+        else await expect(running).rejects.toMatchObject({ code: mode === 'connect-failed'
+          ? 'native_credential_request_failed' : 'transport_failure' });
+        const before = { guards, custody, passwordReads, connected, routes: [...routes] };
+        baseline ??= before; expect(before).toEqual(baseline);
+        const expected = mode === 'connected' ? [credentialWindows[0], credentialWindows[2]]
+          : mode === 'catalog-failed' ? credentialWindows.slice(0, 1)
+            : mode === 'directory-failed' ? credentialWindows.slice(0, 2) : credentialWindows;
+        const summaries = records.filter(record => credentialWindows.some(window => record.phase === window + '-currentness-summary'));
+        expect(summaries.map(record => record.phase)).toEqual(sink === 'absent' ? [] : expected.map(window => window + '-currentness-summary'));
+        expect(summaries.length).toBeLessThanOrEqual(3);
+        for (const summary of summaries) {
+          const window = summary.phase.replace('-currentness-summary', '');
+          expect(summary.currentCalls).toBe(callsAtSummary.get(window));
+          expect(summary.currentCalls).toBeGreaterThan(0);
+          expect(Number.isSafeInteger(summary.currentElapsedMs)).toBe(true);
+          expect(summary.currentElapsedMs).toBeGreaterThanOrEqual(0);
+          expect(summary.sequence).toBe(records[records.indexOf(summary) - 1]!.sequence);
+          expect(Object.keys(summary).sort()).toEqual(['commandHash', 'currentCalls', 'currentElapsedMs',
+            'elapsedMs', 'phase', 'probeDigest', 'profileHash', 'sequence']);
+        }
+        const count = records.length, release = await admission!(parent.signal);
+        assert.ok(typeof release === 'function'); release(); release();
+        expect(records, 'failed and successful credential windows close before later work').toHaveLength(count);
+        expect(JSON.stringify(records)).not.toContain('TEST-private');
+        expect(readFileSync(authFile, 'utf8')).toBe(authBytes);
+        await expect(probe.close()).resolves.toBe(true); expect(stops).toBe(1);
+        expect(records, 'cleanup cannot reopen a credential summary').toHaveLength(count);
       } finally {
         await probe.close(); fetch.mockRestore(); credential.mockRestore(); diagnostic.mockRestore();
         rmSync(root, { recursive: true, force: true });

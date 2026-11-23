@@ -161,8 +161,26 @@ export function createOpenCodeV2ModelProbe(
       managementDigest(options.readiness.expectedProvider)) return unavailable();
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
+  let finishCredentialCurrentness: (() => void) | undefined;
+  const closeCredentialCurrentness = () => {
+    const finish = finishCredentialCurrentness;
+    finishCredentialCurrentness = undefined;
+    finish?.();
+  };
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    configuration.isCurrent, configuration.key, configuration.selectedFile, observePhase);
+    configuration.isCurrent, configuration.key, configuration.selectedFile, observePhase ? phase => {
+      observePhase(phase);
+      const window = phase === 'credential-catalog-start' ? 'credential-catalog'
+        : phase === 'credential-directory-start' ? 'credential-directory'
+          : phase === 'credential-connect-start' ? 'credential-connect' : undefined;
+      if (window) {
+        closeCredentialCurrentness();
+        finishCredentialCurrentness = currentnessTiming.begin(window);
+      } else if (phase === 'credential-catalog-returned' || phase === 'credential-directory-returned'
+          || phase === 'credential-connect-returned' || phase === 'credential-dispose-start') {
+        closeCredentialCurrentness();
+      }
+    } : undefined);
   const current = coordinationSource
     ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
@@ -309,8 +327,10 @@ export function createOpenCodeV2ModelProbe(
       } finally { identityRequestPending = false; }
       observePhase?.('credential');
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
-      nativeCredential = await credential.prepare(wire, client, undefined,
-        integrationId => server!.selectedFileKey(ready!, integrationId));
+      try {
+        nativeCredential = await credential.prepare(wire, client, undefined,
+          integrationId => server!.selectedFileKey(ready!, integrationId));
+      } finally { closeCredentialCurrentness(); }
       observePhase?.('credential-returned');
       observePhase?.('attestation');
       try {

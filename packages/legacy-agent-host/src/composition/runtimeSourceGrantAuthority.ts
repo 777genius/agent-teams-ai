@@ -80,30 +80,75 @@ export function sameRuntimeSourceGrantAuthority(a: RuntimeSourceGrant, b: Runtim
   return runtimeDigest(normalize(a)) === runtimeDigest(normalize(b));
 }
 
-/** Structural history only. Its recorded selection digest never supplies a missing private seed. */
-export function readStoredRuntimeSourcePublication(saved: StoredRuntimeSourceCommand): PublishRuntimeSource {
+interface DecodedPublication {
+  text: string;
+  input: PublishRuntimeSource;
+  fingerprint: string;
+  revision: string;
+}
+
+function decodePublication(text: string): DecodedPublication {
+  const input = publishRuntimeSourceSchema.parse(JSON.parse(text));
+  return { text, input, fingerprint: runtimeDigest(input), revision: runtimeDigest({
+    previousRevision: input.expectedRevision,
+    commandId: input.commandId,
+    grant: input.grant,
+    candidate: input.candidate,
+    ...(input.intent ? { intent: input.intent } : {}),
+  }) };
+}
+
+function readStoredPublication(saved: StoredRuntimeSourceCommand,
+  decode: (text: string) => DecodedPublication): PublishRuntimeSource {
   if (!saved.publicationJson) return held();
-  let input: PublishRuntimeSource;
-  try { input = publishRuntimeSourceSchema.parse(JSON.parse(saved.publicationJson)); }
+  let decoded: DecodedPublication;
+  try { decoded = decode(saved.publicationJson); }
   catch { return held(); }
+  const { input } = decoded;
   if (
     input.commandId !== saved.commandId ||
     input.expectedRevision !== saved.expectedRevision ||
-    runtimeDigest(input) !== saved.fingerprint ||
+    decoded.fingerprint !== saved.fingerprint ||
     saved.sourceId !== input.grant.targetId ||
     saved.resourceId !== input.grant.targetId ||
     saved.profileId !== input.grant.profileId ||
     saved.configRevision !== input.grant.configRevision ||
     saved.providerId !== input.grant.runtimeId ||
-    saved.revision !== runtimeDigest({
-      previousRevision: input.expectedRevision,
-      commandId: input.commandId,
-      grant: input.grant,
-      candidate: input.candidate,
-      ...(input.intent ? { intent: input.intent } : {}),
-    })
+    saved.revision !== decoded.revision
   ) return held();
-  return input;
+  return structuredClone(input);
+}
+
+/** Structural history only. Its recorded selection digest never supplies a missing private seed. */
+export function readStoredRuntimeSourcePublication(saved: StoredRuntimeSourceCommand): PublishRuntimeSource {
+  return readStoredPublication(saved, decodePublication);
+}
+
+/** One index's pure JSON work only; every receipt comparison and physical read stays fresh. */
+export function createStoredRuntimeSourcePublicationReader(): typeof readStoredRuntimeSourcePublication {
+  // Share the existing single-publication UTF-8 budget across at most two decodes.
+  const maximumBytes = 2 * 1024 * 1024;
+  let retained: (DecodedPublication & { bytes: number })[] = [];
+  return saved => {
+    try {
+      return readStoredPublication(saved, text => {
+        const previous = retained.find(value => value.text === text);
+        if (previous) {
+          retained = [previous, ...retained.filter(value => value !== previous)];
+          return previous;
+        }
+        const decoded = decodePublication(text), bytes = Buffer.byteLength(text);
+        if (bytes <= maximumBytes) {
+          retained = [{ ...decoded, bytes }, ...retained].slice(0, 2);
+          while (retained.reduce((total, value) => total + value.bytes, 0) > maximumBytes) retained.pop();
+        }
+        return decoded;
+      });
+    } catch (error) {
+      retained = [];
+      throw error;
+    }
+  };
 }
 
 /** Original replay requires the same current private seed as well as intact recorded identity. */
@@ -122,7 +167,8 @@ export function readOriginalRuntimeSourcePublication(
 /** Validate every original record and pointer, including currently ineligible sources. */
 export function validateRuntimeSourceHistory(
   index: ReturnType<FileRuntimeSourceIndex['read']>,
-  commands: Pick<ManagementCommandStore, 'read'>
+  commands: Pick<ManagementCommandStore, 'read'>,
+  readPublication: typeof readStoredRuntimeSourcePublication = readStoredRuntimeSourcePublication
 ): void {
   const previous = new Map<string, string>(), grants = new Map<string, string>(),
     selections = new Map<string, string>();
@@ -130,7 +176,7 @@ export function validateRuntimeSourceHistory(
     const sourceId = record.grant.targetId, grantDigest = runtimeDigest(record.grant),
       receipt = commands.read(record.commandId);
     if (!receipt || receipt.kind !== 'runtime.source') return held();
-    if (receipt.publicationJson) readStoredRuntimeSourcePublication(receipt);
+    if (receipt.publicationJson) readPublication(receipt);
     if (
       (grants.has(sourceId) && grants.get(sourceId) !== grantDigest) ||
       (selections.has(sourceId) && selections.get(sourceId) !== receipt.selectionDigest) ||
