@@ -80,7 +80,7 @@ async function startHost(port) {
 async function waitUntilReady(baseUrl) {
   const deadline = Date.now() + 75_000;
   while (Date.now() < deadline) {
-    if (processOwner.exitCode !== null) {
+    if (processOwner.exitCode !== null || processOwner.signalCode !== null) {
       throw new Error('Standalone exited early:\n' + logs.slice(-2500));
     }
     try {
@@ -116,6 +116,18 @@ async function run() {
   await startHost(port);
   await waitUntilReady(baseUrl);
   assertions.push('Standalone server booted against isolated HOME, CLAUDE_ROOT and APP_DATA_DIR');
+  // The ConfigManager singleton must read the overridden CLAUDE_ROOT profile.
+  // If it is imported before the override, it falls back to HOME/.claude.
+  const profile = await fetch(baseUrl + '/api/config', {
+    headers: { Origin: baseUrl },
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal(profile.status, 200);
+  const configResponse = await profile.json();
+  assert.equal(configResponse.success, true);
+  assert.equal(configResponse.data.notifications.enabled, false,
+    'ConfigManager must read the overridden CLAUDE_ROOT profile');
+  assertions.push('Standalone ConfigManager resolves CLAUDE_ROOT after overrides');
 
   const invalidOrigin = await request(baseUrl, 'POST', '', {}, 'https://evil.example');
   assert.equal(invalidOrigin.status, 403, 'Untrusted origins must not write settings');
@@ -188,7 +200,7 @@ try {
   if (processOwner && processOwner.exitCode === null) {
     processOwner.kill('SIGTERM');
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    if (processOwner.exitCode === null) processOwner.kill('SIGKILL');
+    if (processOwner.exitCode === null && processOwner.signalCode === null) processOwner.kill('SIGKILL');
   }
   const receipt = { suite: 'notification-channels-standalone', passed, assertions };
   await writeFile(path.join(root, 'receipt-standalone.json'), JSON.stringify(receipt, null, 2));
