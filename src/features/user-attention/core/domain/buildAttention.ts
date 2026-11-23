@@ -5,9 +5,9 @@ import {
   normalizeConversationParticipant,
 } from '@features/team-direct-chats';
 
-import type { AttentionSnapshot, AttentionTaskCandidate } from '../../contracts';
 import type { ConversationScope } from '@features/team-direct-chats';
 import type { InboxMessage } from '@shared/types/team';
+import type { AttentionSnapshot, AttentionTaskCandidate } from '../../contracts';
 
 export interface AttentionChat {
   teamName: string;
