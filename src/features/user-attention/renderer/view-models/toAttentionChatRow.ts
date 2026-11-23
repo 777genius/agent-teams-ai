@@ -1,4 +1,4 @@
-import { getChatMessagePreview } from '@features/team-direct-chats/renderer';
+import { toChatListViewItems } from '@features/team-direct-chats/renderer';
 
 import type { AttentionChat } from '../../core/domain/buildAttention';
 import type { ChatListViewItem } from '@features/team-direct-chats/renderer';

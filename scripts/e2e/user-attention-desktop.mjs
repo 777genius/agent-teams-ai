@@ -234,7 +234,7 @@ async function checkDesktop() {
   })()`);
   assert(clickedChat, 'user-addressed chat is clickable');
   await cdp.waitFor(
-    'window.__agentTeamsDevStore.getState().openTabs.some((tab) => tab.type === "team" && tab.teamName === ${JSON.stringify(first)})',
+    `window.__agentTeamsDevStore.getState().openTabs.some((tab) => tab.type === "team" && tab.teamName === ${JSON.stringify(first)})`,
     'exact team tab opened for chat');
   await until(async () => cdp.evaluate(`(async () => {
     const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
