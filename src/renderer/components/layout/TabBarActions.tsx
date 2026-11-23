@@ -171,14 +171,14 @@ export const TabBarActions = (): React.JSX.Element => {
       {/* Human attention is distinct from ordinary notification history. */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" aria-label="Needs your attention"
+          <button type="button" aria-label={t('attention.title')}
             className="relative rounded-md p-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
             onClick={() => {
               const state = useStore.getState();
               const focused = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
               const existing = focused?.tabs.find((tab) => tab.type === 'attention');
               if (existing) state.setActiveTab(existing.id);
-              else state.openTab({ type: 'attention', label: 'Attention' });
+              else state.openTab({ type: 'attention', label: t('attention.tab') });
             }}>
             <Inbox className="size-4" aria-hidden="true" />
             {attentionModel && attentionModel.taskCount + attentionModel.chatCount > 0 && (
@@ -188,7 +188,7 @@ export const TabBarActions = (): React.JSX.Element => {
             )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Needs your attention</TooltipContent>
+        <TooltipContent side="bottom">{t('attention.title')}</TooltipContent>
       </Tooltip>
 
       {/* GitHub link */}
