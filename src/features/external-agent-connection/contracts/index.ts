@@ -52,7 +52,7 @@ export interface ExternalAgentConnectionApi {
   retryConnection(): Promise<ConnectionInfoV1>;
   getPendingConfirmation?(): Promise<ExternalAgentConfirmation | null>;
   dismissConfirmation?(id: string): Promise<void>;
-  onConfirmation?(listener: (confirmation: ExternalAgentConfirmation) => void): () => void;
+  onConfirmation?(listener: (confirmation: ExternalAgentConfirmation | null) => void): () => void;
   /** Native desktop execution; deliberately unavailable in browser/server mode. */
   directRun?: ExternalAgentRunApi;
 }
