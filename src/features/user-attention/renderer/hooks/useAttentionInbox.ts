@@ -6,7 +6,7 @@ import {
   subscribeContextScopedRequestEpoch,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { getReadSetSnapshot } from '@renderer/utils/teamMessageReadStorage';
+import { getReadSetSnapshot, seedPersistedReadKeysOnce } from '@renderer/utils/teamMessageReadStorage';
 
 import { buildAttentionModel } from '../../core/domain/buildAttention';
 import {
@@ -31,6 +31,24 @@ export function useAttentionInbox() {
     getAttentionStoreState
   );
   useEffect(() => setAttentionContext(contextId, contextEpoch), [contextId, contextEpoch]);
+
+  useEffect(() => {
+    // Messenger migrates the legacy persisted message.read flag before relying
+    // on local read keys. Reuse that same migration for teams opened only in
+    // Attention; the compact candidate projection is NOT a full Messenger
+    // history, so never finalize the shared migration marker here.
+    if (state.contextId !== contextId ||
+        state.contextEpoch !== contextEpoch || !state.snapshot) return;
+    for (const team of state.snapshot.teams) {
+      if (team.error) continue;
+      const alreadyRead = team.messages
+        .filter((message) => !message.groupChatId && message.read === true)
+        .map(toMessageKey);
+      if (alreadyRead.length > 0) {
+        seedPersistedReadKeysOnce(team.teamName, alreadyRead);
+      }
+    }
+  }, [contextId, contextEpoch, state.snapshot, state.contextId, state.contextEpoch]);
 
   const model = useMemo(() => {
     if (state.contextId !== contextId || state.contextEpoch !== contextEpoch || !state.snapshot) return null;
