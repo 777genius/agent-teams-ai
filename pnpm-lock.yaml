@@ -4977,7 +4977,7 @@ packages:
       '@tiptap/core': 3.30.5
 
   '@thinwrap/notifications@1.2.0':
-    resolution: {tarball: https://registry.npmjs.org/@thinwrap/notifications/-/notifications-1.2.0.tgz}
+    resolution: {integrity: sha512-O073RdFNQ9S+dFB3VPgyt4PHg2JMnRzxSGw3lwCH+rCrEA79dTq7rx5R2QCXEw8/oWl2DGWvYBthEr1Vq/PEoA==, tarball: https://registry.npmjs.org/@thinwrap/notifications/-/notifications-1.2.0.tgz}
     engines: {node: '>=18'}
 
   '@tiptap/extension-placeholder@3.30.5':
