@@ -283,6 +283,9 @@ async function checkDesktop() {
   }, 'human clarification persisted by canonical controller setter');
   const added = snap.teams.find((t) => t.teamName === first).tasks.find((t) => t.taskId === '2');
   assert(Number.isFinite(Date.parse(added.requestedAt)), 'real transition timestamp recorded');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2")',
+    'live Dashboard reflects newly requested human clarification without reload', 30_000);
   await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', 'user')`);
   const repeated = (await getSnapshot()).teams.find((t) => t.teamName === first)
     .tasks.find((t) => t.taskId === '2');
@@ -290,7 +293,11 @@ async function checkDesktop() {
   await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', null)`);
   await until(async () => (await getSnapshot()).teams.find((t) => t.teamName === first)
     ?.tasks.every((t) => t.taskId !== '2'), 'cleared clarification removed');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',
+    'live Dashboard removes resolved clarification without reload', 30_000);
   evidence.checks.push('controller transition / repeated setter / clear');
+  evidence.checks.push('live Dashboard clarification appears and disappears');
 
   await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
 }
