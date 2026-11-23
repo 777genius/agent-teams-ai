@@ -1,0 +1,64 @@
+name: User Attention Inbox Electron E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/user-attention-e2e.yml'
+      - 'scripts/e2e/user-attention-desktop.mjs'
+      - 'src/features/user-attention/**'
+      - 'src/features/team-direct-chats/core/domain/**'
+      - 'src/renderer/utils/teamMessageReadStorage.ts'
+      - 'src/renderer/components/team/messages/MessagesPanel.tsx'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/user-attention-e2e.yml'
+      - 'scripts/e2e/user-attention-desktop.mjs'
+      - 'src/features/user-attention/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    name: Linux Electron attention E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+      - name: Install pinned dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify Electron binary
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Prove live Attention Inbox in actual Electron renderer
+        env:
+          ATTENTION_E2E_ARTIFACT_DIR: ${{ runner.temp }}/user-attention-e2e
+        run: xvfb-run -a node scripts/e2e/user-attention-desktop.mjs
+      - name: Upload isolated proof screenshots and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: attention-linux-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/user-attention-e2e/*.png
+            ${{ runner.temp }}/user-attention-e2e/*.json
