@@ -12,6 +12,7 @@ import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { ChatVisualizationPresentationProvider } from '@features/chat-visualizations/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { useAttentionConversationNavigation } from '@features/user-attention/renderer';
 import {
   ChatUnreadBadges,
   ConversationHeader,
@@ -456,6 +457,12 @@ export const MessagesPanel = memo(function MessagesPanel({
     },
     [navigationSurface, openChat, scope]
   );
+
+  const handleAttentionOpenChat = useCallback((target: typeof scope) => {
+    handleOpenChat(target);
+    setMessagesCollapsed(false);
+  }, [handleOpenChat]);
+  useAttentionConversationNavigation(activeContextId, teamName, handleAttentionOpenChat);
 
   const handleExpandedChange = useCallback(
     (nextExpanded: boolean): void => {
