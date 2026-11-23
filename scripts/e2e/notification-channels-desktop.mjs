@@ -123,6 +123,10 @@ async function launch() {
     CLAUDE_CONFIG_DIR: claude,
     AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userData,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
+    // This E2E only exercises settings and notifications, never terminal agents.
+    // Keep the launcher from downloading a real terminal daemon in CI.
+    CLAUDE_TERMINAL_DAEMON_BINARY: runtime,
+    AGENT_TEAMS_MCP_HTTP: '0',
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     CLAUDE_DEV_RUNTIME_DISABLE_GH: '1',
   };
