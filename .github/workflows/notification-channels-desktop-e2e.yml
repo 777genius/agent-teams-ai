@@ -16,6 +16,8 @@ on:
       - 'src/renderer/api/httpClient.ts'
       - 'src/renderer/components/settings/sections/NotificationsSection.tsx'
       - 'scripts/e2e/notification-channels-desktop.mjs'
+      - 'scripts/e2e/notification-channels-standalone.mjs'
+      - 'docker/vite.standalone.config.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
   workflow_dispatch:
@@ -54,6 +56,12 @@ jobs:
         env:
           NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR: ${{ runner.temp }}/notification-channels-evidence
         run: xvfb-run -a pnpm test:e2e:notification-channels
+      - name: Build standalone Node host
+        run: pnpm exec vite build --config docker/vite.standalone.config.ts
+      - name: Exercise pure Node standalone HTTP and secure vault
+        env:
+          NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR: ${{ runner.temp }}/notification-channels-evidence
+        run: node scripts/e2e/notification-channels-standalone.mjs
       - name: Upload sanitized evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,3 +72,4 @@ jobs:
           path: |
             ${{ runner.temp }}/notification-channels-evidence/*.png
             ${{ runner.temp }}/notification-channels-evidence/receipt.json
+            ${{ runner.temp }}/notification-channels-evidence/standalone-*/receipt-standalone.json
