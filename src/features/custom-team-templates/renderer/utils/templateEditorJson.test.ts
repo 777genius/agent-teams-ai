@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { parseTemplateEditorJson } from './templateEditorJson';
 
 describe('template JSON editor', () => {
