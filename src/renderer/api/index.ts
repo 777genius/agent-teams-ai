@@ -28,7 +28,20 @@ function getHttpBaseUrl(): string {
   const params = new URLSearchParams(window.location.search);
   const explicitPort = params.get('port');
   if (explicitPort) {
-    return `http://127.0.0.1:${parseInt(explicitPort, 10)}`;
+    const port = Number(explicitPort);
+    if (!/^[1-9][0-9]{0,4}$/.test(explicitPort) || port > 65535) {
+      return window.location.origin;
+    }
+    const url = `http://127.0.0.1:${port}`;
+    // A loopback page already served from that API port must keep its exact
+    // origin (localhost and 127.0.0.1 are not interchangeable for CORS).
+    const page = new URL(window.location.origin);
+    if (page.protocol === 'http:' &&
+      (page.hostname === 'localhost' || page.hostname === '127.0.0.1') &&
+      (page.port === String(port) || (port === 80 && page.port === ''))) {
+      return page.origin;
+    }
+    return url;
   }
   return window.location.origin;
 }
