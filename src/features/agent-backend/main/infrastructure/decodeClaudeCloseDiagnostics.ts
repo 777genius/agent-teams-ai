@@ -77,7 +77,8 @@ const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch'
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
   'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
 const currentnessPhases = new Set(['identity-currentness-summary', 'catalog-1-currentness-summary',
-  'catalog-2-currentness-summary', 'catalog-3-currentness-summary']);
+  'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
+  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary']);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
   readonly commandHash: string;

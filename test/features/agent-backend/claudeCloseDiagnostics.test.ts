@@ -269,9 +269,10 @@ test.each(startupFailurePhases)('probe decoder retains only the existing startup
 });
 
 const currentnessPhases = ['identity-currentness-summary', 'catalog-1-currentness-summary',
-  'catalog-2-currentness-summary', 'catalog-3-currentness-summary'] as const;
+  'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
+  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary'] as const;
 
-test('four currentness summaries preserve the original phase fields and sequence slots', () => {
+test('four request and three credential summaries preserve the original phase fields and sequence slots', () => {
   const lines: string[] = [], records: OpenCodeProbeDiagnostic[] = [];
   let clock = 10;
   const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
@@ -285,11 +286,11 @@ test('four currentness summaries preserve the original phase fields and sequence
   observe('graph-start');
   const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { records.push(value); });
   for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
-  assert.equal(records.length, 6); assert.ok(records.every(Object.isFrozen));
-  assert.deepEqual(records.map(record => record.sequence), [1, 1, 1, 1, 1, 2]);
-  for (const record of [records[0]!, records[5]!]) assert.deepEqual(Object.keys(record).sort(),
+  assert.equal(records.length, 9); assert.ok(records.every(Object.isFrozen));
+  assert.deepEqual(records.map(record => record.sequence), [1, 1, 1, 1, 1, 1, 1, 1, 2]);
+  for (const record of [records[0]!, records[8]!]) assert.deepEqual(Object.keys(record).sort(),
     ['commandHash', 'elapsedMs', 'phase', 'probeDigest', 'profileHash', 'sequence']);
-  assert.deepEqual(records.slice(1, 5).map(({ phase, currentCalls, currentElapsedMs }) =>
+  assert.deepEqual(records.slice(1, 8).map(({ phase, currentCalls, currentElapsedMs }) =>
     ({ phase, currentCalls, currentElapsedMs })), currentnessPhases.map((phase, index) =>
     ({ phase, currentCalls: index, currentElapsedMs: index * 10 })));
 });
@@ -334,6 +335,7 @@ test('summary decoder rejects missing, extra, nonfinite, unbounded or authority-
     { ...valid, currentElapsedMs: 3_600_001 }, { ...valid, currentElapsedMs: Infinity },
     { ...valid, currentElapsedMs: null }, { ...valid, pid: 31 }, { ...valid, ready: true },
     { ...valid, phase: 'catalog-4-currentness-summary' }, { ...valid, phase: 'identity-currentness-summary-extra' },
+    { ...valid, phase: 'credential-dispose-currentness-summary' }, { ...valid, phase: 'credential-restore-currentness-summary' },
     { ...valid, phase: 'run' }, { ...valid, sequence: 62 },
   ]) decode(frame(unsafe));
   assert.deepEqual(values, []);

@@ -6,11 +6,14 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWriterLease.js';
+import { FileRuntimeSourceIndex } from '../dist/adapters/profile/FileRuntimeSourceIndex.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
-import { runtimeSourceNativeExecutableDigest, runtimeSourceSummarySchema } from '../dist/composition/runtimeSourceContracts.js';
+import { publishRuntimeSourceSchema, runtimeSourceNativeExecutableDigest, runtimeSourceSummarySchema } from '../dist/composition/runtimeSourceContracts.js';
+import * as sourceAuthority from '../dist/composition/runtimeSourceGrantAuthority.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { providerManagementProfileSchema } from '../dist/management/profile.js';
+import { runtimeDigest } from '../dist/runtime/identity.js';
 import {
   captureRuntimeSource,
   compileRuntimeCapture,
@@ -24,6 +27,7 @@ import type {
   RuntimeSourceSummary,
 } from '../dist/composition/runtimeSourceContracts.js';
 import type { TeamRosterConfiguration } from '../dist/team/rosterContracts.js';
+import type { StoredRuntimeSourceCommand } from '../dist/management/commandRecords.js';
 import type { TestContext } from 'node:test';
 
 function fixture(provider: 'claude' | 'codex' = 'claude') {
@@ -185,6 +189,170 @@ function leased(t: TestContext, provider: 'claude' | 'codex' = 'claude') {
     },
   };
 }
+
+async function published(t: TestContext) {
+  const f = leased(t), commandId = 'TEST-publication-decode';
+  await f.index.publish({ grant: f.grant, commandId,
+    expectedRevision: f.index.current({ grant: f.grant }).revision, candidate: f.candidate }, () => {});
+  const store = new FileManagementCommandStore(f.root), saved = store.read(commandId);
+  assert(saved?.kind === 'runtime.source' && saved.publicationJson);
+  return { ...f, index: f.index, store, saved };
+}
+
+function observePublicationDecodes(t: TestContext) {
+  let count = 0;
+  const parse = publishRuntimeSourceSchema.parse.bind(publishRuntimeSourceSchema);
+  t.mock.method(publishRuntimeSourceSchema, 'parse', (...args: Parameters<typeof parse>) => {
+    count++;
+    return parse(...args);
+  });
+  return () => count;
+}
+
+test('warm source history reuses only publication decoding while every original store read remains fresh', async t => {
+  const f = await published(t);
+  f.store.write({ ...f.saved, publicationJson: f.saved.publicationJson + ' ' });
+  const decodes = observePublicationDecodes(t), reads: string[] = [];
+  const readIndex = FileRuntimeSourceIndex.prototype.read, readCommand = FileManagementCommandStore.prototype.read;
+  t.mock.method(FileRuntimeSourceIndex.prototype, 'read', function (this: FileRuntimeSourceIndex) {
+    reads.push('index');
+    return readIndex.call(this);
+  });
+  t.mock.method(FileManagementCommandStore.prototype, 'read', function (this: FileManagementCommandStore, id: string) {
+    reads.push(id);
+    return readCommand.call(this, id);
+  });
+  const first = f.index.current({ grant: f.grant }), originalReads = [...reads];
+  assert.ok(originalReads.filter(value => value === 'index').length >= 2);
+  assert.ok(originalReads.filter(value => value === f.saved.commandId).length >= 3);
+  reads.length = 0;
+  assert.deepEqual(f.index.current({ grant: f.grant }), first);
+  assert.deepEqual(reads, originalReads, 'the exact original index/receipt read order remains');
+  assert.equal(decodes(), 1, 'identical publication bytes are parsed once across both full inspections');
+  sourceAuthority.readStoredRuntimeSourcePublication(f.saved);
+  sourceAuthority.readStoredRuntimeSourcePublication(f.saved);
+  assert.equal(decodes(), 3, 'independent callers retain their uncached decoder');
+});
+
+test('publication decode never lends its first or later nested result to the caller', async t => {
+  const { saved } = await published(t), read = sourceAuthority.createStoredRuntimeSourcePublicationReader();
+  const expected = sourceAuthority.readStoredRuntimeSourcePublication(saved), decodes = observePublicationDecodes(t);
+  const first = read(saved);
+  first.grant.teamScopes[0]!.teamId = 'TEST-foreign';
+  first.candidate.executable.path = '/TEST-replaced';
+  first.grant.teamScopes.push({ teamId: 'TEST-injected', projectId: 'TEST-injected', workspaceId: 'TEST-injected' });
+  const second = read(saved);
+  assert.deepEqual(second, expected);
+  second.grant.teamScopes[0]!.workspaceId = 'TEST-later-mutation';
+  second.candidate.executable.sha256 = '0'.repeat(64);
+  assert.deepEqual(read(saved), expected);
+  assert.equal(decodes(), 1);
+  assert.deepEqual(sourceAuthority.createStoredRuntimeSourcePublicationReader()(saved), expected);
+  assert.equal(decodes(), 2, 'a separate index owns an independent decode');
+});
+
+test('same publication text never caches receipt identity or a prior rejection', async t => {
+  const { saved } = await published(t), read = sourceAuthority.createStoredRuntimeSourcePublicationReader();
+  const expected = sourceAuthority.readStoredRuntimeSourcePublication(saved);
+  const changes: Partial<StoredRuntimeSourceCommand>[] = [
+    { commandId: 'TEST-other-command' }, { expectedRevision: '0'.repeat(64) },
+    { fingerprint: '0'.repeat(64) }, { sourceId: '0'.repeat(64) }, { resourceId: '0'.repeat(64) },
+    { profileId: 'TEST-other-profile' }, { configRevision: 'TEST-other-revision' },
+    { providerId: 'opencode' }, { revision: '0'.repeat(64) },
+  ];
+  const decodes = observePublicationDecodes(t);
+  for (const change of changes) {
+    assert.deepEqual(read(saved), expected);
+    const before = decodes();
+    assert.throws(() => read({ ...saved, ...change }), { code: 'held' });
+    assert.equal(decodes(), before, 'same text still compares the newly observed receipt');
+    assert.deepEqual(read(saved), expected);
+    assert.equal(decodes(), before + 1, 'a failed receipt cannot retain the previous decode');
+  }
+});
+
+test('changed or malformed publication bytes cannot reuse an earlier decode', async t => {
+  const { saved } = await published(t), read = sourceAuthority.createStoredRuntimeSourcePublicationReader();
+  const input = sourceAuthority.readStoredRuntimeSourcePublication(saved), decodes = observePublicationDecodes(t);
+  for (const publicationJson of ['{', JSON.stringify({ ...input, unknown: true }),
+    JSON.stringify({ ...input, commandId: 'TEST-other-command' }), '']) {
+    assert.deepEqual(read(saved), input);
+    assert.throws(() => read({ ...saved, publicationJson }), { code: 'held' });
+    const afterFailure = decodes();
+    assert.deepEqual(read(saved), input);
+    assert.equal(decodes(), afterFailure + 1);
+  }
+  assert.deepEqual(read({ ...saved, publicationJson: saved.publicationJson + '\n' }), input);
+  const afterChangedText = decodes();
+  assert.deepEqual(read(saved), input);
+  assert.equal(decodes(), afterChangedText, 'two distinct valid full strings can each retain a decode');
+});
+
+test('publication decode retains at most two values within one original UTF-8 publication budget', async t => {
+  const { saved } = await published(t), original = sourceAuthority.readStoredRuntimeSourcePublication(saved);
+  const receipt = (commandId: string, characters = 0): StoredRuntimeSourceCommand => {
+    const input = { ...original, commandId, grant: { ...original.grant, ownerId: 'TEST-\u03c0' } };
+    return { ...saved, commandId, publicationJson: JSON.stringify(input).padEnd(characters),
+      fingerprint: runtimeDigest(input), revision: runtimeDigest({ previousRevision: input.expectedRevision,
+        commandId, grant: input.grant, candidate: input.candidate, ...(input.intent ? { intent: input.intent } : {}) }) };
+  };
+  const read = sourceAuthority.createStoredRuntimeSourcePublicationReader(), decodes = observePublicationDecodes(t);
+  const a = receipt('TEST-A'), b = receipt('TEST-B'), c = receipt('TEST-C');
+  read(a); read(b); read(a);
+  assert.equal(decodes(), 2);
+  read(c); read(a);
+  assert.equal(decodes(), 3);
+  read(b);
+  assert.equal(decodes(), 4, 'the least recently used third value was evicted');
+  const bounded = sourceAuthority.createStoredRuntimeSourcePublicationReader();
+  const largeA = receipt('TEST-large-A', 1024 * 1024), largeB = receipt('TEST-large-B', 1024 * 1024);
+  assert.equal(largeA.publicationJson!.length + largeB.publicationJson!.length, 2 * 1024 * 1024);
+  assert.ok(Buffer.byteLength(largeA.publicationJson!) + Buffer.byteLength(largeB.publicationJson!) > 2 * 1024 * 1024);
+  const beforeLarge = decodes();
+  bounded(largeA); bounded(largeB); bounded(largeA);
+  assert.equal(decodes(), beforeLarge + 3, 'the aggregate bound counts UTF-8 bytes, not just code units');
+  const oversized = receipt('TEST-uncached', 2 * 1024 * 1024 + 1), beforeOversized = decodes();
+  bounded(oversized); bounded(oversized);
+  assert.equal(decodes(), beforeOversized + 2, 'an over-budget direct input is never retained');
+});
+
+test('warm source history still refuses changed physical receipts, missing history and revoked current authority', async t => {
+  const f = await published(t), original = f.index.current({ grant: f.grant });
+  const changes: Partial<StoredRuntimeSourceCommand>[] = [
+    { fingerprint: '0'.repeat(64) }, { selectionDigest: '0'.repeat(64) }, { revision: '0'.repeat(64) },
+    { sourceId: '0'.repeat(64) }, { profileId: 'TEST-foreign' }, { configRevision: 'TEST-foreign' },
+    { phase: 'held', resourceHeld: false }, { phase: 'held', resourceHeld: true },
+    { publicationJson: '{' },
+  ];
+  for (const change of changes) {
+    assert.deepEqual(f.index.current({ grant: f.grant }), original);
+    f.store.write({ ...f.saved, ...change });
+    assert.throws(() => f.index.current({ grant: f.grant }), { code: 'held' });
+    f.store.write(f.saved);
+  }
+  const path = join(f.root, 'management-commands', runtimeDigest(f.saved.commandId) + '.json');
+  const bytes = readFileSync(path);
+  rmSync(path);
+  assert.throws(() => f.index.current({ grant: f.grant }), { code: 'held' });
+  writeFileSync(path, bytes, { mode: 0o600 });
+  assert.deepEqual(f.index.current({ grant: f.grant }), original);
+  const ownerRevision = f.profile.owner.revision;
+  f.profile.owner.revision = 'TEST-revoked-owner';
+  assert.throws(() => f.index.current({ grant: f.grant }), { code: 'conflict' });
+  f.profile.owner.revision = ownerRevision;
+  const teams = f.profile.teams;
+  f.profile.teams = [];
+  assert.throws(() => f.index.current({ grant: f.grant }), { code: 'conflict' });
+  f.profile.teams = teams;
+  const management = f.profile.management;
+  f.profile.management = [];
+  assert.throws(() => f.index.current({ grant: f.grant }), { code: 'conflict' });
+  f.profile.management = management;
+  assert.deepEqual(f.index.current({ grant: f.grant }), original);
+  const stale = f.index;
+  f.restart();
+  assert.throws(() => stale.current({ grant: f.grant }));
+});
 
 test('Codex source publication refuses an unqualified version before admission without changing its original selection', async t => {
   const f = leased(t, 'codex');

@@ -173,7 +173,8 @@ const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-do
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
   'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
 const currentnessPhases = new Set<OpenCodeProbePhase>(['identity-currentness-summary',
-  'catalog-1-currentness-summary', 'catalog-2-currentness-summary', 'catalog-3-currentness-summary']);
+  'catalog-1-currentness-summary', 'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
+  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary']);
 
 function currentnessStats(value: unknown): OpenCodeCurrentnessStats | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return;
