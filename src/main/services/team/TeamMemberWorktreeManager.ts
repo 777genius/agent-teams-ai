@@ -115,25 +115,31 @@ function parseGitWorktreeList(raw: string): GitWorktreeEntry[] {
 }
 
 export class TeamMemberWorktreeManager {
-  private static readonly inFlight = new Map<string, Promise<TeamMemberWorktreeResolution>>();
+  private static readonly inFlight = new Map<
+    string,
+    { existingCwd?: string; promise: Promise<TeamMemberWorktreeResolution> }
+  >();
 
   async ensureMemberWorktree(
     request: TeamMemberWorktreeRequest
   ): Promise<TeamMemberWorktreeResolution> {
-    const key = JSON.stringify([
-      request.baseCwd,
-      request.teamName,
-      request.memberName,
-      request.existingCwd,
-    ]);
+    const key = JSON.stringify([request.baseCwd, request.teamName, request.memberName]);
     const ongoing = TeamMemberWorktreeManager.inFlight.get(key);
-    if (ongoing) return ongoing;
+    if (ongoing) {
+      if (ongoing.existingCwd !== request.existingCwd) {
+        throw new Error(`Conflicting concurrent worktree paths for member "${request.memberName}"`);
+      }
+      return ongoing.promise;
+    }
     const pending = this.ensureMemberWorktreeInternal(request);
-    TeamMemberWorktreeManager.inFlight.set(key, pending);
+    TeamMemberWorktreeManager.inFlight.set(key, {
+      existingCwd: request.existingCwd,
+      promise: pending,
+    });
     try {
       return await pending;
     } finally {
-      if (TeamMemberWorktreeManager.inFlight.get(key) === pending) {
+      if (TeamMemberWorktreeManager.inFlight.get(key)?.promise === pending) {
         TeamMemberWorktreeManager.inFlight.delete(key);
       }
     }
