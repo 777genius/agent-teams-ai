@@ -83,8 +83,8 @@ Sources:
 ### Option D — on-demand LOCAL Apprise API + its ready-made web UI
 
 - `caronc/apprise-api` has a built-in web configuration manager; documented local port (default 8000), persistent configs, optional authentication, API and test-send.
-- Run **only while the desktop app is alive**, ideally only while settings are open; bind `127.0.0.1` on an ephemeral port, authenticate every request, protect credentials/CSRF/DNS rebinding, close process on exit. **Never** expose it to LAN/public internet or ship the unauthenticated default.
-- This is still a **local backend process** and a heavy Python/Django-based distribution (or Docker image), even though no hosted Agent Teams server exists. It cannot send new messages after app exits.
+- If Apprise API is **also the delivery engine**, it must run for the **entire desktop session** (closing Settings must not stop delivery). If it is only an on-demand configuration page, another local engine must deliver after Settings closes, creating a second runtime/sync problem. In either mode bind `127.0.0.1` on an ephemeral port, authenticate every request, protect credentials/CSRF/DNS rebinding, close the process on app exit. **Never** expose it to LAN/public internet or ship the unauthenticated default.
+- This is still a **local backend process** and a heavy Python/Django-based distribution (or Docker image), even though no hosted Agent Teams server exists. It cannot send new messages after app exits. Treat on-demand website setup and ongoing notification delivery as distinct responsibilities, not as a free substitute for a running dispatcher.
 - Need assess whether API's own storage and our app config become two conflicting authorities; prefer using it as an advanced **external** service rather than default bundled UI.
 
 Pros: ready visual manager and >100 channels, minimal UI code. Cons: biggest deployment/lifecycle/security/duplicate-state surface, not actually "no backend". **Ease 2-3/10**, breadth 10/10, UX 8/10 once running. Rough **1,600-3,000 integration production LOC + 800-1,500 tests**, **plus** bundling/size/security.
@@ -189,7 +189,7 @@ No spike or implementation is performed in this research PR. These are explicit 
 
 1. **Operational simplicity**: rejected default Novu/n8n/always-on Apprise API because shipping a local Electron app should not require databases or a daemon.
 2. **Delivery correctness**: rejected "just forward each renderer toast" and unbounded retry. Built on normalized committed events, no replay of historical notifications; explicit unknown outcome.
-3. **Security & packaging**: rejected URL secrets on command line, unauthenticated localhost config UI, arbitrary webhook SSRF, or promise that an external service is private.
+3. **Security & packaging**: rejected URL secrets on command line, unauthenticated localhost config UI, arbitrary webhook SSRF, or promise that an external service is private. Also corrected the local API lifetime fallacy: closing configuration UI cannot terminate a delivery engine still needed while the app runs.
 4. **UX/DRY**: rejected rebuilding full per-provider settings forms when an OSS engine could handle many services; balance 3-4 guided native presets plus advanced service URL/help page. Do not share a notification list with the Action Inbox.
 
 ## 10. Decision requested from product owner
