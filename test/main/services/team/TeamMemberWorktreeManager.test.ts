@@ -264,13 +264,19 @@ describe('TeamMemberWorktreeManager', () => {
     const manager = new TeamMemberWorktreeManager();
     const prefix = 'a'.repeat(48);
     const bob = await manager.ensureMemberWorktree({
-      teamName: 'Atlas HQ', memberName: `${prefix}bob`, baseCwd: repoPath,
+      teamName: 'Atlas HQ',
+      memberName: `${prefix}bob`,
+      baseCwd: repoPath,
     });
     const alice = await manager.ensureMemberWorktree({
-      teamName: 'Atlas HQ', memberName: `${prefix}alice`, baseCwd: repoPath,
+      teamName: 'Atlas HQ',
+      memberName: `${prefix}alice`,
+      baseCwd: repoPath,
     });
     const otherTeam = await manager.ensureMemberWorktree({
-      teamName: `${prefix}other`, memberName: `${prefix}bob`, baseCwd: repoPath,
+      teamName: `${prefix}other`,
+      memberName: `${prefix}bob`,
+      baseCwd: repoPath,
     });
     expect(new Set([bob.worktreePath, alice.worktreePath, otherTeam.worktreePath]).size).toBe(3);
     expect(new Set([bob.branchName, alice.branchName, otherTeam.branchName]).size).toBe(3);
@@ -366,9 +372,11 @@ describe('TeamMemberWorktreeManager', () => {
     const repoPath = await createGitRepo(tempRoot);
     const memberName = `${'a'.repeat(48)}alice`;
     const oldPath = path.join(
-      hoisted.appDataRoot, 'team-worktrees',
+      hoisted.appDataRoot,
+      'team-worktrees',
       `${legacySlugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
-      legacySlugify('Atlas HQ'), legacySlugify(memberName)
+      legacySlugify('Atlas HQ'),
+      legacySlugify(memberName)
     );
     const oldBranch = `agent-teams/atlas-hq/${legacySlugify(memberName)}-${shortHash(repoPath)}`;
     await fs.mkdir(path.dirname(oldPath), { recursive: true });
@@ -378,7 +386,10 @@ describe('TeamMemberWorktreeManager', () => {
       manager.ensureMemberWorktree({ teamName: 'Atlas HQ', memberName, baseCwd: repoPath })
     ).rejects.toThrow('ambiguous truncated name');
     const restored = await manager.ensureMemberWorktree({
-      teamName: 'Atlas HQ', memberName, baseCwd: repoPath, existingCwd: oldPath,
+      teamName: 'Atlas HQ',
+      memberName,
+      baseCwd: repoPath,
+      existingCwd: oldPath,
     });
     expect(restored.worktreePath).toBe(oldPath);
     expect(restored.branchName).toBe(oldBranch);
