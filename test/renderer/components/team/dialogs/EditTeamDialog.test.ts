@@ -340,6 +340,33 @@ vi.mock('@renderer/constants/teamColors', () => ({
 import { api } from '@renderer/api';
 import { EditTeamDialog } from '@renderer/components/team/dialogs/EditTeamDialog';
 
+type EditTeamDialogProps = React.ComponentProps<typeof EditTeamDialog>;
+type DialogMember = EditTeamDialogProps['currentMembers'][number];
+type MemberFixtureInput = Pick<DialogMember, 'name'> & Partial<DialogMember>;
+
+function createMemberFixture(member: MemberFixtureInput): DialogMember {
+  return {
+    status: 'unknown',
+    currentTaskId: null,
+    taskCount: 0,
+    lastActiveAt: null,
+    messageCount: 0,
+    ...member,
+  };
+}
+
+function createMembersFixture(
+  members: readonly MemberFixtureInput[]
+): EditTeamDialogProps['currentMembers'] {
+  return members.map(createMemberFixture);
+}
+
+function createSavedConfigFixture(
+  name = 'live-team'
+): Awaited<ReturnType<typeof api.teams.updateConfig>> {
+  return { name };
+}
+
 describe('EditTeamDialog', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -360,7 +387,7 @@ describe('EditTeamDialog', () => {
         currentName: 'Current Team',
         currentDescription: 'desc',
         currentColor: 'blue',
-        currentMembers: currentMembers as any,
+        currentMembers: createMembersFixture(currentMembers),
         isTeamAlive: true,
         projectPath: '/tmp/project',
         onClose: vi.fn(),
@@ -416,14 +443,14 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
-          leadMember: {
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
+          leadMember: createMemberFixture({
             name: 'team-lead',
             role: 'Team Lead',
             providerId: 'codex',
             model: 'gpt-5.4',
             effort: 'medium',
-          } as any,
+          }),
           resolvedMemberColorMap: new Map([
             ['team-lead', 'forest'],
             ['alice', 'blue'],
@@ -464,10 +491,10 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'alice', role: 'Reviewer' },
             { name: 'bob', role: 'Developer' },
-          ] as any,
+          ]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -509,7 +536,7 @@ describe('EditTeamDialog', () => {
 
   it('saves config-only edits without touching the roster', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
     const onSaved = vi.fn();
     const onClose = vi.fn();
@@ -526,11 +553,11 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'bob', role: 'Developer', providerId: 'codex', model: 'gpt-5.2' },
             { name: 'alice', role: 'Reviewer', providerId: 'opencode', model: 'openrouter/a' },
-          ] as any,
-          leadMember: { name: 'team-lead', role: 'Team Lead', providerId: 'codex' } as any,
+          ]),
+          leadMember: createMemberFixture({ name: 'team-lead', role: 'Team Lead', providerId: 'codex' }),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose,
@@ -579,7 +606,7 @@ describe('EditTeamDialog', () => {
   describe('lead instructions of a team definition', () => {
     async function mountWithPrompt(currentLeadPrompt: string | undefined) {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+      vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture('builders'));
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
@@ -592,8 +619,8 @@ describe('EditTeamDialog', () => {
             currentDescription: 'desc',
             currentColor: 'blue',
             ...(currentLeadPrompt === undefined ? {} : { currentLeadPrompt }),
-            currentMembers: [{ name: 'bob', role: 'Developer' }] as any,
-            leadMember: { name: 'team-lead', role: 'Team Lead' } as any,
+            currentMembers: createMembersFixture([{ name: 'bob', role: 'Developer' }]),
+            leadMember: createMemberFixture({ name: 'team-lead', role: 'Team Lead' }),
             projectPath: '/tmp/project',
             onClose: vi.fn(),
             onChangeLeadRuntime: vi.fn(),
@@ -670,7 +697,7 @@ describe('EditTeamDialog', () => {
 
   it('surfaces config-only refresh failures without reporting member changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
     const onSaved = vi.fn(async () => {
       throw new Error('refresh failed');
@@ -689,7 +716,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose,
@@ -735,7 +762,7 @@ describe('EditTeamDialog', () => {
 
   it('removes existing live teammates through the dedicated removeMember path during save', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.removeMember).mockResolvedValue(undefined);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
 
@@ -751,10 +778,10 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'alice', role: 'Reviewer' },
             { name: 'bob', role: 'Developer' },
-          ] as any,
+          ]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -813,7 +840,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -863,7 +890,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
           isTeamAlive: false,
           isTeamProvisioning: true,
           projectPath: '/tmp/project',
@@ -892,7 +919,7 @@ describe('EditTeamDialog', () => {
 
   it('uses replaceMembers without a renderer restart when a live teammate role changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
     vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
@@ -908,7 +935,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -962,7 +989,7 @@ describe('EditTeamDialog', () => {
 
   it('uses replaceMembers without a renderer restart when MCP policy changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
     vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
@@ -978,7 +1005,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Developer', providerId: 'codex' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Developer', providerId: 'codex' }]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1025,7 +1052,7 @@ describe('EditTeamDialog', () => {
 
   it('does not call generic restart for live OpenCode teammate edits handled by replaceMembers', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
     vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
@@ -1041,9 +1068,9 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'alice', role: 'Reviewer', providerId: 'opencode', model: 'openrouter/a' },
-          ] as any,
+          ]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1095,7 +1122,7 @@ describe('EditTeamDialog', () => {
 
   it('blocks live primary-owned teammate edits in mixed OpenCode teams before saving', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
     vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
@@ -1111,11 +1138,11 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'bob', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.2' },
             { name: 'alice', role: 'Reviewer', providerId: 'opencode', model: 'openrouter/a' },
-          ] as any,
-          leadMember: { name: 'team-lead', role: 'Team Lead', providerId: 'codex' } as any,
+          ]),
+          leadMember: createMemberFixture({ name: 'team-lead', role: 'Team Lead', providerId: 'codex' }),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1165,10 +1192,10 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'alice', role: 'Reviewer' },
             { name: 'bob', role: 'Developer' },
-          ] as any,
+          ]),
           isTeamAlive: false,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1212,7 +1239,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1259,7 +1286,7 @@ describe('EditTeamDialog', () => {
 
   it.each([false, true])('surfaces a partial roster refusal with recovery only when required (%s)', async (projectRefusal) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(Object.assign(new Error('disk write failed'), projectRefusal ? { failure: { code: 'TEAM_PROJECT_CONTEXT_UNRECONCILED' } } : {}));
     const onSaved = vi.fn();
 
@@ -1275,7 +1302,7 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
           isTeamAlive: true,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1316,7 +1343,7 @@ describe('EditTeamDialog', () => {
 
   it('allows retrying save after config-only partial save once refreshed settings props catch up', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue(createSavedConfigFixture());
     vi.mocked(api.teams.replaceMembers)
       .mockRejectedValueOnce(new Error('disk write failed'))
       .mockResolvedValueOnce(undefined);
@@ -1332,7 +1359,7 @@ describe('EditTeamDialog', () => {
         currentName,
         currentDescription: 'desc',
         currentColor: 'blue',
-        currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
+        currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
         isTeamAlive: true,
         projectPath: '/tmp/project',
         onClose: vi.fn(),
@@ -1407,10 +1434,10 @@ describe('EditTeamDialog', () => {
           currentName: 'Current Team',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [
+          currentMembers: createMembersFixture([
             { name: 'alice', role: 'Reviewer' },
             { name: 'bob', role: 'Developer' },
-          ] as any,
+          ]),
           isTeamAlive: false,
           projectPath: '/tmp/project',
           onClose: vi.fn(),
@@ -1456,7 +1483,7 @@ describe('EditTeamDialog', () => {
         currentName: 'Current Team',
         currentDescription: 'desc',
         currentColor: 'blue',
-        currentMembers: [{ name: 'alice', role }] as any,
+        currentMembers: createMembersFixture([{ name: 'alice', role }]),
         isTeamAlive: true,
         projectPath: '/tmp/project',
         onClose: vi.fn(),
@@ -1510,14 +1537,14 @@ describe('EditTeamDialog', () => {
           currentName: 'Team Alpha',
           currentDescription: 'desc',
           currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer' }] as any,
-          leadMember: {
+          currentMembers: createMembersFixture([{ name: 'alice', role: 'Reviewer' }]),
+          leadMember: createMemberFixture({
             name: 'lead',
             role: 'Team Lead',
             providerId: 'codex',
             model: 'gpt-5.4',
             effort: 'medium',
-          } as any,
+          }),
           projectPath: '/tmp/project',
           onClose: vi.fn(),
           onChangeLeadRuntime,

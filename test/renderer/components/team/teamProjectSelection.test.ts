@@ -1,10 +1,10 @@
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
-  resolveTeamProjectSelection,
-  resolveTeamsProjectNavigationPath,
   resolveTeamLaunchDefaultProjectPath,
   resolveTeamListProjectPermissionAlias,
+  resolveTeamProjectSelection,
+  resolveTeamsProjectNavigationPath,
   resolveVerifiedProjectTaskNavigation,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';

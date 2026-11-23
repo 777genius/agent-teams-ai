@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { preflightRosterMutation } from '../../../../src/main/ipc/teams/teamRosterMutationPreflight';
-
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
 function mixedTeam(

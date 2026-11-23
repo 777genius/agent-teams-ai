@@ -1,14 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { TEAM_PROJECT_CONTEXT_VIEW_CHANNEL } from '../../../src/features/team-project-context/contracts';
-import { trackProjectCopyLaunch } from '../../../src/features/team-project-context/main/projectCopyLaunches';
 import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
+import { trackProjectCopyLaunch } from '../../../src/features/team-project-context/main/projectCopyLaunches';
 import { registerTeamProjectContextViewHandler } from '../../../src/features/team-project-context/main/TeamProjectContextViewIpc';
-import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
+import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 import {
   getTasksBasePath,
   getTeamsBasePath,

@@ -215,3 +215,17 @@ export function buildEditTeamSourceSnapshot(params: {
     members,
   });
 }
+
+export function applyRemovedMembersToSnapshot(
+  members: readonly ResolvedTeamMember[],
+  removedMemberNames: readonly string[]
+): ResolvedTeamMember[] {
+  if (removedMemberNames.length === 0) {
+    return [...members];
+  }
+  const removedKeys = new Set(removedMemberNames.map((name) => name.trim().toLowerCase()));
+  const removedAt = Date.now();
+  return members.map((member) =>
+    removedKeys.has(member.name.trim().toLowerCase()) ? { ...member, removedAt } : member
+  );
+}

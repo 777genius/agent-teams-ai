@@ -42,6 +42,7 @@ import { Loader2 } from 'lucide-react';
 import { createEditTeamHostSubmission } from './editTeamHostSubmission';
 import { EditTeamLeadPromptField } from './EditTeamLeadPromptField';
 import {
+  applyRemovedMembersToSnapshot,
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
   getEditTeamConfiguredMember,
@@ -142,20 +143,6 @@ function getInvalidMemberNamesError(
     }
   }
   return null;
-}
-
-function applyRemovedMembersToSnapshot(
-  members: readonly ResolvedTeamMember[],
-  removedMemberNames: readonly string[]
-): ResolvedTeamMember[] {
-  if (removedMemberNames.length === 0) {
-    return [...members];
-  }
-  const removedKeys = new Set(removedMemberNames.map((name) => name.trim().toLowerCase()));
-  const removedAt = Date.now();
-  return members.map((member) =>
-    removedKeys.has(member.name.trim().toLowerCase()) ? { ...member, removedAt } : member
-  );
 }
 
 export const EditTeamDialog = ({
