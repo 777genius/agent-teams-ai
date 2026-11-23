@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { ConversationScope } from '@features/team-direct-chats/renderer';
 
@@ -24,12 +24,12 @@ export function useAttentionConversationNavigation(
   teamName: string,
   open: (scope: ConversationScope) => void
 ): void {
+  const handledRef = useRef(0);
   useEffect(() => {
-    let handled = 0;
     const onIntent = (intent: NavigationIntent): void => {
       if (intent.contextId !== contextId || intent.teamName !== teamName ||
-          intent.nonce === handled) return;
-      handled = intent.nonce;
+          intent.nonce === handledRef.current) return;
+      handledRef.current = intent.nonce;
       open(intent.scope);
     };
     subscribers.add(onIntent);
