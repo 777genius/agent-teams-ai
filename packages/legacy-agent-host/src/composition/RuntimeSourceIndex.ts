@@ -29,7 +29,7 @@ import { qualifiedCodexProtocolRevision, RuntimeSourceAdmissionError } from './r
 import { runtimeSourceProcessOriginSchema, runtimeSourceRecipeIdentity } from './runtimeSourceProcessOrigin.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 import { RuntimeSourceUnavailable, readOriginalRuntimeSourcePublication, sameRuntimeSourceGrantAuthority,
-  createStoredRuntimeSourcePublicationReader,
+  createStoredRuntimeSourcePublicationValidator,
   validateRuntimeSourceHistory, selectRuntimeSourceSeed, runtimeSourceNativeIdentityMatches,
   runtimeSourceGrantMatchesScope, assertRuntimeSourceScopeAvailable } from './runtimeSourceGrantAuthority.js';
 import type { RuntimeSourceRecord } from '../adapters/profile/FileRuntimeSourceIndex.js';
@@ -64,7 +64,7 @@ function fail(code: 'invalid' | 'conflict' | 'held'): never {
 export class RuntimeSourceIndex implements RuntimeRecipeSources {
   private readonly store: FileRuntimeSourceIndex;
   private readonly commands: ManagementCommandStore;
-  private readonly readPublication = createStoredRuntimeSourcePublicationReader();
+  private readonly validatePublication = createStoredRuntimeSourcePublicationValidator();
   private readonly pending = new Map<
     string,
     { fingerprint: string; result: Promise<RuntimeSourcePublication> }
@@ -748,7 +748,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
 
   private read(): ReturnType<FileRuntimeSourceIndex['read']> {
     const index = this.store.read();
-    validateRuntimeSourceHistory(index, this.commands, this.readPublication);
+    validateRuntimeSourceHistory(index, this.commands, this.validatePublication);
     return index;
   }
 }

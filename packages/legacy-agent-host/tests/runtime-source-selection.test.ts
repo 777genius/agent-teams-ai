@@ -209,10 +209,24 @@ function observePublicationDecodes(t: TestContext) {
   return () => count;
 }
 
+function observePublicationCopies(t: TestContext, commandId: string) {
+  let count = 0;
+  const copy = globalThis.structuredClone;
+  t.mock.method(globalThis, 'structuredClone', function <T>(value: T, options?: Parameters<typeof copy>[1]): T {
+    if (value !== null && typeof value === 'object' &&
+      Object.hasOwn(value, 'expectedRevision') && Object.hasOwn(value, 'grant') &&
+      Object.hasOwn(value, 'candidate') &&
+      Object.getOwnPropertyDescriptor(value, 'commandId')?.value === commandId) count++;
+    return copy(value, options);
+  });
+  return () => count;
+}
+
 test('warm source history reuses only publication decoding while every original store read remains fresh', async t => {
   const f = await published(t);
   f.store.write({ ...f.saved, publicationJson: f.saved.publicationJson + ' ' });
-  const decodes = observePublicationDecodes(t), reads: string[] = [];
+  const decodes = observePublicationDecodes(t), copies = observePublicationCopies(t, f.saved.commandId),
+    reads: string[] = [];
   const readIndex = FileRuntimeSourceIndex.prototype.read, readCommand = FileManagementCommandStore.prototype.read;
   t.mock.method(FileRuntimeSourceIndex.prototype, 'read', function (this: FileRuntimeSourceIndex) {
     reads.push('index');
@@ -229,14 +243,17 @@ test('warm source history reuses only publication decoding while every original 
   assert.deepEqual(f.index.current({ grant: f.grant }), first);
   assert.deepEqual(reads, originalReads, 'the exact original index/receipt read order remains');
   assert.equal(decodes(), 1, 'identical publication bytes are parsed once across both full inspections');
+  assert.equal(copies(), 0, 'history validation never allocates a discarded publication result');
   sourceAuthority.readStoredRuntimeSourcePublication(f.saved);
   sourceAuthority.readStoredRuntimeSourcePublication(f.saved);
   assert.equal(decodes(), 3, 'independent callers retain their uncached decoder');
+  assert.equal(copies(), 2, 'each independent public read still returns its own publication copy');
 });
 
 test('publication decode never lends its first or later nested result to the caller', async t => {
   const { saved } = await published(t), read = sourceAuthority.createStoredRuntimeSourcePublicationReader();
   const expected = sourceAuthority.readStoredRuntimeSourcePublication(saved), decodes = observePublicationDecodes(t);
+  const copies = observePublicationCopies(t, saved.commandId);
   const first = read(saved);
   first.grant.teamScopes[0]!.teamId = 'TEST-foreign';
   first.candidate.executable.path = '/TEST-replaced';
@@ -247,8 +264,10 @@ test('publication decode never lends its first or later nested result to the cal
   second.candidate.executable.sha256 = '0'.repeat(64);
   assert.deepEqual(read(saved), expected);
   assert.equal(decodes(), 1);
+  assert.equal(copies(), 3, 'warm public reads still isolate every nested result');
   assert.deepEqual(sourceAuthority.createStoredRuntimeSourcePublicationReader()(saved), expected);
   assert.equal(decodes(), 2, 'a separate index owns an independent decode');
+  assert.equal(copies(), 4, 'an independent reader also returns its own copy');
 });
 
 test('same publication text never caches receipt identity or a prior rejection', async t => {
@@ -268,6 +287,50 @@ test('same publication text never caches receipt identity or a prior rejection',
     assert.equal(decodes(), before, 'same text still compares the newly observed receipt');
     assert.deepEqual(read(saved), expected);
     assert.equal(decodes(), before + 1, 'a failed receipt cannot retain the previous decode');
+  }
+});
+
+test('validation-only publication checks preserve wrapper reads and refuse changed receipts or nested JSON', async t => {
+  const { saved } = await published(t), input = sourceAuthority.readStoredRuntimeSourcePublication(saved);
+  const observe = (read: (saved: StoredRuntimeSourceCommand) => unknown) => {
+    const trace: PropertyKey[] = [];
+    const value = read(new Proxy(saved, {
+      get(target, key, receiver) { trace.push(key); return Reflect.get(target, key, receiver); },
+    }));
+    return { trace, value };
+  };
+  const copied = observe(sourceAuthority.createStoredRuntimeSourcePublicationReader());
+  const checked = observe(sourceAuthority.createStoredRuntimeSourcePublicationValidator());
+  assert.deepEqual(checked.trace, copied.trace, 'validation preserves every original receipt access');
+  assert.deepEqual(copied.value, input);
+  assert.equal(checked.value, undefined, 'no decoded object is lent to the validator caller');
+
+  const validate = sourceAuthority.createStoredRuntimeSourcePublicationValidator();
+  const decodes = observePublicationDecodes(t);
+  const changes: Partial<StoredRuntimeSourceCommand>[] = [
+    { commandId: 'TEST-other-command' }, { expectedRevision: '0'.repeat(64) },
+    { fingerprint: '0'.repeat(64) }, { sourceId: '0'.repeat(64) }, { resourceId: '0'.repeat(64) },
+    { profileId: 'TEST-other-profile' }, { configRevision: 'TEST-other-revision' },
+    { providerId: 'opencode' }, { revision: '0'.repeat(64) },
+  ];
+  for (const change of changes) {
+    assert.equal(validate(saved), undefined);
+    const before = decodes();
+    assert.throws(() => validate({ ...saved, ...change }), { code: 'held' });
+    assert.equal(decodes(), before, 'same text still compares the freshly observed receipt');
+    assert.equal(validate(saved), undefined);
+    assert.equal(decodes(), before + 1, 'a failed receipt clears the validator decode');
+  }
+  for (const publicationJson of ['{', '', JSON.stringify({ ...input, unknown: true }),
+    JSON.stringify({ ...input, grant: { ...input.grant, unknown: true } }),
+    JSON.stringify({ ...input, candidate: { ...input.candidate, unknown: true } }),
+    JSON.stringify({ ...input, candidate: { ...input.candidate,
+      executable: { ...input.candidate.executable, unknown: true } } })]) {
+    assert.equal(validate(saved), undefined);
+    assert.throws(() => validate({ ...saved, publicationJson }), { code: 'held' });
+    const afterFailure = decodes();
+    assert.equal(validate(saved), undefined);
+    assert.equal(decodes(), afterFailure + 1, 'malformed or unknown nested JSON clears the validator decode');
   }
 });
 
