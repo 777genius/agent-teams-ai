@@ -247,7 +247,21 @@ describe('strict native Stop WorkSync product census', () => {
     [
       'nonempty agenda',
       (f: ReturnType<typeof caughtUpFixture>) => {
-        f.agenda.items = [{ taskId: 'TEST-task' }];
+        f.agenda.items = [
+          {
+            taskId: 'TEST-task',
+            subject: 'Product change',
+            kind: 'work',
+            assignee: f.target.leadName,
+            priority: 'normal',
+            reason: 'assigned',
+            evidence: {
+              status: 'pending',
+              owner: f.target.leadName,
+              historyEventIds: ['TEST-product-event'],
+            },
+          },
+        ];
       },
     ],
     [
@@ -342,9 +356,9 @@ describe('strict native Stop WorkSync product census', () => {
       },
     ],
     [
-      'unknown decision fields',
+      'decision fields allowed only by the outer audit schema',
       (f: ReturnType<typeof caughtUpFixture>) => {
-        f.decision.metadata = {};
+        f.decision.reason = 'runtime_activity';
       },
     ],
     [

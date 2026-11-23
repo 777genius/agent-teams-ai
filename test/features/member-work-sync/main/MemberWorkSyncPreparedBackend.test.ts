@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -6,6 +7,7 @@ import { KeyedMutex } from '@features/internal-storage/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { buildMemberWorkSyncNudgePayloadHash } from '@features/member-work-sync/core/domain/MemberWorkSyncNudge';
 import { createMemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main/composition/createMemberWorkSyncRestoreParticipant';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
@@ -27,7 +29,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InProcessGateway } from '../../internal-storage/helpers/InProcessGateway';
 import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentity';
 
-import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
+import type { MemberWorkSyncOutboxEnsureInput, MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 import type { MemberWorkSyncStoreSnapshot } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 
 const identity = { teamName: 'sandbox', incarnation: 'inc-1', mutation: false };
@@ -288,6 +290,135 @@ describe('prepared backend production storage path', () => {
     expect(envelope).not.toHaveProperty('incarnation');
     expect(envelope.snapshot.statuses).toEqual([]);
     expect(envelope.snapshot.outboxItems).toEqual([]);
+  });
+
+  for (const recovery of ['warm claim', 'fresh store read'] as const) {
+    it.each(['before action', 'after committed claim', 'clean publication'] as const)(
+      `recovers a public bare dirty fence after %s through ${recovery} without replaying committed work`,
+      async (failure) => {
+        const warn = vi.fn();
+        const h = await setup('sqlite', { warn });
+        await publishBoundStatus(h);
+        const payload: MemberWorkSyncOutboxEnsureInput['payload'] = {
+          from: 'system', to: member.memberName, messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync', actionMode: 'do', workSyncIntent: 'agenda_sync',
+          text: 'TEST original nudge', taskRefs: [],
+        };
+        const input = { ...member, id: 'TEST-original-nudge', agendaFingerprint: 'f', payload,
+          payloadHash: buildMemberWorkSyncNudgePayloadHash({
+            sha256Hex: (value) => createHash('sha256').update(value).digest('hex'),
+          }, payload), nowIso: status().evaluatedAt };
+        await h.store.ensurePending(input);
+        const originalClaim = h.sqlite.claimDue.bind(h.sqlite);
+        const claimed = vi.spyOn(h.sqlite, 'claimDue');
+        const error = new Error('TEST transient public storage failure');
+        if (failure === 'before action') claimed.mockRejectedValueOnce(error);
+        if (failure === 'after committed claim') claimed.mockImplementationOnce(async (request) => {
+          await originalClaim(request);
+          throw error;
+        });
+        if (failure === 'clean publication')
+          vi.spyOn(InternalStorageJsonReplica.prototype, 'writeClean').mockRejectedValueOnce(error);
+        const first = h.store.claimDue(emptyClaim);
+        if (failure === 'clean publication') {
+          await expect(first).resolves.toMatchObject([{ id: input.id, attemptGeneration: 1 }]);
+          expect(warn).toHaveBeenCalledWith(
+            'member-work-sync fallback replica publication failed', expect.any(Object)
+          );
+        } else await expect(first).rejects.toBe(error);
+        const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+        expect(JSON.parse(await readFile(path, 'utf8'))).toMatchObject({
+          state: 'dirty', incarnation: identity.incarnation,
+        });
+        expect(JSON.parse(await readFile(path, 'utf8'))).not.toHaveProperty('snapshot');
+        const committed = recordsToSnapshot(identity.teamName,
+          await h.gateway.listTeamSnapshot(identity.teamName)).outboxItems[0]!;
+        expect(committed).toMatchObject({ id: input.id,
+          status: failure === 'before action' ? 'pending' : 'claimed',
+          attemptGeneration: failure === 'before action' ? 0 : 1,
+        });
+        const active = recovery === 'warm claim' ? h.store
+          : new BackendSelectingMemberWorkSyncStore(h.selector, h.sqlite, h.json, {
+              gateway: h.gateway, paths: h.paths, fallbackRequiresReplica: false,
+            });
+        if (recovery === 'fresh store read') {
+          await active.readTeamMetrics(identity.teamName);
+          expect(claimed).toHaveBeenCalledTimes(1);
+          expect(recordsToSnapshot(identity.teamName,
+            await h.gateway.listTeamSnapshot(identity.teamName)).outboxItems).toEqual([committed]);
+        }
+        const retry = await active.claimDue({ ...emptyClaim, claimedBy: 'TEST-next-dispatch' });
+        expect(claimed).toHaveBeenCalledTimes(2);
+        if (failure === 'before action') expect(retry).toMatchObject([
+          { id: input.id, attemptGeneration: 1, claimedBy: 'TEST-next-dispatch' },
+        ]);
+        else expect(retry).toEqual([]);
+        const canonical = recordsToSnapshot(identity.teamName,
+          await h.gateway.listTeamSnapshot(identity.teamName));
+        if (failure !== 'before action') expect(canonical.outboxItems).toEqual([committed]);
+        await expect(h.replica.readBoundClean(identity.teamName)).resolves.toEqual({
+          incarnation: identity.incarnation, snapshot: canonical,
+        });
+      }
+    );
+  }
+
+  it.each([
+    'JSON fallback', 'recovered primary', 'empty primary without ownership evidence',
+    'unversioned primary without ownership evidence', 'foreign primary', 'foreign wrapper',
+    'malformed wrapper', 'authority recovery candidate', 'unavailable primary',
+  ] as const)('preserves a public dirty fence and refuses %s before import, rewrite or action', async (reason) => {
+    const h = await setup();
+    await publishBoundStatus(h);
+    await h.store.readTeamMetrics(identity.teamName);
+    await h.replica.markDirty(identity.teamName, identity.incarnation);
+    if (reason === 'authority recovery candidate') {
+      const candidate = snapshot(status(2));
+      candidate.statuses[0]!.memberName = 'TEST-unimported';
+      candidate.statuses[0]!.agenda.memberName = 'TEST-unimported';
+      await h.replica.markDirtyWithRecoveryCandidate(identity.teamName, identity.incarnation, candidate);
+    }
+    if (reason === 'empty primary without ownership evidence') {
+      await h.gateway.importTeam(identity.teamName, { statuses: [], reportIntents: [], outboxItems: [], metricEvents: [] });
+    } else if (reason === 'unversioned primary without ownership evidence' || reason === 'foreign primary') {
+      const value = status();
+      if (reason === 'foreign primary') value.statusRevision!.incarnation = 'TEST-foreign';
+      else delete value.statusRevision;
+      await h.gateway.importTeam(identity.teamName, snapshotToRecords(identity.teamName, snapshot(value)));
+    }
+    const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+    if (reason === 'foreign wrapper' || reason === 'malformed wrapper') {
+      const envelope = JSON.parse(await readFile(path, 'utf8'));
+      if (reason === 'foreign wrapper') envelope.incarnation = 'TEST-foreign';
+      else envelope.updatedAt = 'invalid';
+      await writeFile(path, JSON.stringify(envelope));
+    }
+    const before = await readFile(path, 'utf8');
+    const primary = await h.gateway.listTeamSnapshot(identity.teamName);
+    const selector = reason === 'JSON fallback' || reason === 'recovered primary'
+      ? new InternalStorageBackendSelector(() => reason === 'JSON fallback'
+          ? Promise.reject(new Error('TEST SQLite unavailable'))
+          : Promise.resolve({ driver: 'better-sqlite3', databasePath: join(h.root, 'app.db'),
+              schemaVersion: 4, integrity: 'recovered' }))
+      : h.selector;
+    const cold = new BackendSelectingMemberWorkSyncStore(selector, h.sqlite, h.json, {
+      gateway: h.gateway, paths: h.paths, fallbackRequiresReplica: false,
+    });
+    if (reason === 'unavailable primary')
+      vi.spyOn(h.gateway, 'listTeamSnapshot').mockRejectedValueOnce(new Error('TEST primary read failed'));
+    const imported = vi.spyOn(h.gateway, 'importTeam');
+    const dirty = vi.spyOn(InternalStorageJsonReplica.prototype, 'markDirty');
+    const clean = vi.spyOn(InternalStorageJsonReplica.prototype, 'writeClean');
+    const sqliteRead = vi.spyOn(h.sqlite, 'readTeamMetrics');
+    const jsonRead = vi.spyOn(h.json, 'readTeamMetrics');
+    await expect(cold.readTeamMetrics(identity.teamName)).rejects.toThrow();
+    expect(imported).not.toHaveBeenCalled();
+    expect(dirty).not.toHaveBeenCalled();
+    expect(clean).not.toHaveBeenCalled();
+    expect(sqliteRead).not.toHaveBeenCalled();
+    expect(jsonRead).not.toHaveBeenCalled();
+    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await h.gateway.listTeamSnapshot(identity.teamName)).toEqual(primary);
   });
 
   it('preserves bound journal metadata through SQLite and refuses legacy overwrites', async () => {

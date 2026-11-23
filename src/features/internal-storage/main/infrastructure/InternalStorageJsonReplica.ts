@@ -115,23 +115,45 @@ export class InternalStorageJsonReplica<TSnapshot> {
   async readBoundClean(
     teamName: string
   ): Promise<{ incarnation: string; snapshot: TSnapshot } | null> {
+    const publication = await this.readBoundPublication(teamName);
+    if (!publication) return null;
+    if (publication.state !== 'clean')
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'bound clean replica is invalid'
+      );
+    return { incarnation: publication.incarnation, snapshot: publication.snapshot };
+  }
+
+  /** Evidence only: a bare dirty fence needs independently validated healthy-primary ownership. */
+  async readBoundPublication(
+    teamName: string
+  ): Promise<
+    | { state: 'clean'; incarnation: string; snapshot: TSnapshot }
+    | { state: 'dirty'; incarnation: string }
+    | null
+  > {
     const envelope = await this.readEnvelope(teamName, false);
     if (!envelope || !Object.hasOwn(envelope, 'incarnation')) return null;
     const incarnation = envelope.incarnation!;
     this.validateIncarnation(teamName, incarnation);
     if (
-      envelope.state !== 'clean' ||
       !Number.isFinite(Date.parse(envelope.updatedAt)) ||
       Object.keys(envelope).some(
         (key) => !['schemaVersion', 'state', 'updatedAt', 'incarnation', 'snapshot'].includes(key)
       ) ||
-      !this.isSnapshot(envelope.snapshot, teamName)
+      (envelope.state === 'clean'
+        ? !this.isSnapshot(envelope.snapshot, teamName)
+        : Object.hasOwn(envelope, 'snapshot'))
     )
       throw new InternalStorageFallbackUnsafeError(
         this.getPath(teamName),
         'bound clean replica is invalid'
       );
-    return { incarnation, snapshot: envelope.snapshot };
+    // Candidate-bearing dirty evidence belongs exclusively to authority preparation.
+    return envelope.state === 'dirty'
+      ? { state: 'dirty', incarnation }
+      : { state: 'clean', incarnation, snapshot: envelope.snapshot as TSnapshot };
   }
 
   private validateIncarnation(teamName: string, incarnation: string): void {

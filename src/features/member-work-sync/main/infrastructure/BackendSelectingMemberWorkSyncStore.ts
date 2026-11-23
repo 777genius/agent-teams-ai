@@ -403,7 +403,8 @@ export class BackendSelectingMemberWorkSyncStore
           ? await captureMemberWorkSyncReplicaPublication(
               teamName,
               this.replica!,
-              this.options!.gateway
+              this.options!.gateway,
+              this.selector.getBackendInfo()?.integrity === 'ok'
             )
           : undefined;
         if (!this.sqlitePreparedTeams.has(teamName)) {

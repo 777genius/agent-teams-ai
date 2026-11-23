@@ -442,13 +442,14 @@ describe('actual legacy source owners and existing fences', () => {
         startIdentity: 'TEST-original-birth',
       };
       recordOwnedUnixProcessGroup(child, identity);
-      write('config.json', {
+      const config = {
         name: f.teamName,
         ...(workSync ? { _backupIdentityId: workSync.incarnation } : {}),
         leadAgentId: `team-lead@${f.teamName}`,
         leadSessionId: 'TEST-session',
         members: [{ name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' }],
-      });
+      };
+      write('config.json', config);
       write('members.meta.json', { version: 1, members: [] });
       write('team.meta.json', {
         version: 1,
@@ -503,8 +504,9 @@ describe('actual legacy source owners and existing fences', () => {
       await expect(f.source.describe()).rejects.toMatchObject({
         reason: 'native-custody-unverified',
       });
-      await fence?.drain();
       recordVerifiedCliProcessRelease(child, [identity]);
+      if (fence) expect(captured.complete(fence.assertDrained)).toBeNull();
+      await fence?.drain();
       const proof = captured.complete(fence?.assertDrained)!;
       const store = new TeamLaunchStateStore();
       await store.markStopped(f.teamName, await store.beginStop(f.teamName), proof);
@@ -568,9 +570,8 @@ describe('actual legacy source owners and existing fences', () => {
       await store.markStopped(f.teamName);
       expect(readLegacyNativeStopRelease(f.team, f.teamName)).toEqual(proof);
       write('config.json', {
-        name: f.teamName,
+        ...config,
         leadSessionId: 'TEST-foreign-session',
-        members: [{ name: 'team-lead', agentType: 'team-lead' }],
       });
       await expect(f.source.describe()).rejects.toMatchObject({
         reason: 'native-custody-unverified',

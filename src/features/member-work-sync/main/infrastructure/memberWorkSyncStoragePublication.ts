@@ -2,6 +2,7 @@ import {
   validateMemberWorkSyncAuthoritySnapshot,
   validateMemberWorkSyncPrimaryRecords,
 } from './memberWorkSyncAuthorityPreparation';
+import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import { recordsToSnapshot } from './memberWorkSyncSqliteMappers';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
@@ -43,13 +44,29 @@ export function publishMemberWorkSyncLocal<T>(
 export async function captureMemberWorkSyncReplicaPublication(
   teamName: string,
   replica: InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>,
-  gateway: MemberWorkSyncStorageGateway
+  gateway: MemberWorkSyncStorageGateway,
+  allowBoundDirtyPrimaryRecovery = false
 ) {
-  const binding = await replica.readBoundClean(teamName);
+  const binding = await replica.readBoundPublication(teamName);
   const identity = binding ? { teamName, incarnation: binding.incarnation } : undefined;
   if (identity && binding) {
-    validateMemberWorkSyncAuthoritySnapshot(identity, binding.snapshot);
-    validateMemberWorkSyncPrimaryRecords(identity, await gateway.listTeamSnapshot(teamName));
+    if (binding.state === 'clean')
+      validateMemberWorkSyncAuthoritySnapshot(identity, binding.snapshot);
+    else if (!allowBoundDirtyPrimaryRecovery)
+      throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+    const records = await gateway.listTeamSnapshot(teamName);
+    validateMemberWorkSyncPrimaryRecords(identity, records);
+    if (binding.state === 'dirty') {
+      const canonical = recordsToSnapshot(teamName, records);
+      validateMemberWorkSyncAuthoritySnapshot(identity, canonical);
+      // Every retained status must prove ownership; empty state provides no evidence.
+      if (
+        !canonical.statuses.length ||
+        canonical.statuses.some(
+          (status) => status.statusRevision?.incarnation !== identity.incarnation
+        )
+      ) throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+    }
   }
   return {
     validateImport(
