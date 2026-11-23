@@ -89,6 +89,12 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import {
+  createUserAttentionFeature,
+  type UserAttentionFeatureFacade,
+  registerUserAttentionIpc,
+  removeUserAttentionIpc,
+} from '@features/user-attention/main';
 import { createOpenCodeInputDeclarationResolver } from '@features/runtime-provider-management';
 import {
   createRuntimeProviderManagementFeature,
@@ -953,6 +959,7 @@ let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
+let userAttentionFeature: UserAttentionFeatureFacade;
 let teamGroupChatsFeature: TeamGroupChatsFeature;
 let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature>;
 let teamImportFeature: TeamImportFeatureFacade;
@@ -2323,6 +2330,10 @@ async function initializeServices(): Promise<void> {
   });
 
   teamProvisioningService.setMainWindow(mainWindow);
+  userAttentionFeature = createUserAttentionFeature({
+    getContextId: () => contextRegistry.getActive().id,
+    getTeamDataService: () => teamDataService,
+  });
   recentProjectsFeature = createRecentProjectsFeature({
     getActiveContext: () => contextRegistry.getActive(),
     getLocalContext: () => contextRegistry.get('local'),
@@ -2907,6 +2918,7 @@ async function initializeServices(): Promise<void> {
   });
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
+  registerUserAttentionIpc(ipcMain, userAttentionFeature);
   registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
@@ -2982,6 +2994,7 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
+        userAttentionFeature,
         teamGroupChatsFeature,
         customTeamTemplatesFeature,
         organizationsFeature,
@@ -3186,6 +3199,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      removeUserAttentionIpc(ipcMain);
       customTeamTemplatesFeature?.dispose();
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       projectFolderFeature.removeProjectFolderIpc(ipcMain);
