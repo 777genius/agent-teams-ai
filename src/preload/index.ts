@@ -11,7 +11,6 @@ import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
-import { createUserAttentionBridge } from '@features/user-attention/preload';
 import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
@@ -25,6 +24,7 @@ import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/prelo
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
+import { createUserAttentionBridge } from '@features/user-attention/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import {
   WINDOW_SET_ZOOM_FACTOR_CHANNEL,
