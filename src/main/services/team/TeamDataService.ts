@@ -1181,6 +1181,14 @@ export class TeamDataService {
     return alive.sort((left, right) => left.localeCompare(right));
   }
 
+  /** Source-backed attention selection, independent of the 500-row global task export. */
+  async getUserAttentionTasks(teamName: string): Promise<readonly TeamTask[]> {
+    const tasks = await this.readTasksForUiSnapshot(teamName);
+    return tasks.filter((task) =>
+      task.needsClarification === 'user' && task.status !== 'deleted' && !task.deletedAt
+    );
+  }
+
   async getAllTasks(): Promise<GlobalTask[]> {
     const taskReader = this.taskReader as TeamTaskReader & {
       getAllTasksProjectionSnapshot?: () => Promise<readonly (TeamTask & { teamName: string })[]>;
