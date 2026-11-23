@@ -22,8 +22,11 @@ function notifyReadStore(): void {
 }
 
 export function subscribeTeamMessageReadStore(listener: () => void): () => void {
-  if (listeners.size === 0 && typeof window !== 'undefined') {
-    window.addEventListener('storage', onReadStorageEvent);
+  if (listeners.size === 0) {
+    // Another window may have updated localStorage while nobody subscribed.
+    snapshotVersion += 1;
+    snapshotCache.clear();
+    if (typeof window !== 'undefined') window.addEventListener('storage', onReadStorageEvent);
   }
   listeners.add(listener);
   return () => {
