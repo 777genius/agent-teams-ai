@@ -40,6 +40,22 @@ export default interface Resources {
       },
       "title": "News"
     },
+    "attention": {
+      "chats": "Unread chats",
+      "loadFailed": "Unable to load attention status",
+      "loading": "Loading attention status…",
+      "nothing": "Nothing needs your attention right now.",
+      "openTask": "Open task: {{subject}} in {{team}}",
+      "partial": "Some teams could not be loaded. Counts may be incomplete.",
+      "refresh": "Refresh attention status",
+      "retry": "Retry",
+      "tab": "Attention",
+      "tasks": "Awaiting your decision",
+      "teamAttention": "Attention",
+      "timeUnknown": "Time unknown",
+      "title": "Needs your attention",
+      "viewAll": "View all"
+    },
     "brand": {
       "claude": "Claude"
     },
