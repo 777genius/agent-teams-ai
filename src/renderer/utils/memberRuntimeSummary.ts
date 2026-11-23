@@ -1,4 +1,4 @@
-import { formatTeamModelSummary } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { formatTeamModelSummary } from '@renderer/components/team/dialogs/teamModelSummary';
 import { formatBytes } from '@renderer/utils/formatters';
 import { formatTeamProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
@@ -139,6 +139,12 @@ export function resolveMemberRuntimeSummary(
   runtimeEntry?: TeamAgentRuntimeEntry,
   isTeamAlive?: boolean
 ): string | undefined {
+  // Captured members may inherit defaults only after Host configuration is resolved.
+  // An empty settings object represents inheritance; an absent one is unavailable.
+  if (member.runtimeOwner === 'captured-host' && member.configuredRuntimeSettings === undefined) {
+    return undefined;
+  }
+
   const leadLaunchParams = isLeadMember(member) ? launchParams : undefined;
   const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
     .providerBackendId;

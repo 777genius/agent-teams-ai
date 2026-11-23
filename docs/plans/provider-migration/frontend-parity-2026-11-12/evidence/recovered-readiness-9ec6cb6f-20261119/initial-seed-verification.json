@@ -1,0 +1,503 @@
+{
+  "schemaVersion": 1,
+  "kind": "initial-unstarted-seed-current-model-source",
+  "status": "FINITE_5_RED_TO_10_PASS_SCOPED_DECLARATION_BACKED_TYPES_PASS",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate-manifest.json",
+    "bytes": 2503,
+    "lines": 59,
+    "gitBlob": "f5d012f77c1d0ec812e3b8dafe1bb4da627730f3",
+    "sha256": "0c50b1271025bc4f46fb791f091a83e9febc6e09a76215ef98a883aaaeb68998"
+  },
+  "causalAnalysis": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/causal-analysis.json",
+    "bytes": 2468,
+    "lines": 36,
+    "gitBlob": "67c99319aec723ff6ac2a64b19dd1366ba5a89e8",
+    "sha256": "e985e6b83c6c4680199c75be8cc6e4da8fdfa5da425266bbbc1c59b3473aee30"
+  },
+  "sourceView": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/source-view-verification.json",
+    "bytes": 100735,
+    "lines": 2523,
+    "gitBlob": "b02a7ed9d6dec385929ee46844de6170c92fbf6d",
+    "sha256": "9d98c6812674c73345065b0a9a1880776a128e0ed75ce15bd61b4e5a464a1031"
+  },
+  "runs": {
+    "finite-before": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before.json",
+        "bytes": 3228,
+        "lines": 47,
+        "gitBlob": "911b7f32de6a819322c604eb0e47ad00918f000b",
+        "sha256": "b161cbfad07597cbfccde0150f0c5d065c79ac448c45be8af4f6dbb53d4de72d"
+      },
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "changedFilePins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "bytes": 7027,
+          "blob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7",
+          "sha256": "df2cec75fd0a276566d57f391fa9ddac69db334a698e3e2c0d6043bf725230ed"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "bytes": 97435,
+          "blob": "4568072c7d26a53cadf6a26456a266ea1baba114",
+          "sha256": "c906e80891663111429fb2476648edfea04872254efbe2f91b81053d6cc77236"
+        }
+      ],
+      "inputsUnchanged": true,
+      "forbiddenRuntimeAttempts": 0
+    },
+    "finite-after": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-after.json",
+        "bytes": 2249,
+        "lines": 47,
+        "gitBlob": "a7e037d513162efdc0bef0d76295f98d5e13e92e",
+        "sha256": "0b27797531ff03da0e5295f1f979fcf9ee88b9d86b7850144d320a76f3e391a6"
+      },
+      "exit": 0,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "changedFilePins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "bytes": 7018,
+          "blob": "de28635ca9b17c339efa4566bb32263202e9e9cf",
+          "sha256": "aa8f68406e750f512aeee473f6f9df9f6062521826537c0409030d6d3fc85223"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "bytes": 97435,
+          "blob": "4568072c7d26a53cadf6a26456a266ea1baba114",
+          "sha256": "c906e80891663111429fb2476648edfea04872254efbe2f91b81053d6cc77236"
+        }
+      ],
+      "inputsUnchanged": true,
+      "forbiddenRuntimeAttempts": 0
+    },
+    "finite-minimal-guard-before": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-minimal-guard-before.json",
+        "bytes": 9894,
+        "lines": 47,
+        "gitBlob": "5d5d799710b4babf637afc4dcb58720821d6ea38",
+        "sha256": "64386c439f58d3d45000c52c700a939a09ba47cec1d5861bee78baaa1bdc2f53"
+      },
+      "exit": 1,
+      "counts": {
+        "tests": 5,
+        "pass": 1,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "changedFilePins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "bytes": 7018,
+          "blob": "de28635ca9b17c339efa4566bb32263202e9e9cf",
+          "sha256": "aa8f68406e750f512aeee473f6f9df9f6062521826537c0409030d6d3fc85223"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "bytes": 99809,
+          "blob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+          "sha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+        }
+      ],
+      "inputsUnchanged": true,
+      "forbiddenRuntimeAttempts": 0
+    },
+    "finite-final-guards": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-guards.json",
+        "bytes": 3264,
+        "lines": 47,
+        "gitBlob": "1954e305dce23746dc3c6837a8327797fdd2b9db",
+        "sha256": "b39d3d8048808f6c58daf0b73050ffc3289261350c19c7d6345fdf9a3b5da397"
+      },
+      "exit": 0,
+      "counts": {
+        "tests": 5,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "changedFilePins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "bytes": 7384,
+          "blob": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386",
+          "sha256": "6d24ab3558f6f36af846692d97db805c55533178572288af8471a6d652d2326b"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "bytes": 99809,
+          "blob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+          "sha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+        }
+      ],
+      "inputsUnchanged": true,
+      "forbiddenRuntimeAttempts": 0
+    },
+    "finite-final-cohort-before": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-cohort-before.json",
+        "bytes": 8870,
+        "lines": 47,
+        "gitBlob": "6632f81bdf5443226d25d6cab9d2f51e3d11922c",
+        "sha256": "52a3ba50a07b4b473ca803131091bc88d54daca2bdbb3ead32804be1bc30caae"
+      },
+      "exit": 1,
+      "counts": {
+        "tests": 10,
+        "pass": 5,
+        "fail": 5,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "changedFilePins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "bytes": 7027,
+          "blob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7",
+          "sha256": "df2cec75fd0a276566d57f391fa9ddac69db334a698e3e2c0d6043bf725230ed"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "bytes": 99809,
+          "blob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+          "sha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+        }
+      ],
+      "inputsUnchanged": true,
+      "forbiddenRuntimeAttempts": 0
+    },
+    "finite-final-cohort-after": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-cohort-after.json",
+        "bytes": 4866,
+        "lines": 47,
+        "gitBlob": "79c994a4383090f49a800cc8833e055de2087cff",
+        "sha256": "2ab9f743e9ff1473e90b187a2a6fde209d3e3bd6bfd8bb571994d024638b5c77"
+      },
+      "exit": 0,
+      "counts": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "changedFilePins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "bytes": 7384,
+          "blob": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386",
+          "sha256": "6d24ab3558f6f36af846692d97db805c55533178572288af8471a6d652d2326b"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "bytes": 99809,
+          "blob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+          "sha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+        }
+      ],
+      "inputsUnchanged": true,
+      "forbiddenRuntimeAttempts": 0
+    }
+  },
+  "finalCohort": {
+    "existing": 5,
+    "new": 5,
+    "before": {
+      "pass": 5,
+      "fail": 5
+    },
+    "after": {
+      "pass": 10,
+      "fail": 0,
+      "skip": 0
+    },
+    "sameTestBytes": true
+  },
+  "intermediateGuardCorrection": "The minimal source-only change passed the positive case but failed four seed retained-read compatibility boundaries. The final seed-only fallback passes all five new cases and the five existing source/probe guard cases.",
+  "focusedTypes": {
+    "record": {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/declaration-backed-focused-typecheck.json",
+      "bytes": 1436,
+      "lines": 42,
+      "gitBlob": "ff3686b73d4f3b1032f1e17ff059cea679b3b4d0",
+      "sha256": "0b1b4b91ed2d5ffbc0a50d538871eaa80c55e9e59eb1fb1da6fe72930e291103"
+    },
+    "exit": 0,
+    "scope": "Full two actual changed files, original strict compiler options, existing prepared declarations for dependencies; not regenerated or full exact-head build/typecheck.",
+    "preparedDeclarationInputs": {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/prepared-declaration-inputs.json",
+      "bytes": 198217,
+      "lines": 3779,
+      "gitBlob": "65bb0509c21f068295a62ec77a838db5fbcf160e",
+      "sha256": "e533a1ce3448ceb86764cc623219764586f8716984ebf4bd98686b885cba38c6"
+    }
+  },
+  "typeLimit": "Earlier actual-source transitive graph check was killed with exit -9 and no output; its record is retained. The successful bounded check uses unchanged existing prepared declarations and is not a regenerated or full exact-head build.",
+  "priorTypeAttempt": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/focused-typecheck.json",
+    "bytes": 625,
+    "lines": 17,
+    "gitBlob": "5d791114296bd4a03a7335701dd4d32204613a58",
+    "sha256": "100b2353b02a9901c65bfb9369e95f8416c55b1f96397c288d32fdcee0826481"
+  },
+  "setupFailures": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before-loader-1.json",
+      "bytes": 3023,
+      "lines": 17,
+      "gitBlob": "0b941996866f9daf196c095a60855359446ca9af",
+      "sha256": "daf4585e894f379ffe41beda8435ba268ff8d43ad8ac648933191aaf20202b5f"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before-loader-2.json",
+      "bytes": 2704,
+      "lines": 18,
+      "gitBlob": "76719ab8634970c9ea9d955ad5acfcc9cba99070",
+      "sha256": "a0f1e2ccb476b3ec712a9d48481f0f15a56ba9193468cff1529a2626f62ce352"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before-selection-setup.json",
+      "bytes": 2487,
+      "lines": 18,
+      "gitBlob": "922321f539d977b7d377be8c15fb040ffc7f497a",
+      "sha256": "3ab8e43036226ceb3e0042e3bfe5746fe26ad926bbbe819befb4099c31365d9f"
+    }
+  ],
+  "setupFailureMeaning": "Prepared dependency/fixture setup failures are not counted as semantic regressions. An additional failed setup invocation collided with an existing receipt filename; no result from it is used as evidence.",
+  "evidenceArchive": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-evidence.tar.gz",
+    "bytes": 122375,
+    "lines": 930,
+    "gitBlob": "b1506f40b3962b15b66ccfd08a1ea7e1f2f99c4b",
+    "sha256": "6b9c6a2dc468ee6ff3632279922bce290a4263251fc1692a511cbd679c864362"
+  },
+  "evidenceFiles": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/source-restoration.json",
+      "bytes": 184,
+      "lines": 6,
+      "gitBlob": "7289959759a20f2080ca1f130f4d5ceb53f9826b",
+      "sha256": "cd5da09dadd363564fefe28c1e5bbad14db60e2ecea65dfb59bf466511d8fff0"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before.json",
+      "bytes": 3228,
+      "lines": 47,
+      "gitBlob": "911b7f32de6a819322c604eb0e47ad00918f000b",
+      "sha256": "b161cbfad07597cbfccde0150f0c5d065c79ac448c45be8af4f6dbb53d4de72d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-cohort-after.json",
+      "bytes": 4866,
+      "lines": 47,
+      "gitBlob": "79c994a4383090f49a800cc8833e055de2087cff",
+      "sha256": "2ab9f743e9ff1473e90b187a2a6fde209d3e3bd6bfd8bb571994d024638b5c77"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/run_finite.py",
+      "bytes": 1856,
+      "lines": 44,
+      "gitBlob": "44c7d0c4cb201ef84cd4414296c55cd025bfc9dc",
+      "sha256": "d45c9301af6bb72ff590d2192d118ed1eac1f64fdf0712f2a4ce42393f977ecd"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-guards.json",
+      "bytes": 3264,
+      "lines": 47,
+      "gitBlob": "1954e305dce23746dc3c6837a8327797fdd2b9db",
+      "sha256": "b39d3d8048808f6c58daf0b73050ffc3289261350c19c7d6345fdf9a3b5da397"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before-selection-setup.json",
+      "bytes": 2487,
+      "lines": 18,
+      "gitBlob": "922321f539d977b7d377be8c15fb040ffc7f497a",
+      "sha256": "3ab8e43036226ceb3e0042e3bfe5746fe26ad926bbbe819befb4099c31365d9f"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/freeze_candidate.py",
+      "bytes": 10500,
+      "lines": 161,
+      "gitBlob": "7fe395baf43c5de6cb14cc3a0225414753ec2891",
+      "sha256": "ec072f4dd8c22b1bfcf34fc50d3f416b349bdb95a485444520f28f5103594312"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate-manifest.json",
+      "bytes": 2503,
+      "lines": 59,
+      "gitBlob": "f5d012f77c1d0ec812e3b8dafe1bb4da627730f3",
+      "sha256": "0c50b1271025bc4f46fb791f091a83e9febc6e09a76215ef98a883aaaeb68998"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before-loader-2.json",
+      "bytes": 2704,
+      "lines": 18,
+      "gitBlob": "76719ab8634970c9ea9d955ad5acfcc9cba99070",
+      "sha256": "a0f1e2ccb476b3ec712a9d48481f0f15a56ba9193468cff1529a2626f62ce352"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-after.json",
+      "bytes": 2249,
+      "lines": 47,
+      "gitBlob": "a7e037d513162efdc0bef0d76295f98d5e13e92e",
+      "sha256": "0b27797531ff03da0e5295f1f979fcf9ee88b9d86b7850144d320a76f3e391a6"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/focused-typecheck.json",
+      "bytes": 625,
+      "lines": 17,
+      "gitBlob": "5d791114296bd4a03a7335701dd4d32204613a58",
+      "sha256": "100b2353b02a9901c65bfb9369e95f8416c55b1f96397c288d32fdcee0826481"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/declaration-backed-focused-typecheck.json",
+      "bytes": 1436,
+      "lines": 42,
+      "gitBlob": "ff3686b73d4f3b1032f1e17ff059cea679b3b4d0",
+      "sha256": "0b1b4b91ed2d5ffbc0a50d538871eaa80c55e9e59eb1fb1da6fe72930e291103"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/production-change.patch",
+      "bytes": 2149,
+      "lines": 43,
+      "gitBlob": "e98d2bbea9e8616f7ccfa97abcef054d1c783710",
+      "sha256": "d4805381075928e5213ea592145133cfa87648619be404fc656fa9c78de55eae"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-cohort-before.json",
+      "bytes": 8870,
+      "lines": 47,
+      "gitBlob": "6632f81bdf5443226d25d6cab9d2f51e3d11922c",
+      "sha256": "52a3ba50a07b4b473ca803131091bc88d54daca2bdbb3ead32804be1bc30caae"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate.patch",
+      "bytes": 8060,
+      "lines": 142,
+      "gitBlob": "cfa631efdb9050a588fc8a803f1e648f796a1187",
+      "sha256": "8619af2d170d73cb28530877de78cad062aea02f64b4c6e37cc434d185538507"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/prepared-declaration-inputs.json",
+      "bytes": 198217,
+      "lines": 3779,
+      "gitBlob": "65bb0509c21f068295a62ec77a838db5fbcf160e",
+      "sha256": "e533a1ce3448ceb86764cc623219764586f8716984ebf4bd98686b885cba38c6"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/source-view-verification.json",
+      "bytes": 100735,
+      "lines": 2523,
+      "gitBlob": "b02a7ed9d6dec385929ee46844de6170c92fbf6d",
+      "sha256": "9d98c6812674c73345065b0a9a1880776a128e0ed75ce15bd61b4e5a464a1031"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/causal-analysis.json",
+      "bytes": 2468,
+      "lines": 36,
+      "gitBlob": "67c99319aec723ff6ac2a64b19dd1366ba5a89e8",
+      "sha256": "e985e6b83c6c4680199c75be8cc6e4da8fdfa5da425266bbbc1c59b3473aee30"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-before-loader-1.json",
+      "bytes": 3023,
+      "lines": 17,
+      "gitBlob": "0b941996866f9daf196c095a60855359446ca9af",
+      "sha256": "daf4585e894f379ffe41beda8435ba268ff8d43ad8ac648933191aaf20202b5f"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-minimal-guard-before.json",
+      "bytes": 9894,
+      "lines": 47,
+      "gitBlob": "5d5d799710b4babf637afc4dcb58720821d6ea38",
+      "sha256": "64386c439f58d3d45000c52c700a939a09ba47cec1d5861bee78baaa1bdc2f53"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/pure-analysis-source-pins.json",
+      "bytes": 105392,
+      "lines": 3142,
+      "gitBlob": "3e4c124f02f599b21f02602c756984b0264a874a",
+      "sha256": "7f09132e9c973eb5aeb032d08e64ddbca9ae07b245b74cfa86713aa7dde7183e"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/ledger-source-pins.json",
+      "bytes": 17478,
+      "lines": 547,
+      "gitBlob": "718cd625f798a2fe5fe28457512648289292fc42",
+      "sha256": "75f569de5ab69f32da99a73f9cdf9fe449bb25b2fdcff7728cdacb9c2a7fb7a3"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/provider-input-pins.json",
+      "bytes": 53688,
+      "lines": 1297,
+      "gitBlob": "8e7429aed70432af9da8f3c04058a5b870245693",
+      "sha256": "918ec04e6cf0a9b41df1bf55952fb884e605395053b13cf536eef7f831ce53dc"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/provider-dependency-inputs.json",
+      "bytes": 1749,
+      "lines": 32,
+      "gitBlob": "41056ecc5a7c9180603d321576a59b132da16866",
+      "sha256": "1d2df8be504d1be8a96aac75bd79edbe496427f02ec07bdcfa4f9faa2458cd37"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/profile-mechanism-analysis.json",
+      "bytes": 12240,
+      "lines": 264,
+      "gitBlob": "fd73807179baf23d88596a60b1f949e225cde547",
+      "sha256": "d982d786b9dbcdcc7fa0415b8fe752e071eb517577f0764f82ff3b6e3ad34467"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/finite-runtime-guard.mjs",
+      "bytes": 705,
+      "lines": 17,
+      "gitBlob": "6e68592542802b1afc525bc6bbf0783cfa86e143",
+      "sha256": "d5befad8270251061f1c017ffc00003b65d15957fe9ca0b74781cae0aeb593ab"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/compare-mechanism.mts",
+      "bytes": 3008,
+      "lines": 42,
+      "gitBlob": "ed7148a9c0e29f43fdbc1d28eec6e7b10b3e1403",
+      "sha256": "789f921c6b35f45e3dabeddc8cad65a329ee6fd227abc26df457a6ddedfcfaaa"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/pure-analysis-bootstrap.mjs",
+      "bytes": 737,
+      "lines": 21,
+      "gitBlob": "3565b7f9d7517b3dd16ef4d3b0a85d22a9fd246b",
+      "sha256": "f3014880b2f96869999c5dd54ebf53119d6b664f6458dc55c2f1a8f553fcaaf4"
+    }
+  ],
+  "nativeOrAppExecutions": 0,
+  "forbiddenRuntimeAttempts": 0,
+  "fullLintOrProjectTypecheckClaimed": false,
+  "originalCiActionsRepeated": false,
+  "refsOrIndexWritten": false
+}

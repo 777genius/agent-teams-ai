@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_FINAL_GUI_AGGREGATE",
+  "fullReceipt": false,
+  "qualification": "Original per-run verdicts only; no new overall PASS or cross-source qualification. Raw receipt hashes bind exact evidence. Canonical JSON hashes use sorted keys, compact separators, original arrays and unescaped Unicode. Missing resource observations remain unobserved. Cumulative CPU ticks require the same process birth for deltas; no OOM or kill-sender inference.",
+  "runs": [
+    {
+      "mode": "emulated-import-lifecycle-ui",
+      "originalStatus": "INCOMPLETE",
+      "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+      "excluded": [
+        "vendor authentication",
+        "native model execution",
+        "full Stage1/release/default activation"
+      ],
+      "metadataStatus": "INCOMPLETE",
+      "harnessExitCode": 1,
+      "source": {
+        "head": "917a7d3c3737904080da5abebb30d8f999d876eb",
+        "tree": "b70bf96c3b821bf0fdcb7225689e4c00ce445469",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-917a7d3c-import-lifecycle-derived-20261119/source-snapshot.json",
+          "bytes": 382,
+          "sha256": "7c22d946764d3018ce01736997a4af261e76865bf482dfb26b3ed7948037c602"
+        },
+        "selectedSourceCount": 1908,
+        "beforeAfterSourceListsEqual": true,
+        "sourceListCanonicalJsonSha256": "88aa724ab37be00f3be8bde6bf88497ce6722ae141f5d91056e539058752d6b1"
+      },
+      "profile": null,
+      "modeResourceSelectors": {
+        "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4": "1",
+        "AGENT_TEAMS_DISABLE_SOURCEMAPS": "1"
+      },
+      "elapsedSeconds": null,
+      "startedAt": "2026-11-19T11:35:03.507289+00:00",
+      "finishedAt": "2026-11-19T11:39:16.574678+00:00",
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/917a7d3c3737904080da5abebb30d8f999d876eb/emulated-import-lifecycle-ui.result.json",
+          "bytes": 2215,
+          "sha256": "81caeb506653edc5cdb56f47ddb63615589c0edd936f412712b78f35b571e4e9"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/917a7d3c3737904080da5abebb30d8f999d876eb/emulated-import-lifecycle-ui.observation.json",
+          "bytes": 2138,
+          "sha256": "08bb36da82928ccc262d06580e95756133d2430e799868b5d89a1b5d813b5076"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-aFJGuj/desktop-backend-receipt.json",
+          "bytes": 988794,
+          "sha256": "2823b0da75215a0de93fbc9099104249d831e66d8a47ee648e144ed07c0b3c90"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/917a7d3c3737904080da5abebb30d8f999d876eb/emulated-import-lifecycle-ui.log"
+      },
+      "proofs": {
+        "finiteStoppedProducer": {
+          "status": "PASS",
+          "scope": "Current frontend Create/Launch, visible finite reply, original Main Stop/release, UI Task and ordinary Quit",
+          "excluded": [
+            "genuine historical donor frontend",
+            "vendor CLI/inference/auth qualification",
+            "multi-member or Windows source release",
+            "native session adoption"
+          ],
+          "sourceKind": "actual-current-finite-solo",
+          "execution": "finite-legacy-bootstrap-protocol",
+          "canonicalJsonSha256": "45db86901b711751df512318d6818462cec0916f5003270c7743937a90352180",
+          "stepCount": 36,
+          "quitRequested": true,
+          "originalRequestedQuitExit": {
+            "initialExitCode": 0,
+            "initialSignalCode": null,
+            "exitCode": 0,
+            "signalCode": null
+          },
+          "sourcePeerAbsentAfterCleanup": true,
+          "inputsFrozen": true,
+          "failure": {
+            "message": null,
+            "messageCanonicalJsonSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+            "source": null,
+            "sourceFreeze": null
+          },
+          "cleanup": {
+            "remaining": [],
+            "capturedHostAbsent": null
+          },
+          "cleanupCanonicalJsonSha256": "bcade01c8dadceb08fd5a753999d790765949788afeca720a65b8283bbcfd8f1",
+          "beforeHarnessCleanup": {
+            "count": 0,
+            "canonicalJsonSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "finiteStoppedImportUiProof": {
+          "status": "INCOMPLETE",
+          "scope": "Original current frontend finite solo producer and Main Stop/release, cold Main import, saved Task/settings readback, distinct fresh Host SDK generation, reply, Stop and reload",
+          "excluded": [
+            "genuine historical donor frontend",
+            "vendor CLI/inference/auth qualification",
+            "multi-member or Windows source release",
+            "native source session adoption"
+          ],
+          "sourceKind": "actual-current-finite-solo",
+          "execution": "finite-protocol-peer",
+          "canonicalJsonSha256": "1d6d5a8f550db4dd6b91f58642e7c7aebaf5a0be25ca73cc662f0b3392bcccd1",
+          "stepCount": 8
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-aFJGuj/ui-failure.png",
+          "bytes": 95969,
+          "sha256": "907f38ed273b250bc081c572e85bf42924a6ebca15d62e6e1db063a606053c79"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-aFJGuj/ui-finite-import-source.png",
+          "bytes": 95787,
+          "sha256": "8da506ce90f0c47dd3f7aa733e653886dad7d9c1dff2583344c7b91df1cc6cf6"
+        }
+      ],
+      "failure": {
+        "message": "UI read timed out: original Launch dialog; no mutation retry",
+        "messageCanonicalJsonSha256": "2ead823e3a6f9e68de735cb54612713f6d9f1d9114cc49be96b25f8cb48e7759",
+        "source": {
+          "canonicalJsonSha256": "f2d9d254126279a355ec4601c7488b13f61f13cff354a34fe0beb74f81fad718",
+          "kind": "error",
+          "omittedFieldCount": 1,
+          "frameCount": 5
+        },
+        "sourceFreeze": null
+      },
+      "cleanup": {
+        "remaining": [],
+        "capturedHostObserved": false,
+        "capturedHostAbsent": null,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "cleanupObservation": "observed in original outer receipt",
+      "failureQuit": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": 0,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "verifiedMilestones": {
+        "scope": "Existing original finite TEST producer and its final receipt; no real Claude/Codex or new UI action",
+        "producer": {
+          "originalStatus": "PASS",
+          "standaloneReceipt": {
+            "path": "/tmp/TEST-desktop-backend-aFJGuj/finite-stopped-import-producer.json",
+            "bytes": 147545,
+            "sha256": "2b9b7e525cee06cc3c53b28f6950f79c64a6afd7b90722a4fbfdc17bad99c3a5"
+          },
+          "standaloneEqualsEmbeddedReceipt": true,
+          "originalBootstrapCount": 1,
+          "originalCompletedTurnCount": 1,
+          "originalStopRelease": {
+            "present": true,
+            "matchesDurableStoppedNativeRelease": true,
+            "version": 1,
+            "kind": "desktop-owned-unix-cli",
+            "canonicalJsonSha256": "62325eb0e37b33035b996543e35bceb790e28d1bde40d8621840196d3385192f",
+            "processCount": 1
+          },
+          "postStopProductTaskPresent": true,
+          "originalRequestedQuitExit": {
+            "initialExitCode": 0,
+            "initialSignalCode": null,
+            "exitCode": 0,
+            "signalCode": null
+          },
+          "beforeHarnessCleanup": [],
+          "cleanup": {
+            "remaining": [],
+            "capturedHostAbsent": null
+          },
+          "sourcePeerAbsentAfterCleanup": true,
+          "inputsFrozen": true
+        },
+        "consumer": {
+          "originalStatus": "INCOMPLETE",
+          "phaseObservation": [
+            {
+              "observedAt": "2026-11-19T11:38:44.645Z",
+              "namespace": "StoppedTeamImport",
+              "source": "application",
+              "phase": "prepare",
+              "category": "held",
+              "outcome": "not-dispatched",
+              "prepareBoundary": "snapshot-export",
+              "rowCanonicalJsonSha256": "3b3fd0ac182f0352d2bec73604f5f09ed166ba735ac4c716510a54d1a1695ece"
+            }
+          ],
+          "persistentLog": {
+            "path": "/tmp/TEST-desktop-backend-aFJGuj/userData/logs/app-errors.ndjson",
+            "bytes": 49398,
+            "sha256": "fdd695447c2110c79f4ea6a4af20598926681088539a005da3b9d04d5228aba3"
+          },
+          "originalFailure": "UI read timed out: original Launch dialog; no mutation retry",
+          "collectorCleanupQualified": false,
+          "cleanupInterpretation": "Physical app process group is empty and original app Quit exited 0. Host was never observed; capturedHostAbsent=null is unknown, not confirmed Host exit. The strict original collector cleanup=false is preserved."
+        },
+        "queueContinuation": {
+          "emulated-retained-original-ui": "NOT_RUN: original queue stopped at first INCOMPLETE",
+          "automaticRetries": 0
+        }
+      }
+    }
+  ],
+  "derivation": {
+    "capturedAt": "2026-11-19T11:42:07.496163+00:00",
+    "collector": {
+      "path": "/workspace/scratch/de9d4631e21c/collect-derived-gui-evidence.py",
+      "bytes": 13665,
+      "sha256": "afd6aad2d3bed0191b66878ce56645b72eed51128c5cfa52fb92de4578f8d9c9"
+    },
+    "unchangedCollectorOutput": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-917a7d3c-import-lifecycle-derived-20261119/original-collector-summary.json",
+      "bytes": 7086,
+      "sha256": "7fcd63ed220b3b07cf19f25fed2095db7c71dd2c52b9d827f3b3444429a5fc4d"
+    },
+    "sourceSnapshot": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-917a7d3c-import-lifecycle-derived-20261119/source-snapshot.json",
+      "bytes": 382,
+      "sha256": "7c22d946764d3018ce01736997a4af261e76865bf482dfb26b3ed7948037c602"
+    },
+    "method": "Original post-exit collector output plus closed existing producer/prepare-boundary projection; no fixture, receipt, source, or GUI mutations."
+  }
+}

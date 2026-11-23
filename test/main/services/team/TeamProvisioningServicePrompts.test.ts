@@ -1089,7 +1089,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('Do NOT create a separate "review task"');
     expect(prompt).toContain('If no reviewer exists, leave #X completed.');
     expect(prompt).toContain(
-      'If you are the reviewer for task #X, call review_start on #X first, then review_approve or review_request_changes on #X itself.'
+      'If you review task #X, call review_start on #X first and preserve its reviewRequestId.'
+    );
+    expect(prompt).toContain(
+      'human_approval or lead_then_human means review_complete or review_request_changes with expectedReviewRequestId from the same review cycle'
+    );
+    expect(prompt).toContain(
+      'agent_approval means review_approve or review_request_changes on #X itself.'
     );
   });
 
@@ -1259,7 +1265,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('Only move #X into REVIEW when a real reviewer exists for #X.');
     expect(prompt).not.toContain('Only create a separate review reminder/assignment task');
     expect(prompt).toContain(
-      'Correct flow: finish implementation on #X -> task_complete #X -> review_request #X -> reviewer runs review_start #X -> reviewer runs review_approve or review_request_changes on #X.'
+      'Correct flow: finish implementation on #X -> task_complete #X -> review_request #X -> reviewer runs review_start #X -> reviewer runs the policy-appropriate review_complete or review_approve, or review_request_changes, on #X.'
     );
     await svc.cancelProvisioning(runId);
   });

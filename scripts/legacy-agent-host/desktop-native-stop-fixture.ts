@@ -7,7 +7,8 @@ import { assertOwnedCdpListener, command, processTable } from './desktop-backend
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import { desktopActiveMetadata, desktopMetadataProcess, desktopMetadataProfileHash,
-  readDesktopMetadataLineage, assertDesktopMetadataLineageRetained } from './desktop-opencode-metadata-lineage.ts';
+  readDesktopMetadataLineage, assertDesktopMetadataLineageRetained,
+  readDesktopMetadataEvents, desktopMetadataReadyScopeCount } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopNativeHostSnapshot } from './desktop-opencode-metadata-lineage.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { DesktopCdpPort } from './desktop-captured-app.ts';
@@ -116,7 +117,8 @@ export async function prepareDesktopNativeStop(options: {
     }
   }
   const selectedMetadata = globalMetadata ? await captureDesktopOpenCodeProjectMetadata(
-    { ...fixture, root: fixture.root! }, group, globalMetadata) : undefined;
+    { ...fixture, root: fixture.root! }, group, globalMetadata,
+    { remainingMs: remainingSetupMs, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
   remainingSetupMs();
   const metadata = selectedMetadata?.captured, metadataSources = selectedMetadata?.metadataSources;
   if (metadata) assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
@@ -384,9 +386,12 @@ export function separateDesktopOpenCodeRuntimeChildren(
 
 /** Observe only the existing stderr/file and OS census; never repeat a catalog/native operation. */
 async function captureMetadataObservation(fixture: MetadataFixture, group: number,
-  profileHashes: readonly string[], original?: DesktopNativeHostSnapshot, expectedRuntimeCount?: 0 | 1 | 3) {
-  const deadline = Date.now() + 5000; let last: unknown;
+  profileHashes: readonly string[], original?: DesktopNativeHostSnapshot, expectedRuntimeCount?: 0 | 1 | 3,
+  remainingMs?: () => number) {
+  const deadline = Date.now() + Math.min(5000, remainingMs?.() ?? 5000); let last: unknown;
   do {
+    remainingMs?.();
+    let result: { captured: DesktopNativeHostSnapshot; runtime: ProcessFact[] } | undefined;
     try {
       const captured = readDesktopNativeHostProcesses(fixture, group), table = processFacts();
       assert.deepEqual(table.find(row => row.pid === captured.host.pid), captured.host);
@@ -399,9 +404,15 @@ async function captureMetadataObservation(fixture: MetadataFixture, group: numbe
       assert.ok(expected === 0 || expected === 1 || expectedRuntimeCount === 3 && expected === 3);
       assert.equal(runtime.length, expected);
       for (const child of runtime) assert.equal(child.command, metadata[0]!.command);
-      return { captured, runtime };
+      result = { captured, runtime };
     } catch (error) { last = error; }
+    remainingMs?.();
+    if (result) {
+      if (remainingMs) assert.ok(Date.now() < deadline, 'Original metadata physical observation deadline expired');
+      return result;
+    }
     await tick();
+    remainingMs?.();
   } while (Date.now() < deadline);
   throw last;
 }
@@ -417,6 +428,74 @@ type MetadataSource = { sourceId: string; revision: string; profileId: string; c
 type MetadataFixture = { root: string; node: string; hostEntry: string };
 type GlobalMetadata = { captured: ReturnType<typeof readDesktopNativeHostProcesses>;
   source: MetadataSource; runtimeDigest: string };
+
+type MetadataObservationBudget = {
+  remainingMs(): number | undefined;
+  assertOwnedRenderer(): void;
+  beforePhysical?(): Promise<unknown>;
+};
+const metadataRemaining = (budget: MetadataObservationBudget): number => {
+  budget.assertOwnedRenderer();
+  const remaining = budget.remainingMs();
+  assert.ok(typeof remaining === 'number' && Number.isFinite(remaining) && remaining > 0,
+    'Original metadata observation deadline expired');
+  return remaining;
+};
+
+function metadataHostCurrent(fixture: MetadataFixture, group: number,
+  host: ProcessFact, budget: MetadataObservationBudget): void {
+  metadataRemaining(budget);
+  assert.deepEqual(readDesktopNativeHostProcesses(fixture, group).host, host, 'same retained metadata Host birth');
+  metadataRemaining(budget);
+}
+
+async function assertMetadataSelectionCurrent(fixture: MetadataFixture, group: number,
+  sources: readonly MetadataSource[], host: ProcessFact, budget: MetadataObservationBudget): Promise<void> {
+  metadataHostCurrent(fixture, group, host, budget);
+  for (const source of sources) {
+    metadataHostCurrent(fixture, group, host, budget);
+    const current = await readDesktopOpenCodeMetadataSource(fixture.root, source.projectPath);
+    metadataHostCurrent(fixture, group, host, budget);
+    assert.deepEqual(current, source, 'same retained metadata source selection');
+  }
+  metadataRemaining(budget);
+}
+
+/** Wait only for the original log's lifecycle transition; the physical oracle below still qualifies it. */
+async function captureReadyMetadata(fixture: MetadataFixture, group: number,
+  sources: readonly MetadataSource[], host: ProcessFact, budget: MetadataObservationBudget,
+  original?: DesktopNativeHostSnapshot) {
+  const profileHashes = sources.map(desktopMetadataProfileHash);
+  let prefix = original?.metadataLineage?.events.map(event => ({ ...event })) ?? [];
+  const assertCurrent = () => assertMetadataSelectionCurrent(fixture, group, sources, host, budget);
+  const ready = () => {
+    metadataRemaining(budget);
+    const events = readDesktopMetadataEvents(fixture.root, host.pid, true);
+    assert.deepEqual(events.slice(0, prefix.length), prefix, 'original metadata log prefix is retained while waiting');
+    const count = desktopMetadataReadyScopeCount(events, profileHashes, host.pid);
+    prefix = events.map(event => ({ ...event }));
+    assert.deepEqual(readDesktopNativeHostProcesses(fixture, group).host, host, 'same retained metadata Host birth');
+    metadataRemaining(budget);
+    return count === profileHashes.length;
+  };
+  await assertCurrent();
+  for (;;) {
+    if (ready()) {
+      if (!budget.beforePhysical) break;
+      await budget.beforePhysical();
+      await assertCurrent();
+      if (ready()) break;
+    }
+    await tick();
+    await assertCurrent();
+  }
+  const result = await captureMetadataObservation(fixture, group, profileHashes, original, 0,
+    () => metadataRemaining(budget));
+  await assertCurrent();
+  assert.deepEqual(result.captured.host, host);
+  metadataRemaining(budget);
+  return result;
+}
 
 /** Actual source-derived profile IDs, not the descriptor's common seed profile. */
 async function readDesktopOpenCodeMetadataSource(root: string, projectPath: string | null): Promise<MetadataSource> {
@@ -498,31 +577,50 @@ export async function captureDesktopOpenCodeGlobalMetadata(cdp: Pick<DesktopCdpP
   assert.equal(catalog.providerId, 'test-local'); assert.equal(catalog.catalogState, 'fresh');
   assert.ok(Array.isArray(catalog.models) &&
     catalog.models.map(object).some(model => model.modelId === 'test-local/TEST-model'));
+  const budget = remainingMs ? { remainingMs, assertOwnedRenderer } : undefined;
+  const host = budget ? readDesktopNativeHostProcesses(fixture, group).host : undefined;
+  if (budget) metadataHostCurrent(fixture, group, host!, budget);
   const source = await readDesktopOpenCodeMetadataSource(fixture.root, null);
+  if (budget) metadataHostCurrent(fixture, group, host!, budget);
   remainingMs?.();
-  const { captured } = await captureMetadataObservation(fixture, group, [desktopMetadataProfileHash(source)], undefined, 0);
+  const { captured } = budget
+    ? await captureReadyMetadata(fixture, group, [source], host!, budget)
+    : await captureMetadataObservation(fixture, group, [desktopMetadataProfileHash(source)], undefined, 0);
+  if (budget) metadataHostCurrent(fixture, group, host!, budget);
   remainingMs?.();
   assert.equal(captured.children.length, 1,
     'capture one global owner before project selection; every earlier retired owner remains in the lineage');
   const digest = await metadataOnlyRuntimeDigest(fixture.root);
+  if (budget) {
+    await assertMetadataSelectionCurrent(fixture, group, [source], host!, budget);
+    assertOwnedRenderer();
+  }
   remainingMs?.();
   return { captured, source, runtimeDigest: digest };
 }
 
 /** Preserve the full original lineage and correlate both captured scopes with their actual native owners. */
 export async function captureDesktopOpenCodeProjectMetadata(fixture: MetadataFixture, group: number,
-  global: GlobalMetadata) {
-  const sources = [await readDesktopOpenCodeMetadataSource(fixture.root, null),
-    await readDesktopOpenCodeMetadataSource(fixture.root, join(fixture.root, 'workspace'))];
+  global: GlobalMetadata, budget?: MetadataObservationBudget) {
+  const assertCurrent = () => { if (budget) metadataHostCurrent(fixture, group, global.captured.host, budget); };
+  assertCurrent();
+  const source = await readDesktopOpenCodeMetadataSource(fixture.root, null);
+  assertCurrent();
+  const sources = [source, await readDesktopOpenCodeMetadataSource(fixture.root, join(fixture.root, 'workspace'))];
+  assertCurrent();
   assert.deepEqual(sources[0], global.source, 'global selection did not change while project metadata loaded');
   assert.equal(await metadataOnlyRuntimeDigest(fixture.root), global.runtimeDigest,
     'catalog/preflight did not create or alter a Runtime');
-  const { captured } = await captureMetadataObservation(fixture, group, sources.map(desktopMetadataProfileHash), global.captured, 0);
+  assertCurrent();
+  const { captured } = budget
+    ? await captureReadyMetadata(fixture, group, sources, global.captured.host, budget, global.captured)
+    : await captureMetadataObservation(fixture, group, sources.map(desktopMetadataProfileHash), global.captured, 0);
   assert.equal(captured.children.length, 2, 'one observed native owner for each exact captured scope');
   const metadataSources = sources.map(source => ({
     ...source, process: desktopMetadataProcess(captured, desktopMetadataProfileHash(source)),
   }));
   assertDesktopOpenCodeMetadataSources(metadataSources, captured);
+  if (budget) metadataRemaining(budget);
   return { captured, metadataSources };
 }
 

@@ -57,6 +57,9 @@ export function projectRuntimeMember(options: {
             images: attachmentCapabilities.images,
             documents: attachmentCapabilities.documents,
             textFiles: attachmentCapabilities.textFiles,
+            ...(attachmentCapabilities.nativeMedia ? { nativeMedia: {
+              ...attachmentCapabilities.nativeMedia, mimeTypes: [...attachmentCapabilities.nativeMedia.mimeTypes],
+            } } : {}),
           },
         }
       : {}),

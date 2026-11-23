@@ -21,6 +21,7 @@ const BOARD_MCP_MARKERS = [
   '"review_start"',
   '"review_request"',
   '"review_approve"',
+  '"review_complete"',
   '"review_request_changes"',
 ];
 

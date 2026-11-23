@@ -5,6 +5,7 @@ import { readdir, realpath } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { basename, join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { desktopFiniteHeapNodeOptions } from '../lib/desktop-finite-node-options.ts';
 export { projectDesktopHarnessFailure, projectDesktopMixedSettingsFailure } from './desktop-backend-failures.ts';
 
 export interface ProcessIdentity {
@@ -38,6 +39,7 @@ export async function assertDesktopRuntimePins(fixture: {
 /** Preserve explicit TEST admission before even probing the selected renderer port. */
 export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1', 'root must authorize actual pnpm dev:mcp launch');
+  desktopFiniteHeapNodeOptions();
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY;
   assert.ok(emulatedOnly === undefined || emulatedOnly === '1', 'explicit provider-emulation admission');
   if (emulatedOnly === '1') {
@@ -45,7 +47,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
     const controlled = mode === 'process-cold-ui' && process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
       /^\/(?:[^/]+\/)*TEST-[^/]+\/[^\0\r\n]+\.json$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH ?? '') &&
       /^[a-f0-9]{64}$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 ?? '');
-    assert.ok(controlled || ['team-ui', 'task-board-ui', 'task-board-cross-team-ui', 'skills-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
+    assert.ok(controlled || ['team-ui', 'task-board-ui', 'task-board-cross-team-ui', 'skills-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-retained-original-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
       'provider-emulation admits only the original offline controls and exact pinned TEST provider modes');
     if (controlled) {
       assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
@@ -53,7 +55,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
       assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
     }
     // Reject inherited native/scenario selectors before any fixture or model starts.
-    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
+    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|TEST_FINITE_HEAP_(?:1536|1536_UV4)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
     for (const key of Object.keys(process.env))
       if (key.startsWith('LEGACY_DESKTOP_')) assert.ok(allowed.test(key) ||
         mode === 'review-readback-ui' && /^LEGACY_DESKTOP_READBACK_(?:ROOT|RECEIPT_SHA256)$/u.test(key) ||
@@ -64,7 +66,11 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
     (process.platform === 'linux' && process.arch === 'x64' && (linuxModeAllowed || emulatedOnly === '1')),
     'Linux Desktop portability requires an explicitly bounded proof mode');
   if (process.platform === 'linux') {
-    assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');
+    const display = process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '';
+    const loopbackTcp = /^127\.0\.0\.1:(0|[1-9]\d{0,4})$/u.exec(display);
+    // An inherited loopback listener still uses X11's fixed 6000 + display port.
+    assert.ok(/^:\d+$/u.test(display) || loopbackTcp !== null && 6000 + Number(loopbackTcp[1]) <= 65535,
+      'explicit isolated TEST X display');
     assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY, 'explicit TEST display authorization file');
   }
 }
@@ -545,7 +551,8 @@ export async function settledGroupMembers(
  * macOS ps shows a just-exited Node child as "(node)" or "<defunct>" instead of its original
  * command. Authorize TEST process-group cleanup only while the captured leader
  * is still an unreaped zombie owned by this exact harness. A changed live
- * process, PID reuse, or an orphaned group must never pass this guard.
+ * process or orphaned group is refused; separate ps reads are not atomic identity.
+ * Linux admits only "[MainThread] <defunct>" under the same retained-child/birth checks.
  */
 export function isCapturedOriginalNodeZombie(input: {
   expectedIdentity: string;
@@ -557,7 +564,8 @@ export function isCapturedOriginalNodeZombie(input: {
   parentPid: number;
   platform?: NodeJS.Platform;
 }): boolean {
-  if ((input.platform ?? process.platform) !== 'darwin') return false;
+  const platform = input.platform ?? process.platform;
+  if (platform !== 'darwin' && platform !== 'linux') return false;
   if (!Number.isSafeInteger(input.group) || input.group <= 0 || input.childPid !== input.group)
     return false;
   if (
@@ -575,11 +583,12 @@ export function isCapturedOriginalNodeZombie(input: {
   // The original packed app has a different macOS zombie display name than
   // the dev Node wrapper. Bind that exception to its exact captured invocation.
   const originalNode =
-    (observed[2] === '(node)' || observed[2] === '<defunct>') &&
+    (platform === 'linux' ? observed[2] === '[MainThread] <defunct>' :
+      observed[2] === '(node)' || observed[2] === '<defunct>') &&
     /(?:^|\/)node\s+/.test(expected[2]!) &&
     /(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!);
   const originalPackedApp =
-    observed[2] === '(Agent Teams AI)' &&
+    platform === 'darwin' && observed[2] === '(Agent Teams AI)' &&
     /(?:^|\/)Agent Teams AI\.app\/Contents\/MacOS\/Agent Teams AI --remote-debugging-port=9222$/.test(expected[2]!);
   return originalNode || originalPackedApp;
 }

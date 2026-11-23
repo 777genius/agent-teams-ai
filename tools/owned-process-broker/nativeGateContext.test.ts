@@ -4,7 +4,7 @@ import { once } from 'node:events';
 
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 
-import { capturedQueryableWitness } from './nativeGateContext';
+import { capturedGateSentinel, capturedQueryableWitness } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 
 vi.mock('node:child_process', async (original) => {
@@ -37,14 +37,29 @@ const actor = String.raw`
   process.stdout.write('cap', () => process.stdout.write('tured\r\n'));
 `;
 const children: ChildProcess[] = [];
+// Finite original-pipe actor; the inherited stdout tail proves exit is not close.
+const sentinelActor = String.raw`
+  if (process.argv[1] !== 'source-sentinel') process.exit(58);
+  setTimeout(() => process.exit(70), 2000).unref();
+  process.stdin.on('data', () => process.exit(60));
+  process.stdin.on('end', () => {
+    const { spawn } = require('node:child_process');
+    const tail = spawn(process.execPath, ['--eval', 'setTimeout(() => process.exit(0), 100)'],
+      { stdio: ['ignore', 1, 2] });
+    tail.unref();
+    process.exit(0);
+  });
+  process.stdout.write('sentinel\n');
+`;
 
 beforeEach(() => {
   assert.equal(process.env.OWNED_PROCESS_VENDOR_TEST_GO, undefined, 'No ambient vendor admission');
   vi.mocked(spawn).mockReset();
   vi.mocked(spawn).mockImplementation((file, args, options) => {
-    assert.equal(file, 'TEST-closed-witness-actor');
+    assert.ok(file === 'TEST-closed-witness-actor' || file === 'TEST-closed-gate-sentinel');
     assert.ok(Array.isArray(args));
-    const child = childProcess.spawn(process.execPath, ['--input-type=commonjs', '--eval', actor, '--', ...args], options);
+    const source = file === 'TEST-closed-gate-sentinel' ? sentinelActor : actor;
+    const child = childProcess.spawn(process.execPath, ['--input-type=commonjs', '--eval', source, '--', ...args], options);
     children.push(child);
     return child;
   });
@@ -91,5 +106,35 @@ describe('original query witness protocol', () => {
     await assert.rejects(capturedQueryableWitness('TEST-closed-witness-actor', 42, 'fedcba9876543210',
       () => {}, createNativeGateEvents(), 'query-wait-gated'), /Original HANDLE witness unavailable/);
     assert.equal(children[0]!.exitCode, 24);
+  });
+});
+
+describe('original gate sentinel lifetime', () => {
+  it('holds the same original child until EOF and requires child close after exit without replaying cleanup', async () => {
+    const owner = capturedGateSentinel('TEST-closed-gate-sentinel');
+    await owner.ready;
+    assert.deepEqual(vi.mocked(spawn).mock.calls[0]?.[1], ['source-sentinel']);
+    assert.deepEqual(vi.mocked(spawn).mock.calls[0]?.[2]?.stdio, ['pipe', 'pipe', 'pipe']);
+    assert.equal(owner.process.exitCode, null);
+    const exited = once(owner.process, 'exit');
+    let confirmed = false;
+    const closing = owner.close();
+    assert.equal(owner.close(), closing, 'original cleanup cannot be replayed');
+    void closing.then(() => { confirmed = true; });
+    await exited;
+    assert.equal(owner.process.exitCode, 0);
+    assert.equal(confirmed, false, 'original exit alone is insufficient while stdout remains open');
+    await closing;
+    assert.equal(confirmed, true);
+  });
+
+  it('does not qualify an unrelated early exit or protocol byte as owned cleanup', async () => {
+    const owner = capturedGateSentinel('TEST-closed-gate-sentinel');
+    await owner.ready;
+    const exited = once(owner.process, 'exit');
+    owner.process.stdin.write('X');
+    await exited;
+    assert.equal(owner.process.exitCode, 60);
+    await assert.rejects(owner.close(), /Original gate sentinel remains alive until owned EOF/);
   });
 });

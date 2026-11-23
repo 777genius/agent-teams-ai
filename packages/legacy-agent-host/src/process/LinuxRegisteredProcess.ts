@@ -1,6 +1,6 @@
 import { ChildProcess } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, openSync, realpathSync } from 'node:fs';
+import { digestOpenExecutable } from './digestOpenExecutable.js';
 import { loadProcessNativeArtifact } from './loadProcessNativeArtifact.js';
 import { createLinuxWarmProcess, linuxWarmIdentity } from './LinuxWarmProcess.js';
 import { runtimeDigest } from '../runtime/identity.js';
@@ -139,7 +139,7 @@ export function createQualifiedLinuxProcessApi(artifact: {
       try {
         const opened = fstatSync(file, { bigint: true });
         if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino) return hold();
-        digest = createHash('sha256').update(readFileSync(file)).digest('hex');
+        digest = digestOpenExecutable(file);
       } finally { closeSync(file); }
       const after = lstatSync(executable.path, { bigint: true }), measuredAfter = measure();
       if (digest !== executable.sha256 || before.dev !== after.dev || before.ino !== after.ino ||

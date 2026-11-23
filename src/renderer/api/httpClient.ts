@@ -1,9 +1,5 @@
 /**
- * HTTP-based implementation of ElectronAPI for browser mode.
- *
- * Replaces Electron IPC with fetch() for request/response and
- * EventSource (SSE) for real-time events. Allows the renderer
- * to run in a regular browser connected to an HTTP server.
+ * Browser-mode ElectronAPI using HTTP requests and server-sent events.
  */
 import { createAgentBackendHttpClient } from '@features/agent-backend/renderer';
 import {
@@ -33,6 +29,7 @@ import {
   type UpsertOrganizationRelationRequest,
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
+import { createReviewFlowHttpApi } from '@features/review-flow/renderer/http';
 import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
@@ -241,8 +238,11 @@ export class HttpAPIClient implements ElectronAPI {
       () => this.baseUrl,
       (route, request) => this.post<void>(route, request)
     ),
-    (route, request) => this.post(route, request)
+    (route, request) => this.post(route, request), (route, request) => this.post(route, request)
   );
+
+  reviewFlow = createReviewFlowHttpApi();
+
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),

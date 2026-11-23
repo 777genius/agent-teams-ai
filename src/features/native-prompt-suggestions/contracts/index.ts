@@ -1,5 +1,6 @@
 /** Browser-safe projection only. Native IDs and provider SDK handles stay in Host. */
-export type NativeNextPromptProvider = 'claude' | 'codex';
+export const NATIVE_NEXT_PROMPT_PROVIDERS = ['claude', 'codex'] as const;
+export type NativeNextPromptProvider = (typeof NATIVE_NEXT_PROMPT_PROVIDERS)[number];
 
 export interface NativeNextPromptIdentity {
   /** An opaque owner-qualified UI handle, never a filesystem path. */

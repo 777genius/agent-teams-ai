@@ -59,7 +59,7 @@ function comment(value: unknown): TaskComment {
   };
 }
 const taskStates = ['pending', 'in_progress', 'completed', 'deleted'] as const;
-const reviewStates = ['none', 'review', 'needsFix', 'approved'] as const;
+const reviewStates = ['none', 'review', 'needsFix', 'reviewed', 'approved'] as const;
 
 function workInterval(value: unknown): TaskWorkInterval {
   const source = row(value);
@@ -96,6 +96,8 @@ function workflowEvent(value: unknown): TaskHistoryEvent {
       return { ...base, type: 'review_requested', from: choice(source.from, reviewStates),
         to: choice(source.to, ['review'] as const),
         ...(source.reviewer === undefined ? {} : { reviewer: text(source.reviewer) }),
+        ...(source.stage === undefined ? {} : { stage: choice(source.stage, ['lead_signoff'] as const) }),
+        ...(source.afterReviewRequestId === undefined ? {} : { afterReviewRequestId: text(source.afterReviewRequestId) }),
         ...(source.note === undefined ? {} : { note: text(source.note) }) };
     case 'review_changes_requested':
       return { ...base, type: 'review_changes_requested', from: choice(source.from, reviewStates),
@@ -105,6 +107,16 @@ function workflowEvent(value: unknown): TaskHistoryEvent {
       return { ...base, type: 'review_approved', from: choice(source.from, reviewStates),
         to: choice(source.to, ['approved'] as const),
         ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_completed':
+      return { ...base, type: 'review_completed', from: choice(source.from, ['review'] as const),
+        to: choice(source.to, ['reviewed'] as const), reviewRequestId: text(source.reviewRequestId),
+        ...(source.note === undefined ? {} : { note: text(source.note) }),
+        ...(source.leadSignoffSkipped === undefined ? {} : {
+          leadSignoffSkipped: choice(source.leadSignoffSkipped, ['actor_is_lead', 'work_by_lead', 'no_lead'] as const),
+        }) };
+    case 'human_approved':
+      return { ...base, type: 'human_approved', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['approved'] as const) };
     case 'review_disapproved':
       return { ...base, type: 'review_disapproved',
         from: choice(source.from, ['approved'] as const),
@@ -235,6 +247,10 @@ function kanban(value: unknown, teamName: string): KanbanState {
       ...strings(entry, ['errorDescription']),
     };
   }
+  if (source.reviewFlow !== undefined) {
+    result.reviewFlow = choice(source.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const);
+    if (source.reviewFlowPrompt !== undefined) result.reviewFlowPrompt = text(source.reviewFlowPrompt);
+  } else if (source.reviewFlowPrompt !== undefined) throw new Error('Invalid review flow override');
   if (source.columnOrder !== undefined) {
     result.columnOrder = {};
     for (const [column, ids] of Object.entries(row(source.columnOrder))) {

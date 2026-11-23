@@ -6031,4 +6031,219 @@ describe('useRuntimeProviderManagement', () => {
 
     expect(clearProjectDefaultModel).not.toHaveBeenCalled();
   });
+
+  it('clears loading for the current silent refresh and refuses a stale response', async () => {
+    let resolve!: (response: RuntimeProviderManagementViewResponse) => void;
+    const first = new Promise<RuntimeProviderManagementViewResponse>((done) => {
+      resolve = done;
+    });
+    const currentView = { ...createRuntimeView(), defaultModel: 'TEST-current-silent-model' };
+    let calls = 0;
+    const loadView = vi.fn(() => {
+      calls++;
+      return calls === 1
+        ? first
+        : Promise.resolve({
+            schemaVersion: 1 as const,
+            runtimeId: 'opencode' as const,
+            view: currentView,
+          });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
+        },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false })
+      );
+    });
+    let pending!: Promise<boolean>;
+    await act(async () => {
+      pending = actions!.refresh();
+    });
+    expect(state?.loading).toBe(true);
+    await act(async () => {
+      await actions!.refreshDirectory();
+    });
+    expect(loadView).toHaveBeenCalledTimes(2);
+    expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
+    expect(state?.error).toBeNull();
+    expect(state?.loading).toBe(false);
+    await act(async () => {
+      resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: { ...createRuntimeView(), defaultModel: 'TEST-stale-model' },
+      });
+      expect(await pending).toBe(false);
+    });
+    expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
+    expect(state?.error).toBeNull();
+    // The stale completion cannot restore the loading state cleared by the current request.
+    expect(state?.loading).toBe(false);
+    expect(loadView).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['response-error', 'rejection'] as const)(
+    'clears pending loading when the current silent refresh ends with %s',
+    async (outcome) => {
+      let resolveFirst!: (response: RuntimeProviderManagementViewResponse) => void;
+      const first = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
+        resolveFirst = resolve;
+      });
+      const failure = new Error('TEST-current-silent-view-error');
+      const failedResponse: RuntimeProviderManagementViewResponse = {
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: { code: 'runtime-misconfigured', message: failure.message, recoverable: true },
+      };
+      let calls = 0;
+      const loadView = vi.fn(() => {
+        calls++;
+        if (calls === 1) return first;
+        return outcome === 'rejection' ? Promise.reject(failure) : Promise.resolve(failedResponse);
+      });
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            loadView,
+            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
+          },
+        } as unknown as ElectronAPI,
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false })
+        );
+      });
+      let pendingFirst!: Promise<boolean>;
+      await act(async () => {
+        pendingFirst = actions!.refresh();
+      });
+      expect(state?.loading).toBe(true);
+      await act(async () => {
+        await actions!.refreshDirectory();
+      });
+      expect(loadView).toHaveBeenCalledTimes(2);
+      expect(state?.loading).toBe(false);
+      expect(state?.view).toBeNull();
+      expect(state?.error).toBe(failure.message);
+      expect(state?.errorDiagnostics).toBeNull();
+      await act(async () => {
+        resolveFirst({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          view: { ...createRuntimeView(), defaultModel: 'TEST-stale-after-silent-error' },
+        });
+        expect(await pendingFirst).toBe(false);
+      });
+      expect(state?.loading).toBe(false);
+      expect(state?.view).toBeNull();
+      expect(state?.error).toBe(failure.message);
+      expect(loadView).toHaveBeenCalledTimes(2);
+    }
+  );
+
+  it.each(['newer-request', 'unmounted'] as const)(
+    'keeps a silent view completion inert after %s',
+    async (outcome) => {
+      let resolveFirst!: (response: RuntimeProviderManagementViewResponse) => void;
+      let resolveSilent!: (response: RuntimeProviderManagementViewResponse) => void;
+      let resolveLatest!: (response: RuntimeProviderManagementViewResponse) => void;
+      const first = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
+        resolveFirst = resolve;
+      });
+      const silent = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
+        resolveSilent = resolve;
+      });
+      const latest = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
+        resolveLatest = resolve;
+      });
+      let calls = 0;
+      const loadView = vi.fn(() => {
+        calls++;
+        return calls === 1 ? first : calls === 2 ? silent : latest;
+      });
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            loadView,
+            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
+          },
+        } as unknown as ElectronAPI,
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false })
+        );
+      });
+      let pendingFirst!: Promise<boolean>;
+      let pendingSilent!: Promise<void>;
+      let pendingLatest!: Promise<boolean>;
+      await act(async () => {
+        pendingFirst = actions!.refresh();
+      });
+      await act(async () => {
+        pendingSilent = actions!.refreshDirectory();
+      });
+      expect(state?.loading).toBe(true);
+      const beforeUnmount = state;
+      if (outcome === 'newer-request') {
+        await act(async () => {
+          pendingLatest = actions!.refresh();
+        });
+      } else {
+        await act(async () => {
+          root.unmount();
+        });
+      }
+      await act(async () => {
+        resolveSilent({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          view: { ...createRuntimeView(), defaultModel: 'TEST-refused-silent-view' },
+        });
+        await pendingSilent;
+      });
+      expect(loadView).toHaveBeenCalledTimes(outcome === 'newer-request' ? 3 : 2);
+      expect(state?.loading).toBe(true);
+      expect(state?.view).toBeNull();
+      if (outcome === 'unmounted') expect(state).toBe(beforeUnmount);
+      await act(async () => {
+        resolveFirst({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          view: createRuntimeView(),
+        });
+        expect(await pendingFirst).toBe(false);
+      });
+      expect(state?.loading).toBe(true);
+      if (outcome === 'newer-request') {
+        await act(async () => {
+          resolveLatest({
+            schemaVersion: 1,
+            runtimeId: 'opencode',
+            view: { ...createRuntimeView(), defaultModel: 'TEST-latest-view' },
+          });
+          expect(await pendingLatest).toBe(true);
+        });
+        expect(state?.loading).toBe(false);
+        expect(state?.view?.defaultModel).toBe('TEST-latest-view');
+      } else {
+        expect(state).toBe(beforeUnmount);
+      }
+      expect(loadView).toHaveBeenCalledTimes(outcome === 'newer-request' ? 3 : 2);
+    }
+  );
 });

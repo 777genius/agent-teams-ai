@@ -1,0 +1,213 @@
+{
+  "schema": "original-030-D1-complete-workspace-and-typed-lint-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826474,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "job": {
+    "id": 135167682454,
+    "name": "Offline Host Desktop (linux-x64, team)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:16:46Z",
+    "completed_at": "2026-11-18T23:37:02Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682454",
+    "runner_name": "GitHub Actions 1000395369"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682454,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 23:42:43 UTC",
+    "bytes": 2931057,
+    "sha256": "9fb5ab0e222844ca2ec42bdb396bb1193bd883461487d53901b6e8fed7c12fa6",
+    "computedGitBlobSha": "82ed4e808e6bbb7e0c0b52d6c31959475ed4177f",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682454-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "82ed4e808e6bbb7e0c0b52d6c31959475ed4177f",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 33908.79583",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 251.36951",
+    "ℹ tests 202",
+    "ℹ pass 202",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 89362.616946",
+    "ℹ tests 134",
+    "ℹ pass 132",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 2",
+    "ℹ todo 0",
+    "ℹ duration_ms 17024.253253"
+  ],
+  "consolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-Q7rnTk/desktop-backend-receipt.json"
+    }
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14482003211,
+    "bytes": 669167,
+    "sha256": "9d50f9839157e5378baae9979af2769aa48ea6d0f80734b2fcd977c19592c814",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scopeLimit": "Original source030 only. Common unit counts repeat across jobs and are not summed as unique tests. No forthcoming candidate qualification.",
+  "jobLogEndpointRetired": true,
+  "originalSuccessfulSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:17:23Z",
+      "completed_at": "2026-11-18T23:17:23Z"
+    },
+    {
+      "name": "Build existing Desktop prerequisites and verify admission",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-18T23:18:52Z",
+      "completed_at": "2026-11-18T23:19:33Z"
+    },
+    {
+      "name": "Verify original Runtime and Team conversation contracts",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 11,
+      "started_at": "2026-11-18T23:19:33Z",
+      "completed_at": "2026-11-18T23:21:20Z"
+    },
+    {
+      "name": "Verify complete workspace types and original typed lint scopes",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12,
+      "started_at": "2026-11-18T23:21:20Z",
+      "completed_at": "2026-11-18T23:35:12Z"
+    },
+    {
+      "name": "Exercise ordinary Team controls and renderer reload",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 15,
+      "started_at": "2026-11-18T23:35:15Z",
+      "completed_at": "2026-11-18T23:36:55Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-18T23:36:55Z",
+      "completed_at": "2026-11-18T23:36:56Z"
+    }
+  ],
+  "fullGate": {
+    "qualified": true,
+    "gateStep": {
+      "name": "Verify complete workspace types and original typed lint scopes",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12,
+      "started_at": "2026-11-18T23:21:20Z",
+      "completed_at": "2026-11-18T23:35:12Z"
+    },
+    "canonicalTypecheckCount": 12,
+    "additionalFeatureTypecheckCount": 1,
+    "canonicalScopes": [
+      "root application",
+      "scripts/tsconfig/tsconfig.updater-e2e.json",
+      "scripts/tsconfig/tsconfig.release-tooling.json",
+      "scripts/tsconfig/tsconfig.sentry-e2e.json",
+      "scripts/tsconfig/tsconfig.sentry-sdk-e2e.json",
+      "scripts/tsconfig/tsconfig.sentry-sdk-preload.json",
+      "scripts/tsconfig/tsconfig.sentry-sdk-renderer.json",
+      "scripts/tsconfig/tsconfig.desktop-e2e.json",
+      "tsconfig.legacy-agent-host-scripts.json",
+      "legacy-agent-host/tsconfig.test.json",
+      "agent-teams-mcp source",
+      "agent-teams-mcp/tsconfig.test.json"
+    ],
+    "additionalFeatureScope": "test/features/agent-backend/tsconfig.json",
+    "directFeatureCommandQualification": "The original set -euo pipefail step printed the direct feature tsc after pnpm typecheck:workspace; subsequent typed lint commands ran and step12 completed success. This is not inferred from the fast-lint prefix.",
+    "typedLint": [
+      {
+        "scope": "src/main src/preload src/shared src/types",
+        "errors": 0,
+        "warnings": 3361
+      },
+      {
+        "scope": "src/renderer",
+        "errors": 0,
+        "warnings": 1464
+      },
+      {
+        "scope": "src/features",
+        "errors": 0,
+        "warnings": 1554
+      },
+      {
+        "scope": "agent-teams-mcp src/**/*.ts",
+        "errors": 0,
+        "warnings": 4
+      }
+    ],
+    "fastLintPrefix": {
+      "errors": 0,
+      "warnings": 14,
+      "separateFromFullTypedGate": true
+    }
+  },
+  "gateCommandEvidence": [
+    "pnpm typecheck:workspace",
+    "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+    "pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main",
+    "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer",
+    "pnpm lint:ci:files src/features --cache-location .eslintcache-features",
+    "pnpm lint:mcp",
+    "✖ 14 problems (0 errors, 14 warnings)",
+    "$ pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+    "$ node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json",
+    "$ node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
+    "$ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
+    "$ tsc --noEmit",
+    "$ tsc --noEmit -p tsconfig.test.json",
+    "$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/main src/preload src/shared src/types --cache-location .eslintcache-main",
+    "✖ 3361 problems (0 errors, 3361 warnings)",
+    "$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/renderer --cache-location .eslintcache-renderer",
+    "✖ 1464 problems (0 errors, 1464 warnings)",
+    "$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/features --cache-location .eslintcache-features",
+    "✖ 1554 problems (0 errors, 1554 warnings)",
+    "$ pnpm --filter agent-teams-mcp lint",
+    "$ eslint \"src/**/*.ts\"",
+    "✖ 4 problems (0 errors, 4 warnings)"
+  ],
+  "uiQualification": "Original ordinary Team controls and renderer reload plus exact-source/receipt/cleanup verifier succeeded. This does not qualify F1 cross-team ReviewFlow or its three cold owner-routing epochs.",
+  "verificationLimit": "Artifact metadata from original upload log; no extra receipt download or visual inspection. Existing warnings remain visible."
+}

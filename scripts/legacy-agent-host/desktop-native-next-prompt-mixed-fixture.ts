@@ -310,7 +310,9 @@ export async function prepareDesktopNativeNextPromptMixedFixture(
   }
   const configPath = join(base.root, 'claude/agent-teams-config.json');
   const config = row(JSON.parse(await readFile(configPath, 'utf8')));
-  row(config.general).nativeNextPromptSuggestionsEnabled = true;
+  const connections = (config.providerConnections ??= {}) as Record<string, unknown>;
+  for (const provider of ['anthropic', 'codex'])
+    row((connections[provider] ??= {})).nativeNextPromptSuggestionsEnabled = true;
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
   const profileBytes = JSON.stringify(profile);
   await writeFile(base.profilePath, profileBytes, { mode: 0o600 });

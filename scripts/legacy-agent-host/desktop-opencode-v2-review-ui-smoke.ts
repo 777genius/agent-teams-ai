@@ -82,11 +82,20 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   await cdp.send('Input.insertText', { text: V2_REVIEW_BOOTSTRAP });
   await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===${desktopJsLiteral(V2_REVIEW_BOOTSTRAP)}`,
     'one deliberate original bootstrap');
-  await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(node=>node.textContent.trim()==='Launch team'&&!node.disabled)`,
-    'original captured V2 readiness permits Launch', 120_000);
+  const preflightDeadline = Date.now() + 120_000;
+  const remainingPreflightMs = () => {
+    options.assertOwnedRenderer();
+    const remaining = preflightDeadline - Date.now();
+    assert.ok(remaining > 0, 'Original V2 preflight observation deadline expired');
+    return remaining;
+  };
+  const observePreflight = () => ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(node=>node.textContent.trim()==='Launch team'&&!node.disabled)`,
+    'original captured V2 readiness permits Launch', remainingPreflightMs(), Boolean, { deadline: preflightDeadline });
+  await observePreflight();
   assert.ok(model.probes.length > 0 && model.probes.every(row => row.tools === 0));
   assert.equal(model.observations.length, 0, 'preflight never dispatches the business prompt');
-  const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.group, globalMetadata);
+  const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.group, globalMetadata,
+    { remainingMs: remainingPreflightMs, assertOwnedRenderer: options.assertOwnedRenderer, beforePhysical: observePreflight });
   let metadata = selected.captured; proof.metadataSources = selected.metadataSources;
   proof.originalMetadataBeforeLaunch = metadata;
   await captureReadiness(cdp, fixture.handleId, proof, options.assertOwnedRenderer, 'before-original-submit');

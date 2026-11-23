@@ -17,6 +17,7 @@ import {
   createCapturedHostClient,
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
+import { captureProviderManagement } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import { capturedHostProfileDigest } from '../../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
 import * as nodeLaunch from '../../../src/main/utils/electronNodeLaunch';
 import * as linuxLaunch from '../../../src/main/utils/linuxChildLaunch';
@@ -147,6 +148,42 @@ function client(profile: SelectedHostProfile, owner?: HostCustodyOwner, remainin
   clients.push(instance);
   return instance;
 }
+
+it('correlates the original captured catalog UUID across real TEST stdio without new custody', async () => {
+  const records: { requestIdHash: string; phase: string; inputKind: string }[] = [];
+  const remove = addLogSink(entry => {
+    if (entry.namespace === 'Host:OpenCodeCatalog') records.push(entry.args[1] as typeof records[number]);
+  });
+  try {
+    const transport = client(await fixture(`
+      import { createHostServer } from ${JSON.stringify(serverUrl)};
+      import { createOpenCodeCatalogDiagnostic } from ${JSON.stringify(new URL('./adapters/providers/createClaudeCloseDiagnostic.js', serverUrl).href)};
+      import { createProviderManagementMethods } from ${JSON.stringify(new URL('./composition/createProviderManagementMethods.js', serverUrl).href)};
+      const methods = createProviderManagementMethods({ assertTargetAvailable() {}, catalog(raw, requestId) {
+        const observe = createOpenCodeCatalogDiagnostic(requestId, raw);
+        for (const phase of ['queued', 'started', 'returned']) observe(phase);
+        return { requestId, params: raw };
+      } }, () => false);
+      const server = createHostServer({ input: process.stdin, output: process.stdout,
+        buildId: 'TEST-host-v1', methods: { 'management.catalog': methods['management.catalog'] } });
+      void server.closed.then(() => process.exit(0));
+    `, 'raw'));
+    const target = captureProviderManagement({ targetId: 'TEST-target', profileId: 'TEST-captured-source',
+      configRevision: 'TEST-captured-revision', client: transport, start: () => transport.start(),
+      ownerAvailable: () => true, foregroundCurrent: () => true });
+    const result = await target.request('catalog', { providerId: 'TEST-provider', includeModels: true }) as {
+      ok: boolean; value: { requestId: string; params: unknown };
+    };
+    await transport.shutdown();
+    expect(result.ok).toBe(true);
+    expect(result.value.requestId).toMatch(/^[a-f0-9-]{36}$/);
+    expect(result.value.params).toEqual({ providerId: 'TEST-provider', includeModels: true,
+      profileId: 'TEST-captured-source', configRevision: 'TEST-captured-revision' });
+    const hash = createHash('sha256').update(result.value.requestId, 'utf8').digest('hex');
+    expect(records.map(record => record.phase)).toEqual(['main-admitted', 'queued', 'started', 'returned']);
+    expect(records.every(record => record.requestIdHash === hash && record.inputKind === 'explicit-provider')).toBe(true);
+  } finally { remove(); }
+});
 
 describe('captured legacy host client over real subprocess stdio', () => {
 
@@ -1056,7 +1093,29 @@ describe('captured native prompt notifications', () => {
       server.notifyData('runtime.prompt-suggestion.updated', params); return 'done';
     } },
     enabled: { lane: 'control', handle: () => process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED },
+    providers: { lane: 'control', handle: () => ({
+      selected: process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS,
+      legacy: process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED,
+    }) },
   `;
+
+  it.each([[], ['claude'], ['codex'], ['claude', 'codex']].map(providers => ({ providers })))(
+    'captures provider list $providers before mutation and overrides both profile flags', async ({ providers: selectedProviders }) => {
+      const selected = await fixture(methods);
+      const profile = { ...selected, env: { ...selected.env,
+        AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: '1', AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS: 'claude,codex' } };
+      const providers = [...selectedProviders] as ('claude' | 'codex')[];
+      const options = { nativeNextPromptEnabled: true, nativeNextPromptProviders: providers };
+      const transport = new CapturedHostClient(profile, undefined, undefined, options);
+      clients.push(transport);
+      providers.splice(0, providers.length, 'claude');
+      await transport.start();
+      expect(await transport.request('providers', undefined, { control: true })).toEqual({
+        selected: selectedProviders.join(','), legacy: '0',
+      });
+      expect((await transport.shutdown()).childExit).toBe('confirmed');
+    }
+  );
 
   it.each([undefined, false, true] as const)(
     'captures enablement %s and publisher before caller mutation or Host startup', async enabled => {

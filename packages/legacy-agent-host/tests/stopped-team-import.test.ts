@@ -396,6 +396,77 @@ test('complete detached snapshot preserves policy/content/blob/archive census wi
   assert.deepEqual(readFileSync(f.path('tasks', 'TEST-a.json')), before);
 });
 
+test('canonical Main source artifacts stay censused without transferring ownership or replay state', async (t) => {
+  const f = fixture(t);
+  const excluded = [
+    '.agent-teams-owner.json',
+    '.team-runtime-recovery/state.json',
+    'cache/transcript-affinity/TEST%2Fworkspace.json',
+  ];
+  const marker = 'TEST-original-private-owner-runtime-cache';
+  for (const path of excluded) {
+    mkdirSync(join(f.path('team', path), '..'), { recursive: true });
+    writeFileSync(f.path('team', path), JSON.stringify({ original: marker }));
+  }
+  const journal = 'comment-notification-journal.json.sqlite-fallback-replica';
+  const journalBytes = JSON.stringify({
+    schemaVersion: 1,
+    state: 'clean',
+    updatedAt: '2026-11-19T11:37:00.000Z',
+    snapshot: { initialized: true, entries: [] },
+  });
+  writeFileSync(f.path('team', journal), journalBytes);
+  const snapshot = await exportStoppedTeam(f.source);
+  for (const path of excluded) {
+    const file = snapshot.files.find((entry) => entry.category === 'team' && entry.path === path)!;
+    assert.equal(file.disposition, 'excluded');
+    assert.equal(file.base64, undefined);
+    assert.ok(file.size > 0 && /^[a-f0-9]{64}$/.test(file.sha256));
+  }
+  assert.equal(JSON.stringify(snapshot).includes(marker), false);
+  const history = snapshot.files.find(
+    (entry) => entry.category === 'team' && entry.path === journal
+  )!;
+  assert.equal(history.disposition, 'archive');
+  assert.equal(Buffer.from(history.base64!, 'base64').toString(), journalBytes);
+  assert.deepEqual(validateStoppedSnapshot(snapshot), snapshot);
+  const result = f.importer.import('TEST-canonical-source-import', requestFor(snapshot), snapshot);
+  assert.equal(result.phase, 'published');
+  for (const path of [...excluded, journal])
+    assert.equal(existsSync(join(f.destination, 'teams/TEST-imported', path)), false);
+  assert.equal(
+    readFileSync(
+      join(f.destination, 'teams/TEST-imported/.host-owner/import/archive/team', journal),
+      'utf8'
+    ),
+    journalBytes
+  );
+  const state = JSON.parse(
+    readFileSync(join(f.destination, 'teams/TEST-imported/.host-owner/state.json'), 'utf8')
+  );
+  assert.equal(state.runtimeNeverLaunched, true);
+  assert.equal(state.runtimeCaptures, undefined);
+});
+
+test('canonical Main artifact exceptions keep neighbouring unknown paths refused', async (t) => {
+  for (const path of [
+    '.agent-teams-owner.json.extra',
+    '.team-runtime-recovery/other.json',
+    'cache/other.json',
+    'cache/transcript-affinity/nested/TEST.json',
+    'cache/transcript-affinity/raw space.json',
+    'cache/transcript-affinity/%ZZ.json',
+    'cache/transcript-affinity/TEST%2fworkspace.json',
+    'comment-notification-journal.json.sqlite-fallback-replica.extra',
+  ]) {
+    const f = fixture(t);
+    mkdirSync(join(f.path('team', path), '..'), { recursive: true });
+    writeFileSync(f.path('team', path), '{}');
+    await assert.rejects(exportStoppedTeam(f.source), { code: 'hold' }, path);
+    assert.deepEqual(readdirSync(f.destination), []);
+  }
+});
+
 test('active/UNKNOWN closure, source changes/corrupt bytes, missing required blob and caps refuse before destination publication', async (t) => {
   for (const condition of [
     'active',

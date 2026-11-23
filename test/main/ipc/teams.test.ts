@@ -1,4 +1,9 @@
 import { TeamCreationRefusal } from '@features/agent-backend/contracts';
+import {
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
+} from '@features/review-flow/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
@@ -381,6 +386,9 @@ const TEAM_HANDLER_KEYS = [
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -579,6 +587,7 @@ describe('ipc teams handlers', () => {
     createTask: vi.fn(() => resolved({ id: '1', subject: 'Test', status: 'pending' })),
     requestReview: vi.fn(() => resolvedUndefined()),
     updateKanban: vi.fn(() => resolvedUndefined()),
+    setReviewFlowSettings: vi.fn(() => resolvedUndefined()),
     updateKanbanColumnOrder: vi.fn(() => resolvedUndefined()),
     updateTaskStatus: vi.fn(() => resolvedUndefined()),
     startTask: vi.fn(() => resolvedUndefined()),

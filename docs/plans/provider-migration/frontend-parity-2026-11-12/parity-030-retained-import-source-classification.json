@@ -1,0 +1,160 @@
+{
+  "schema": "original-030-retained-import-bounded-source-classification-v1",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826474,
+  "jobId": 135167682392,
+  "readOnly": true,
+  "sourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-original-ui.ts",
+      "bytes": 14348,
+      "sha256": "e31af31d78273d9eda133554a67cf907849524c1acce4148494fd79a6a59d932",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 45897,
+      "sha256": "e84a189178a440aa57137ce2213a425d4b2231d78f708afe07501b9ba121d85d",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-original-fixture.ts",
+      "bytes": 7735,
+      "sha256": "f457ec8ac3de7f27d5cbb0c5a6071dc4f8c76859c246abc13473418e53329e20",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/stoppedTeamLaunch.ts",
+      "bytes": 11215,
+      "sha256": "6dc7e93a714d92d40e4cb914e0e1c77614de8a98a5c20ce553e97046be51dc45",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+      "bytes": 6348,
+      "sha256": "db06686931695fc352f4a4826d26601a6c8c817c0db230bf25ecd8d7cbc0c9ab",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts",
+      "bytes": 2132,
+      "sha256": "9e827aed5366c9467d44333dc333df4679a98f79613d385b7caa03f26c98c8d1",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+      "bytes": 13314,
+      "sha256": "57557c18e1cc5f85ef54cc2153f2cd76f50b91af52e7a60f2cd04849e2b84057",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts",
+      "bytes": 18220,
+      "sha256": "a760d8b0b73409b29fd9e5ca9c3203223b2ca8df3809b82a08753b63c71cf244",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/stopped-team-import/FileStoppedSnapshotResolver.ts",
+      "bytes": 4987,
+      "sha256": "696a147f4c8e69de9e3dbf3457a4613cf788afe1c136976569fb5cf8c8a67284",
+      "matchesOriginalReceiptSourcePin": true
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "bytes": 13120,
+      "sha256": "884a2de9e9bdb6e42f80579b65d5ddfe6e60e2b3d0c921d41cea686671fc7939",
+      "gitBlobSha": "0387d24830f45fa722b2e71765fdfde4c9a98f0d",
+      "immutableRef": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "exactSourceReadback": true,
+      "originalReceiptSourcePin": false
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "bytes": 4761,
+      "sha256": "d0743a080503a79ab8726abefa69cf665284cd7b2247bf36a0f4a7775d2df0cf",
+      "gitBlobSha": "91c3ad1a90cbdc1da7e08bdf9d9d63121548f50d",
+      "immutableRef": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "exactSourceReadback": true,
+      "originalReceiptSourcePin": false
+    }
+  ],
+  "originalEvidence": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682392-evidence.json",
+    "bytes": 59523,
+    "sha256": "98cf8fc7f736495407cca652bd2f2aef8d0a345639633b7da38fa7ff1ab28639",
+    "computedGitBlobSha": "5fac62a609226f601051271adcd6b65a29baec0d",
+    "publishedBlobSha": "5fac62a609226f601051271adcd6b65a29baec0d",
+    "exactReadback": true
+  },
+  "actualDiagnostic": {
+    "time": "2026-11-18T23:38:23.998Z",
+    "namespace": "StoppedTeamImport",
+    "source": "application",
+    "phase": "prepare",
+    "category": "held",
+    "outcome": "not-dispatched"
+  },
+  "awaitedPredicate": "document.body.innerText.includes('Use the original runtime?')",
+  "originalReadWait": {
+    "timeoutMs": 30000,
+    "firstCheckAtMs": 1795045103944,
+    "deadlineMs": 1795045133944,
+    "lastCheckAtMs": 1795045134005,
+    "ownerStarted": 192,
+    "ownerResolved": 192,
+    "preparationStarted": 0,
+    "preparationResolved": 0,
+    "readsStarted": 192,
+    "readsResolved": 192,
+    "postReadLate": 0,
+    "contextRetries": 0,
+    "phase": "other",
+    "boundary": "pause",
+    "cutoff": "loop"
+  },
+  "sourceInterpretation": {
+    "harness": "After exactly one detail Launch click, the original wait requires the explicit original-runtime question. Its existing 30-second read-only wait expired after 192 resolved reads. The explicit runtime choice/bootstrap/turn/reply/Stop proof was not reached.",
+    "uiBranch": "stoppedTeamLaunchSelection prepares the stopped import. A held/not-dispatched result opens the observed Stopped Team import held confirmation and awaits user choice; the harness never clicked Retry. The explicit original-runtime offer requires native-custody-unverified/not-dispatched and a retained-runtime callback. Generic held cannot authorize this branch.",
+    "application": "Phase prepare is set after initial source capture, original request guard, target capture, receipt list/lookup and receipt-source checks. No existing receipt plus action prepare enters prepareStoppedLegacyImport; effect remains false until the later publish-guard succeeds.",
+    "prepareBoundary": "Preparation includes source/target checks, fenced stopped snapshot export, then immutable snapshot staging. The exact throwing sub-boundary is not present in the original private diagnostic.",
+    "category": "The diagnostic maps own reason/code/name hold or held to held. Export and snapshot resolution have multiple TeamOwnerError hold paths. held alone does not identify which occurred. prepareStoppedLegacyImport remembers LegacyStoppedImportHold from describe/fenced and rethrows that original typed error instead of the generic export wrapper error.",
+    "fixture": "The original source seeds an archive with an unqualified legacy session and without native stop-release records. The expected explicit choice still requires the typed native-custody-unverified result; fixture intent alone cannot establish where the actual preparation failed.",
+    "causeLimit": "Other routing-unavailable diagnostics were observed, but this import reached prepare and startup discovery was ready. They do not establish the source of the import refusal. No causal source defect is established by the bounded artifact and source review."
+  },
+  "postFailureDialogSample": [
+    {
+      "text": "Stopped Team import held\n\nRetry the original detached import? The legacy Team will remain unchanged.\n\nClose\nRetry original import",
+      "buttons": [
+        {
+          "text": "Close",
+          "disabled": false,
+          "x": 627.9375,
+          "y": 473,
+          "width": 69.796875,
+          "height": 38
+        },
+        {
+          "text": "Retry original import",
+          "disabled": false,
+          "x": 709.734375,
+          "y": 473,
+          "width": 157.265625,
+          "height": 38
+        }
+      ]
+    }
+  ],
+  "observationLimits": [
+    "The retained partial dialog sample is later, not atomic with the failed read.",
+    "The terminal receipt does not contain the exact inner preparation exception or source-owner census.",
+    "The loop deadline and returned UI observation are separate from a permission to retry or extend the action."
+  ],
+  "cleanup": {
+    "appExitCode": 0,
+    "remaining": [],
+    "testPeersAbsent": true,
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null
+  },
+  "decision": "Preserve original failure and uncertainty. No source fix, rerun, replay, deadline increase, authority bypass, or permission change follows from this evidence. Original artifact/log endpoints remain permanently retired."
+}

@@ -1,3 +1,4 @@
+import { readOriginalRuntimeScope } from '@main/services/runtime/OriginalRuntimeScope';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
@@ -245,6 +246,8 @@ let cacheGeneration = 0;
 export class ClaudeBinaryResolver {
   /** Native provider discovery must not reuse the configured orchestrator or its cache. */
   static async resolveNative(): Promise<string | null> {
+    const original = readOriginalRuntimeScope();
+    if (original) return original.nativeClaudeBinaryPath;
     const override = getConfiguredRuntimeOverrideRaw('claude');
     const pathEnv = buildMergedCliPath(null);
     if (override) {
@@ -277,7 +280,13 @@ export class ClaudeBinaryResolver {
     cacheVerifiedAt = 0;
   }
 
+  static getCacheGeneration(): number {
+    return cacheGeneration;
+  }
+
   static async resolve(options: ClaudeBinaryResolveOptions = {}): Promise<string | null> {
+    const original = readOriginalRuntimeScope();
+    if (original) return original.binaryPath;
     const generation = cacheGeneration;
     if (cachedPath !== undefined) {
       const now = Date.now();

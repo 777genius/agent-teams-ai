@@ -70,7 +70,13 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
   if (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
       (base.protocolRevision !== '2.1.4' || !base.embedded))
     throw new TeamLaunchError('invalid', 'probe-v2-unsupported');
-  const key = `team-probe-${runtimeDigest(base)}`;
+  const modelProbeTimeoutMs = 90000;
+  const timeoutMs = Math.min(base.limits.timeoutMs,
+    base.provider === 'opencode' && base.nativeGeneration === 'v2' ? modelProbeTimeoutMs : 30000);
+  // Changed startup policy cannot reuse old profile bytes or retained evidence.
+  // The original account resource fence remains independent of this identity.
+  const key = `team-probe-${runtimeDigest(timeoutMs > 30000
+    ? { profile: base, startupPolicy: 'opencode-v2-probe-budget-v1' } : base)}`;
   const common = {
     profileId: key,
     configRevision: key,
@@ -79,8 +85,8 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
     environment: { ...base.environment },
     ...(base.windowsBroker ? { windowsBroker: { ...base.windowsBroker } } : {}),
     accountBinding: base.accountBinding,
-    timeoutMs: Math.min(base.limits.timeoutMs, 30000),
-    modelProbeTimeoutMs: 90000,
+    timeoutMs,
+    modelProbeTimeoutMs,
   };
   if (base.provider === 'codex')
     return {

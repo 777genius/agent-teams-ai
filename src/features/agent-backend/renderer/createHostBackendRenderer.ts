@@ -33,6 +33,7 @@ const reads = new Set<BackendOperation>([
   'task.get',
   'tasks.list',
   'team.snapshot',
+  'team.review-flow.read',
   'team.changes.read',
   'team.messages.page',
   'command.lookup',
@@ -65,7 +66,43 @@ export function createHostBackendRenderer(
   captureScope: () => () => boolean
 ): { teams: TeamsAPI; backend: AgentBackendApi } {
   const readOrder = new TeamProductReadOrder();
+  const retainedLegacyLaunch = source.retainedLegacyLaunch?.bind(source);
   const backend: AgentBackendApi = {
+    ...(retainedLegacyLaunch
+      ? {
+          retainedLegacyLaunch: async (request) => {
+            // Cleanup only targets the captured choice and its private work after context changes.
+            if (
+              request.action === 'close' ||
+              request.action === 'closeIntent' ||
+              request.action === 'cancelModels'
+            )
+              return retainedLegacyLaunch(request);
+            const current = captureScope();
+            if (!current())
+              return {
+                ok: false as const,
+                reason: 'source-changed' as const,
+                outcome: 'not-dispatched' as const,
+              };
+            const result = await retainedLegacyLaunch(request);
+            if (current()) return result;
+            if (result.ok && (result.action === 'open' || result.action === 'rebind')) {
+              // A late choice must not lose its cleanup owner when the result is refused.
+              try {
+                await retainedLegacyLaunch({ action: 'close', scopeId: result.value.scopeId });
+              } catch {
+                /* Main retains the choice if cleanup cannot be confirmed. */
+              }
+            }
+            return {
+              ok: false as const,
+              reason: 'source-changed' as const,
+              outcome: 'unknown' as const,
+            };
+          },
+        }
+      : {}),
     ...(source.stoppedImport
       ? {
           stoppedImport: async (request) => {

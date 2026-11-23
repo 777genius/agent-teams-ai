@@ -101,8 +101,79 @@ test('the original finite captured child retains sanitized stderr and excludes i
     }
   });
 
+test('original process exit cannot confirm cleanup before its stdio close and final stderr tail',
+  { skip: process.platform === 'win32', timeout: 5000 }, async () => {
+    const { root, profile, request } = await setup(`#!${process.execPath}
+const { writeSync } = require('node:fs');
+writeSync(2, 'TEST original process diagnostic\\n');
+writeSync(2, 'TEST original process final tail');
+process.exit(7);
+`);
+    const custody = new CapturedProcess(profile), observations: RuntimeProcessOutput[] = [];
+    try {
+      const child = custody.launch(request);
+      assert.ok(child instanceof ChildProcess, 'POSIX fixture retains its actual original Node child');
+      observeMemberProcessStderr(child, { profile,
+        observeProcessOutput: value => { observations.push(value); } }, request.args);
+      child.stdout.resume();
+      let closed = false, stoppedAtExit: boolean | undefined, cleanupObservedClose: boolean | undefined;
+      let cleanupAtExit: Promise<boolean> | undefined;
+      child.once('close', () => { closed = true; });
+      const close = once(child, 'close');
+      child.once('exit', () => {
+        // Observe synchronously at the original OS exit, before its later stdio-close event.
+        stoppedAtExit = custody.observeStopped();
+        cleanupAtExit = custody.confirmStopped().then(confirmed => {
+          cleanupObservedClose = closed;
+          return confirmed;
+        });
+      });
+      assert.deepEqual(await close, [7, null]);
+      assert.equal(await cleanupAtExit, true);
+      assert.equal(stoppedAtExit, false, 'OS exit alone cannot settle original stdio ownership');
+      assert.equal(cleanupObservedClose, true, 'cleanup must observe the original close');
+      assert.deepEqual(observations, [
+        { kind: 'process-output', stream: 'stderr', text: 'TEST original process diagnostic' },
+        { kind: 'process-output', stream: 'stderr', text: 'TEST original process final tail' },
+      ]);
+    } finally {
+      assert.equal(await custody.confirmStopped(), true);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+test('an original spawn error without a PID still retains stdio ownership until close',
+  { skip: process.platform === 'win32', timeout: 5000 }, async () => {
+    const { root, profile, request } = await setup('#!/TEST-missing-native-interpreter\n');
+    const custody = new CapturedProcess(profile);
+    try {
+      const child = custody.launch(request);
+      child.stdout.resume();
+      let closed = false, stoppedAtError: boolean | undefined, cleanupObservedClose: boolean | undefined;
+      let error: NodeJS.ErrnoException | undefined, cleanupAtError: Promise<boolean> | undefined;
+      const close = new Promise<void>(resolve => child.once('close', () => { closed = true; resolve(); }));
+      child.once('error', (value: NodeJS.ErrnoException) => {
+        error = value;
+        stoppedAtError = custody.observeStopped();
+        cleanupAtError = custody.confirmStopped().then(confirmed => {
+          cleanupObservedClose = closed;
+          return confirmed;
+        });
+      });
+      await close;
+      assert.equal(child.pid, undefined);
+      assert.equal(error?.code, 'ENOENT');
+      assert.equal(await cleanupAtError, true);
+      assert.equal(stoppedAtError, false, 'a failed allocation does not skip its original close');
+      assert.equal(cleanupObservedClose, true);
+    } finally {
+      assert.equal(await custody.confirmStopped(), true);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
 test('original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail',
-  { skip: process.platform === 'win32' }, async () => {
+  { skip: process.platform === 'win32' }, async t => {
     const { root, profile } = await setup(`#!${process.execPath}
 const { writeSync } = require('node:fs');
 writeSync(2, 'TEST original Claude startup diagnostic\\n');
@@ -133,15 +204,33 @@ process.exit(7);
           readCheckpoint: async () => { throw new Error('TEST checkpoint must not be read'); },
           observeProcessOutput: value => observations.push(value), onProgress: () => { progress++; },
         });
+        const originalSpawn = childProcess.spawn;
+        let originalClose: Promise<void> | undefined;
+        t.mock.method(childProcess, 'spawn', ((...args: Parameters<typeof spawn>) => {
+          assert.equal(args[0], profile.executable.path, 'only the original finite selected child');
+          assert.equal(originalClose, undefined, 'one original SDK child, never a replacement');
+          const child = originalSpawn(...args);
+          originalClose = new Promise<void>((resolve, reject) => {
+            child.once('error', reject);
+            child.once('close', () => { child.removeListener('error', reject); resolve(); });
+          });
+          void originalClose.catch(() => {}); // The original await below still reports any launch failure.
+          return child;
+        }) as typeof spawn);
+        syncBuiltinESMExports();
         try {
           await assert.rejects(provider.factory.open(request));
           assert.equal(await provider.cleanup(), true, 'the original finite child is physically stopped');
+          assert.ok(originalClose, 'the original child was captured before its output events');
+          // Physical process absence and the original pipe's final close are separate observations.
+          await originalClose;
           assert.deepEqual(observations, [
             { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude startup diagnostic' },
             { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude final tail' },
           ]);
           assert.equal(provider.isReady(), false); assert.equal(progress, 0);
         } finally {
+          t.mock.restoreAll(); syncBuiltinESMExports();
           provider.seal(); assert.equal(await provider.cleanup(), true);
         }
       } finally { await endpoint.close(); }

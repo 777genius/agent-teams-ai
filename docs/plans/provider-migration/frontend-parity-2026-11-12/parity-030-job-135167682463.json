@@ -1,0 +1,109 @@
+{
+  "schema": "current-head-original-selected-ui-lane-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682463,
+    "name": "Offline Host Desktop (linux-x64, skills)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:20:39Z",
+    "completed_at": "2026-11-18T23:25:10Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682463",
+    "runner_name": "GitHub Actions 1000395383"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682463,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 23:27:11 UTC",
+    "bytes": 295268,
+    "sha256": "bde9366b469e7ed75c4242d69c54653e75c1f28408b23aaf50e675f2f2e8120f",
+    "computedGitBlobSha": "0e16eed1f0bd35b3fd185811e3c1dcac05d633f2",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682463-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "0e16eed1f0bd35b3fd185811e3c1dcac05d633f2",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 33173.074014",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 204.177784"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-vQFxO7/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:21:23Z",
+      "completed_at": "2026-11-18T23:21:23Z"
+    },
+    {
+      "name": "Exercise original Skills and cross-Team controls",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17,
+      "started_at": "2026-11-18T23:23:34Z",
+      "completed_at": "2026-11-18T23:25:03Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-18T23:25:03Z",
+      "completed_at": "2026-11-18T23:25:03Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: skills-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14481533151,
+    "bytes": 1398479,
+    "sha256": "021d431bbcb7a7891ae684e0775e61c702027f9e9cce7f8a377e966fd89fcf14",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original Skills and cross-team controls selected lane only. This does not qualify the full F1 task-board-cross-team-ui ReviewFlow/reopen and three owner-routing epochs. No real vendor executable or authentication qualification is claimed.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt not separately downloaded. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

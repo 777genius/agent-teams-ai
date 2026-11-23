@@ -1,0 +1,648 @@
+{
+  "schemaVersion": 1,
+  "kind": "passive-original-f60-gui-artifact-and-visual-review",
+  "reviewer": "finite_restart_current",
+  "observedAt": "2026-11-18T21:30:43.776168+00:00",
+  "sourceHead": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+  "summary": {
+    "gitBlob": "e66507f7b0e35f03936795ef248a26e92af072c1",
+    "sha256": "edcabd48c06df6e4192c045b46698a804226a5866b278f5bb953d4213cabe8ee",
+    "bytes": 25168
+  },
+  "originalReceipt": {
+    "path": "/tmp/TEST-desktop-backend-NOf0ZA/desktop-backend-receipt.json",
+    "bytes": 4230979,
+    "sha256": "161f325719c946ff8341ce0582e4a5e00ee0036f0795fd6839f31027ad0664cc"
+  },
+  "overallStatus": "INCOMPLETE",
+  "proofs": [
+    {
+      "name": "taskBoardUiProof",
+      "status": "PASS",
+      "steps": 99,
+      "canonicalJsonSha256": "02191d1f031bde8a4368a92a983dc681a3e90018d3f59a8d951f22d752e842f1"
+    },
+    {
+      "name": "taskReviewCycleUiProof",
+      "status": "PASS",
+      "steps": 62,
+      "canonicalJsonSha256": "6de312bd0598e24408cb5b96f6bb7dad2ad4e0a3b67582a3f4757893f09920db"
+    },
+    {
+      "name": "reviewFlowUiProof",
+      "status": "INCOMPLETE",
+      "steps": 2,
+      "canonicalJsonSha256": "2a06591ff4a78efafa251b63b0934545cc9124328d4716e0d1aae2c0d7a03849"
+    }
+  ],
+  "sourceFreeze": {
+    "beforeCount": 1883,
+    "afterCount": 1883,
+    "distinctPaths": 1883,
+    "listsExactlyEqual": true,
+    "canonicalJsonSha256": "0c7b1c2e877d510a2be81fed138d616043a7d49e45739549e27d2f128cd8debd",
+    "proofAndProductSourcePinsMatch": true
+  },
+  "commandReceipts": {
+    "count": 22,
+    "exactByteLengthAndSha256Matches": 22,
+    "embeddedObjectEqualityMatches": 13,
+    "originalReceiptIdMatches": 9,
+    "phases": {
+      "rejected": 1,
+      "completed": 21
+    },
+    "records": [
+      {
+        "proof": "taskBoardUiProof",
+        "file": "0b074cc3689622df65e7fb63e3aca4bb02a46e54e1bcbb6c9ff0a43db760f086.json",
+        "commandId": "42e69496-afdb-43a6-a8b4-9a4e774e7b38",
+        "operation": "task.start",
+        "phase": "rejected",
+        "bytes": 1184,
+        "sha256": "5a9a89772e0b0ad6833fcdb6dfa4830bc6ea948b49f25f36ed910a400ca0819d",
+        "canonicalJsonSha256": "8739a9b17124baad9e2590c216bc3d0f028566b0e86663d03c3de91cad65a918",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "36cd2f57d5689f788233d615ed3da0087886d7ff475d23fb75d756db95cbdf0c.json",
+        "commandId": "d1739774-68c9-4f92-9c17-a42ccd6cc71f",
+        "operation": "task.create",
+        "phase": "completed",
+        "bytes": 2395,
+        "sha256": "101ae74c029ab98bf1dd2adf46a5c164d5157190e34cfd458b75ab36fe251a4a",
+        "canonicalJsonSha256": "0f15621aab239db6f16e731e797b4b03411be037262873da8c1f2068af5e5004",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "54ea395514a32e6aa6406075f10f5be7ae8ae0484c09d433e773855ca10cdb56.json",
+        "commandId": "4a648ae9-ea57-40bc-999d-579c8a2b3a81",
+        "operation": "task.start",
+        "phase": "completed",
+        "bytes": 3803,
+        "sha256": "80ce87c428420005991b8130843c4c22ae96a4d2316e12e4fdc1850fe6ecc8a8",
+        "canonicalJsonSha256": "5e6354539d40b52a0be3b617e11339dccb603402fab7a4ba75e71d27d5011739",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "6aeb6ccba8a301b5d56804c26fea19834b9dd520bdfe380a0d5fea24136bba61.json",
+        "commandId": "TEST-large-accepted-task-comment",
+        "operation": "task.comment",
+        "phase": "completed",
+        "bytes": 1802843,
+        "sha256": "0d39bfbace04885003b39f98bb308e58736636823271b2cdd5856c5fbe474b05",
+        "canonicalJsonSha256": "01aa75fb0d63e89f296841a210c4ea481e8c5485aa17d589f32e759ffabb2a5a",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+        "commandId": "TEST-ui-offline-seed",
+        "operation": "task.create",
+        "phase": "completed",
+        "bytes": 2197,
+        "sha256": "78988e6739fc86000cff4eca1e0414e3b182585201a2f17cf04a0d49a073e006",
+        "canonicalJsonSha256": "bc63dea8e9b937b487b883328fea0ec425bd606e2fde17c189d587c5ab994efe",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "84ddd0be5deb04f613bf6303aae6a35febe98d33d1f17a3ec8e128071f72ffa4.json",
+        "commandId": "1f24d427-5536-4086-b134-67de747b431e",
+        "operation": "task.attachment.add",
+        "phase": "completed",
+        "bytes": 4427,
+        "sha256": "813ddaff0654878e452043cbc5cbb8fa557a6a8336ed32f511b8fa6cae129a26",
+        "canonicalJsonSha256": "34ecc16ce0c72ff7afe37012abf6fbcd8df87155c6f8d1c752f478c1dfcfd196",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "903e933c3828d5882135a8e208935870ca7bd2e3760ef50b0a9fa0c512d168f6.json",
+        "commandId": "347c196e-d370-482a-a747-843e4e7b60df",
+        "operation": "task.board.order",
+        "phase": "completed",
+        "bytes": 1522,
+        "sha256": "50e6db7049ae987f4daa1cda31321d42746e7ae79b24ff8bf186277b14299f0a",
+        "canonicalJsonSha256": "fe6f06a69257f9d662c8405b4ed105ea902845e1c83dbe52bd8ba142d648db07",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "9249c37097a38bcd3314a441b7042bdd77a1c32f397de455eaddbc14a9c5fe3e.json",
+        "commandId": "157948ed-0c94-4ed3-8b3a-1d779319de8f",
+        "operation": "task.assign",
+        "phase": "completed",
+        "bytes": 2505,
+        "sha256": "0dbcfc31b2c3cc441420b21309b02acb890a5252e42423efbef38df9c496bc2a",
+        "canonicalJsonSha256": "d6847422988b789c6244c88bc38c360449d7026ec7605631f50e007d53cf6759",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "9d1c00e7d559dc9e3bd888745de60c08add08f13aaf062228b6d4ca543eb5e33.json",
+        "commandId": "TEST-task-board-clarification-setup",
+        "operation": "task.clarification",
+        "phase": "completed",
+        "bytes": 2287,
+        "sha256": "f8a926d4186748a416163e11a05a59d2e9e84f6a8f2db2ebb7abbf6fa1f80fcf",
+        "canonicalJsonSha256": "3fc71a251ffda1f8a09910e712705bfa90cf3133a37ed90b33ce21abbdc6d3a8",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "b842d67f7e7c3b20370a4c9672b9ccbd15785cb4cd48e2fbddb22be1bcfcab18.json",
+        "commandId": "2e8cac51-d543-4b5e-9a5c-031cf539c2bb",
+        "operation": "task.lifecycle",
+        "phase": "completed",
+        "bytes": 602702,
+        "sha256": "30c183ebdf62e67002ebed35d433fe35c37081aafc0f259653ccc35c744efd14",
+        "canonicalJsonSha256": "67d2c2d1f11762b97126f19d90ce444d1c10724eba5d6f49ebf9ae04ed3c29f1",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "cd576e00d2fdc9e3010d8e3bfe97cc30bcef98ede45644edfd912772a388f956.json",
+        "commandId": "a6550b26-da6a-45cd-98d3-436dcfffa45c",
+        "operation": "task.clarification",
+        "phase": "completed",
+        "bytes": 2475,
+        "sha256": "2da34c690e7fd78f43b41ecb833d42b87fc61f3500c710aee6e206e973307811",
+        "canonicalJsonSha256": "a78ea9cfd456d761bd5fdc475055ebf580a56fcf7bd129ea31e87740bfb3772b",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "d9c9c0ddc1074add9a592ee9eef7c29cb8ce8c3350ffdd9b381783db77c35c78.json",
+        "commandId": "6d9f7c1a-ec8d-4fd2-bf4c-5cc95aee2d78",
+        "operation": "task.comment",
+        "phase": "completed",
+        "bytes": 6519,
+        "sha256": "c21aca95cee4fdeae0d81703450f153267c854483ef4ca88ccef8ef4b6aef6b7",
+        "canonicalJsonSha256": "41cf98d1151d414f7e32db39c5d64824039eebe2959e1fab796d85b263dd2bb1",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskBoardUiProof",
+        "file": "e883c5113311aeb4b488bbf1ac5592a07f535fb1920003d4726f0635b018abbb.json",
+        "commandId": "549bfa35-7151-4eb6-ad98-50e2c67c0761",
+        "operation": "task.attachment.remove",
+        "phase": "completed",
+        "bytes": 4499,
+        "sha256": "4dc65ce16519d2e903d5c3ca11de0bd62918509e0712d240233a8a760eb55a12",
+        "canonicalJsonSha256": "4fb35f6fc0155daedf62cde13baf914d3d0dfae9c6267d88d3af37554ba569ee",
+        "originalBinding": "exact embedded object"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "f0904c3d06840fdadd1fea11fa068a7734689971845e94f336430bca5f403f81.json",
+        "commandId": "d1f3fabf-a403-43fe-bc3f-54de8216d6ed",
+        "operation": "task.lifecycle",
+        "phase": "completed",
+        "bytes": 4742,
+        "sha256": "4136a1cfe45f0b3ed9d21143aa81bc110ca5ba7cb28492d60121ac458ac715a9",
+        "canonicalJsonSha256": "1bbfe73dad8f96cd4488d1e17e3919014ff046d8113a01bb26bf8fb125f86b50",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "7875e833e70cf4d0302d28993ec33180bee966091f9548438df7e4f9fbd65cb6.json",
+        "commandId": "d17ec9bf-f004-456e-b4f3-2e2850b50d9c",
+        "operation": "task.review",
+        "phase": "completed",
+        "bytes": 4968,
+        "sha256": "5a8036f9366242da3e49e4ba0b981a300eb9cc77a8782f08cc2c2752013bee87",
+        "canonicalJsonSha256": "0b633e5db971e2f2402de1381370ac0f318113a344177fdfd9a90287e9244874",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "eb42b8e33891f2048e938cb594d14cd99e1b87977a3c8de2272f80e04a25004c.json",
+        "commandId": "123bcc9e-9489-4bcb-8f15-e2fef23f7167",
+        "operation": "task.review",
+        "phase": "completed",
+        "bytes": 5797,
+        "sha256": "a0a916e28bf45a9b26bb184bf91ccc7e06017e3fc6279f3796a209607270a0f3",
+        "canonicalJsonSha256": "8a4926cb2399b7204bf136fbba604448dd5ce2bc9e867a130b4e88b305eca1c4",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "c66fb19ee801d4248d5bd80fc494e026fab750e2bf3eebbbce2e48db7b5d2f51.json",
+        "commandId": "09ddeafa-4601-4782-8aee-c98fcbc0221e",
+        "operation": "task.start",
+        "phase": "completed",
+        "bytes": 6325,
+        "sha256": "c0ba4f9bad4cfc5b1643fb5bb9120546406bdf0b5e510ab2d654cf3e5a8c7d20",
+        "canonicalJsonSha256": "ea73be1f2a3b6d3df3930f3a361e2f5236bcb7a43c3c3d060745c4126bbc2674",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "b42b77894f9e4d968b00d2ce26da9046252c7a4559ca21970216040f79631f16.json",
+        "commandId": "7b53371d-b765-49f3-a01d-d6a7a49dedf6",
+        "operation": "task.comment",
+        "phase": "completed",
+        "bytes": 7083,
+        "sha256": "59baaf8d639c613aa4b5c4e02455c29028473c50bbf4ebbfd5a0fbd7444910fd",
+        "canonicalJsonSha256": "2951002dbbbaf5820f42222f07ee31ddb5de4f650a57b4be70ff2be64f909777",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "1fbfa0e75cbda5bd790c778964e09fe1c08dcf159add6fb40eae7eadeac800f2.json",
+        "commandId": "025ffa79-fcec-4173-b041-c96aa789d4e0",
+        "operation": "task.lifecycle",
+        "phase": "completed",
+        "bytes": 6561,
+        "sha256": "d72a16f1f8d7ed6a50e6091fa9fb3fde3127f01588763cea1e116ceee081b8a9",
+        "canonicalJsonSha256": "0a590ab74b940a1a0580ad4949bc8333db12e87efd6da9b55bdce3f4f5ca537d",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "2bb1f3b128d12745a278077e55c0b042a7d4bafbe6e975028fc6f27677d7a8e7.json",
+        "commandId": "22a1fd20-9010-4c4b-aff2-01af083f699a",
+        "operation": "task.review",
+        "phase": "completed",
+        "bytes": 6787,
+        "sha256": "4fce0ad44e53ff8e764501bc10fa5e46c9982abd2ae249c30335b1af58b0c2d8",
+        "canonicalJsonSha256": "4133fbda1e5e264b4d33a4b470095453064becb9a13e117d4185e15803d04fc5",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "05ec19de0b425d6aa6074c213e27f3465ca10596b0190374245cb5acf8437c0f.json",
+        "commandId": "4ae7f496-a567-4af4-8ae8-2e261564a2cf",
+        "operation": "task.review",
+        "phase": "completed",
+        "bytes": 7110,
+        "sha256": "93d6ce9c436825c1d56d48748ffb6c00fab601b40d8290aa309d996be896e1f0",
+        "canonicalJsonSha256": "38fd8eb15530b32ae2ecb04568f8b0e77bc1f379c3a251e287c813227d711e8a",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      },
+      {
+        "proof": "taskReviewCycleUiProof",
+        "file": "78492d2b9dd111bd60ab3f87888e96aa1e92fc4d7c0a3c5402c3c2558aaa53ad.json",
+        "commandId": "ecb730eb-e475-4675-a911-0509fc03e78e",
+        "operation": "task.review",
+        "phase": "completed",
+        "bytes": 7279,
+        "sha256": "a2d7d2f0f85de2e9f91907c30e0467f064617010104c302f1aa4273210b8510f",
+        "canonicalJsonSha256": "3e783ba5bb7dc740f39ae4ffee8221d36e68b88f1ef96833c1177a4247756695",
+        "originalBinding": "exact original receiptIds entry; no embedded command object in this subproof"
+      }
+    ],
+    "interpretation": "All 22 local files match pinned byte lengths and SHA256. Exactly 13 also equal full embedded original receipt objects; the other 9 bind to the exact original ordered receiptIds, not embedded objects. The one rejected task.start is the original blocked-start negative oracle."
+  },
+  "images": [
+    {
+      "key": "initialScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-initial.png",
+      "bytes": 98789,
+      "sha256": "5d115e2f351114fb3fc965e9a5d2445e23eeea1c9f36c9dcda974f08eb9b1f0b",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The dark desktop shows Messages, the TEST private backend team panel, board columns and the Tasks sidebar at 1400x900.",
+          "The initial TODO card is captured as a skeleton-like block with gray placeholder bars. Later frames show rendered task text; this isolated frame does not establish a rendering defect.",
+          "No dedicated create-dialog frame is among the ten images. Creation is supported by the original task.create command receipt and subsequent visible dependent task."
+        ]
+      }
+    },
+    {
+      "key": "dependencyScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-assigned-blocked.png",
+      "bytes": 105621,
+      "sha256": "1c302e13b371485b257b4a3ef10b0cf7ea2fa0e9f7a180b24d7ac33912741a83",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "Task details show TEST ordinary dependent board task, Pending status and alice assignee.",
+          "Awaiting clarification from you, Mark resolved and a Blocked by predecessor relation are visibly present.",
+          "The detail modal, description, Attachments 0 and comment entry area fit within this captured viewport."
+        ]
+      }
+    },
+    {
+      "key": "reorderedScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-reordered.png",
+      "bytes": 125922,
+      "sha256": "dab66fbd7a92aedd959c5e7bd23a54528119e843a79d0fcbb7ad3c973a4dc629",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The TODO column contains two tasks with the dependent task above the predecessor seed; alice and dependency labels are visible.",
+          "The new task is also visible in the Tasks sidebar. Long linked names are ellipsized.",
+          "This is a static resulting-order image; the original task.board.order receipt supplies command evidence."
+        ]
+      }
+    },
+    {
+      "key": "blockedStartScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-blocked-start.png",
+      "bytes": 138321,
+      "sha256": "15b858c1d9eff3944a44faeb13d971f3a0ea6e046699d36a9e5681986e9654fa",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The dependent task remains in TODO and retains its blocker relation.",
+          "The Tasks sidebar explicitly says Tasks could not be refreshed, Previously loaded results remain visible. Their counts may be out of date., 4 loaded, and Host read crossed a mutation boundary, with Refresh available.",
+          "This warning is absent from later saved frames. The images alone do not establish recovery timing, cause beyond the displayed refusal, or a newly introduced regression."
+        ]
+      }
+    },
+    {
+      "key": "reloadedScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-reloaded.png",
+      "bytes": 118605,
+      "sha256": "61c299ff26e749af18056ae8ecd33e622bcd1b8879bd1816c04b50bea19e7bae",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The dependent task is in IN PROGRESS and the predecessor seed has completed status in the sidebar.",
+          "The board relation reads Depends on and the previous sidebar refresh warning is absent.",
+          "The original subproof identifies the reload step; the image directly establishes only the displayed state."
+        ]
+      }
+    },
+    {
+      "key": "attachments.addedScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-attachment-added.png",
+      "bytes": 120486,
+      "sha256": "d8b437c5dd93b19446817e2a3f44957239f489cb12914cc25fa78dd4aeec9f0b",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "Task details show In Progress, Attachments 1 and a colored red-to-green image thumbnail with the Attach image action.",
+          "The visible system comment says the predecessor completed and all blockers are resolved; the header nevertheless labels the completed green predecessor relation Blocked by.",
+          "The tall modal has its own scrollbar and content continuing below the fold."
+        ]
+      }
+    },
+    {
+      "key": "attachments.reloadedScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-attachments-reloaded.png",
+      "bytes": 110364,
+      "sha256": "546d8605385425e4b6f0714800e1f09586188497b58af4cbc0e2c5863f0eb907",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "Task details still show In Progress, Attachments 1 and the same colored thumbnail after the original reload step.",
+          "Comments 2 and Awaiting reply from alice are visible.",
+          "The header still says Blocked by with the green predecessor chip; this is a wording observation, not proof that starting is still blocked."
+        ]
+      }
+    },
+    {
+      "key": "attachments.removedScreenshot",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-attachment-removed.png",
+      "bytes": 112072,
+      "sha256": "75a97fa0d4bc6c5618c2be4d58051f47e4cb8ebca9f58fc715d48377bcad6a6b",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The scrolled task modal shows Attachments 0 and no task image thumbnail.",
+          "The separate TEST attachment comment original remains visible with its file icon; removing the task attachment did not visibly remove this comment attachment.",
+          "The visible system message says Dependency resolved and all blockers are resolved. Upper task content is above the current internal scroll position."
+        ]
+      }
+    },
+    {
+      "key": "reviewApproved",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-review-approved.png",
+      "bytes": 97846,
+      "sha256": "4d27bff58f189223e0d2411fcd7b6abb90c65329e74018bd942a0a7a3176daec",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The dependent task is visibly in APPROVED, count 1, with alice and its Depends on relation.",
+          "The predecessor seed is visibly in DONE, count 1; the sidebar marks the dependent task with its approval icon.",
+          "This specific image establishes Approved, not the later Done state."
+        ]
+      }
+    },
+    {
+      "key": "reviewFlowFailure",
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-failure.png",
+      "bytes": 135174,
+      "sha256": "0b99088eb6cb82138d4cbbba0f5817eff9eb77790a7f1d3f78b3685ae876879c",
+      "width": 1400,
+      "height": 900,
+      "hashVerified": true,
+      "actualVisualInspection": {
+        "completed": true,
+        "method": "view_image of the existing pinned PNG; no new capture or app interaction",
+        "observations": [
+          "The dependent task and predecessor seed are both visibly in DONE, count 2; this later image corroborates the original approvedToDone result.",
+          "The team policy popover is open with This team, Default, Use the default settings enabled, and the approval-policy choices visible.",
+          "The lower policy content continues below the visible popover scroll area and the default-settings footer link is not visible in this frame.",
+          "This geometry agrees with the original target facts: one enabled target, centerInViewport=false and hitPresent=false. It does not establish successful navigation or validation of the subsequent 823 helper change."
+        ]
+      }
+    }
+  ],
+  "cleanupQualification": {
+    "processGroup": 56,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded",
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "beforeHarnessCleanup": [],
+    "qualification": "The captured app group is empty and app exit is 0/null. capturedHostObserved=false and capturedHostAbsent=null; no separate Host exit or Host custody-release verdict is inferred."
+  },
+  "continuation": {
+    "ownerRoutingEpochs": [],
+    "ownerContinuationStarted": false,
+    "basis": "Post-exit observation records no epochs; original harness requires Taskboard-chain PASS and cleanup before owner continuation.",
+    "laterFlowsQualified": false
+  },
+  "failure": {
+    "message": "UI target read failed: open existing default settings link; facts={\"matches\":1,\"disabled\":false,\"ariaDisabled\":false,\"pointerEventsNone\":false,\"centerInViewport\":false,\"hitPresent\":false}",
+    "targetFacts": {
+      "matches": 1,
+      "disabled": false,
+      "ariaDisabled": false,
+      "pointerEventsNone": false,
+      "centerInViewport": false,
+      "hitPresent": false
+    },
+    "source": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:487:26",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:491:17",
+        "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts:123:5",
+        "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts:140:3",
+        "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts:153:5",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:479:7"
+      ]
+    },
+    "originalReadBudgetMs": 30000,
+    "readWaitObservation": {
+      "phase": "initial",
+      "boundary": "evaluate",
+      "cutoff": "after-evaluate",
+      "firstCheckAtMs": 1795036356579,
+      "lastCheckAtMs": 1795036386591,
+      "ownerStarted": 152,
+      "ownerResolved": 152,
+      "preparationStarted": 0,
+      "preparationResolved": 0,
+      "readsStarted": 152,
+      "readsResolved": 152,
+      "postReadLate": 1,
+      "contextRetries": 0,
+      "deadlineMs": 1795036386579
+    },
+    "interpretation": "One enabled target was found, but its center was outside the viewport and hit testing found no element at that center. No click retry or changed deadline was used."
+  },
+  "visualInspection": {
+    "status": "COMPLETE_BOUNDED_REVIEW",
+    "imagesActuallyViewed": 10,
+    "allImageHashesVerified": true,
+    "imageSize": {
+      "width": 1400,
+      "height": 900
+    },
+    "f1Scope": "The previously unperformed visual inspection of these ten existing f60 keyframes is complete. This does not complete F1 or the entire GUI chain.",
+    "visualCorroboration": [
+      "Created dependent task shown after the command, assignee and clarification/blocker state",
+      "Resulting task order and dependent task kept in TODO for the blocked-start negative case",
+      "In Progress after the predecessor completed",
+      "Task image present, retained after reload and absent after removal; separate comment attachment retained",
+      "Dependent task in Approved and later in Done",
+      "ReviewFlow popover open with lower footer outside the visible scroll area"
+    ],
+    "boundedFindings": [
+      {
+        "id": "sidebar-read-refusal",
+        "frames": [
+          "blockedStartScreenshot"
+        ],
+        "observation": "An explicit stale-sidebar warning reports Host read crossed a mutation boundary; loaded results remain visible.",
+        "laterObservation": "The warning is absent from the later captured reload/attachment frames.",
+        "qualification": "Do not describe all frames as clean or infer an unobserved recovery timing/new regression."
+      },
+      {
+        "id": "resolved-blocker-wording",
+        "frames": [
+          "attachments.addedScreenshot",
+          "attachments.reloadedScreenshot"
+        ],
+        "observation": "Detail header says Blocked by despite In Progress, a green completed predecessor chip and a system comment declaring blockers resolved; board uses Depends on.",
+        "qualification": "A visible wording inconsistency is recorded for product review. These static images do not establish incorrect runtime blocking or a newly introduced regression."
+      },
+      {
+        "id": "offscreen-policy-footer",
+        "frames": [
+          "reviewFlowFailure"
+        ],
+        "observation": "Policy footer is below the visible scroll area; original target telemetry finds one enabled target outside the viewport with no hit at its center.",
+        "qualification": "Original ReviewFlow remains INCOMPLETE. No fresh execution of the later scroll helper is represented."
+      }
+    ],
+    "notEstablished": [
+      "A dedicated create-dialog visual review",
+      "All possible GUI states or viewports",
+      "Completion of ReviewFlow or later owner routing/continuation",
+      "Fresh qualification of 823 or any later source/dependency head",
+      "A separate Host exit/custody-release result",
+      "Real vendor/native-provider functionality"
+    ]
+  },
+  "execution": {
+    "tests": 0,
+    "build": 0,
+    "app": 0,
+    "native": 0,
+    "browserCUA": 0,
+    "CIEndpointCalls": 0,
+    "sourceEdits": 0
+  },
+  "visualReviewCompletedAt": "2026-11-18T21:34:37.230763+00:00",
+  "priorPassiveVerification": {
+    "path": "/workspace/scratch/c714f5bce554/final-823-visual-review/passive-artifact-verification.json",
+    "bytes": 20083,
+    "sha256": "377f21245b63d57ba55b4647eb57daeba0343fff643121f3c9828d3227d76f39",
+    "qualification": "Preserved unchanged; its visualInspection=pending describes the earlier artifact-verification stage."
+  },
+  "originalApprovedToDone": {
+    "status": "PASS",
+    "statusAfter": "completed",
+    "reviewStateAfter": "none",
+    "doneControlsVisible": true,
+    "visualBinding": [
+      "reviewApproved shows the earlier Approved state",
+      "reviewFlowFailure shows the later Done state"
+    ]
+  },
+  "verdict": {
+    "artifactIntegrity": "PASS for the exact existing f60 receipt, 1883-source before/after lists, 22 command receipt files and 10 pinned PNGs",
+    "visualInspection": "Completed for 10/10 existing keyframes with the three bounded findings above",
+    "taskBoardUiProof": "Original PASS; 99 steps",
+    "taskReviewCycleUiProof": "Original PASS; 62 steps",
+    "reviewFlowUiProof": "Original INCOMPLETE; 2 steps",
+    "overallGuiInvocation": "Original INCOMPLETE; unchanged by this passive review",
+    "sourceQualification": "Historical exact f60 artifacts only; no test execution, replay, build, app/native launch or runtime qualification of a subsequent head"
+  },
+  "method": {
+    "canonicalJson": "UTF-8 JSON with recursively sorted object keys, compact separators and ensure_ascii=False; original array order retained",
+    "actions": "Read existing receipt/command/image artifacts, compare bytes and canonical objects, inspect existing PNGs, save this evidence record and publish an immutable Git blob without commit or ref change.",
+    "sourceEdits": false,
+    "automaticPatch": false
+  }
+}

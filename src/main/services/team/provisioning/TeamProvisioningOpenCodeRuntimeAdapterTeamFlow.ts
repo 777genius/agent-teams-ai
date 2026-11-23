@@ -105,6 +105,7 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   // Before any spawn and fail-closed, like the launch admission claim.
   await ports.claimCreatedTeam(launchRequest.teamName);
   await ports.writeTeamMeta(launchRequest.teamName, {
+    runtimeSelectionVersion: launchRequest.runtimeSelectionVersion,
     displayName: launchRequest.displayName,
     description: launchRequest.description,
     color: launchRequest.color,

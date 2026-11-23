@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 1,
+  "kind": "synthetic-child-exitcode-type-only-followup",
+  "createdAt": "2026-11-19T01:53:42.964937+00:00",
+  "status": "SOURCE_EXCERPT_RED_TO_GREEN_AND_IDENTICAL_RUNTIME",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate-manifest.json",
+    "bytes": 1183,
+    "sha256": "1d37ab907a6c6b5a60514945379a423431a432120d38e3d6b93982fac7ce982b",
+    "gitBlob": "5b5b231add2ca75b4821e613f2d2659392527954"
+  },
+  "sourcePins": [
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 28169,
+        "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+        "gitBlob": "7ca326f89632042a98c5bc459250df221980bdd4",
+        "lines": 684
+      },
+      "after": {
+        "bytes": 28238,
+        "sha256": "1b6a05cb460ada5596bce3f2553a917777e86545e2af8e23995606c44cfd5900",
+        "gitBlob": "36728b28d564cac2d107f17be0add0ab5dafb43c",
+        "lines": 689
+      }
+    }
+  ],
+  "patch": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate.patch",
+    "bytes": 717,
+    "sha256": "61c50b56cbdd75263cfcbf89df4799c1c1198618bd905713b3c78d3471dd5eff",
+    "gitBlob": "ed6216e2e2bc4ee83f13f8690538fc470e34b951"
+  },
+  "originalFailure": {
+    "jobId": 135261468624,
+    "platform": "ubuntu-latest",
+    "step": "Typecheck application before Electron startup",
+    "command": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
+    "rawLog": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261468624-terminal.log",
+      "bytes": 47766,
+      "sha256": "75a164af8d1bfe4e595cbcd51dc1621d01442fb140a6549d005934a55b9d5deb",
+      "gitBlob": "5d7fa81fd328ca91d682480b0d37ea1464021620"
+    },
+    "terminalMetadata": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261468624-terminal-metadata.json",
+      "bytes": 5770,
+      "sha256": "158c4823276877bccb163ddaa17fb167f993d90237a1f95280030d513671b608",
+      "gitBlob": "59fd0850ef564f813895ed4a12fc70a07f27689f"
+    },
+    "diagnostic": "Exact42a4 test(607,15) TS2540: Cannot assign to exitCode because it is a read-only property. Prior isolated Host build succeeded; subsequent actual Electron E2E did not execute."
+  },
+  "cause": "The existing plain synthetic child is asserted as ChildProcess, whose actual prepared Node24.12.4 type makes exitCode readonly; the positive Stop test legitimately mutates that same synthetic object after recorded custody release.",
+  "correction": "Retain the existing ChildProcess assertion and intersect only its local TEST view with { exitCode: number | null }. No any, suppression, global readonly change, object substitution, new runtime operation, modified stop/custody assertion, or production change.",
+  "toolchain": {
+    "node": {
+      "version": "v24.22.3",
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126951512,
+      "sha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "gitBlob": "578c139c661b1a3eb68abc5886f01d9b3cbe3dd5"
+    },
+    "typescript": {
+      "version": "7.0.2",
+      "files": [
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/package.json",
+          "bytes": 3087,
+          "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+          "gitBlob": "f4242a69df961fcaf5210ac08ace176ced18c6a4"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+          "bytes": 44,
+          "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd",
+          "gitBlob": "34638f82f78ad0641bd169a41a598ed3a73b63d5"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/lib/tsc.js",
+          "bytes": 609,
+          "sha256": "cbdfbf11c26ed00dfc073155e316a42d6d6d8a387be61006b82fa9aa93ac572e",
+          "gitBlob": "eb869b715737e45fcf1af33d1af3157b59ba08de"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/lib/getExePath.js",
+          "bytes": 3051,
+          "sha256": "96c10fd3a18e165d7323de8e314ac8d755ad96811f9fbc304a5b3ba4e05285cc",
+          "gitBlob": "ade3d7bb92e2125c4306d71620666c0eba3371d4"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/typescript@7.0.2/node_modules/@typescript/typescript-linux-x64/lib/tsc",
+          "bytes": 24101026,
+          "sha256": "4f2de678286401759b3fb4475bafe35b8f32b4b3a07d92642bbf37eadc9b34a4",
+          "gitBlob": "3cf53c3bee5833a49d5c9be19cdfab4f790fab58"
+        }
+      ]
+    },
+    "nodeTypes": {
+      "version": "24.12.4",
+      "files": [
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/package.json",
+          "bytes": 4510,
+          "sha256": "456b1366f1966515c4dfec48446c82275502a2d5ea7cfbc74874323b39e3776f",
+          "gitBlob": "836c645b60e453f09f8740976505058b08b61501"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/assert.d.ts",
+          "bytes": 46664,
+          "sha256": "4ea15fd99b2e34cb25fe8346c955000bb70c8b423ae4377a972ef46bfb37f595",
+          "gitBlob": "cd6d6df9ff33d4291585ffedd0a8619c9e98afdb"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/assert/strict.d.ts",
+          "bytes": 3003,
+          "sha256": "7cf69dd5502c41644c9e5106210b5da7144800670cbe861f66726fa209e231c4",
+          "gitBlob": "4ed7395a6bc76a40bdf26f2905a217bdd464fac4"
+        }
+      ]
+    },
+    "nodeChildProcessDeclaration": {
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/child_process.d.ts",
+      "bytes": 66808,
+      "sha256": "c06b2652ffeb89afd0f1c52c165ced77032f9cd09bc481153fbd6b5504c69494",
+      "gitBlob": "e680bf29dd33de2f7a937eb8bfb91c30c61340ac"
+    }
+  },
+  "typecheck": {
+    "scope": "Actual TS7 source-excerpt noEmit using exact fake declaration and assignment with prepared Node types; not complete-file/project typecheck",
+    "runs": [
+      {
+        "side": "before",
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+          "--noEmit",
+          "--pretty",
+          "false",
+          "-p",
+          "tsconfig.json"
+        ],
+        "cwd": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-type-before",
+        "startedAt": "2026-11-19T01:49:25.374721+00:00",
+        "durationMs": 910.969,
+        "exitCode": 1,
+        "log": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/typecheck-before.log",
+        "logBytes": 110,
+        "logSha256": "de92bc198304cf349fded2172aee5d21421a41db24995987a5ab64d369f9ee69",
+        "output": "fixture-type-excerpt.ts(10,11): error TS2540: Cannot assign to 'exitCode' because it is a read-only property.\n"
+      },
+      {
+        "side": "after",
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+          "--noEmit",
+          "--pretty",
+          "false",
+          "-p",
+          "tsconfig.json"
+        ],
+        "cwd": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-type-after",
+        "startedAt": "2026-11-19T01:49:26.286059+00:00",
+        "durationMs": 495.017,
+        "exitCode": 0,
+        "log": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/typecheck-after.log",
+        "logBytes": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output": ""
+      }
+    ],
+    "verdict": "One exact original readonly diagnostic in extracted source before; zero diagnostics after",
+    "sourceMap": {
+      "scope": "Source-excerpt compiler proof only, not complete-file or project typecheck",
+      "rootCompilerConfigBlob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "entries": [
+        {
+          "side": "before",
+          "fullSourcePath": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/before/src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+          "declarationStartLine": 461,
+          "declarationText": "const child = { pid: 44101, exitCode: null, signalCode: null, killed: false } as ChildProcess;",
+          "assignmentOriginalLine": 607,
+          "assignmentText": "f.child.exitCode = 0;",
+          "wrapper": "Only async fixture/scenario return/call shape retained; all persistence/custody/runtime bodies omitted and not executed. Actual node:child_process declaration is resolved from prepared @types/node."
+        },
+        {
+          "side": "after",
+          "fullSourcePath": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate/src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+          "declarationStartLine": 461,
+          "declarationText": "const child = {\n        pid: 44101,\n        exitCode: null,\n        signalCode: null,\n        killed: false,\n      } as ChildProcess & { exitCode: number | null };",
+          "assignmentOriginalLine": 612,
+          "assignmentText": "f.child.exitCode = 0;",
+          "wrapper": "Only async fixture/scenario return/call shape retained; all persistence/custody/runtime bodies omitted and not executed. Actual node:child_process declaration is resolved from prepared @types/node."
+        }
+      ]
+    },
+    "sourceMapPin": {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/excerpt-source-map.json",
+      "bytes": 1651,
+      "sha256": "322a825f84218ece383e3ec9d209cdd4c1329db1ae42595c665b653cedea385d",
+      "gitBlob": "ca425d770cb21809e196d5bd3294a53131fd5c05"
+    },
+    "fullFileOrProjectTypecheck": false,
+    "scopeLimit": "The proof extracts the exact declared synthetic child and exact f.child.exitCode assignment with async fixture-return/call shape and real Node types. Other test bodies/transitive project imports are deliberately omitted; it proves this local type incompatibility only.",
+    "config": "All immutable root tsconfig compiler options preserved; include is limited to fixture-type-excerpt.ts; no diagnostic suppression or extra exclusions."
+  },
+  "runtimeErasure": {
+    "runtime": "v24.22.3",
+    "mode": "transform",
+    "scope": "Entire original and candidate test files transformed without evaluation or import execution",
+    "identicalJavaScriptBytes": true,
+    "byteLength": 28578,
+    "sha256": "c7ef76da83f0bfba7d9059e996b51c05c52405e35c7ab869c993e81a3b774246",
+    "sourceChange": "One existing synthetic child assertion gains the erased intersection { exitCode: number | null }; formatter wraps only that declaration"
+  },
+  "finiteRegression": {
+    "scope": "One existing positive solo-owned-Stop regression using actual immutable42a4 source view plus erased-only test correction; filesystem sandbox and synthetic child, no app/native/build/install",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/vitest/vitest.mjs",
+      "run",
+      "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "--pool=forks",
+      "--maxWorkers=1",
+      "--minWorkers=1",
+      "--no-file-parallelism",
+      "-t",
+      "publishes an original solo Create, retains live reads, and enables only its exact owned Stop proof",
+      "--reporter=json",
+      "--outputFile=/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-runtime-after-result.json"
+    ],
+    "cwd": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-runtime",
+    "startedAt": "2026-11-19T01:51:32.407096+00:00",
+    "durationMs": 7579.776,
+    "exitCode": 0,
+    "environmentDelta": {
+      "AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE": "1"
+    },
+    "log": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-runtime-after.log",
+    "logBytes": 123,
+    "logSha256": "549ce04e9e9a60f36b25561895eede725c60f695500bc28ca3953033a0692141",
+    "output": "JSON report written to /workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-runtime-after-result.json\n",
+    "passed": 1,
+    "failed": 0,
+    "intentionallyUnselected": 16,
+    "discovered": 17,
+    "selectedResult": {
+      "ancestorTitles": [
+        "owned solo publication through the real Main snapshot and store owners"
+      ],
+      "fullName": "owned solo publication through the real Main snapshot and store owners publishes an original solo Create, retains live reads, and enables only its exact owned Stop proof",
+      "status": "passed",
+      "title": "publishes an original solo Create, retains live reads, and enables only its exact owned Stop proof",
+      "duration": 62.08456600000045,
+      "failureMessages": [],
+      "meta": {}
+    },
+    "sourceInputManifest": {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/runtime-inputs.json",
+      "bytes": 1246226,
+      "sha256": "1f9f92569462ff6a961c465e23c021e35b97a9fc7d350127f281c61230fd4ef2",
+      "gitBlob": "755fb148d5d9b4b570585efe4ba1557def4d3aaa"
+    },
+    "sourceInputCount": 4779,
+    "sourceInputsExact42BeforeCandidateOverlay": true,
+    "sourceInputsUnchangedAfterSelectedTest": true,
+    "dependencies": "Prepared dependency links only; node_modules cache location isolated within verify-runtime; no dependency install or product build.",
+    "scopeLimit": "One selected existing positive Stop test passed;16 other discovered tests were intentionally unselected, not a17-test/full-suite PASS. The child is synthetic and filesystem writes are sandbox test fixtures; physical/native custody is not exercised."
+  },
+  "formatting": "Prepared Prettier3.8.1 using immutable repository configuration changed only the declaration wrapping. Complete transformed JavaScript identity verifies all executable expressions and assertions remain identical.",
+  "limits": [
+    "No complete-file/root-project typecheck, full typed lint, build, GUI/native/provider execution or new E2E qualification.",
+    "Current useful-job publication gate is unchanged; root alone reviews and composes source and owns Git/ref/index updates.",
+    "The frozen3b2301a tree and both previous publication directories were left untouched.",
+    "An initial excerpt locator expected a one-line declaration and was adjusted after formatting before any compiler run. Both recorded compiler runs executed once; the existing positive Stop case executed once.",
+    "Two preliminary local read commands were delayed by login-shell startup; both completed without duplicate execution. Subsequent calls used login:false."
+  ],
+  "files": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate-manifest.json",
+      "bytes": 1183,
+      "sha256": "1d37ab907a6c6b5a60514945379a423431a432120d38e3d6b93982fac7ce982b",
+      "gitBlob": "5b5b231add2ca75b4821e613f2d2659392527954"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate.patch",
+      "bytes": 717,
+      "sha256": "61c50b56cbdd75263cfcbf89df4799c1c1198618bd905713b3c78d3471dd5eff",
+      "gitBlob": "ed6216e2e2bc4ee83f13f8690538fc470e34b951"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/excerpt-source-map.json",
+      "bytes": 1651,
+      "sha256": "322a825f84218ece383e3ec9d209cdd4c1329db1ae42595c665b653cedea385d",
+      "gitBlob": "ca425d770cb21809e196d5bd3294a53131fd5c05"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-type-before/fixture-type-excerpt.ts",
+      "bytes": 287,
+      "sha256": "f0b92d2347d453b3120a207954915ebf6e128e31fa933314f161d07da609929e",
+      "gitBlob": "d3c2c0d5f2245f7c9122d6fc06984e06bae0f9c7"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-type-after/fixture-type-excerpt.ts",
+      "bytes": 336,
+      "sha256": "8f6a461016249cd62f042ba6a4f70ac72c210749d9c6b3e21e439e12013e1449",
+      "gitBlob": "90ae4948f31d719d04847ed5964d8f0315d0078d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-type-before/tsconfig.json",
+      "bytes": 977,
+      "sha256": "b0ddc75f55428e9f044a832a717d5a36b661e1c6d645e1080114756ca03773b9",
+      "gitBlob": "3574610045e3d3714dbd04ceef1a482207619636"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/verify-type-after/tsconfig.json",
+      "bytes": 977,
+      "sha256": "b0ddc75f55428e9f044a832a717d5a36b661e1c6d645e1080114756ca03773b9",
+      "gitBlob": "3574610045e3d3714dbd04ceef1a482207619636"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/typecheck-before.log",
+      "bytes": 110,
+      "sha256": "de92bc198304cf349fded2172aee5d21421a41db24995987a5ab64d369f9ee69",
+      "gitBlob": "b484a1d5dbc8043a5bdc4365c31b4b14d0e5451d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/typecheck-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/typecheck-results.json",
+      "bytes": 1834,
+      "sha256": "4303ffe0c6a53d0256802379b606c220e3a0694806a9e5feb61e31ef3e369a9b",
+      "gitBlob": "cd9a9976cadbc5b64e3108a9ba25550ca570c91f"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/runtime-erasure-result.json",
+      "bytes": 453,
+      "sha256": "6936792e346a2dbb046dad0496397567800bff9ad42bab2d8d78af0f5db986b1",
+      "gitBlob": "1b218af9214e20361185acb8dede4f2f3021b756"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/erasure/before.js",
+      "bytes": 28578,
+      "sha256": "c7ef76da83f0bfba7d9059e996b51c05c52405e35c7ab869c993e81a3b774246",
+      "gitBlob": "e37860fc4eec8c0e68e5a4958dc0383ecf02759d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/erasure/after.js",
+      "bytes": 28578,
+      "sha256": "c7ef76da83f0bfba7d9059e996b51c05c52405e35c7ab869c993e81a3b774246",
+      "gitBlob": "e37860fc4eec8c0e68e5a4958dc0383ecf02759d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-runtime-after.log",
+      "bytes": 123,
+      "sha256": "549ce04e9e9a60f36b25561895eede725c60f695500bc28ca3953033a0692141",
+      "gitBlob": "df712e8be26725274a3e8636aa5d0f69a92b9388"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-runtime-after-result.json",
+      "bytes": 7332,
+      "sha256": "6788c1f86df72292407d709ce142a5cfcd2b4696ee21f8d64d9a193d4e389e81",
+      "gitBlob": "05ea87c0d92bcc6b1c3538b7130323e927d3c795"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-runtime-execution.json",
+      "bytes": 1465,
+      "sha256": "ef8f472ee6e9ce6bd85767f6af54c038bab53173754027afda16f0b5b4449f8a",
+      "gitBlob": "111792763341ec83786c6abe357713af0c02a38d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/runtime-inputs.json",
+      "bytes": 1246226,
+      "sha256": "1f9f92569462ff6a961c465e23c021e35b97a9fc7d350127f281c61230fd4ef2",
+      "gitBlob": "755fb148d5d9b4b570585efe4ba1557def4d3aaa"
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "kind": "INDEPENDENT_WORKFLOW_MEDIA_ROSTER_R2",
+  "reviewer": "review_ready_823",
+  "observedAt": "2026-11-18T21:58:28.181812+00:00",
+  "sourceHead": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+  "originalNativeReceiptHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+  "verdict": "PASS for exact one-line workflow postimage and faithfully scoped finite verifier RED-to-GREEN evidence; current native/workflow acceptance remains separate.",
+  "sourceChange": {
+    "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "preimage": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "bytes": 36309,
+      "lines": 630
+    },
+    "postimage": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "25aa41fbcad0d5758e1e6a697f602d15a05468af",
+      "sha256": "01a7b3829567d0be7d83bb2dad81e25d7523d4ce54bcf891a45f05b12caa5cc1",
+      "bytes": 36406,
+      "lines": 631
+    },
+    "exactChange": "One 97-byte line adds all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback between original_uploaded_PNG_native_image_inference_and_public_readback and checkpoint_and_original_host_native_cleanup_confirmed.",
+    "allOtherWorkflowBytesUnchanged": true,
+    "producerAndHelpersUnchanged": true
+  },
+  "sourcePins": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "bytes": 36309
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "gitBlob": "b836af9bbae19ac541a367e9fc247f6f2637bfa3",
+      "sha256": "832f743b8d3faed7fc43ebf84a0477ff5d81c9df10ffbd26c9dc82fd44c52528",
+      "bytes": 33488
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-message-media.ts",
+      "gitBlob": "8ea7f962cd24074e4a8e2431492b7fc225d8d4a0",
+      "sha256": "498950c718ccf34eb3ee1c2fe13846967c38da068a309b50bdb2c10acc6f530f",
+      "bytes": 11601
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "gitBlob": "9d51c429126e3fa0a9aec3ce59757efe115f467b",
+      "sha256": "2ec4c75a02ca20231728d5658a4057fa27c49a011d2a94a22a149e22c3769d47",
+      "bytes": 38944
+    },
+    {
+      "path": "test/scripts/ciOptionalWorkflows.test.mts",
+      "gitBlob": "487e74244b722b47931f209ddc0292e69ad6184f",
+      "sha256": "565231c7f05a0a13728084094a99b4e1b2828b27e38056a990d552e7b1da38a4",
+      "bytes": 8756
+    }
+  ],
+  "producerReview": {
+    "sameFunctionForManualAuto": true,
+    "mediaStepUnconditional": true,
+    "position": "After all native media assertions/public readback and original PNG marker; before checkpoint and original Host cleanup.",
+    "preservedAssertions": [
+      "Native model request validates original PNG/JPEG/GIF/WebP MIME and exact bytes.",
+      "PDF data URI is exact to original bytes.",
+      "Original4MiB PNG is normalized and checked as2000x1 exact red pixels with PNG structural/CRC constraints.",
+      "Public attachment reads reassemble and compare all original bytes.",
+      "Cold Host readback compares the same media facts, preserves command receipts, and verifies no model/tool replay.",
+      "Manual retains two permission replies, auto retains zero; both retain11model requests and empty modelFailures."
+    ]
+  },
+  "actualFiniteEvidence": {
+    "receiptSha256": "b32592a99a2bd35ec2bddb085ccb9b2ceb1f41d61ba347f5ebabbde5ba0630df",
+    "runnerSha256": "873410e73dd521d6dc6f46264a8156b233b4bee9384d27d151b4b03867eda1a0",
+    "manifestSha256": "9555b69f7a486b69a717ca99dd6f684e009d01fe5f0c4e68a6b9c953782cf1f4",
+    "scriptBindings": [
+      {
+        "script": "before-verifier.mjs",
+        "exactOriginalInlineBody": true,
+        "openingQuotedNewlineRetained": true,
+        "sha256": "8d6f8f21b66ba47cbeea8cf649b484b07c1c556e245446fedb5200eae24e4943",
+        "bytes": 2872
+      },
+      {
+        "script": "after-verifier.mjs",
+        "exactOriginalInlineBody": true,
+        "openingQuotedNewlineRetained": true,
+        "sha256": "097b8ad9187cf9dc685be65ace382fd5df2304d15de51c4dc2194801f51baa59",
+        "bytes": 2969
+      }
+    ],
+    "summary": {
+      "originalRefusalReproduced": 1,
+      "fullVerifierPassed": 1,
+      "originalReceiptsFullyChecked": 2,
+      "exactStepNegativeRefusals": 3
+    },
+    "runtime": {
+      "nodeVersion": "v24.22.3",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "explicitVerifierContext": {
+      "platform": "win32",
+      "arch": "x64",
+      "onlyReceiptPaths": [
+        "opencode-v2-embedded-host.json",
+        "opencode-v2-embedded-host-auto.json"
+      ],
+      "PRODUCT_ADMITTED": "Explicit1 matching original verifier having reached the step-array assertion; this is not a new tuple admission."
+    },
+    "runnerAssessment": [
+      "vm.SourceTextModule evaluates the exact complete saved inline JavaScript body.",
+      "The linker admits only node:assert/strict (the actual strict assertion library) and node:fs (a frozen two-file read-only string port).",
+      "The selected environment is derived from original inputs and original passing custody metadata; native receipt bytes remain unchanged in GREEN.",
+      "One original manual receipt reproduces the precise closed-roster refusal. One GREEN evaluates both original manual and auto receipts fully.",
+      "Three negative copies retain exact-step rejection for missing manual media marker, extra auto marker and reordered auto marker.",
+      "Since full evaluation completes for both original receipts, all later original qualification=false and Windows shell digest assertions execute without rewriting them."
+    ],
+    "limits": [
+      "Linux/other-platform verifier branches were not evaluated here.",
+      "The review did not rerun the VM or any tests. The runtime is localLinux Node24.22.3 with explicitWindowsdata context, not nativeWindows execution.",
+      "Original823 native job/workflow conclusions remain unchanged; new current-head requiredCI remains open."
+    ]
+  },
+  "originalArtifact": {
+    "sha256": "4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613",
+    "bytes": 13580,
+    "members": [
+      {
+        "name": "opencode-v2-embedded-host.json",
+        "sha256": "bd682bbbb2ad463dfcc20a1c2bfd704a633f1db9384b27f4b6ce31a65f4986f8",
+        "bytes": 91886,
+        "exactZipMember": true
+      },
+      {
+        "name": "opencode-v2-embedded-host-auto.json",
+        "sha256": "b6202512a9eef253f248a82d9475fbcb5dd4063356578a9b51e5d3d128592055",
+        "bytes": 96755,
+        "exactZipMember": true
+      },
+      {
+        "name": "opencode-v2-embedded-inputs.json",
+        "sha256": "f91e4902cc2e8ba6ad629332115039f6b0df4b8a299fed195d6b2be41f2f99f4",
+        "bytes": 780,
+        "exactZipMember": true
+      },
+      {
+        "name": "opencode-v2-windows-custody.json",
+        "sha256": "354c1c12164d6dee53488e52ec56893cd85cef54b98afdaa0e2eca53b3219cc0",
+        "bytes": 907,
+        "exactZipMember": true
+      }
+    ]
+  },
+  "reviewerExtractionNote": "Initial local comparison omitted the opening newline in the actual quoted JavaScript; accounting for that existing newline establishes exact bytes for both scripts. No script was changed.",
+  "existingFinitePolicyTest": {
+    "path": "test/scripts/ciOptionalWorkflows.test.mts",
+    "scope": "Existing17workflow-policy cases protect triggers/concurrency/selected gates; they do not assert this inline receipt roster. No duplicate run was requested for an unchanged policy surface."
+  },
+  "execution": {
+    "testsOrVerifierRerun": false,
+    "appNativeBuildInstall": false,
+    "ciRequests": false,
+    "sourceEdits": false,
+    "commitOrRefEdits": false
+  }
+}

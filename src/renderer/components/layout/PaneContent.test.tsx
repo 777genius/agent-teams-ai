@@ -15,14 +15,37 @@ const teamDetailViewMock = vi.hoisted(() => {
   return { promise, resolve };
 });
 
-vi.mock('../dashboard/DashboardView', () => ({
-  DashboardView: ({ isActive = true }: { isActive?: boolean }) =>
-    React.createElement(
-      'div',
-      { 'data-view': 'dashboard', 'data-active': String(isActive) },
-      'Dashboard view'
-    ),
-}));
+const routeImports = vi.hoisted(() => ({ dashboard: 0, settings: 0 }));
+
+vi.mock('../dashboard/DashboardView', () => {
+  routeImports.dashboard += 1;
+  return {
+    DashboardView: ({ isActive = true }: { isActive?: boolean }) =>
+      React.createElement(
+        'div',
+        { 'data-view': 'dashboard', 'data-active': String(isActive) },
+        'Dashboard view'
+      ),
+  };
+});
+
+vi.mock('../settings/SettingsView', () => {
+  routeImports.settings += 1;
+  return {
+    SettingsView: ({ isActive = true }: { isActive?: boolean }) => {
+      const [value, setValue] = React.useState(0);
+      return React.createElement(
+        'button',
+        {
+          'data-view': 'settings',
+          'data-active': String(isActive),
+          onClick: () => setValue(value + 1),
+        },
+        `Settings value ${value}`
+      );
+    },
+  };
+});
 
 vi.mock('../extensions/ExtensionStoreView', () => ({
   ExtensionStoreView: () =>
@@ -65,6 +88,13 @@ const teamTab: Tab = {
   label: 'Alpha',
   teamName: 'team-alpha',
   createdAt: 3,
+};
+
+const settingsTab: Tab = {
+  id: 'tab-settings',
+  type: 'settings',
+  label: 'Settings',
+  createdAt: 4,
 };
 
 const createPane = (tabs: Tab[], activeTabId: string | null): Pane => ({
@@ -120,13 +150,50 @@ describe('PaneContent', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders the default dashboard without suspending when no tabs are open', async () => {
+  it('contains the default dashboard load in a local fallback and then renders it', async () => {
     const { host, root } = createHarness();
 
-    await renderPane(root, createPane([], null));
+    expect(routeImports.dashboard).toBe(0);
+    act(() => {
+      root.render(<PaneContent pane={createPane([], null)} isPaneFocused />);
+    });
 
-    expect(host.textContent).toContain('Dashboard view');
+    expect(host.textContent).not.toContain('Dashboard view');
+    expect(host.querySelector('[role="status"]')).not.toBeNull();
+    await waitForText(host, 'Dashboard view');
+
+    expect(routeImports.dashboard).toBe(1);
     expect(host.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('imports Settings on activation and preserves its local state across tab switches', async () => {
+    const { host, root } = createHarness();
+    const tabs = [dashboardTab, settingsTab];
+
+    await renderPane(root, createPane(tabs, dashboardTab.id));
+    expect(routeImports.settings).toBe(0);
+    expect(host.querySelector('[data-view="settings"]')).toBeNull();
+
+    await renderPane(root, createPane(tabs, settingsTab.id));
+    await waitForText(host, 'Settings value 0');
+    expect(routeImports.settings).toBe(1);
+    const settingsView = host.querySelector<HTMLButtonElement>('[data-view="settings"]')!;
+    expect(settingsView.getAttribute('data-active')).toBe('true');
+    await act(async () => {
+      settingsView.click();
+    });
+    expect(settingsView.textContent).toBe('Settings value 1');
+
+    await renderPane(root, createPane(tabs, dashboardTab.id));
+    expect(host.querySelector('[data-view="settings"]')).toBe(settingsView);
+    expect(settingsView.getAttribute('data-active')).toBe('false');
+    expect(settingsView.closest<HTMLElement>('.absolute')?.style.display).toBe('none');
+
+    await renderPane(root, createPane(tabs, settingsTab.id));
+    expect(routeImports.settings).toBe(1);
+    expect(host.querySelector('[data-view="settings"]')).toBe(settingsView);
+    expect(settingsView.textContent).toBe('Settings value 1');
+    expect(settingsView.getAttribute('data-active')).toBe('true');
   });
 
   it('does not mount inactive lazy tab content during initial pane render', async () => {

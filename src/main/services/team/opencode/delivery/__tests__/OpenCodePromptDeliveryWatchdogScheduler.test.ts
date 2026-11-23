@@ -353,7 +353,8 @@ describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () =>
   it('replaces a revoked generation wake with its successor on the same message key', async () => {
     const { scheduler, deps } = makeScheduler();
     let firstCurrent = true;
-    const successorCurrent = (): boolean => true;
+    let successor = true;
+    const successorCurrent = (): boolean => successor;
     scheduler.schedule({
       teamName: 'team',
       memberName: 'jack',
@@ -372,8 +373,11 @@ describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () =>
     await vi.advanceTimersByTimeAsync(500);
     expect(deps.relay).toHaveBeenCalledTimes(1);
     expect(deps.relay).toHaveBeenCalledWith(
-      expect.objectContaining({ isCurrent: successorCurrent })
+      expect.objectContaining({ isCurrent: expect.any(Function) })
     );
+    expect(vi.mocked(deps.relay).mock.calls[0]?.[0].isCurrent?.()).toBe(true);
+    successor = false;
+    expect(vi.mocked(deps.relay).mock.calls[0]?.[0].isCurrent?.()).toBe(false);
     scheduler.cancelTeam('team');
   });
 
@@ -400,18 +404,30 @@ describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () =>
       teamName: 'team',
       memberName: 'jack',
       messageId: 'queued',
+      isCurrent: expect.any(Function),
     });
+    expect(vi.mocked(deps.relay).mock.calls[0]?.[0].isCurrent?.()).toBe(true);
     scheduler.cancelTeam('team');
   });
 
-  it('does not narrow an existing unscoped wake when a scoped wake advances its deadline', async () => {
+  it.each([false, true])('keeps unscoped intent (forwarded=%s)', async (forwarded) => {
     const { scheduler, deps } = makeScheduler();
     let current = true;
+    const target = { teamName: 'team', memberName: 'jack' };
+    let isCurrent: (() => boolean) | undefined;
+    if (forwarded) {
+      scheduler.schedule({ ...target, messageId: 'seed', delayMs: 500 });
+      await vi.advanceTimersByTimeAsync(500);
+      isCurrent = vi.mocked(deps.relay).mock.calls[0]?.[0].isCurrent;
+      expect(isCurrent).toBeTypeOf('function');
+      vi.mocked(deps.relay).mockClear();
+    }
     scheduler.schedule({
       teamName: 'team',
       memberName: 'jack',
       messageId: 'queued',
       delayMs: 3_000,
+      ...(isCurrent ? { isCurrent } : {}),
     });
     scheduler.schedule({
       teamName: 'team',
@@ -427,7 +443,9 @@ describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () =>
       teamName: 'team',
       memberName: 'jack',
       messageId: 'queued',
+      isCurrent: expect.any(Function),
     });
+    expect(vi.mocked(deps.relay).mock.calls[0]?.[0].isCurrent?.()).toBe(true);
     scheduler.cancelTeam('team');
   });
 

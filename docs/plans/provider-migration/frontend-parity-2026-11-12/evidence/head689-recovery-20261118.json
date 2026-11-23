@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "base": "68956f3fd5e4f4ad300f8f627d085097d531eaa5",
+  "baseTree": "7a1065fa84321574065fdcf33cb80d27ce43dfc7",
+  "branch": "fix/frontend-parity-completion-20261113",
+  "pullRequest": 1192,
+  "targetBase": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "environmentUnavailableSince": "2026-11-18T08:10:00Z",
+  "noExecutionAfterOutage": true,
+  "retiredOriginalAttemptOneRuns": [
+    {
+      "id": 44252221927,
+      "name": "Teams",
+      "conclusion": "success",
+      "scope": "3OS config-only original UI; no provider execution"
+    },
+    {
+      "id": 44252221838,
+      "name": "Host Emulated",
+      "conclusion": "failure",
+      "scope": "21 successful jobs,8 scenario failures plus failed aggregate"
+    },
+    {
+      "id": 44252221762,
+      "name": "Host fixture",
+      "conclusion": "failure",
+      "scope": "Linux and Darwinx64/ARM64 pass; Windowsx64/ARM64 readiness deadlines fail"
+    },
+    {
+      "id": 44252221877,
+      "name": "Packaged",
+      "conclusion": "failure",
+      "scope": "all5 actual V2Host scopes pass; Darwinx64 finite original-peer identity refusal"
+    },
+    {
+      "id": 44252222114,
+      "name": "Stage1",
+      "conclusion": "failure",
+      "scope": "7 successful jobs,2 Darwin P09 source-writer failures"
+    },
+    {
+      "id": 44252222089,
+      "name": "Main",
+      "conclusion": "failure",
+      "scope": "full workspace typecheck/fast feedback pass; retained original Launch scope refusal"
+    }
+  ],
+  "unpublished": [
+    {
+      "name": "captured-member-labels",
+      "status": "Reviewed and locally tested before outage; full regression file not recovered",
+      "handover": "/workspace/scratch/c714f5bce554/evidence-current/member-labels-689/frozen-review-input.json",
+      "handoverSHA256": "eccb4a1e3c54d23f2892443860b0e10080ee73b25831e8e500f815ca95424d10",
+      "patchSHA256": "7122a1ac8504cc9f4dbcb331a035c879b7a3da23e15df374a4f277f12ad51b7a",
+      "checks": "baseline3FAIL/30PASS; final33/33PASS; lint/cap/diffPASS",
+      "files": [
+        [
+          "src/renderer/utils/memberRuntimeSummary.ts",
+          "a64428d8c4ec3ede2300d3c40024d6b5ed081c4bf7e0bbea4decbcf90709d317"
+        ],
+        [
+          "test/renderer/utils/memberRuntimeSummary.test.ts",
+          "ab6f254628346ae4a2b7cd14a0c9046d41b43912efcd59656a5934870f6469f8"
+        ]
+      ]
+    },
+    {
+      "name": "runtime-open-diagnostics-final",
+      "status": "Reviewed and locally tested; exact7file group not recovered; diagnostic only, cause not established",
+      "handover": "/workspace/scratch/c714-runtime-open-diagnostic-689-validation-20261118/final/handover.json",
+      "handoverSHA256": "1daeb875d1ea747019f6bfa1a73ebad5674db1ff399e49e6e692006710ab0717",
+      "patchSHA256": "f88cd7035d1f4e5b052a04745827c894c26f54f6638572e2f71e675daf5713e4",
+      "checks": "22PASS; Hostbuild and focusedtypes/lint/cap/diffPASS",
+      "files": [
+        [
+          "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+          "5feb3e94ddd16b8a8171f3f9284e9f5fcded7fec21874e6eecc196bde55182a8"
+        ],
+        [
+          "packages/legacy-agent-host/src/diagnostics/runtimeOpenDiagnostic.ts",
+          "f6bcf6632a39423fd6a80252b9103b534bcd641fcba397626d6267d5abb4e0d7"
+        ],
+        [
+          "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+          "36e9e4591cc69adaa3e0997325c56d9e7c0e0757545eeb6cb08856e3a2c92784"
+        ],
+        [
+          "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+          "0d32d18e733e3ceb3d9c78c6eeae307eb5083c6ef8ee94f6035c2da0b012d43b"
+        ],
+        [
+          "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+          "f364ceaaf4ba65befb6e5fa99e65d1e4b5b4afce1fea7d0798a3d900c706b6a2"
+        ],
+        [
+          "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+          "bd11114da6885ff911d08c4bf73a0c23a9c54fedf0f6440d99629fe3725292ff"
+        ],
+        [
+          "test/features/agent-backend/runtimeOpenDiagnostics.test.ts",
+          "e81be8c3ef6ee9f5cf7ad583812f76f13970e6fe99578d4df56073aa10197c10"
+        ]
+      ]
+    },
+    {
+      "name": "epoch-natural-exit-final-v2",
+      "status": "Reviewed and locally tested; exact2file group not recovered; historical cleanup remains incomplete",
+      "handover": "/workspace/scratch/c714-owner-natural-reap-689-validation-20261118/handover-final.json",
+      "handoverSHA256": "37b40c953b5e412f81305860c70a3b0d1a07002505192e3421d4e76b98502aa0",
+      "patchSHA256": "be876a79434bd1a80f5c92fcc9d3cd6d0a77adcccb04fc4efd8162245cf5eee5",
+      "checks": "actualcaller baselineRED + latePIDreappearanceRED; final128PASS; scripts types/lint/cap/diffPASS",
+      "files": [
+        [
+          "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+          "79bf9c48320c95fac43a1d22ce429ab229631c60f4666dc7e39fafdb67ebb366"
+        ],
+        [
+          "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "7cc2df1110229189e34c6653cc013f210ae14d6a20889b318f53b8d9c7e07949"
+        ]
+      ]
+    },
+    {
+      "name": "metadata-passive-readiness",
+      "status": "DRAFT / NOT APPROVED / KNOWN RED: final owner guard must precede final remainingMs; fix was NOT applied",
+      "worktree": "/workspace/scratch/c714-metadata-readiness-689-20261118",
+      "lastResult": "26tests:25PASS/1FAIL, Missing expected rejection when original final guard crosses setup cutoff",
+      "lastRedLogSHA256": "11aa87f3cfb45764c7bda5d91edbf5d09efca08b9d99d5232e18c682bdc5aa99",
+      "next": "Apply guard-before-remaining order, run actual caller26tests + scripts types/lint/cap/diff, independent review/freeze; preserve original120/180s and physical5s observer; no new RPC or launch."
+    }
+  ],
+  "pendingDiagnoses": [
+    {
+      "name": "retained-original-import-held",
+      "jobId": 134625609400,
+      "firstRefusal": "one original Detail Launch -> stopped import held/not-dispatched; underlying caught error not recorded",
+      "next": "bounded private closed-field diagnostics in existing Main catches, actual function regression; no change authored"
+    },
+    {
+      "name": "OpenCodeV2resume",
+      "jobId": 134625609263,
+      "firstRefusal": "preflight and2metadata scopes passed; one Launch click; no single fresh Team capture within original60s",
+      "next": "Inspect already downloaded20member artifact14408992114; PNG/state/runtime/error bytes were not read before environment outage; cause unknown"
+    },
+    {
+      "name": "Windowsreadiness",
+      "jobs": [
+        134625437051,
+        134625436457
+      ],
+      "firstRefusal": "Windows x64: original reference probe expiry at original15s cutoff+142ms; consumer observation14978ms does not date that refusal. Windows ARM64: original ready projection returned at15375.9215ms after15s cutoff. Cleanup positive; no proven source fix."
+    },
+    {
+      "name": "PackagedDarwinx64",
+      "jobId": 134626723608,
+      "firstRefusal": "Original finite management peer argv became(node) before lifecycle. No original peer exit receipt at that failing observation; later original app exit0 and peer absence are separate positive evidence. Strict oracle retained."
+    },
+    {
+      "name": "P09",
+      "firstRefusal": "source-writer invariants not proven on Darwin; owner contract decision remains open in40-p09-source-writer-decision-2026-11-16.md"
+    },
+    {
+      "name": "Securityaudit",
+      "firstRefusal": "picomatch advisory GHSA-fc5q-39xc-vjpf remains open in recorded audit; no dependency install, waiver or invented patched version"
+    }
+  ],
+  "recordedAt": "2026-11-18T08:42:59Z",
+  "publicationStatus": "Prepared for one commit and immediate guarded fast-forward; new CI not observed yet",
+  "reviews": {
+    "retained": {
+      "schemaVersion": 1,
+      "base": "68956f3fd5e4f4ad300f8f627d085097d531eaa5",
+      "reviewer": "root",
+      "decision": "PASS for publication of exact frozen final rev3 with workflow; E2E pending",
+      "handoverSHA256": "4e290d4f59607810c7765072fa5f20fb30bfaa343f37d51a2fc5bd1312415438",
+      "patchSHA256": "2bb636fa7475ac88b69067c5d3def7f04fe27fd6a460d0938bacaf1ae6431212",
+      "files": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.ts",
+          "blob": "55b25da6fb7922c7beabe464fdba9572787ac774",
+          "baseSHA256": null,
+          "sha256": "0200b764e1dd13abbdfe3219297aaadb0c9d6b15dadfda3a0f3b17662e5f0a1e"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+          "blob": "f0d244198b09be1b401a34710874d7f5b067d2cf",
+          "baseSHA256": null,
+          "sha256": "4055c8b1e18f9618938c524aeafaa4772f82e4a91ac3118a7ecde331133c8d62"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+          "blob": "3bb0ba5a0ca714a05b9493e455a496f264fea923",
+          "baseSHA256": "62b222833b0d6b86706f84e92fbb0fe954bb0f62b7cd8b48a7e38c1724b4ed43",
+          "sha256": "73a95f910d90178fad7e015a884b19d782c105c143f83a79d03f689a9dafabc7"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "dc72d624c16e0419b1cc2a89a236d6d51a5d105f",
+          "baseSHA256": "100678ba8acec78df752dbf2f80b295e00e0bd521efdaceef643959d87c1596c",
+          "sha256": "9f9f20715e69dcecb8c84ee55f7420796ad4c1b17dffd4fe771a3606023f65c6"
+        }
+      ],
+      "findings": [
+        "All 4 exact frozen postimages independently fetched and hashed by root; modified base preimages verified.",
+        "Entire helper and 272 line regression read; actual pinned Main Coordinator's mandatory roster/admission/UNKNOWN handling read, SHA256 da9c9f2a3fb1efbcfa60e6abe2d586423591330017d799ac3bc8e29dc622b0d0.",
+        "Original renderer method and receiver captured; exact saved request/roster validated; one scoped launch per original call; closeIntent retains same original intent.",
+        "Final post-close cutoff retained; lost ACK cannot redispatch; actual Main UNKNOWN effect prevents close from clearing debt.",
+        "Caller changes are one import and two original calls, with unchanged requests and fixed original intents; workflow changes only one test-path argument."
+      ],
+      "previousIndependentReviews": [
+        [
+          "nativeMainContract",
+          "fded1c907e1683f3509d9bcf0629a050f6c77b248d69839bd7e29fed9d93b6d7"
+        ],
+        [
+          "nativeWorkflow",
+          "500ff00b49adddf79247c23ab1befdd4d6f9469df1b1b113f3dfa74b1b7f725c"
+        ],
+        [
+          "uiFinalRev3",
+          "c0a607b9d26c4bb47b4d7ec421dceb73d3daf1e7c535e4b6be808d83174bf89a"
+        ]
+      ],
+      "priorValidation": {
+        "regressions": "22/22 PASS including actual Coordinator roster RED/GREEN and unknown debt",
+        "focusedTypesLintCapDiff": "PASS before outage"
+      },
+      "newExecution": false,
+      "limits": [
+        "Finite authority ports are not a new native composition or Desktop UI run.",
+        "Earlier rev2 approval was withdrawn; only final rev3 with roster qualifies for this review."
+      ]
+    },
+    "m16": {
+      "schemaVersion": 1,
+      "base": "68956f3fd5e4f4ad300f8f627d085097d531eaa5",
+      "reviewer": "root",
+      "decision": "PASS for publication of exact frozen M16 candidate; E2E pending",
+      "handoverSHA256": "ed3c77e467af11fb7f513b44db5bd95833d698f1c665b0d28d9b5924b3b626ba",
+      "files": [
+        {
+          "path": "tools/owned-process-broker/fixtures/legacyBootstrapPeer.mjs",
+          "blob": "dfb470220906ce99af8cf90201e3133d1f67c9d4",
+          "baseSHA256": "855467b8cf22bcf8e4461ffe0aae2f92208d8cd04d0f5955b828601eacdca3fa",
+          "sha256": "a73582586c858dc4c267bb33a1d3ad159a94fe3c2313a641346146d3c753a5f7"
+        },
+        {
+          "path": "test/main/services/runtime/AnthropicModelCatalogPicker.safe-e2e.test.ts",
+          "blob": "187a9d7b68fa964dec516a5bede5066216249524",
+          "baseSHA256": "84a336fce0ed3cfd0a9a183d5db167dac374b90d7fb051f98dad4fb9fca97b5a",
+          "sha256": "a8bfef183a2a8e725c9575fb5ff3ef0eaf24d040c6c2bc3ac7369e8299037783"
+        }
+      ],
+      "findings": [
+        "Root independently fetched immutable blobs and base689; exact preimage/postimage SHA256 values match the frozen handover.",
+        "Complete new diff read; fixture metadata models remain concrete, dynamic:false, no production mapper/resolver/admission changes.",
+        "Actual finite Node peer test calls original Main mapper/picker/preflight; family alias and unknown model still refused.",
+        "All 8822 UTF8 bytes beginning at original -p branch through EOF compare equal; SHA256 ca73f408d2446c756ce1f677f153791b7cecf5c1d2528a75252c7b90c07edaa5."
+      ],
+      "priorValidation": {
+        "actualMapperPickerPreflight": "4/4 PASS; baseline RED before loss",
+        "existingFiniteGuards": "13+18=31 PASS before loss",
+        "types": "whole scripts and focused regression closure PASS",
+        "lintSourceCapDiff": "PASS"
+      },
+      "newExecution": false,
+      "limits": [
+        "No new desktop/native E2E performed.",
+        "Win32 new regression intentionally skipped; no native Windows qualification."
+      ],
+      "secondaryDigestCorrection": {
+        "resolved": true,
+        "explanation": "Original freeze hashes bytes AFTER the26byte marker. Root's byte comparison included the marker. Both exact ranges are unchanged.",
+        "afterMarkerSHA256": "aca5e6c347461c83b021f2af932fc0627035cfa8728410e5c119d96ef79292d8",
+        "afterMarkerBytes": 8796,
+        "includingMarkerSHA256": "ca73f408d2446c756ce1f677f153791b7cecf5c1d2528a75252c7b90c07edaa5"
+      }
+    },
+    "selectors": {
+      "schemaVersion": 1,
+      "base": "68956f3fd5e4f4ad300f8f627d085097d531eaa5",
+      "reviewer": "root",
+      "recoveredExact": true,
+      "files": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "blob": "44a8cb5c3814b6401ca3c433b9714d9c282d9ffb",
+          "baseSHA256": "ba0e1b37e015189ad2129c1155322f8655ed12e048033d5969139e6452cf6198",
+          "sha256": "229391d41cd79b523674c967de4b01c66760bc2f013e01037f9309f577bf6f81",
+          "replacements": 2
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-roster-lifecycle-ui-smoke.ts",
+          "blob": "b06b1c39ace6eef13cd4e60ba6064c56823c9b27",
+          "baseSHA256": "e210b7c340c98311a58339470588b83cb84f58722e51787aa09fbc3bbd85b975",
+          "sha256": "2c2008f65013d1503a83878d89702664d6361ceee56f3e9af090c58c05162f7b",
+          "replacements": 1
+        }
+      ],
+      "verified": "Root independently fetched remote base and immutable blobs; all hashes match frozen candidate145d24158e0026a6a19a24fb7bb47e2732cf558eabb66b8e95763298108d3ee9. Reverse replacements reproduce exact base. Actual TeamDetailView icon-only Add button and existing click handler read from pinned689. Actions/order/deadlines preserved.",
+      "previousChecks": {
+        "scopedLint": "PASS before environment loss",
+        "diffCheck": "PASS before environment loss",
+        "wholeScriptsTypecheck": "pending combined; no new claim",
+        "E2E": "not run for candidate"
+      },
+      "environment": "exec unavailable; no local run after outage"
+    }
+  },
+  "frontendPriorResult": {
+    "passed": 26162,
+    "skipped": 38,
+    "failed": 0,
+    "distinctFiles": 2182,
+    "sourceHead": "68956f3fd5e4f4ad300f8f627d085097d531eaa5",
+    "scope": "offline frontend only"
+  },
+  "environmentUnavailableSinceApproximate": true,
+  "evidenceNoteReview": {
+    "reviewer": "ci_native_37",
+    "decision": "PASS",
+    "documentBlob": "730b123fbb6cfe92a14e3097e9e8ff5234ae43b4",
+    "documentSHA256": "21c78904fbe8de827e0aa190e62538f25dd3c48b2bc73e36fae431bbc467cedd",
+    "reviewedReportBlob": "4f7551c0720aac03a6a26aa155d4bf5e464e0223",
+    "appliedClarifications": [
+      "Windowsx64 reference expiry vs earlier consumer observation distinguished.",
+      "Darwin original peer exit receipt absence is scoped to failing observation; later app exit0 retained.",
+      "Environment outage timestamp explicitly marked approximate.",
+      "Report recordedAt uses observed clock, no invented second-level precision."
+    ]
+  }
+}

@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { isAbsolute, join, parse, resolve, sep } from 'node:path';
 
+import { beginModelReadinessNamespaceTiming } from '../../diagnostics/modelReadinessTiming.js';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest, safeSegment } from '../../team/identity.js';
 
@@ -67,8 +68,13 @@ export class TeamOwnerStore implements TeamStore {
   private validateNamespace(): void {
     const directoryPath = (target: string, required = false): void => {
       let part = parse(target).root;
-      for (const segment of target.slice(part.length).split(sep)) {
-        part = join(part, segment);
+      // Constructor/join already normalize these targets. Keep every fresh
+      // ancestor read without repeatedly normalizing its whole path prefix.
+      let cursor = part.length;
+      while (cursor <= target.length) {
+        const next = target.indexOf(sep, cursor), end = next < 0 ? target.length : next;
+        part = end === cursor ? join(part, '') : target.slice(0, end);
+        cursor = next < 0 ? target.length + 1 : next + 1;
         try {
           const stat = lstatSync(part);
           if (!stat.isDirectory() || stat.isSymbolicLink()) throw new TeamOwnerError('hold');
@@ -97,15 +103,20 @@ export class TeamOwnerStore implements TeamStore {
     };
     const team = join(this.root, 'teams', this.teamName);
     const tasks = join(this.root, 'tasks', this.teamName);
-    directoryPath(this.directory, true);
-    directoryPath(tasks);
-    tree(team);
-    tree(tasks);
+    const timing = beginModelReadinessNamespaceTiming();
+    try {
+      directoryPath(this.directory, true);
+      directoryPath(tasks);
+      timing?.tree();
+      tree(team);
+      tree(tasks);
+    } finally { timing?.finish(); }
   }
 
-  read<T>(name: string): T | undefined {
+  read<T>(name: string, decode?: (text: string) => T): T | undefined {
     try {
-      return JSON.parse(readFileSync(join(this.directory, name), 'utf8')) as T;
+      const text = readFileSync(join(this.directory, name), 'utf8');
+      return decode ? decode(text) : JSON.parse(text) as T;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw new TeamOwnerError('hold');

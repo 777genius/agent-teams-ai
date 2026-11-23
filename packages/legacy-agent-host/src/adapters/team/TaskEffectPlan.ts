@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest, safeSegment } from '../../team/identity.js';
@@ -45,6 +45,7 @@ interface Plan extends PreparedTaskMutation {
   source: Record<string, FileVersion>;
   directories: Record<string, string>;
   writes: Write[];
+  reviewFlowDefaults: { directory: string; directoryIdentity: string | null; version: FileVersion | null };
 }
 
 const MAX_FILES = 10_000;
@@ -55,9 +56,12 @@ export class TaskEffectPlan implements TaskMutationPort {
   constructor(
     private readonly root: string,
     private readonly teamName: string,
-    private readonly store: TeamStore
+    private readonly store: TeamStore,
+    private readonly reviewFlowDefaultsDirectory = root
   ) {
     safeSegment(teamName);
+    if (!isAbsolute(reviewFlowDefaultsDirectory) || reviewFlowDefaultsDirectory.includes('\0'))
+      throw new TeamOwnerError('invalid');
   }
 
   private key(receipt: CommandReceipt): string {
@@ -147,6 +151,7 @@ export class TaskEffectPlan implements TaskMutationPort {
       plan.schemaVersion !== 1 ||
       plan.commandId !== receipt.commandId ||
       plan.fingerprint !== receipt.fingerprint ||
+      plan.reviewFlowDefaults?.directory !== this.reviewFlowDefaultsDirectory ||
       !Array.isArray(plan.writes) ||
       plan.writes.length > MAX_FILES
     )
@@ -176,6 +181,12 @@ export class TaskEffectPlan implements TaskMutationPort {
     const previous = this.readPlan(receipt);
     if (previous) return previous;
     const source = this.scan(this.root);
+    const defaults = this.file(this.reviewFlowDefaultsDirectory, 'review-flow-defaults.json');
+    const defaultsSource: Plan['reviewFlowDefaults'] = {
+      directory: this.reviewFlowDefaultsDirectory,
+      directoryIdentity: this.identity(this.reviewFlowDefaultsDirectory, true) ?? null,
+      version: defaults?.version ?? null,
+    };
     const work = join(this.root, 'teams', this.teamName, '.host-owner', 'task-work', randomUUID());
     // Only an unprepared private snapshot is disposable. No live product file is touched here.
     rmSync(work, { recursive: true, force: true });
@@ -185,10 +196,14 @@ export class TaskEffectPlan implements TaskMutationPort {
         mkdirSync(dirname(join(work, path)), { recursive: true });
         writeFileSync(join(work, path), file.bytes, { flag: 'wx' });
       }
+      // Default bytes participate in the exact read closure, never the write allowlist.
+      if (defaults) writeFileSync(join(work, 'review-flow-defaults.json'), defaults.bytes, { flag: 'wx' });
       const board = createTeamPolicy(work, this.teamName).taskBoard(actor);
       let result: JsonValue;
       try {
+        if (receipt.command.operation !== 'task.board.review-flow') board.getKanbanState({ strict: true });
         result = apply(board);
+        board.getKanbanState({ strict: true });
       } catch {
         throw new TaskPolicyRejected();
       }
@@ -196,19 +211,22 @@ export class TaskEffectPlan implements TaskMutationPort {
         receipt.command.operation === 'task.create'
           ? receipt.effects.taskId
           : receipt.command.operation === 'message.send' ||
-              receipt.command.operation === 'task.board.order'
+              (receipt.command.operation === 'task.board.order' ||
+               receipt.command.operation === 'task.board.review-flow')
             ? ''
             : receipt.command.payload.taskId;
       // Board ordering has no synthetic Task identity. Its exact board state is
       // retained alongside the same full file preimage and publication plan.
       const taskHash = digest(
-        receipt.command.operation === 'task.board.order'
+        (receipt.command.operation === 'task.board.order' ||
+         receipt.command.operation === 'task.board.review-flow')
           ? board.getKanbanState()
           : board.getTask(taskId)
       );
       const target = this.scan(work);
       for (const path of Object.keys(source)) if (!target[path]) throw new TeamOwnerError('hold');
       if (digest(this.scan(this.root)) !== digest(source)) throw new TeamOwnerError('hold');
+      this.checkDefaults(defaultsSource);
       const writes: Write[] = [];
       // Product Task/board state precedes inbox publication; the complete plan is already durable.
       const changed = Object.keys(target)
@@ -255,6 +273,7 @@ export class TaskEffectPlan implements TaskMutationPort {
         removedMessageIds,
         writes,
         directories,
+        reviewFlowDefaults: defaultsSource,
         source: Object.fromEntries(
           Object.entries(source).map(([path, file]) => [path, file.version])
         ),
@@ -307,6 +326,7 @@ export class TaskEffectPlan implements TaskMutationPort {
   }
 
   private check(plan: Plan): void {
+    this.checkDefaults(plan.reviewFlowDefaults);
     for (const [path, identity] of Object.entries(plan.directories))
       if (this.identity(join(this.root, path), true) !== identity) throw new TeamOwnerError('hold');
     const current = this.scan(this.root);
@@ -327,6 +347,13 @@ export class TaskEffectPlan implements TaskMutationPort {
       )
         throw new TeamOwnerError('hold');
     }
+  }
+
+  private checkDefaults(source: Plan['reviewFlowDefaults']): void {
+    if (source.directory !== this.reviewFlowDefaultsDirectory ||
+        source.directoryIdentity !== (this.identity(source.directory, true) ?? null) ||
+        digest(source.version) !== digest(this.file(source.directory, 'review-flow-defaults.json')?.version ?? null))
+      throw new TeamOwnerError('hold');
   }
 
   publish(receipt: CommandReceipt): void {

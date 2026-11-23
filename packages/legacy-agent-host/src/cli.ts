@@ -31,17 +31,19 @@ try {
   if (path || digest) {
     if (!path || !digest) throw new Error('Invalid host profile');
     // Transport-only hosts do not load provider SDKs or Team persistence machinery.
-    const [{ createTeamHost }, { readTeamHostProfile }] = await Promise.all([
+    const [{ createTeamHost }, { readTeamHostProfile }, { parsePromptSuggestionProviders }] = await Promise.all([
       import('./composition/TeamHost.js'),
       import('./composition/readProfile.js'),
+      import('./composition/createCapturedPromptSuggestionBinding.js'),
     ]);
     // Trusted Main passes a captured user preference at Host startup.
     // No renderer command or alteration of an already-running SDK Query.
-    const preference = process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED;
-    if (preference !== undefined && preference !== '0' && preference !== '1')
-      throw new Error('Invalid native suggestion startup preference');
+    // Throws on anything but a comma separated subset of the known providers (empty = none).
+    const providers = process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS;
     server = createTeamHost(readTeamHostProfile(path, digest), streams,
-      preference === undefined ? undefined : { promptSuggestionsEnabled: preference === '1' });
+      { ...(providers === undefined ? {} : { promptSuggestionProviders: parsePromptSuggestionProviders(providers) }),
+        ...(process.env.AGENT_TEAMS_REVIEW_FLOW_DEFAULTS_DIRECTORY
+          ? { reviewFlowDefaultsDirectory: process.env.AGENT_TEAMS_REVIEW_FLOW_DEFAULTS_DIRECTORY } : {}) });
   } else {
     server = createHostServer({ ...streams, buildId: 'legacy-agent-host/0.1.0' });
   }

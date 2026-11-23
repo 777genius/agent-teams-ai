@@ -11,6 +11,11 @@ import {
 } from '@features/agent-attachments/main';
 import { isHostTeamSelectionKey, TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
+import {
+  createReviewFlowFeature,
+  registerReviewFlowIpc,
+  removeReviewFlowIpc,
+} from '@features/review-flow/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -32,7 +37,7 @@ import {
   validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
@@ -694,6 +699,17 @@ export function initializeTeamHandlers(
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
+  registerReviewFlowIpc(
+    ipcMain,
+    createReviewFlowFeature({
+      teamWriter: {
+        setReviewFlowSettings: (teamName, settings) =>
+          getTeamDataService().setReviewFlowSettings(teamName, settings),
+      },
+      getClaudeDir: getClaudeBasePath,
+      getTeamsDir: getTeamsBasePath,
+    })
+  );
   ipcMain.handle(TEAM_LIST, handleListTeams);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
@@ -793,6 +809,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 }
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
+  removeReviewFlowIpc(ipcMain);
   ipcMain.removeHandler(TEAM_LIST);
   ipcMain.removeHandler(TEAM_GET_DATA);
   ipcMain.removeHandler(TEAM_GET_TASK_CHANGE_PRESENCE);

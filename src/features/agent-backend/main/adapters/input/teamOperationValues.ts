@@ -140,6 +140,7 @@ export function parseBackendTeamOperation(
   value: unknown
 ): BackendOperationPayloads[keyof BackendOperationPayloads] {
   switch (operation) {
+    case 'team.review-flow.read':
     case 'team.lead.activity.read':
     case 'team.lead.context.read':
     case 'team.launch.model.configuration.read':

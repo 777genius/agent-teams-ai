@@ -18,18 +18,54 @@ import type {
 } from '../../team/ports.js';
 import type { ExpectedLaunchMember, LaunchAttempt, TeamLaunchRecord } from '../../team-launch/contracts.js';
 
+interface ValidatedLaunch {
+  name: string;
+  runId: string;
+  text: string;
+  row: TeamLaunchRecord;
+}
+
 /** Read-only projection of the one authoritative launch record, never a second registry. */
 export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
+  private validated: ValidatedLaunch | undefined;
   constructor(private readonly store: TeamStore) {}
 
   private read(initial: RuntimeMemberBinding): TeamLaunchRecord | undefined {
-    const row = this.store.read<TeamLaunchRecord>(`launches/${runtimeDigest(initial.runId)}.json`);
-    if (row === undefined) return undefined;
+    const previous = this.validated;
+    this.validated = undefined;
+    let completed: ValidatedLaunch | undefined;
+    try {
+      const runId = initial.runId, name = `launches/${runtimeDigest(runId)}.json`;
+      const selected: { token?: object; entry?: { text: string; row: TeamLaunchRecord } | undefined } = {};
+      const value = this.store.read<unknown>(name, text => {
+        // No parsed row escapes into a store wrapper, and each invocation replaces the token.
+        selected.token = Object.freeze({}); selected.entry = undefined;
+        selected.entry = { text, row: previous?.name === name && previous.runId === runId && previous.text === text
+          ? previous.row : JSON.parse(text) as TeamLaunchRecord };
+        return selected.token;
+      });
+      if (value === undefined) return undefined;
+      if (!selected.entry || value !== selected.token)
+        return this.validate(value as TeamLaunchRecord, initial.runId);
+      const { text, row } = selected.entry;
+      if (previous?.name !== name || previous.runId !== runId || previous.text !== text)
+        this.validate(row, initial.runId);
+      else if (row.definition.launchId !== initial.runId) throw new TeamOwnerError('hold');
+      // Size bounds reuse only; fresh reads, authority and larger valid records keep their old path.
+      if (initial.runId === runId && Buffer.byteLength(text, 'utf8') <= 1024 * 1024)
+        completed = { name, runId, text, row };
+      return row;
+    } finally {
+      // An outer failure also discards any entry published by a reentrant read.
+      this.validated = completed;
+    }
+  }
+  private validate(row: TeamLaunchRecord, runId: string): TeamLaunchRecord {
     if (
       row.schemaVersion !== 1 ||
       !row.definition ||
       !Array.isArray(row.definition.members) ||
-      row.definition.launchId !== initial.runId ||
+      row.definition.launchId !== runId ||
       runtimeDigest(row.definition) !== row.fingerprint
     )
       throw new TeamOwnerError('hold');

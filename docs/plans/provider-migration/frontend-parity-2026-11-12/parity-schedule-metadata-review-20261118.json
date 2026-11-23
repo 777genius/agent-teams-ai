@@ -1,0 +1,534 @@
+{
+  "schemaVersion": 1,
+  "kind": "finite-source-verification-and-R2-of-atomic-schedule-background-metadata",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "generatedAt": "2026-11-18T23:22:36.490904+00:00",
+  "originalFailure": {
+    "job": 135167681954,
+    "workflowRun": 44407826474,
+    "proofBlob": "7f04c627901ba9a0381067b879d11dd2d43ac2be",
+    "test": "HostSchedules.safe-e2e.test.ts:261:64",
+    "observed": "After actual cron and pause, cold restart retained active instead of paused.",
+    "scope": "Original Host frontend shard; no local repetition of the child Host test."
+  },
+  "cause": "The background finalizers read one schedule before admission to the repository metadata queue, then saved the complete stale row. A committed pause or edit in that window was overwritten.",
+  "change": "A required repository updateSchedule port reads, invokes the synchronous row updater, and durably writes within the existing metadata queue. Only background timestamps/reset/increment migrate to it. Missing/deleted rows stay absent, IDs cannot change, callback/I/O errors propagate and the queue recovers.",
+  "sourceManifest": [
+    {
+      "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+      "preimage": {
+        "bytes": 7964,
+        "lines": 219,
+        "gitBlob": "2f0ef6e8a4d6506ecb20322af5626bb193db3f31",
+        "sha256": "3871a5eec4cd342ed257228ec24459a6447fa9a9ac25e8fd47b9c4ea1dfbe99c"
+      },
+      "postimage": {
+        "bytes": 8604,
+        "lines": 236,
+        "gitBlob": "7a77c040eea4d316cd2f0fec5596bbebc31210ca",
+        "sha256": "765d969d6956679e0559017507d5f7289859ba81abd988a8f85fc97ed657bdc2"
+      }
+    },
+    {
+      "path": "src/main/services/schedule/ScheduleRepository.ts",
+      "preimage": {
+        "bytes": 1114,
+        "lines": 24,
+        "gitBlob": "9ccc8524d62b5de7c2f4d1b377c2ce93426276dc",
+        "sha256": "1ca68de73459f47dbc68df22fb613612c98a1ea78f3151ed09f8f307e683c0be"
+      },
+      "postimage": {
+        "bytes": 1307,
+        "lines": 26,
+        "gitBlob": "052e724d9ddc699b24c96aaf563cf874d475720a",
+        "sha256": "ff0b29ebbbf8936c01d94916798889185d3336081000d1327f428f885cfb883f"
+      }
+    },
+    {
+      "path": "src/main/services/schedule/SchedulerService.ts",
+      "preimage": {
+        "bytes": 33201,
+        "lines": 847,
+        "gitBlob": "b85244125521fce56e3cf2f320a07ae1d4ca0469",
+        "sha256": "e4506b2a381741bdfa0ed21bdd6cbd06a1d63dad79e90b5258f870735e3e675b"
+      },
+      "postimage": {
+        "bytes": 32983,
+        "lines": 836,
+        "gitBlob": "7e80ea7cb896ec3c802f130afff36f32f48b1483",
+        "sha256": "a42eeacd8e4ad2dda44b9941a18d9c4b8023a2a3711f625d81142e63065a5235"
+      }
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+      "preimage": null,
+      "postimage": {
+        "bytes": 9242,
+        "lines": 220,
+        "gitBlob": "fa4fc950036305a7f5f2de09e1508f652ff655c1",
+        "sha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa"
+      }
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerService.test.ts",
+      "preimage": {
+        "bytes": 41442,
+        "lines": 1210,
+        "gitBlob": "35073d552b8928f969490f7d68028fa11f3ead34",
+        "sha256": "0692cc42f1009e89f45125ce4d8d6c6ae53b3e1b4b0fd9ba58072e11c7c2d5be"
+      },
+      "postimage": {
+        "bytes": 41784,
+        "lines": 1219,
+        "gitBlob": "f04861c30e17c66e13f433a997a121e42d4150ac",
+        "sha256": "0e3882d1cd88571759a59fc29c5352b5baf9298283d9685c8fd7026134d27a22"
+      }
+    },
+    {
+      "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+      "preimage": {
+        "bytes": 20972,
+        "lines": 495,
+        "gitBlob": "214670d5f0780307de13b14c86d19b885f10fc0e",
+        "sha256": "001d1775fb62fa0647a34d4df70719a0ce35f13a907c6ba2401556bcb3e0204c"
+      },
+      "postimage": {
+        "bytes": 21111,
+        "lines": 496,
+        "gitBlob": "434b4689a4e9ca01243e7f2da5af21d803252094",
+        "sha256": "4d0dadaeda026ec8836539ca34212bc98a1c0a05b6788ef3f41d396f794b86aa"
+      }
+    }
+  ],
+  "execution": {
+    "node": "v24.22.3",
+    "vitest": "3.2.6",
+    "environment": "Existing canonical Vitest config/setup, one fork per bounded run, prepared dependencies only; test temporary HOME cleanup limited to current tests.",
+    "sourceContext": "Immutable547 archive plus exact030 three src postimages; candidate six-path overlay. Relevant original preimages match030.",
+    "before": {
+      "selectedTests": 3,
+      "failed": 3,
+      "passed": 0,
+      "unselected": 5,
+      "exitCode": 1,
+      "failures": [
+        {
+          "name": "scheduler metadata concurrency 'updateScheduleTimestamps' preserves durable pause and edits across restart",
+          "messages": [
+            "AssertionError: expected { id: 'TEST-metadata-race', …(13) } to match object { id: 'TEST-metadata-race', …(7) }\n(7 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at /workspace/scratch/c714f5bce554/schedule-030-candidate/verify-before/test/main/services/schedule/SchedulerMetadataConcurrency.test.ts:130:21\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        },
+        {
+          "name": "scheduler metadata concurrency 'resetConsecutiveFailures' preserves durable pause and edits across restart",
+          "messages": [
+            "AssertionError: expected { id: 'TEST-metadata-race', …(11) } to match object { id: 'TEST-metadata-race', …(7) }\n(5 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at /workspace/scratch/c714f5bce554/schedule-030-candidate/verify-before/test/main/services/schedule/SchedulerMetadataConcurrency.test.ts:130:21\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        },
+        {
+          "name": "scheduler metadata concurrency 'incrementConsecutiveFailures' preserves durable pause and edits across restart",
+          "messages": [
+            "AssertionError: expected { id: 'TEST-metadata-race', …(11) } to match object { id: 'TEST-metadata-race', …(7) }\n(5 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at /workspace/scratch/c714f5bce554/schedule-030-candidate/verify-before/test/main/services/schedule/SchedulerMetadataConcurrency.test.ts:130:21\n    at file:///workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        }
+      ]
+    },
+    "after": {
+      "passed": 80,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "files": [
+        {
+          "path": "test/main/services/schedule/JsonScheduleRepository.test.ts",
+          "tests": 17,
+          "passed": 17,
+          "durationMs": 156.547607421875
+        },
+        {
+          "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+          "tests": 8,
+          "passed": 8,
+          "durationMs": 124.24853515625
+        },
+        {
+          "path": "test/main/services/schedule/SchedulerService.test.ts",
+          "tests": 41,
+          "passed": 41,
+          "durationMs": 511.48681640625
+        },
+        {
+          "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+          "tests": 14,
+          "passed": 14,
+          "durationMs": 3941.745361328125
+        }
+      ]
+    }
+  },
+  "finalImportOnlyAmendment": {
+    "executedNewTestSha256": "73616d1a404ea6aff67c4dfe7baa66a3c48fd7805d060b32336dbbed4f088482",
+    "finalNewTestSha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+    "bodySha256": "583de4d1088477635d3797df6abee90c6c22381ad71e17ecea883a3ab9bc3b3d",
+    "bodyIdentical": true,
+    "scope": "Only Node builtin import declarations moved first; same declaration multiset. No extra suite run after import-only change."
+  },
+  "fastLint": {
+    "beforeFiveFiles": {
+      "errors": 7,
+      "warnings": 2
+    },
+    "afterFirstSixFiles": {
+      "errors": 8,
+      "warnings": 2
+    },
+    "finalNewTest": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "newDiagnosticsAfterCorrection": 0,
+    "inherited": "Seven errors (one import order and six explicit-any uses) in existing SchedulerService.test.ts; two no-unsafe-finally warnings in unchanged service dispatch code. These are preserved, not a global fast-lint PASS.",
+    "fullTypedLint": false
+  },
+  "R2": {
+    "schemaVersion": 1,
+    "status": "R2_PASS_BOUNDED",
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "scope": "Independent review of root-authored three production files and two existing test adaptations; source binding and limits review of the new regression authored by this reviewer and separately reviewed by root.",
+    "sourceBinding": "All six existing source preimages (including unchanged JsonScheduleRepository.test.ts verification context) match original Git blobs retained in complete547 and unchanged030 delta. Exactly six changed paths are approved below; JsonScheduleRepository.test.ts is unchanged and excluded from publication delta.",
+    "findings": [
+      {
+        "area": "repository transaction",
+        "verdict": "PASS",
+        "reason": "updateSchedule places readSchedulesFile(true), the synchronous callback and writeSchedulesFile inside the existing per-instance writeMetadata queue. No new owner/queue/global reentrancy is introduced. Missing rows/null callbacks do not write; changed identity throws; read/callback/write errors propagate and the existing queue catch keeps later writes usable."
+      },
+      {
+        "area": "background writers",
+        "verdict": "PASS",
+        "reason": "Only timestamp completion, resetConsecutiveFailures and incrementConsecutiveFailures switch to atomic update. They derive their postimage from the latest queued record. Public create/update/pause/resume/delete and execution lifecycle bodies are unchanged."
+      },
+      {
+        "area": "side effects and errors",
+        "verdict": "PASS",
+        "reason": "Automatic pause uses the latest count and threshold; cron pause, warm-up cancellation and emitted pause event remain after confirmed persistence. Null deletion result skips the event. Timestamp event is likewise post-write. Logging still occurs before failed persistence, preserving the original warning/error ordering."
+      },
+      {
+        "area": "existing tests",
+        "verdict": "PASS",
+        "reason": "The mock repository gains the required API. Existing automatic-pause storage-failure test invokes the updater callback before rejecting, then checks unchanged state, unpaused cron and the original warning. The filesystem stop barrier test now gates the actual writeSchedulesFile boundary reached by both APIs; original blocked-stop, persisted timestamp and restart assertions remain intact."
+      },
+      {
+        "area": "finite regression",
+        "verdict": "PASS",
+        "reason": "A one-shot spy holds writeMetadata before admission, leaving other writes able to commit. Original methods have already captured stale rows; candidate callbacks read only after the hold is released. The same test body checks pause/user edits then real stop/start. Early return/rejection before admission fails promptly without deadline polling. Other cases cover latest failure threshold, deletion, callback/identity/write failure and queue recovery."
+      }
+    ],
+    "limits": {
+      "SchedulerService": {
+        "originalLines": 847,
+        "candidateLines": 836,
+        "frozenCap": 847,
+        "withinCap": true
+      },
+      "JsonScheduleRepositoryLines": 236,
+      "ScheduleRepositoryLines": 26,
+      "policyOrBaselineChanged": false
+    },
+    "finiteVerification": {
+      "executor": "Root performed each test snapshot once; reviewer inspected saved original results and source bindings only.",
+      "runtime": "Node24.22.3 / prepared Vitest3.2.6 / one fork per run / canonical happy-dom config and test/setup.ts / actual filesystem and atomic writes with finite dependency mocks",
+      "before": {
+        "selected": 3,
+        "failed": 3,
+        "unselected": 5,
+        "failure": "All three original background-method cases failed at the durable preservation assertion, not an import/runtime timeout."
+      },
+      "after": {
+        "passed": 80,
+        "failed": 0,
+        "skipped": 0,
+        "files": {
+          "JsonScheduleRepository.test.ts": 17,
+          "SchedulerMetadataConcurrency.test.ts": 8,
+          "SchedulerService.test.ts": 41,
+          "SmartSchedules.safe-e2e.test.ts": 14
+        }
+      },
+      "canonicalConfig": {
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "bytes": 1187,
+        "lines": 34
+      },
+      "canonicalSetup": {
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "bytes": 5297,
+        "lines": 168
+      },
+      "finalImportOnlyRevision": {
+        "testedSha256": "73616d1a404ea6aff67c4dfe7baa66a3c48fd7805d060b32336dbbed4f088482",
+        "finalSha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+        "bodyIdentical": true,
+        "bodySha256": "583de4d1088477635d3797df6abee90c6c22381ad71e17ecea883a3ab9bc3b3d",
+        "sameImportDeclarations": true,
+        "change": "Move pure node builtin import block before application imports, preserving application-import order. No test/body/expectation changes; no second80-test run."
+      }
+    },
+    "fastLint": {
+      "originalFiveFiles": {
+        "errors": 7,
+        "warnings": 2
+      },
+      "initialCandidateSixFiles": {
+        "errors": 8,
+        "warnings": 2,
+        "newFinding": "new regression import order only"
+      },
+      "finalNewTest": {
+        "errors": 0,
+        "warnings": 0,
+        "fatal": 0,
+        "ignored": false
+      },
+      "inherited": "Existing SchedulerService.test.ts has one import sort and six no-explicit-any errors; SchedulerService.ts has two no-unsafe-finally warnings at unchanged663/667. No inherited finding was suppressed or edited; this is not a clean full-scope lint claim."
+    },
+    "acceptanceBoundaries": [
+      "Tests exercise actual background service/repository paths with deterministic interleaving, not the complete original HostSchedules.safe-e2e lifecycle. Original CI acceptance remains necessary.",
+      "The existing queue serializes writers sharing this repository instance, as in createSchedulerService composition; no cross-process or multiple-instance transaction guarantee is claimed.",
+      "Public CRUD read/save behavior is outside this targeted three-background-writer correction.",
+      "No full typed lint/typecheck, application/native run, build, install, CI request or rerun was performed by this reviewer."
+    ],
+    "changes": [
+      {
+        "path": "src/main/services/schedule/SchedulerService.ts",
+        "before": {
+          "sha256": "e4506b2a381741bdfa0ed21bdd6cbd06a1d63dad79e90b5258f870735e3e675b",
+          "gitBlob": "b85244125521fce56e3cf2f320a07ae1d4ca0469",
+          "bytes": 33201,
+          "lines": 847
+        },
+        "candidate": {
+          "sha256": "a42eeacd8e4ad2dda44b9941a18d9c4b8023a2a3711f625d81142e63065a5235",
+          "gitBlob": "7e80ea7cb896ec3c802f130afff36f32f48b1483",
+          "bytes": 32983,
+          "lines": 836
+        }
+      },
+      {
+        "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+        "before": {
+          "sha256": "3871a5eec4cd342ed257228ec24459a6447fa9a9ac25e8fd47b9c4ea1dfbe99c",
+          "gitBlob": "2f0ef6e8a4d6506ecb20322af5626bb193db3f31",
+          "bytes": 7964,
+          "lines": 219
+        },
+        "candidate": {
+          "sha256": "765d969d6956679e0559017507d5f7289859ba81abd988a8f85fc97ed657bdc2",
+          "gitBlob": "7a77c040eea4d316cd2f0fec5596bbebc31210ca",
+          "bytes": 8604,
+          "lines": 236
+        }
+      },
+      {
+        "path": "src/main/services/schedule/ScheduleRepository.ts",
+        "before": {
+          "sha256": "1ca68de73459f47dbc68df22fb613612c98a1ea78f3151ed09f8f307e683c0be",
+          "gitBlob": "9ccc8524d62b5de7c2f4d1b377c2ce93426276dc",
+          "bytes": 1114,
+          "lines": 24
+        },
+        "candidate": {
+          "sha256": "ff0b29ebbbf8936c01d94916798889185d3336081000d1327f428f885cfb883f",
+          "gitBlob": "052e724d9ddc699b24c96aaf563cf874d475720a",
+          "bytes": 1307,
+          "lines": 26
+        }
+      },
+      {
+        "path": "test/main/services/schedule/SchedulerService.test.ts",
+        "before": {
+          "sha256": "0692cc42f1009e89f45125ce4d8d6c6ae53b3e1b4b0fd9ba58072e11c7c2d5be",
+          "gitBlob": "35073d552b8928f969490f7d68028fa11f3ead34",
+          "bytes": 41442,
+          "lines": 1210
+        },
+        "candidate": {
+          "sha256": "0e3882d1cd88571759a59fc29c5352b5baf9298283d9685c8fd7026134d27a22",
+          "gitBlob": "f04861c30e17c66e13f433a997a121e42d4150ac",
+          "bytes": 41784,
+          "lines": 1219
+        }
+      },
+      {
+        "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+        "before": {
+          "sha256": "001d1775fb62fa0647a34d4df70719a0ce35f13a907c6ba2401556bcb3e0204c",
+          "gitBlob": "214670d5f0780307de13b14c86d19b885f10fc0e",
+          "bytes": 20972,
+          "lines": 495
+        },
+        "candidate": {
+          "sha256": "4d0dadaeda026ec8836539ca34212bc98a1c0a05b6788ef3f41d396f794b86aa",
+          "gitBlob": "434b4689a4e9ca01243e7f2da5af21d803252094",
+          "bytes": 21111,
+          "lines": 496
+        }
+      },
+      {
+        "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+        "before": null,
+        "candidate": {
+          "sha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+          "gitBlob": "fa4fc950036305a7f5f2de09e1508f652ff655c1",
+          "bytes": 9242,
+          "lines": 220
+        }
+      }
+    ],
+    "evidence": [
+      {
+        "path": "before-result.json",
+        "sha256": "1bbe1300171f3e19f6a5e8c8729e11d9929a24deaa67816be94bd81e985f8f6b",
+        "gitBlob": "1ee1fe9e120a87aae5c763b094f4e3f864185e6c",
+        "bytes": 6314,
+        "lines": 1
+      },
+      {
+        "path": "after-result.json",
+        "sha256": "2ca9aa7fc74a49be6e026ad8394a5b53712e99e48679e6fe1be1ba1b4258872f",
+        "gitBlob": "19e88f414e951c54d22f9f1b493ec084369d00c1",
+        "bytes": 24955,
+        "lines": 1
+      },
+      {
+        "path": "before-run.log",
+        "sha256": "2ab5decc144b20ab1a8df5d4880df3d30f333a5a84d4d4912987d8b80ebfead3",
+        "gitBlob": "e513371d8cb565f72256875ffa4bde3ce4eaea7d",
+        "bytes": 97,
+        "lines": 1
+      },
+      {
+        "path": "after-run.log",
+        "sha256": "de4dd9c8868f93bfa256e7f8d73ef2e751a1cbfc03e94025ed4b79f4255abe5f",
+        "gitBlob": "1512b0ac935a03f80d3d39fe0fed8b4f26bcd180",
+        "bytes": 96,
+        "lines": 1
+      },
+      {
+        "path": "before-lint.json",
+        "sha256": "f1c0ba12817ba95b5af3fd0681b16d5bb29116fec99b4eac6b5d2648c3a1162a",
+        "gitBlob": "5561ac95280be08c33e852371cbb02543700d20c",
+        "bytes": 83077,
+        "lines": 1
+      },
+      {
+        "path": "after-lint.json",
+        "sha256": "1f2288bfde1846f52388fe053fdb04979e3daf41b9664921f67c33dff50b4dc4",
+        "gitBlob": "7870c4c3086c22859b59a89a36bc88b11817d53d",
+        "bytes": 93612,
+        "lines": 1
+      },
+      {
+        "path": "new-test-final-lint.json",
+        "sha256": "37b8df04a61f71dfdb81e129c459c04d1cf68fdcfbf05e81acca1bec58891d6b",
+        "gitBlob": "e9f734a97b6662bdffdbce230549b621a73341ba",
+        "bytes": 311,
+        "lines": 1
+      },
+      {
+        "path": "candidate-manifest.json",
+        "sha256": "43e91f7363d340db2ded2d0f26061901cb64e73db42a4297b3a88f3551c4e599",
+        "gitBlob": "009a40ec1b6796dcfbfeecddfcbb68d4ce843f22",
+        "bytes": 3080,
+        "lines": 91
+      },
+      {
+        "path": "candidate.patch",
+        "sha256": "dbe1f96d762ad63eb3ac01b2bd19c0edd3f404ad742844049b698406489e79db",
+        "gitBlob": "06a60bc9b5eb490dc6a603e835b46a1858d5e27f",
+        "bytes": 17543,
+        "lines": 413
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "file": "candidate.patch",
+      "bytes": 17543,
+      "sha256": "dbe1f96d762ad63eb3ac01b2bd19c0edd3f404ad742844049b698406489e79db",
+      "gitBlob": "06a60bc9b5eb490dc6a603e835b46a1858d5e27f"
+    },
+    {
+      "file": "candidate-manifest.json",
+      "bytes": 3080,
+      "sha256": "43e91f7363d340db2ded2d0f26061901cb64e73db42a4297b3a88f3551c4e599",
+      "gitBlob": "009a40ec1b6796dcfbfeecddfcbb68d4ce843f22"
+    },
+    {
+      "file": "before-result.json",
+      "bytes": 6314,
+      "sha256": "1bbe1300171f3e19f6a5e8c8729e11d9929a24deaa67816be94bd81e985f8f6b",
+      "gitBlob": "1ee1fe9e120a87aae5c763b094f4e3f864185e6c"
+    },
+    {
+      "file": "before-run.log",
+      "bytes": 97,
+      "sha256": "2ab5decc144b20ab1a8df5d4880df3d30f333a5a84d4d4912987d8b80ebfead3",
+      "gitBlob": "e513371d8cb565f72256875ffa4bde3ce4eaea7d"
+    },
+    {
+      "file": "after-result.json",
+      "bytes": 24955,
+      "sha256": "2ca9aa7fc74a49be6e026ad8394a5b53712e99e48679e6fe1be1ba1b4258872f",
+      "gitBlob": "19e88f414e951c54d22f9f1b493ec084369d00c1"
+    },
+    {
+      "file": "after-run.log",
+      "bytes": 96,
+      "sha256": "de4dd9c8868f93bfa256e7f8d73ef2e751a1cbfc03e94025ed4b79f4255abe5f",
+      "gitBlob": "1512b0ac935a03f80d3d39fe0fed8b4f26bcd180"
+    },
+    {
+      "file": "before-lint.json",
+      "bytes": 83077,
+      "sha256": "f1c0ba12817ba95b5af3fd0681b16d5bb29116fec99b4eac6b5d2648c3a1162a",
+      "gitBlob": "5561ac95280be08c33e852371cbb02543700d20c"
+    },
+    {
+      "file": "after-lint.json",
+      "bytes": 93612,
+      "sha256": "1f2288bfde1846f52388fe053fdb04979e3daf41b9664921f67c33dff50b4dc4",
+      "gitBlob": "7870c4c3086c22859b59a89a36bc88b11817d53d"
+    },
+    {
+      "file": "new-test-final-lint.json",
+      "bytes": 311,
+      "sha256": "37b8df04a61f71dfdb81e129c459c04d1cf68fdcfbf05e81acca1bec58891d6b",
+      "gitBlob": "e9f734a97b6662bdffdbce230549b621a73341ba"
+    },
+    {
+      "file": "r2-source-review.json",
+      "bytes": 11391,
+      "sha256": "74610d24de71ab7e221c8101306fdb52350a83f27d288fd1e3e89cd1b145e8a9",
+      "gitBlob": "f373563227324351eeb2e847fb181d86d3610c2c"
+    }
+  ],
+  "limits": [
+    "The regression holds an existing metadata writer before queue admission with finite test synchronization, no timing retry.",
+    "Private background methods are directly invoked to isolate the causal race; the original Host cron/restart case still needs next-source CI acceptance.",
+    "Real JSON/atomic I/O and Cron calculations execute. Provider/process effects use existing deterministic ports or an executor that throws if called.",
+    "No app/native/Host child, install, build, full workspace typecheck or full typed lint was executed locally.",
+    "Repository fence is the existing instance queue; no new cross-process or arbitrary external writer guarantee is claimed."
+  ],
+  "sourceSize": {
+    "SchedulerService": {
+      "before": 847,
+      "after": 836,
+      "frozenCap": 847
+    },
+    "JsonScheduleRepository": 236,
+    "ScheduleRepository": 26,
+    "policyOrBaselineChanged": false,
+    "fullCompositionEvaluationPending": true
+  }
+}

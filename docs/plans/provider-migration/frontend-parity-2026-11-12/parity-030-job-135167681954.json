@@ -1,0 +1,78 @@
+{
+  "schema": "current-head-original-ui-job-terminal-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167681954,
+    "name": "Offline frontend tests (1/4)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-18T22:53:10Z",
+    "completed_at": "2026-11-18T22:59:35Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167681954",
+    "runner_name": "GitHub Actions 1000395281"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167681954,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-18 23:01:16 UTC",
+    "bytes": 176413,
+    "sha256": "9e4b18cd5dc64f985d41f1ea5e34b25e71af44c02ff9537df7cd245fdf882687",
+    "computedGitBlobSha": "2760524edb422469e0fb3ee1181a0b084effa827",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167681954-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "2760524edb422469e0fb3ee1181a0b084effa827",
+    "exactReadback": true
+  },
+  "jobLogEndpointRetired": true,
+  "failedSteps": [
+    {
+      "name": "Run the complete safe frontend shard",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 8,
+      "started_at": "2026-11-18T22:54:16Z",
+      "completed_at": "2026-11-18T22:59:29Z"
+    }
+  ],
+  "originalFailureAndFinalSummary": " FAIL  test/main/services/schedule/HostSchedules.safe-e2e.test.ts > runs the actual cron against the captured team and keeps an unavailable launch quiet and recoverable\nAssertionError: expected 'active' to be 'paused' // Object.is equality\n\nExpected: \"paused\"\nReceived: \"active\"\n\n ❯ test/main/services/schedule/HostSchedules.safe-e2e.test.ts:261:64\n    259|   expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, …\n    260|   await f.restart();\n    261|   expect((await f.scheduler.getSchedule(schedule.id))?.status).toBe('p…\n       |                                                                ^\n    262|   await f.scheduler.resumeSchedule(schedule.id);\n    263|   const resumed = await f.waitRun(schedule.id, row => row.id !== first…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed | 550 passed (551)\n      Tests  1 failed | 6349 passed | 6 skipped (6356)\n   Start at  22:54:17\n   Duration  311.87s (transform 28.69s, setup 13.57s, collect 243.87s, tests 178.29s, environment 96.42s, prepare 28.33s)\n\n",
+  "finalCounts": {
+    "files": {
+      "passed": 550,
+      "failed": 1,
+      "total": 551
+    },
+    "tests": {
+      "passed": 6349,
+      "failed": 1,
+      "skipped": 6,
+      "total": 6356
+    },
+    "durationSeconds": 311.87
+  },
+  "firstFailure": {
+    "file": "test/main/services/schedule/HostSchedules.safe-e2e.test.ts",
+    "testName": "runs the actual cron against the captured team and keeps an unavailable launch quiet and recoverable",
+    "location": "261:64",
+    "expected": "paused",
+    "actual": "active",
+    "boundary": "after await f.restart() the reloaded schedule.status assertion fails"
+  },
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14478534087,
+    "bytes": 302187,
+    "sha256": "8b18727fc1ed7f3e324b7485bcb29c77c0e3c7df164e7a13f3c14abed6515825",
+    "downloaded": false
+  },
+  "originalFinalJsonReportWritten": "/home/runner/work/_temp/host-offline-tests-1.json",
+  "scope": "Full original frontend shard1/4 completed with exactly one failed test. This is not a PASS and is not combined with historical shards from other commits."
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "scope": "Final22-source composition, preserve historical12 composition",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+  "preimage": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+  "previous12Composition": {
+    "sha": "741dbdc6f296a7a67a8639b7a928e6664886cab2",
+    "sha256": "d3a459914d1bcf231bc5ee44daec991a252f1c2d2fc57ca94d0377a8b58fd992",
+    "bytes": 25644,
+    "lines": 396
+  },
+  "final": {
+    "sha": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+    "sha256": "120bccf5b98f8f596c4a69c7a780f8048187bf274b550a52f1c45770edb02d10",
+    "bytes": 25735,
+    "lines": 397
+  },
+  "literalAddition": "'packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts',",
+  "preserved": "Every prior literal and source body; one extra finite-source pin only",
+  "reason": "The native passive diagnostic helper is a TEST observer activated by existing native fixtures and must be in the fixed source census. Desktop/Main observer activation is not introduced.",
+  "tests": "New driver-close regression is selected by existing package tests/*.test.ts; no workflow change.",
+  "createdAt": "2026-11-19T00:30:13.559099+00:00"
+}

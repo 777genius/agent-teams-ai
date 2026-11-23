@@ -1,0 +1,559 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-20",
+  "parentHead": "ada00fd369bd3cccb0c398bf888557558adca70d",
+  "branch": "fix/frontend-parity-completion-20261113",
+  "pr": 1192,
+  "scope": "Retained product compatibility and finite Main prompt correction; passive diagnostics for unresolved original E2E failures",
+  "toolchain": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "nativeTypeScript": "7.0.2",
+    "install": "frozen lockfile / ignore scripts / no lockfile changes"
+  },
+  "sourceFiles": [
+    {
+      "path": "scripts/e2e/teams-create-page-schedule-observation.mjs",
+      "sha256": "062be9ff2cc62bb35fbcca5ab87f0413c0b0a083eb33129781f6a2491c139441",
+      "bytes": 18742
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-schedule-observation.test.mjs",
+      "sha256": "b43658750bfc6fd53c526ff0234c03999baeddbc78b2616e35f7a6891454f350",
+      "bytes": 29115
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "sha256": "539abbde9bc32879e59478cd8d07034ca240cfbb78172d88c12b146451cebb99",
+      "bytes": 69837
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "sha256": "82614509d1e81b456c6734f495e3697bbe993d4a8a6749071971c1481a7cbd3e",
+      "bytes": 51311
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-module-load-observation.ts",
+      "sha256": "b27c4ba6061b875e35a920ae0f0b1b21df23fcd36e6c2ddbb52cd6b58198fb3b",
+      "bytes": 3701
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "sha256": "aaae33b35f5af9f8a13532e6c0a9e2fb5963ea34a70b3677135a9240c9890ce5",
+      "bytes": 22262
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "sha256": "b9c9329e5fd4bb0536115ce4c8957f61b59226e8f1b80ac508a52b72cbae4897",
+      "bytes": 52302
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-original-test-fixture.ts",
+      "sha256": "b2c3f07fbea2564a040f208aa6963c758b027fc5f5cf98a28a36e19d5cc6ed92",
+      "bytes": 5466
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-original.test.ts",
+      "sha256": "8f08ad96b575cf417c879e2d318eb6e13690e6d7555d15f5574f51f86bd27ed3",
+      "bytes": 11324
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-schedule-history-observation.test.ts",
+      "sha256": "c478f7e7e7496b0b6ad601dbfcb414e9b4431315fbddc77cf2aed61f87dd248a",
+      "bytes": 3842
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-schedule-history-observation.ts",
+      "sha256": "b0bf525ed77ad44aa25791c26078f1cac47f14ae98a169b4a76acddf24f2108c",
+      "bytes": 2003
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "sha256": "9882ddef7557af86af9281c4c60d93c62f43d322d777adbf9a309e35ee64624b",
+      "bytes": 282832
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "sha256": "65fc865f502df46d4cab2b26882f1f5256f9bbd3e48a9d78f2f1b3b697f91fd1",
+      "bytes": 33568
+    },
+    {
+      "path": "src/main/services/team/LegacySavedTeamNativeIdentity.ts",
+      "sha256": "61eeed02d00da334959a1e8767dc58c53e41c836d4f8a327836d47a7189d6219",
+      "bytes": 8695
+    },
+    {
+      "path": "test/features/agent-backend/legacySavedDraftFormat.test.ts",
+      "sha256": "fb66a856ebf7bd650ec05b88b9fa7dfc3e980ee78942a4ca80754ee3f5e39198",
+      "bytes": 11715
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyBootstrapPrompt.test.ts",
+      "sha256": "61ea4bd7eab2ccaaecdc55ed82d088754e04e23bfbd1cfa76bf37bac0403a21e",
+      "bytes": 7577
+    },
+    {
+      "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+      "sha256": "185b7295b52fb33c3a0bafeb0e33628032be8f886bb9970b4d7a14e5b1368517",
+      "bytes": 23429
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/retainedLegacyBootstrapPeer.mjs",
+      "sha256": "cd9fc0cb137eed3c37e10832645aa1d2c723df9ec62e68f6c8984e69ef77e473",
+      "bytes": 16297
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/retainedLegacyHydrationPrompt.txt",
+      "sha256": "6bd919e892140dc3665f6c517d10b21b9e43ce65607f84210c3af4ec4dc6f0dc",
+      "bytes": 43472
+    }
+  ],
+  "checks": [
+    {
+      "scope": "canonical Host build",
+      "result": "PASS",
+      "log": "host-build.log"
+    },
+    {
+      "scope": "actual writer/reader RED",
+      "result": "9 FAIL / 5 PASS against original predicate",
+      "log": "retained-reader-final-red.log"
+    },
+    {
+      "scope": "writer/reader GREEN",
+      "result": "14/14 PASS",
+      "log": "retained-final-focused.log"
+    },
+    {
+      "scope": "actual Main prompt complete finite contract",
+      "result": "14/14 PASS",
+      "log": "retained-peer-review-green.log"
+    },
+    {
+      "scope": "existing finite archive peer",
+      "result": "17/17 PASS",
+      "log": "retained-peer-reviewed-finite-green.log"
+    },
+    {
+      "scope": "existing stopped import source",
+      "result": "27/27 PASS",
+      "log": "retained-prompt-reader-green.log"
+    },
+    {
+      "scope": "original observer suite before error length review correction",
+      "result": "255/255 PASS",
+      "log": "module-observation-tests.log"
+    },
+    {
+      "scope": "observer review correction",
+      "result": "2/2 PASS after oversized error RED",
+      "log": "module-observation-review-green.log"
+    },
+    {
+      "scope": "actual Croner and JSON repository, controlled runtime ports",
+      "result": "15/15 PASS; not original Host GUI",
+      "log": "cron-transition-node24-tests.log"
+    },
+    {
+      "scope": "passive cron history observer",
+      "result": "3/3 PASS; independently rerun",
+      "reviewer": "ci_review_audit"
+    },
+    {
+      "scope": "schedule final geometry refusal diagnostics",
+      "result": "14/14 PASS after two expected RED diagnostic assertions",
+      "log": "schedule-geometry-green.log"
+    },
+    {
+      "scope": "canonical full app typecheck",
+      "result": "INCOMPLETE exit137, no compiler type diagnostics",
+      "log": "canonical-typecheck.log"
+    },
+    {
+      "scope": "same canonical full app typecheck with GOMEMLIMIT6GiB GOGC50 GOMAXPROCS2",
+      "result": "INCOMPLETE exit137, no compiler type diagnostics",
+      "log": "canonical-typecheck-bounded.log"
+    },
+    {
+      "scope": "scoped app typecheck",
+      "result": "PASS",
+      "log": "scoped-app-typecheck-final.log",
+      "config": "typecheck/app.json",
+      "compilerOptionsOverridden": false,
+      "note": "Four changed app/test roots plus six existing ambient declarations, original canonical options and transitive imports. Initial scoped config lacked React ambient; corrected config, not production source."
+    },
+    {
+      "scope": "canonical full Host scripts typecheck",
+      "result": "PASS",
+      "log": "full-host-scripts-typecheck-final.log",
+      "note": "Three real TS7 errors in new test fixed: empty-array deepEqual narrowed later callback-mutated Row[] to never; equal(length,0) preserves the runtime empty-list oracle."
+    },
+    {
+      "scope": "fast lint",
+      "result": "PASS 16 code files",
+      "log": "continuation-fast-lint.log"
+    },
+    {
+      "scope": "new geometry files fast lint and Node syntax",
+      "result": "PASS",
+      "reviewer": "parity_plan_audit"
+    },
+    {
+      "scope": "source size guard",
+      "result": "PASS 5170 files / 141 frozen legacy exceptions",
+      "log": "continuation-size-guard.log"
+    },
+    {
+      "scope": "Team provisioning architecture guard",
+      "result": "PASS",
+      "log": "continuation-architecture-guard.log"
+    }
+  ],
+  "reviews": {
+    "reader": {
+      "reviewers": [
+        "ci_review_audit",
+        "parity_plan_audit"
+      ],
+      "result": "no findings"
+    },
+    "peer": {
+      "reviewers": [
+        "ci_review_audit",
+        "root"
+      ],
+      "finding": "unchecked interior prompt accepted",
+      "resolution": "fixed code-owned digest of complete actual Main fixture; actual builder byte equality and insertion/replacement RED/GREEN; independent inserted-text subprocess refuses before bootstrap"
+    },
+    "moduleAndCensus": {
+      "reviewers": [
+        "ci_review_audit",
+        "parity_plan_audit"
+      ],
+      "finding": "unbounded syntactically matching error string",
+      "resolution": "shared<=128classifier before regex, million-character RED/GREEN",
+      "note": "Root subsequent test-only equal(length,0) correction independently reviewed by recover_checkout"
+    },
+    "cron": {
+      "reviewers": [
+        "ci_review_audit",
+        "root"
+      ],
+      "result": "no findings; diagnostic only"
+    },
+    "geometry": {
+      "reviewers": [
+        "root",
+        "recover_checkout"
+      ],
+      "result": "No findings in final two-file diff, observer slot/cleanup interaction, original reads/actions/deadlines and bounded record; independent recover_checkout review completed."
+    },
+    "github": {
+      "resolvedInlineThreads": 43,
+      "totalInlineThreads": 43,
+      "formalReviews": 20,
+      "formalApprovedReviews": 0,
+      "localReviewIsNotGithubApproval": true
+    }
+  },
+  "originalAdaQualification": {
+    "frontend": "4/4 PASS",
+    "nativeV2": "9/9 PASS",
+    "packaged": "5/5 platform jobs + full gate PASS",
+    "hostWorkJobs": "23/29 PASS,6FAIL; aggregateFAIL",
+    "processPOSIX": "3PASS",
+    "manualCiActions": []
+  },
+  "originalFailures": [
+    {
+      "case": "Darwin ARM Review",
+      "status": "OPEN original E2E",
+      "run": 44637680026,
+      "job": 135960332703,
+      "artifact": 14586290443,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680026/job/135960332703",
+      "observed": "pre-Launch model probe startup expired; complete graph phase23.34s; Ada probe resourceHeld=false"
+    },
+    {
+      "case": "Darwin ARM Resume",
+      "status": "OPEN original E2E",
+      "run": 44637680026,
+      "job": 135960332818,
+      "artifact": 14587195831,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680026/job/135960332818",
+      "observed": "TeamDetail skeleton, Launch absent before original cold resume"
+    },
+    {
+      "case": "Darwin ARM Quit-active",
+      "status": "OPEN original E2E",
+      "run": 44637680026,
+      "job": 135960332844,
+      "artifact": 14587097578,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680026/job/135960332844",
+      "observed": "Runtime opening incomplete; reference expiry1795133348584, DB session1795133343852, instruction1795133347530, driver-open refusal1795133349427; original active Quit not reached"
+    },
+    {
+      "case": "retained original",
+      "status": "OPEN original E2E",
+      "run": 44637680026,
+      "job": 135960333162,
+      "artifact": 14588696608,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680026/job/135960333162",
+      "observed": "Main publication unconfirmed; finite peer rejected actual hydration format"
+    },
+    {
+      "case": "OpenCode automatic cron",
+      "status": "OPEN original E2E",
+      "run": 44637680026,
+      "job": 135960333202,
+      "artifact": 14591700525,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680026/job/135960333202",
+      "observed": "manual/reply/approval/reload passed; automatic dispatched run missing, history absent in original artifact"
+    },
+    {
+      "case": "V2 management membership",
+      "status": "OPEN original E2E",
+      "run": 44637680026,
+      "job": 135960333405,
+      "artifact": 14588839581,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680026/job/135960333405",
+      "observed": "settings subflow passed; membership observed3vs2 Host children before original Add; old currentPhysical is prior verified census"
+    },
+    {
+      "case": "Windows x64 process",
+      "status": "OPEN original E2E",
+      "run": 44637679983,
+      "job": 135960321405,
+      "artifact": 14586571348,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637679983/job/135960321405",
+      "observed": "OpenCode Team A15s readiness incomplete; all3original HANDLEs absent"
+    },
+    {
+      "case": "Windows ARM64 process",
+      "status": "OPEN original E2E",
+      "run": 44637679983,
+      "job": 135960321490,
+      "artifact": 14587560980,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637679983/job/135960321490",
+      "observed": "Codex TeamA/TeamB passed; B standalone expired15s; all24captured roots absent; slot24no-local-dispatch cleanup confirmed"
+    },
+    {
+      "case": "Teams macOS schedule",
+      "status": "OPEN original E2E",
+      "run": 44637680071,
+      "job": 135960322153,
+      "artifact": 14586292752,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637680071/job/135960322153",
+      "observed": "original final geometry refusal before press; snapshotnull, no causal product-layout fix established"
+    },
+    {
+      "case": "retained V1/V2 coexistence",
+      "status": "OPEN original E2E",
+      "run": 44637679931,
+      "job": 135982348116,
+      "artifact": 14590108776,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44637679931/job/135982348116",
+      "observed": "coordinator admission/source-unreadable/product-records before dispatch; raw metadata absent, writer incompatibility independently reproduced"
+    }
+  ],
+  "artifactDigests": {
+    "14586290443": {
+      "sha256": "30f856ae569645924ef600cdf3c0ca4550ad088e560b4818a619190d9180cef5",
+      "bytes": 307140,
+      "uploadDigestMatched": true
+    },
+    "14586292752": {
+      "sha256": "a16564ef752003682a8ea1b27bbbab81084105cb9378c9b83f7d7a3f60dc65e9",
+      "bytes": 1437288,
+      "uploadDigestMatched": true
+    },
+    "14586571348": {
+      "sha256": "40753d3d80cf9deb93eee4a17ceef972acf8a400891d5d42935462437b270f06",
+      "bytes": 74560,
+      "uploadDigestMatched": true
+    },
+    "14587097578": {
+      "sha256": "304c4764ccf047805c37c2571cb653511fab5f7018a91a930cf89a21f9733b20",
+      "bytes": 286260,
+      "uploadDigestMatched": true
+    },
+    "14587195831": {
+      "sha256": "73d336d2782dd49070ba3ab4d3c9c81d57db1650bb834c4115316a19ec7a17ea",
+      "bytes": 262973,
+      "uploadDigestMatched": true
+    },
+    "14587560980": {
+      "sha256": "1eb724cde3e38747e42cc6b1d555b62e3375920e5c389db9bc602e36451ce5e7",
+      "bytes": 56239,
+      "uploadDigestMatched": true
+    },
+    "14588696608": {
+      "sha256": "2f51d61f8b006b4594fac414ac8ae291be598a12bdb3647aba1635c038c36509",
+      "bytes": 877666,
+      "uploadDigestMatched": true
+    },
+    "14588839581": {
+      "sha256": "f27f26939b2224b22945767c6df6fc4073fc1070669ab0ff612c7d439fa4f86a",
+      "bytes": 1406254,
+      "uploadDigestMatched": true
+    },
+    "14590108776": {
+      "sha256": "af23729f358c2a02801fee2cbef85eb434005e717300530d2a71335d98de1dc5",
+      "bytes": 367817,
+      "uploadDigestMatched": true
+    },
+    "14591700525": {
+      "sha256": "7c18d48dd806703732de4618161d01f2e62b5e82ba92bd025c4bbc6028eacffe",
+      "bytes": 1936905,
+      "uploadDigestMatched": true
+    }
+  },
+  "limits": {
+    "localOriginalGui": "not executed: Unix sockets/display unavailable in current environment",
+    "windowsNative": "not executed locally",
+    "canonicalFullAppTypes": "local exit137 retained as INCOMPLETE; original CI remains required",
+    "sourceCorrectionsAreNotFullE2E": true
+  },
+  "delivery": {
+    "route": [
+      1192,
+      1186,
+      982
+    ],
+    "currentDraftSafePublication": "allowed",
+    "readyOrParentUpdate": "selects real Claude/Codex execution including version; conflicts with existing user restriction",
+    "mergePerformed": false,
+    "fullE2EComplete": false
+  },
+  "rawChecks": {
+    "archive": "continuation-checks-20261120.tar.gz",
+    "logs": [
+      {
+        "path": "host-build.log",
+        "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789",
+        "bytes": 182
+      },
+      {
+        "path": "retained-reader-final-red.log",
+        "sha256": "5f4cb5efbd697a82b1221635bbf28c27790c2f0388fff0c33f87a1146e29a7e1",
+        "bytes": 5250
+      },
+      {
+        "path": "retained-final-focused.log",
+        "sha256": "d17adbc53bc5bc9dcafbd2596f684967db1b734ff59da8cb25cc99712fd7c8b7",
+        "bytes": 419
+      },
+      {
+        "path": "retained-prompt-red.log",
+        "sha256": "150449a209fcaa43965a880ce54a8ace2542d41fdc893844ba271cc8407548da",
+        "bytes": 5109
+      },
+      {
+        "path": "retained-peer-review-red.log",
+        "sha256": "72652e6dc1bd86b5445e6e1f02d6edd71218e9d74061b5bd5243d4783e228886",
+        "bytes": 4558
+      },
+      {
+        "path": "retained-peer-review-green.log",
+        "sha256": "e2deb3fa18cc3fafd5df10ac3e6e43cd45214fad187e82809e079e7c0b450f05",
+        "bytes": 338
+      },
+      {
+        "path": "retained-peer-reviewed-finite-green.log",
+        "sha256": "30c0378c1c263145bd67d3cb3a4f93d137aa0a27a20fc836435ecac06c2f21a8",
+        "bytes": 1724
+      },
+      {
+        "path": "retained-prompt-reader-green.log",
+        "sha256": "75e7d3c8b964643411d8e446c1515283fe060a767829de9629a4cd549063155a",
+        "bytes": 824
+      },
+      {
+        "path": "retained-fixes-lint.log",
+        "sha256": "196a93f472e9d49b16d3b51f9437e010d6f7f8f6f3faf07374c4b7c79dc98593",
+        "bytes": 488
+      },
+      {
+        "path": "module-observation-tests.log",
+        "sha256": "b63e9ec9e92953da2433d6a448e589c8cb6c6723e803f3c19ef7d1d8a7c14f5a",
+        "bytes": 60455
+      },
+      {
+        "path": "module-observation-review-red.log",
+        "sha256": "38efb41251ee3d5a56136af3534517e4d3345b236b66f8c2c98137e402d98584",
+        "bytes": 21154
+      },
+      {
+        "path": "module-observation-review-green.log",
+        "sha256": "f049b5479f6c6e2ac69dab114ff33e3e9d55d9b32fff2c2c95ba6881d567078d",
+        "bytes": 329
+      },
+      {
+        "path": "cron-transition-node24-tests.log",
+        "sha256": "d2b124261f4565a862278b3998c6f1409b941398602af2b66d406de6698d249e",
+        "bytes": 283
+      },
+      {
+        "path": "schedule-geometry-red.log",
+        "sha256": "8680f2f35d0abafe40d8033feba73804b7936ba63a38b23c2fa8c28f176a9020",
+        "bytes": 1461
+      },
+      {
+        "path": "schedule-geometry-green.log",
+        "sha256": "ad5780f1c897fe2a3592de4b87512e8ebba526183bc3a070713f7dde70caa611",
+        "bytes": 1722
+      },
+      {
+        "path": "canonical-typecheck.log",
+        "sha256": "4b1e42f778f0a3dd1a07c725e1e047c1ae21960da0e42ec4655982bed14bc18c",
+        "bytes": 1104
+      },
+      {
+        "path": "canonical-typecheck-bounded.log",
+        "sha256": "4b1e42f778f0a3dd1a07c725e1e047c1ae21960da0e42ec4655982bed14bc18c",
+        "bytes": 1104
+      },
+      {
+        "path": "scoped-app-typecheck.log",
+        "sha256": "5b6dfc5e716bd033c972865ed6e089cf46b764fef464dbcaaba88477db3421dd",
+        "bytes": 183
+      },
+      {
+        "path": "scoped-app-typecheck-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "full-host-scripts-typecheck.log",
+        "sha256": "d3cee31ca09da083017d01991b138a2d488891d59ce296cf4aaf2b5b4fe77628",
+        "bytes": 532
+      },
+      {
+        "path": "full-host-scripts-typecheck-final.log",
+        "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015",
+        "bytes": 97
+      },
+      {
+        "path": "continuation-fast-lint.log",
+        "sha256": "6cce29684ce5d28910940503f9bac11a774319eb8ed56f50aa637d7420e54038",
+        "bytes": 1085
+      },
+      {
+        "path": "continuation-size-guard.log",
+        "sha256": "5e0eec3da9dff5c1814ca02bc81969790d78c1e914cf741842a560575f2afc7f",
+        "bytes": 249
+      },
+      {
+        "path": "continuation-architecture-guard.log",
+        "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c",
+        "bytes": 245
+      },
+      {
+        "path": "review-retained-product-format.log",
+        "sha256": "ac3323a99997558588edc1fc28b53e0006b6e87f19c8704c64b29ffda9cafd6e",
+        "bytes": 279
+      }
+    ],
+    "archiveSha256": "3bac84d1844a196dbd9783e64294a601ffbc228cf225c545f983785f70658ed1"
+  }
+}

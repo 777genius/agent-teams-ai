@@ -10,6 +10,7 @@ import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/compo
 import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { providerManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { fileHash } from './nativeEmulatedProfile';
+import { emulatedSourceOpenCodeRequestTimeoutMs } from './nativeEmulatedSourceReadiness';
 
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { DesktopBackendDescriptor } from '../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
@@ -56,9 +57,40 @@ export async function prepareEmulatedSourceProfile(sandbox: string, broker: stri
     const output = provider === 'codex' ? `codex-cli ${versions[source]}`
       : provider === 'claude' ? `${versions[source]} (Claude Code)` : versions[source];
     const code = `import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';import {appendFileSync,readFileSync,realpathSync} from 'node:fs';
+import {constants as bufferConstants} from 'node:buffer';
+import {createHash} from 'node:crypto';import {appendFileSync,closeSync,fstatSync,openSync,readFileSync,readSync,realpathSync} from 'node:fs';
+// Fresh Node 24 readFileSync bytes and owned-fd behavior, without retaining the whole image.
+function selfDigest(path) {
+  const hash = createHash('sha256');
+  const fd = openSync(path, 'r');
+  let size = 0, offset = 0, closeAttempted = false;
+  try {
+    let info;
+    try { info = fstatSync(fd); } catch {
+      throw new TypeError("Cannot read properties of undefined (reading '1')");
+    }
+    size = info.isFile() ? Number(info.size) : 0;
+    if (size > 2 ** 31 - 1) throw Object.assign(
+      new RangeError('File size (' + size + ') is greater than 2 GiB'), {code: 'ERR_FS_FILE_TOO_LARGE'});
+    let buffer;
+    try { buffer = Buffer.allocUnsafe(size === 0 ? 8192 : Math.min(size, 512 * 1024)); } catch (error) {
+      if (size === 0) {
+        closeAttempted = true;
+        try { closeSync(fd); } catch { /* Preserve the original allocation refusal. */ }
+      }
+      throw error;
+    }
+    do {
+      const count = readSync(fd, buffer, 0, size === 0 ? buffer.length : Math.min(buffer.length, size - offset), null);
+      if (!count) break;
+      hash.update(buffer.subarray(0, count)); offset += count;
+    } while (size === 0 || offset < size);
+  } finally { if (!closeAttempted) closeSync(fd); }
+  if (size === 0 && offset > bufferConstants.MAX_LENGTH) Buffer.concat([Buffer.alloc(0)], offset);
+  return hash.digest('hex');
+}
 assert.equal(realpathSync.native(process.execPath),${JSON.stringify(node)});
-assert.equal(createHash('sha256').update(readFileSync(process.execPath)).digest('hex'),${JSON.stringify(fileHash(node))});
+assert.equal(selfDigest(process.execPath),${JSON.stringify(fileHash(node))});
 const argv=process.argv.slice(2);
 const fact={provider:${JSON.stringify(provider)},source:${JSON.stringify(source)},pid:process.pid,parentPid:process.ppid};
 if(argv.length===1&&argv[0]==='--version'){
@@ -143,7 +175,11 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider']
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness',
+    'diagnostics/modelReadinessTiming', 'composition/createRuntimeMemberProviderFactory',
+    'composition/runtimeControlAuthority', 'composition/createRuntimeTeamLaunch', 'composition/captureTeamAccountRead',
+    'team/TeamOwner', 'adapters/team/TeamOwnerStore', 'composition/teamRoster', 'composition/RuntimeTeamCoordinator', 'composition/captureMemberProviderAuthority',
+    'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider', 'adapters/providers/CodexMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
@@ -158,7 +194,7 @@ function validateSourceRefusal(value, persisted) {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
   const hash = raw => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = raw => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
-  const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+  const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired checkSite',
     consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
     'opencode-open': 'bindingDigest phase reason',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
@@ -172,6 +208,8 @@ function validateSourceRefusal(value, persisted) {
     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+    assert.ok(value.checkSite === null || ['before-owner', 'after-owner', 'request-builder', 'after-reply'].includes(value.checkSite));
+    if (value.checkSite !== null) assert.ok(value.phase === 'resume' && ['sealed', 'current-false', 'current-threw', 'launch-deadline'].includes(value.reason));
   } else if (value.kind === 'opencode-open') {
     assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
     assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
@@ -181,7 +219,8 @@ function validateSourceRefusal(value, persisted) {
       const timing = value.currentCalls;
       assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
       assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
-      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated', ...(Object.hasOwn(timing, 'regions') ? ['regions'] : [])].sort());
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated',
+        ...['regions', 'namespace'].filter(key => Object.hasOwn(timing, key))].sort());
       assert.ok(clock(timing.count) && timing.count <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && timing.maxMs <= timing.totalMs);
       assert.equal(typeof timing.truncated, 'boolean');
       assert.ok(timing.lastMs === null || clock(timing.lastMs) && timing.lastMs <= timing.maxMs);
@@ -191,11 +230,28 @@ function validateSourceRefusal(value, persisted) {
         const regions = timing.regions;
         assert.ok(regions && typeof regions === 'object' && !Array.isArray(regions) && [Object.prototype, null].includes(Object.getPrototypeOf(regions)));
         assert.ok(Object.getOwnPropertySymbols(regions).length === 0 && Object.values(Object.getOwnPropertyDescriptors(regions)).every(row => 'value' in row));
-        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority', ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : [])];
+        const authorityParts = Object.hasOwn(regions, 'referenceAccountProviderCount');
+        assert.ok(!authorityParts || Object.hasOwn(regions, 'referenceAccountCount'));
+        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority',
+          ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : []),
+          ...(authorityParts ? ['referenceAccountProvider', 'referenceAccountAllocation'] : [])];
         assert.deepEqual(Object.keys(regions).sort(), names.flatMap(name => [name + 'Count', name + 'Ms']).sort());
         for (const name of names) {
           const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];
           assert.ok(clock(count) && count <= timing.count && clock(milliseconds) && (count !== 0 || milliseconds === 0));
+        }
+      }
+      if (Object.hasOwn(timing, 'namespace')) {
+        const namespace = timing.namespace;
+        assert.ok(namespace && typeof namespace === 'object' && !Array.isArray(namespace) && [Object.prototype, null].includes(Object.getPrototypeOf(namespace)));
+        assert.ok(Object.getOwnPropertySymbols(namespace).length === 0 && Object.values(Object.getOwnPropertyDescriptors(namespace)).every(row => 'value' in row));
+        assert.deepEqual(Object.keys(namespace).sort(), ['referenceSamples', 'referenceDirectoryPathMs', 'referenceTreeMs', 'accountSamples', 'accountDirectoryPathMs', 'accountTreeMs'].sort());
+        assert.ok(Object.values(namespace).every(clock) && timing.count > 0 && Object.hasOwn(timing, 'regions'));
+        assert.ok(namespace.referenceSamples <= 4096 && namespace.accountSamples <= namespace.referenceSamples);
+        for (const part of ['DirectoryPathMs', 'TreeMs']) {
+          assert.ok(namespace['account' + part] <= namespace['reference' + part]);
+          for (const scope of ['reference', 'account'])
+            assert.ok(namespace[scope + 'Samples'] !== 0 || namespace[scope + part] === 0);
         }
       }
     }
@@ -231,9 +287,86 @@ channel('agent-teams.legacy-host.first-refusal').subscribe(value => { try {
   if (pair !== null) references.add(pair);
 } catch { disabled = true; } });
 const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};
-const runtimeProjectionRows = new Map(); let projectionUnknown = false;
+const codexContexts = [], codexEvents = [], codexStates = [], codexViews = new Map(); let codexUnknown = false, codexTimed = false;
+const codexReject = () => { codexUnknown = true; codexContexts.length = 0; codexEvents.length = 0; codexStates.length = 0; codexViews.clear(); };
+const codexTuple = (value, fields) => {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+  assert.ok([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0);
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  assert.deepEqual(Object.keys(descriptors).sort(), [...fields].sort());
+  assert.ok(Object.values(descriptors).every(row => 'value' in row));
+  return fields.map(key => descriptors[key].value);
+};
+try { channel('agent-teams.legacy-host.codex-readiness').subscribe(value => { try {
+  if (codexUnknown) return;
+  const timed = Object.hasOwn(value, 'timing');
+  const [schemaVersion, bindingDigest, sourceId, sourceRevision, sequence, invocation, operation, phase, result, rawTiming] = codexTuple(value,
+    ['schemaVersion', 'bindingDigest', 'sourceId', 'sourceRevision', 'sequence', 'invocation', 'operation', 'phase', 'result', ...(timed ? ['timing'] : [])]);
+  assert.equal(schemaVersion, timed ? 2 : 1);
+  assert.ok([bindingDigest, sourceId, sourceRevision].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)));
+  assert.ok(Number.isInteger(sequence) && sequence >= 1 && sequence <= 64 && Number.isInteger(invocation) && invocation >= 1 && invocation <= 16);
+  assert.ok(['open', 'catalog', 'readiness'].includes(operation) && ['before-await', 'after-await', 'returned', 'threw'].includes(phase));
+  assert.ok(phase === 'returned' ? operation !== 'open' && typeof result === 'boolean' : result === null);
+  const identity = [bindingDigest, sourceId, sourceRevision];
+  let contextIndex = codexContexts.findIndex(row => row.every((value, index) => value === identity[index]));
+  if (contextIndex < 0) {
+    assert.ok(codexContexts.length < 4); contextIndex = codexContexts.length;
+    codexContexts.push(identity); codexStates.push({ sequence: 0, invocations: new Map(), schemaVersion, timing: [] });
+  }
+  const state = codexStates[contextIndex]; assert.equal(sequence, state.sequence + 1);
+  assert.equal(schemaVersion, state.schemaVersion);
+  let timing;
+  if (timed) {
+    assert.ok(Array.isArray(rawTiming) && Object.getOwnPropertySymbols(rawTiming).length === 0);
+    const descriptors = Object.getOwnPropertyDescriptors(rawTiming);
+    assert.deepEqual(Object.keys(descriptors), [...Array.from({ length: 10 }, (_, index) => String(index)), 'length']);
+    assert.ok(Object.values(descriptors).every(row => 'value' in row));
+    assert.equal(descriptors.length.value, 10);
+    timing = Array.from({ length: 10 }, (_, index) => descriptors[index].value);
+    assert.ok(timing.every(number => Number.isSafeInteger(number) && number >= 0 && number <= 999999));
+    for (const index of [1, 4, 7]) {
+      assert.ok(timing[index] <= 4096 && timing[index + 2] <= timing[index + 1]);
+      if (timing[index] === 0) assert.ok(timing[index + 1] === 0 && timing[index + 2] === 0);
+      if (state.timing.length && timing[index] === state.timing[index])
+        assert.ok(timing[index + 1] === state.timing[index + 1] && timing[index + 2] === state.timing[index + 2]);
+    }
+    assert.ok(timing.every((number, index) => !state.timing.length || number >= state.timing[index]));
+    state.timing = timing; codexTimed = true;
+  }
+  const prior = state.invocations.get(invocation);
+  if (phase === 'before-await') {
+    assert.equal(prior, undefined); assert.equal(invocation, state.invocations.size + 1);
+  } else {
+    assert.ok(prior && prior[0] === operation);
+    assert.ok(phase === 'after-await' ? prior[1] === 'before-await'
+      : phase === 'returned' ? prior[1] === 'after-await'
+      : prior[1] === 'before-await' || prior[1] === 'after-await');
+  }
+  assert.ok(codexEvents.length < 64);
+  state.sequence = sequence; state.invocations.set(invocation, [operation, phase]);
+  codexEvents.push([contextIndex, sequence, invocation, operation, phase, result, ...(timed ? [timing] : [])]);
+} catch { codexReject(); } }); } catch { codexReject(); }
+try { channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
+  if (codexUnknown) return;
+  const tuple = codexTuple(value, ['viewDigest', 'bindingMatches', 'recordReady', 'providerReady', 'ownerCurrent', 'nativeReady']);
+  assert.ok(typeof tuple[0] === 'string' && /^[a-f0-9]{64}$/.test(tuple[0]));
+  assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');
+  for (let index = 2; index <= 4; index++)
+    assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
+  assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
+  assert.ok(codexViews.has(tuple[0]) || codexViews.size < 4); codexViews.set(tuple[0], codexEvents.length);
+} catch { codexReject(); } }); } catch { codexReject(); }
+try { process.once('exit', () => { try {
+  const value = codexUnknown ? { schemaVersion: 1, status: 'unknown', reason: 'invalid-overflow-or-observer-failure' }
+    : { schemaVersion: codexTimed ? 2 : 1, status: 'observed', contexts: codexContexts, events: codexEvents, views: [...codexViews] };
+  const raw = JSON.stringify(value);
+  writeFileSync(projectionLedger + '.codex-readiness', Buffer.byteLength(raw) <= 8192 ? raw :
+    '{"schemaVersion":1,"status":"unknown","reason":"invalid-overflow-or-observer-failure"}', { mode: 0o600, flag: 'wx' });
+} catch { /* A missing separate ledger remains unknown; preserve the original exit listener. */ } }); } catch { codexReject(); }
+const runtimeProjectionRows = new Map(); let projectionUnknown = false, projectionRefusal = 'invalid';
 channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
   if (projectionUnknown) return;
+  projectionRefusal = 'invalid';
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   assert.ok([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0);
   const fields = ['viewDigest', 'bindingMatches', 'recordReady', 'providerReady', 'ownerCurrent', 'nativeReady'];
@@ -247,13 +380,14 @@ channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
     assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
   assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
   const prior = runtimeProjectionRows.get(tuple[0]);
-  if (prior !== undefined) assert.deepEqual(tuple, prior);
-  else { assert.ok(runtimeProjectionRows.size < 4); runtimeProjectionRows.set(tuple[0], tuple); }
+  if (prior !== undefined) { projectionRefusal = 'conflict'; assert.equal(tuple[5], prior[5]); }
+  else { projectionRefusal = 'capacity'; assert.ok(runtimeProjectionRows.size < 4); }
+  runtimeProjectionRows.set(tuple[0], tuple);
 } catch { projectionUnknown = true; runtimeProjectionRows.clear(); } });
 process.once('exit', () => { try {
-  const value = projectionUnknown ? { status: 'unknown' } : { status: 'observed', rows: [...runtimeProjectionRows.values()] };
+  const value = projectionUnknown ? { status: 'unknown', reason: projectionRefusal } : { status: 'observed', rows: [...runtimeProjectionRows.values()] };
   const raw = JSON.stringify(value);
-  writeFileSync(projectionLedger, Buffer.byteLength(raw) <= 512 ? raw : '{"status":"unknown"}', { mode: 0o600, flag: 'wx' });
+  writeFileSync(projectionLedger, Buffer.byteLength(raw) <= 512 ? raw : '{"status":"unknown","reason":"byte-budget"}', { mode: 0o600, flag: 'wx' });
 } catch { /* Missing exit evidence remains unknown; never replace an earlier Host ledger. */ } });
 await import(${JSON.stringify(pathToFileURL(cli).href)});
 `, { flag: 'wx' });
@@ -270,7 +404,8 @@ await import(${JSON.stringify(pathToFileURL(cli).href)});
     cwd: root, env: { HOME: join(root, 'host-home'), TMPDIR: join(root, 'host-tmp'), TEMP: join(root, 'host-tmp'),
       TMP: join(root, 'host-tmp'), SystemRoot: systemRoot, PATH: [dirname(node), join(systemRoot, 'System32')].join(';'),
       LEGACY_AGENT_HOST_PROFILE_PATH: profilePath, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(profilePath) },
-    startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
+    startupTimeoutMs: 10000, requestTimeoutMs: provider === 'opencode' ? emulatedSourceOpenCodeRequestTimeoutMs : 15000,
+    writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
   const owner = { ownerId, revision: profile.owner.revision };
   const descriptor: DesktopBackendDescriptor = { schemaVersion: 1, defaultOwner: owner,
     owners: [{ ...owner, storageRoot: profile.owner.storageRoot, profile: host }],

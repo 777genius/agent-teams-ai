@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-driver-close-diagnostic-source-review",
+  "reviewer": "/root/composition_review_030",
+  "reviewedAt": "2026-11-19T00:18:59.765704+00:00",
+  "verdict": "PASS_SOURCE_AND_FINITE_SCOPE_WITH_SOURCE_FREEZE_INTEGRATION_REQUIRED",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "candidateManifestPin": {
+    "blob": "2089e98881978e5518a2fff7a102816467d340f9",
+    "sha256": "a5a3921d373d7c1dd261f97e9a3a7d5e09bace02b243878fc9e7ab364241f6f5",
+    "bytes": 1434
+  },
+  "verificationPin": {
+    "blob": "4024048b731e5c795521e6382ccb5c7f3f77cacf",
+    "sha256": "c26d748a64d73b66e531b29137244fda2b7aba23650e2265ab4d520553bddcaf",
+    "bytes": 10346
+  },
+  "candidatePaths": [
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "e2b14e9e1118948e4f0159c25aa0f4d34dd138b5",
+        "sha256": "d3de97d27fd606c02a32ba1faf6a96eefe2b2be9875d6dd2f13c8b6fb9874ded",
+        "bytes": 42751,
+        "lines": 656
+      },
+      "after": {
+        "gitBlob": "3022c10041dd8bceabdd9e9982ab78a305e9c167",
+        "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+        "bytes": 44790,
+        "lines": 690
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "mode": "100644",
+      "before": null,
+      "after": {
+        "gitBlob": "4dbce7ddf863f4b1513bdb018c67b29ec31eac71",
+        "sha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+        "bytes": 11220,
+        "lines": 182
+      }
+    }
+  ],
+  "independence": "Reviewer did not author or edit this candidate and did not rerun its tests. Full two-path patch and original/candidate execution logs were read; candidate bytes and immutable preimages were independently hashed.",
+  "producerVerification": {
+    "archiveSha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+    "memberSha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+    "method": "Read and hash the existing local pinned archive and driver-session.js member, without extracting/executing the runtime.",
+    "behavior": "Existing producer publishes failure-only channel agent-teams:opencode-v2:driver-close-failed after original-work/protocol-dispose/confirm-stopped boundaries. It gates engine opencode-v2 and own-data64lowercasehex trustedBinding; optional diagnostics cannot replace the original close receipt. No producer/archive change proposed."
+  },
+  "reviewFindings": {
+    "projection": "Both emitter subscriber and parent receipt independently project only own data fields trustedBinding,stage,outcome from the existing closed vocabularies. Getter/inherited/descriptor-trap and malformed values are rejected; extra fields are discarded. The64hex binding is retained as an opaque observation, not compared to an invented probe selector and never used as authority.",
+    "boundedness": "Emitter251ordinary+5failure families+trace-limit and parent250ordinary+6failure families+trace-limit remain within257rows. Each original failure family retains its reserve. Original64KiB trace,512B rawline and513B serialized-entry limits are unchanged. Parent driver observation is first-only across its epochs.",
+    "afterLimit": "Driver subscriber and parent critical-family branches execute before ordinary quota refusal. New counters reserve one existing ordinary slot at each boundary, so late failure observation survives capped ordinary traffic without expanding the budget.",
+    "passivity": "Module load does not auto-activate the finite process view. New observer reads no source authority, sends no command, performs no process signal and changes no cleanup result/deadline. Actual producer result and runtime code remain untouched.",
+    "tests": "The six finite tests execute actual stripped fixture bodies with real diagnostics_channel publications and in-memory process streams. They cover closed labels, opaque bindings, malformed/accessor fields, independent receipt rejection, chunked lines, duplicates across epochs, preserved critical families at row/byte pressure, and subscription cleanup. Original one selected test fails at0vs1 missing observation; candidate6/6 pass.",
+    "testDiscovery": "Existing Host package tests/*.test.ts glob discovers the new test through the unchanged conditional MainCI workspace command. Discovery is not a claim it ran in every matrix or bypasses build/typecheck.",
+    "componentSeparation": "Neither changed path overlaps the original frozen12. Native-host fixture attachment loader, Quit command snapshot, Scheduler metadata behavior, production/provider contracts and original credential assertions are unchanged."
+  },
+  "sourceFreezeRequired": {
+    "proposalPin": {
+      "blob": "1f3a68f54724e00717a5aab48f9515d9bca0249b",
+      "sha256": "697a4a2526c191e88c23ffda4b373df26729f8d788aa5f18ff5577830d2800f2",
+      "bytes": 908
+    },
+    "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "parentIntermediateBlob": "741dbdc6f296a7a67a8639b7a928e6664886cab2",
+    "addExactlyOneLiteral": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+    "preserve": "All original/Quit/schedule literals and Set/hash-before/after bodies. This shared amendment belongs to root, not author.",
+    "sizeBinding": "Both candidate paths are non-production under the saved actual classifier, but the1line shared production roster changes its tuple and must be included in the final complete composition size binding."
+  },
+  "executionLimits": [
+    "No diagnostic conclusion from this finite PASS changes original credential INCOMPLETE/cleanup=false/held debt.",
+    "No native Host/provider/app/build/install/transport or full typecheck ran in this review.",
+    "Executing Node is24.22.3; the in-memory process view uses24.21.0 only to exercise existing admitted observer shape.",
+    "Exact next original CI/native evidence and final Git tree/source-freeze composition remain pending."
+  ]
+}

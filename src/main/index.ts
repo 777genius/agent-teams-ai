@@ -75,6 +75,7 @@ import {
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+import { selectNativeNextPromptProviders } from '@features/native-prompt-suggestions/main';
 import * as projectFolderFeature from '@features/project-folder/main';
 import {
   createRecentProjectsFeature,
@@ -227,7 +228,11 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { createDesktopCodexFeatures } from './composition/createDesktopCodexFeatures';
-import { createDesktopStoppedImportContext } from './composition/createDesktopStoppedImportContext';
+import {
+  captureDesktopNativeStopWorkSyncFence,
+  createDesktopStoppedImportContext,
+  createDesktopWorkSyncSourceAdmission,
+} from './composition/createDesktopStoppedImportContext';
 import { createDesktopOpenCodeLifecycle } from './composition/createDesktopOpenCodeLifecycle';
 import { createDesktopProviderManagementFeatures } from './composition/createDesktopProviderManagementFeatures';
 import {
@@ -1747,7 +1752,7 @@ async function initializeServices(): Promise<void> {
   initializeAgentBackendConnection(contextRegistry, {
     getMainWindow: () => mainWindow,
     rendererIndexPath: resolveRendererIndexPath(__dirname),
-    nativeNextPromptEnabled: configManager.getConfig().general.nativeNextPromptSuggestionsEnabled === true,
+    nativeNextPromptProviders: selectNativeNextPromptProviders(configManager.getConfig().providerConnections),
     // Fail closed for browser SSE: /api/events broadcasts to every connected
     // client without per-owner authorization. Never publish private human-DM
     // follow-ups there until a scoped authenticated SSE transport exists.
@@ -1890,7 +1895,8 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService = createDefaultTeamProvisioningService(
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
-    gatewayLaunchRuntime.seams
+    gatewayLaunchRuntime.seams,
+    (teamName) => captureDesktopNativeStopWorkSyncFence(() => memberWorkSyncFeature, teamName)
   );
   teamDataService.setTeamProfileOwnership((teamName) =>
     teamProvisioningService.isTeamManagedByThisProfile(teamName)
@@ -2503,7 +2509,9 @@ async function initializeServices(): Promise<void> {
       logger: memberWorkSyncLogger,
     });
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
-    sourceWriteAdmission: initializedBackupOwner.sourceWriteAdmission,
+    sourceWriteAdmission: createDesktopWorkSyncSourceAdmission(
+      initializedBackupOwner, () => teamBackupService === initializedBackupOwner
+    ),
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,

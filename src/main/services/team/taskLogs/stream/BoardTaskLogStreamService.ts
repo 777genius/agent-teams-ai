@@ -273,6 +273,7 @@ function inferHistoricalLinkKind(canonicalToolName: string): 'lifecycle' | 'boar
     case 'task_set_status':
     case 'task_start':
     case 'review_approve':
+    case 'review_complete':
     case 'review_request_changes':
     case 'review_start':
       return 'lifecycle';
@@ -301,6 +302,7 @@ function inferHistoricalActionCategory(canonicalToolName: string): BoardTaskActi
     case 'review_start':
     case 'review_request':
     case 'review_approve':
+    case 'review_complete':
     case 'review_request_changes':
       return 'review';
     case 'task_add_comment':
@@ -577,7 +579,6 @@ function looksLikeJsonPayload(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.startsWith('{') || trimmed.startsWith('[');
 }
-
 function parseJsonLikeString(value: string): unknown {
   const trimmed = value.trim();
   if (!looksLikeJsonPayload(trimmed)) {
@@ -1784,7 +1785,6 @@ export class BoardTaskLogStreamService {
     };
     return locator.getGeneration?.(teamName) ?? 0;
   }
-
   private async getStreamLayout(teamName: string, taskId: string): Promise<StreamLayout> {
     const cacheKey = this.buildLayoutCacheKey(teamName, taskId);
     const generation = this.getTranscriptDiscoveryGeneration(teamName);

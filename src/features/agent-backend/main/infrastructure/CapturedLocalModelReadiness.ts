@@ -3,7 +3,7 @@ import { constants, promises as fs } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, parse as parsePath, resolve, sep } from 'node:path';
 
-import { actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema, parseLiveRosterResponse } from '@agent-teams/legacy-agent-host/team-host';
+import { actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema, parseLiveRosterResponse } from '@agent-teams/legacy-agent-host/team-host/readiness';
 import {
   createOpenCodeGlobalConfigEnvironmentResolver,
   isPrivateNetworkRuntimeLocalProviderUrl,

@@ -1,0 +1,1932 @@
+{
+  "schema": "current030-original-host-ui-terminal-closure-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826474,
+  "event": "pull_request",
+  "runAttempt": 1,
+  "run": {
+    "id": 44407826474,
+    "name": "Host Emulated Acceptance",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "event": "pull_request",
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-18T22:03:43Z",
+    "updated_at": "2026-11-19T00:55:14Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474"
+  },
+  "jobCensus": {
+    "total": 30,
+    "success": 22,
+    "failure": 8,
+    "cancelled": 0,
+    "running": 0,
+    "queued": 0,
+    "usefulMatrixAndShardJobs": 29,
+    "usefulSuccess": 22,
+    "usefulFailure": 7,
+    "aggregateFailure": 1
+  },
+  "jobs": [
+    {
+      "id": 135167681954,
+      "name": "Offline frontend tests (1/4)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T22:53:10Z",
+      "completed_at": "2026-11-18T22:59:35Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167681954",
+      "runner_name": "GitHub Actions 1000395281"
+    },
+    {
+      "id": 135167682379,
+      "name": "Offline Host Desktop (linux-x64, codex)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:03:07Z",
+      "completed_at": "2026-11-18T23:09:46Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682379",
+      "runner_name": "GitHub Actions 1000395321"
+    },
+    {
+      "id": 135167682392,
+      "name": "Offline Host Desktop (linux-x64, retained-original)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T23:34:03Z",
+      "completed_at": "2026-11-18T23:39:00Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682392",
+      "runner_name": "GitHub Actions 1000395421"
+    },
+    {
+      "id": 135167682430,
+      "name": "Offline Host Desktop (linux-x64, cross-team)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:50:14Z",
+      "completed_at": "2026-11-19T00:00:52Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682430",
+      "runner_name": "GitHub Actions 1000395505"
+    },
+    {
+      "id": 135167682446,
+      "name": "Offline Host Desktop (linux-x64, extensions)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:52:26Z",
+      "completed_at": "2026-11-18T23:56:49Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682446",
+      "runner_name": "GitHub Actions 1000395511"
+    },
+    {
+      "id": 135167682454,
+      "name": "Offline Host Desktop (linux-x64, team)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:16:46Z",
+      "completed_at": "2026-11-18T23:37:02Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682454",
+      "runner_name": "GitHub Actions 1000395369"
+    },
+    {
+      "id": 135167682463,
+      "name": "Offline Host Desktop (linux-x64, skills)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:20:39Z",
+      "completed_at": "2026-11-18T23:25:10Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682463",
+      "runner_name": "GitHub Actions 1000395383"
+    },
+    {
+      "id": 135167682526,
+      "name": "Offline Host Desktop (linux-x64, claude)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:03:02Z",
+      "completed_at": "2026-11-18T23:10:55Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682526",
+      "runner_name": "GitHub Actions 1000395320"
+    },
+    {
+      "id": 135167682607,
+      "name": "Offline frontend tests (2/4)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:18:14Z",
+      "completed_at": "2026-11-18T23:23:49Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682607",
+      "runner_name": "GitHub Actions 1000395376"
+    },
+    {
+      "id": 135167682686,
+      "name": "Offline Host Desktop (linux-x64, opencode)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:05:40Z",
+      "completed_at": "2026-11-19T00:12:23Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682686",
+      "runner_name": "GitHub Actions 1000395571"
+    },
+    {
+      "id": 135167682733,
+      "name": "Offline Host Desktop (linux-x64, management)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:48:22Z",
+      "completed_at": "2026-11-18T23:52:24Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682733",
+      "runner_name": "GitHub Actions 1000395499"
+    },
+    {
+      "id": 135167682738,
+      "name": "Offline frontend tests (4/4)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:45:27Z",
+      "completed_at": "2026-11-18T23:52:53Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682738",
+      "runner_name": "GitHub Actions 1000395485"
+    },
+    {
+      "id": 135167682752,
+      "name": "Offline Host Desktop (darwin-arm64, installer)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T22:49:14Z",
+      "completed_at": "2026-11-18T22:54:26Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682752",
+      "runner_name": "GitHub Actions 1000395261"
+    },
+    {
+      "id": 135167682754,
+      "name": "Offline Host Desktop (linux-x64, taskboard)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:02:42Z",
+      "completed_at": "2026-11-19T00:07:26Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682754",
+      "runner_name": "GitHub Actions 1000395554"
+    },
+    {
+      "id": 135167682766,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T22:43:20Z",
+      "completed_at": "2026-11-18T22:53:26Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682766",
+      "runner_name": "GitHub Actions 1000395236"
+    },
+    {
+      "id": 135167682769,
+      "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:19:31Z",
+      "completed_at": "2026-11-18T23:23:54Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682769",
+      "runner_name": "GitHub Actions 1000395380"
+    },
+    {
+      "id": 135167682827,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T23:08:15Z",
+      "completed_at": "2026-11-18T23:17:38Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682827",
+      "runner_name": "GitHub Actions 1000395340"
+    },
+    {
+      "id": 135167682844,
+      "name": "Offline frontend tests (3/4)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:08:23Z",
+      "completed_at": "2026-11-19T00:15:45Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682844",
+      "runner_name": "GitHub Actions 1000395582"
+    },
+    {
+      "id": 135167682858,
+      "name": "Offline Host Desktop (linux-x64, import)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:11:26Z",
+      "completed_at": "2026-11-19T00:15:56Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682858",
+      "runner_name": "GitHub Actions 1000395594"
+    },
+    {
+      "id": 135167682886,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:25:59Z",
+      "completed_at": "2026-11-18T23:36:32Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682886",
+      "runner_name": "GitHub Actions 1000395399"
+    },
+    {
+      "id": 135167682895,
+      "name": "Offline Host Desktop (linux-x64, collaboration)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:04:10Z",
+      "completed_at": "2026-11-19T00:10:31Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682895",
+      "runner_name": "GitHub Actions 1000395565"
+    },
+    {
+      "id": 135167682918,
+      "name": "Offline Host Desktop (linux-x64, review)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:10:16Z",
+      "completed_at": "2026-11-19T00:14:57Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682918",
+      "runner_name": "GitHub Actions 1000395590"
+    },
+    {
+      "id": 135167682932,
+      "name": "Offline Host Desktop (linux-x64, selection)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:14:10Z",
+      "completed_at": "2026-11-19T00:19:12Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682932",
+      "runner_name": "GitHub Actions 1000395602"
+    },
+    {
+      "id": 135167682948,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T23:29:07Z",
+      "completed_at": "2026-11-18T23:36:16Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682948",
+      "runner_name": "GitHub Actions 1000395407"
+    },
+    {
+      "id": 135167682972,
+      "name": "Offline Host Desktop (linux-x64, processes)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:08:26Z",
+      "completed_at": "2026-11-19T00:12:41Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682972",
+      "runner_name": "GitHub Actions 1000395583"
+    },
+    {
+      "id": 135167682976,
+      "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T23:48:23Z",
+      "completed_at": "2026-11-18T23:53:51Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682976",
+      "runner_name": "GitHub Actions 1000395500"
+    },
+    {
+      "id": 135167682983,
+      "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T23:56:52Z",
+      "completed_at": "2026-11-19T00:12:03Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682983",
+      "runner_name": "GitHub Actions 1000395535"
+    },
+    {
+      "id": 135167683004,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-18T22:14:27Z",
+      "completed_at": "2026-11-18T22:23:53Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167683004",
+      "runner_name": "GitHub Actions 1000395102"
+    },
+    {
+      "id": 135167683345,
+      "name": "Offline Host Desktop (linux-x64, codex-login)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-19T00:11:03Z",
+      "completed_at": "2026-11-19T00:16:37Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167683345",
+      "runner_name": "GitHub Actions 1000395593"
+    },
+    {
+      "id": 135237877776,
+      "name": "Offline Host Desktop",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826474,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-19T00:55:11Z",
+      "completed_at": "2026-11-19T00:55:13Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135237877776",
+      "runner_name": "GitHub Actions 1000395808"
+    }
+  ],
+  "artifactInventory": {
+    "total_count": 29,
+    "artifacts": [
+      {
+        "id": 14485300284,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NTMwMDI4NA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-collaboration",
+        "size_in_bytes": 1702461,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14485300284",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14485300284/zip",
+        "expired": false,
+        "digest": "sha256:238f14a1081b607fb45d6ebd8438c7f02c0a0b7b5abb6878ef6aa97c32b008c8",
+        "created_at": "2026-11-19T00:10:27Z",
+        "updated_at": "2026-11-19T00:10:27Z",
+        "expires_at": "2026-12-03T00:10:27Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14485221922,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NTIyMTkyMg==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-codex-login",
+        "size_in_bytes": 706422,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14485221922",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14485221922/zip",
+        "expired": false,
+        "digest": "sha256:247cecadcaa1ce3921c0a1e91c1ed1608b2af942aae9a3319b88cb4336884e1b",
+        "created_at": "2026-11-19T00:16:32Z",
+        "updated_at": "2026-11-19T00:16:32Z",
+        "expires_at": "2026-12-03T00:16:30Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14485196753,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NTE5Njc1Mw==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-import",
+        "size_in_bytes": 1176651,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14485196753",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14485196753/zip",
+        "expired": false,
+        "digest": "sha256:863a751bb7e104c560b54e9c42d89be69579636c07f358f1978ec6e22edff99a",
+        "created_at": "2026-11-19T00:15:52Z",
+        "updated_at": "2026-11-19T00:15:52Z",
+        "expires_at": "2026-12-03T00:15:50Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14484966956,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NDk2Njk1Ng==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-processes",
+        "size_in_bytes": 742368,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484966956",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484966956/zip",
+        "expired": false,
+        "digest": "sha256:3ea5cf1349757d9ccef81430572898efc5620c3ba6146a100c285d823bf1dad1",
+        "created_at": "2026-11-19T00:12:38Z",
+        "updated_at": "2026-11-19T00:12:38Z",
+        "expires_at": "2026-12-03T00:12:38Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14484777184,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NDc3NzE4NA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode",
+        "size_in_bytes": 2478125,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484777184",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484777184/zip",
+        "expired": false,
+        "digest": "sha256:e0463889d9fe68c92052b5a662ec8ff215934db6ff0689e88e649d081482a608",
+        "created_at": "2026-11-19T00:12:19Z",
+        "updated_at": "2026-11-19T00:12:19Z",
+        "expires_at": "2026-12-03T00:12:17Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14484437950,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NDQzNzk1MA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode-v2-management",
+        "size_in_bytes": 1418891,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484437950",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484437950/zip",
+        "expired": false,
+        "digest": "sha256:d81e3684ecd30e29774425d639d1773f445463c940c7c91ae2fa73f969724adb",
+        "created_at": "2026-11-19T00:11:59Z",
+        "updated_at": "2026-11-19T00:11:59Z",
+        "expires_at": "2026-12-03T00:11:58Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14484121917,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NDEyMTkxNw==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-cross-team",
+        "size_in_bytes": 2935121,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484121917",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484121917/zip",
+        "expired": false,
+        "digest": "sha256:67bfc1b40bdecd9b71f25e836186d342e4aa5a5ee327c059eb249846d62db249",
+        "created_at": "2026-11-19T00:00:48Z",
+        "updated_at": "2026-11-19T00:00:48Z",
+        "expires_at": "2026-12-03T00:00:47Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14484045585,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4NDA0NTU4NQ==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-import-lifecycle",
+        "size_in_bytes": 601701,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484045585",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14484045585/zip",
+        "expired": false,
+        "digest": "sha256:515798bc7fdfd0e337d5eef75a4e4d046f1961e7e8f9bb38888579499fe0702d",
+        "created_at": "2026-11-18T23:53:48Z",
+        "updated_at": "2026-11-18T23:53:48Z",
+        "expires_at": "2026-12-02T23:53:47Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14483869130,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4Mzg2OTEzMA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-selection",
+        "size_in_bytes": 1333890,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483869130",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483869130/zip",
+        "expired": false,
+        "digest": "sha256:253ec86558d85cd3608eb3e0888d4155f8f74e960e5d78774b3247d53bb16ffa",
+        "created_at": "2026-11-19T00:19:09Z",
+        "updated_at": "2026-11-19T00:19:09Z",
+        "expires_at": "2026-12-03T00:19:08Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14483867647,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4Mzg2NzY0Nw==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-taskboard",
+        "size_in_bytes": 1635045,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483867647",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483867647/zip",
+        "expired": false,
+        "digest": "sha256:0a64e3b1619ecdd0ef9bc817ea5830f2da7835f2f70b95b048a58101380ae66a",
+        "created_at": "2026-11-19T00:07:23Z",
+        "updated_at": "2026-11-19T00:07:23Z",
+        "expires_at": "2026-12-03T00:07:22Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14483814914,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MzgxNDkxNA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-review",
+        "size_in_bytes": 1028977,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483814914",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483814914/zip",
+        "expired": false,
+        "digest": "sha256:36c28412b9dcd03f18e2b1e39eb0125772351d27f9a00f5fb112522e778c11fb",
+        "created_at": "2026-11-19T00:14:53Z",
+        "updated_at": "2026-11-19T00:14:53Z",
+        "expires_at": "2026-12-03T00:14:52Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14483738871,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MzczODg3MQ==",
+        "name": "host-offline-tests-030b21f0765d1a6e6572f46d262c672d63e69eb7-3",
+        "size_in_bytes": 304435,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483738871",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483738871/zip",
+        "expired": false,
+        "digest": "sha256:f153e94b947f82d046783f01109334e34b4b6729e952b141850e703fc727a8a6",
+        "created_at": "2026-11-19T00:15:41Z",
+        "updated_at": "2026-11-19T00:15:41Z",
+        "expires_at": "2026-12-03T00:15:40Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14483102890,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MzEwMjg5MA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-management",
+        "size_in_bytes": 1150406,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483102890",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14483102890/zip",
+        "expired": false,
+        "digest": "sha256:f42d04dbfe78c1c50ea8dd24da697b26851390a0beb36a598a9d881e58f10781",
+        "created_at": "2026-11-18T23:52:21Z",
+        "updated_at": "2026-11-18T23:52:21Z",
+        "expires_at": "2026-12-02T23:52:20Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482859091,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4Mjg1OTA5MQ==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-extensions",
+        "size_in_bytes": 982045,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482859091",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482859091/zip",
+        "expired": false,
+        "digest": "sha256:cb41f38515261683e42478e2e3f649adca585ece15708dd4e9dc02509738cd0e",
+        "created_at": "2026-11-18T23:56:46Z",
+        "updated_at": "2026-11-18T23:56:46Z",
+        "expires_at": "2026-12-02T23:56:46Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482813568,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MjgxMzU2OA==",
+        "name": "host-offline-tests-030b21f0765d1a6e6572f46d262c672d63e69eb7-4",
+        "size_in_bytes": 326445,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482813568",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482813568/zip",
+        "expired": false,
+        "digest": "sha256:e02bce1f3584b449c5169671cc42020d7243f8488d8a826ad394d46552a2d3a6",
+        "created_at": "2026-11-18T23:52:50Z",
+        "updated_at": "2026-11-18T23:52:50Z",
+        "expires_at": "2026-12-02T23:52:50Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482517109,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MjUxNzEwOQ==",
+        "name": "host-emulated-darwin-arm64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode-v2-quit-pending-open",
+        "size_in_bytes": 555794,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482517109",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482517109/zip",
+        "expired": false,
+        "digest": "sha256:195a8547ff2e1350a36b6c303c8a1e498186e4c47e9592327eb96590534a7e14",
+        "created_at": "2026-11-18T23:36:21Z",
+        "updated_at": "2026-11-18T23:36:21Z",
+        "expires_at": "2026-12-02T23:36:20Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482243208,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MjI0MzIwOA==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-retained-original",
+        "size_in_bytes": 668052,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482243208",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482243208/zip",
+        "expired": false,
+        "digest": "sha256:d3a82113a9b83ab0ebbce7302987cc3a84f1b519f3adb8c07d2ed80acc5a7a97",
+        "created_at": "2026-11-18T23:38:57Z",
+        "updated_at": "2026-11-18T23:38:57Z",
+        "expires_at": "2026-12-02T23:38:55Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482185896,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MjE4NTg5Ng==",
+        "name": "host-offline-tests-030b21f0765d1a6e6572f46d262c672d63e69eb7-2",
+        "size_in_bytes": 321062,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482185896",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482185896/zip",
+        "expired": false,
+        "digest": "sha256:8f7db4eca395873aa703900b957a9109e6d793a8ce3ce1c7462d658381f6a369",
+        "created_at": "2026-11-18T23:23:45Z",
+        "updated_at": "2026-11-18T23:23:45Z",
+        "expires_at": "2026-12-02T23:23:44Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482115173,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MjExNTE3Mw==",
+        "name": "host-emulated-darwin-arm64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode-v2-resume",
+        "size_in_bytes": 309095,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482115173",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482115173/zip",
+        "expired": false,
+        "digest": "sha256:342a1812dab32c395dfad21b2a79635074b48ec1e34d51ed533e25780e0213b2",
+        "created_at": "2026-11-18T23:17:25Z",
+        "updated_at": "2026-11-18T23:17:25Z",
+        "expires_at": "2026-12-02T23:17:24Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14482003211,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MjAwMzIxMQ==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-team",
+        "size_in_bytes": 669167,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482003211",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14482003211/zip",
+        "expired": false,
+        "digest": "sha256:9d50f9839157e5378baae9979af2769aa48ea6d0f80734b2fcd977c19592c814",
+        "created_at": "2026-11-18T23:36:57Z",
+        "updated_at": "2026-11-18T23:36:57Z",
+        "expires_at": "2026-12-02T23:36:56Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14481533151,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MTUzMzE1MQ==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-skills",
+        "size_in_bytes": 1398479,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14481533151",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14481533151/zip",
+        "expired": false,
+        "digest": "sha256:021d431bbcb7a7891ae684e0775e61c702027f9e9cce7f8a377e966fd89fcf14",
+        "created_at": "2026-11-18T23:25:05Z",
+        "updated_at": "2026-11-18T23:25:05Z",
+        "expires_at": "2026-12-02T23:25:04Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14480779489,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MDc3OTQ4OQ==",
+        "name": "host-emulated-darwin-arm64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode-v2-chat-attachments",
+        "size_in_bytes": 683296,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14480779489",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14480779489/zip",
+        "expired": false,
+        "digest": "sha256:d91e703b8d5459b30cdfaf30d73866c6aae47d10aa4f1fd370b397992ae87ebe",
+        "created_at": "2026-11-18T23:36:09Z",
+        "updated_at": "2026-11-18T23:36:09Z",
+        "expires_at": "2026-12-02T23:36:08Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14480521679,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MDUyMTY3OQ==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-codex",
+        "size_in_bytes": 2965168,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14480521679",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14480521679/zip",
+        "expired": false,
+        "digest": "sha256:3a709c12073bfe68895c4b1dc0b57f32582eb6e9a70afecbda9acc5d9405e057",
+        "created_at": "2026-11-18T23:09:41Z",
+        "updated_at": "2026-11-18T23:09:41Z",
+        "expires_at": "2026-12-02T23:09:40Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14480494109,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ4MDQ5NDEwOQ==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-claude-lifecycle",
+        "size_in_bytes": 4025306,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14480494109",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14480494109/zip",
+        "expired": false,
+        "digest": "sha256:e1048051a9dc403abd50cf501c583563dd1df47b7342d009a1ccf7d2f0edac6c",
+        "created_at": "2026-11-18T23:23:50Z",
+        "updated_at": "2026-11-18T23:23:50Z",
+        "expires_at": "2026-12-02T23:23:49Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14479953393,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3OTk1MzM5Mw==",
+        "name": "host-emulated-linux-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7-claude",
+        "size_in_bytes": 3746787,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14479953393",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14479953393/zip",
+        "expired": false,
+        "digest": "sha256:e75fc0f4d4fbae85ca3f13a57e79090e70863a667522236123bfdc4f554a49bc",
+        "created_at": "2026-11-18T23:10:51Z",
+        "updated_at": "2026-11-18T23:10:51Z",
+        "expires_at": "2026-12-02T23:10:49Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14479602395,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3OTYwMjM5NQ==",
+        "name": "host-emulated-darwin-arm64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode-v2-review",
+        "size_in_bytes": 303969,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14479602395",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14479602395/zip",
+        "expired": false,
+        "digest": "sha256:0ada06b179fb068903132a9603ac09db8f4490450a90efb0bac46f1fcde8ea33",
+        "created_at": "2026-11-18T22:53:12Z",
+        "updated_at": "2026-11-18T22:53:12Z",
+        "expires_at": "2026-12-02T22:53:11Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14478534087,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3ODUzNDA4Nw==",
+        "name": "host-offline-tests-030b21f0765d1a6e6572f46d262c672d63e69eb7-1",
+        "size_in_bytes": 302187,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478534087",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478534087/zip",
+        "expired": false,
+        "digest": "sha256:8b18727fc1ed7f3e324b7485bcb29c77c0e3c7df164e7a13f3c14abed6515825",
+        "created_at": "2026-11-18T22:59:31Z",
+        "updated_at": "2026-11-18T22:59:31Z",
+        "expires_at": "2026-12-02T22:59:30Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14478234270,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3ODIzNDI3MA==",
+        "name": "host-emulated-darwin-arm64-030b21f0765d1a6e6572f46d262c672d63e69eb7-installer",
+        "size_in_bytes": 1178304,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478234270",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478234270/zip",
+        "expired": false,
+        "digest": "sha256:0bd77f72fee961d9e7d25eb180e78e7e6ec660b6fec0f365c2fc998e16768ae8",
+        "created_at": "2026-11-18T22:54:19Z",
+        "updated_at": "2026-11-18T22:54:19Z",
+        "expires_at": "2026-12-02T22:54:18Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14477940072,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3Nzk0MDA3Mg==",
+        "name": "host-emulated-darwin-arm64-030b21f0765d1a6e6572f46d262c672d63e69eb7-opencode-v2-quit-active",
+        "size_in_bytes": 353592,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14477940072",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14477940072/zip",
+        "expired": false,
+        "digest": "sha256:2baab3f820127148e345d4d700edb45ef312b384787d6160b8b14a7b279a5f86",
+        "created_at": "2026-11-18T22:23:40Z",
+        "updated_at": "2026-11-18T22:23:40Z",
+        "expires_at": "2026-12-02T22:23:39Z",
+        "workflow_run": {
+          "id": 44407826474,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      }
+    ]
+  },
+  "jobProofs": [
+    {
+      "jobId": 135167681954,
+      "name": "Offline frontend tests (1/4)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167681954,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-18 23:01:16 UTC",
+        "bytes": 176413,
+        "sha256": "9e4b18cd5dc64f985d41f1ea5e34b25e71af44c02ff9537df7cd245fdf882687",
+        "computedGitBlobSha": "2760524edb422469e0fb3ee1181a0b084effa827",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167681954-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "2760524edb422469e0fb3ee1181a0b084effa827",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167681954-evidence.json",
+        "bytes": 3859,
+        "sha256": "fef04792caa0c1d6da39a3d5b65534f4b044f2dc684a9dcf47bb1ea1fdc1f954",
+        "computedGitBlobSha": "7f04c627901ba9a0381067b879d11dd2d43ac2be",
+        "publishedBlobSha": "7f04c627901ba9a0381067b879d11dd2d43ac2be",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682379,
+      "name": "Offline Host Desktop (linux-x64, codex)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682379,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:11:47 UTC",
+        "bytes": 293791,
+        "sha256": "8959186dac5f466d71c1bfbb99f8518d507cfacb6ba91d216524ce7835194dd5",
+        "computedGitBlobSha": "40fdca84404543c598be2fe985d28980bdc8ed3b",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682379-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "40fdca84404543c598be2fe985d28980bdc8ed3b",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682379-evidence.json",
+        "bytes": 4530,
+        "sha256": "6a9e4fc2d1c56123ad62cacecd2eae9a475327a7390d4b4b9d34a1a10a7f474d",
+        "computedGitBlobSha": "6ea3769bbc50aff19151ba6f8d3ac8c1ff72a7d0",
+        "publishedBlobSha": "6ea3769bbc50aff19151ba6f8d3ac8c1ff72a7d0",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682392,
+      "name": "Offline Host Desktop (linux-x64, retained-original)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682392,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-18 23:43:31 UTC",
+        "bytes": 304214,
+        "sha256": "6bfc76229f3578d7c4f46d51b8a1f05bd99b8bcc87b4a8ff02f03da632fc8985",
+        "computedGitBlobSha": "7437f926f8efc3f99cdfe406b73480f759badff8",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682392-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "7437f926f8efc3f99cdfe406b73480f759badff8",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682392-evidence.json",
+        "bytes": 59523,
+        "sha256": "98cf8fc7f736495407cca652bd2f2aef8d0a345639633b7da38fa7ff1ab28639",
+        "computedGitBlobSha": "5fac62a609226f601051271adcd6b65a29baec0d",
+        "publishedBlobSha": "5fac62a609226f601051271adcd6b65a29baec0d",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682430,
+      "name": "Offline Host Desktop (linux-x64, cross-team)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682430,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:03:09 UTC",
+        "bytes": 294448,
+        "sha256": "313e6b01bbebccb0cc41fa3f3eaaab526687dec1894175110ed0aacd1846fed9",
+        "computedGitBlobSha": "ee62ee9f28154c6daf22d733ebf898d1cc4cdf11",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682430-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "ee62ee9f28154c6daf22d733ebf898d1cc4cdf11",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682430-evidence.json",
+        "bytes": 27354,
+        "sha256": "4e45f4591f20a42a88ecb77a9225585d67e70979679f06359557e49480620a73",
+        "computedGitBlobSha": "b46667183a947d54b4525530d8848a5554df5f51",
+        "publishedBlobSha": "b46667183a947d54b4525530d8848a5554df5f51",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682446,
+      "name": "Offline Host Desktop (linux-x64, extensions)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682446,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:03:15 UTC",
+        "bytes": 296704,
+        "sha256": "5634e3475d61d2574483fe44aa7a6413dfee12e18b1f100a3f7494aad54af6c8",
+        "computedGitBlobSha": "0fb7bd3e3b481bbb7838e98ebe0c8c5aabbe28a1",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682446-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "0fb7bd3e3b481bbb7838e98ebe0c8c5aabbe28a1",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682446-evidence.json",
+        "bytes": 4425,
+        "sha256": "027c19f35f2f1b7177a1f65b13039ec5846e8fc388e92850dafef92ff259c0b5",
+        "computedGitBlobSha": "5750bbf1102fab97728e90a89a170f7e5cfc979c",
+        "publishedBlobSha": "5750bbf1102fab97728e90a89a170f7e5cfc979c",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682454,
+      "name": "Offline Host Desktop (linux-x64, team)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682454,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:42:43 UTC",
+        "bytes": 2931057,
+        "sha256": "9fb5ab0e222844ca2ec42bdb396bb1193bd883461487d53901b6e8fed7c12fa6",
+        "computedGitBlobSha": "82ed4e808e6bbb7e0c0b52d6c31959475ed4177f",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682454-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "82ed4e808e6bbb7e0c0b52d6c31959475ed4177f",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682454-evidence.json",
+        "bytes": 8993,
+        "sha256": "619f14259354dcb3bf2e038bcfb46281293f62952e4b5685b8a7dab7401a5362",
+        "computedGitBlobSha": "bef4e1065d2f11632033e58088c52dd4eac14e1d",
+        "publishedBlobSha": "bef4e1065d2f11632033e58088c52dd4eac14e1d",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682463,
+      "name": "Offline Host Desktop (linux-x64, skills)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682463,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:27:11 UTC",
+        "bytes": 295268,
+        "sha256": "bde9366b469e7ed75c4242d69c54653e75c1f28408b23aaf50e675f2f2e8120f",
+        "computedGitBlobSha": "0e16eed1f0bd35b3fd185811e3c1dcac05d633f2",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682463-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "0e16eed1f0bd35b3fd185811e3c1dcac05d633f2",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682463-evidence.json",
+        "bytes": 4460,
+        "sha256": "7b6f86cd6bfd8ad517c78f60ee2b94a0e2a1e3b86d03e44bf0ac4a2469d62483",
+        "computedGitBlobSha": "1490477544f4991e381073d9e1ed4e3b330369f1",
+        "publishedBlobSha": "1490477544f4991e381073d9e1ed4e3b330369f1",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682526,
+      "name": "Offline Host Desktop (linux-x64, claude)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682526,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:11:54 UTC",
+        "bytes": 296885,
+        "sha256": "80539c40263fdc488987e52403080163d0c1a660f6b51e14cec8f07318af7813",
+        "computedGitBlobSha": "1a0b32b11521b03f5f9c52aec5136dd33023ffd6",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682526-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "1a0b32b11521b03f5f9c52aec5136dd33023ffd6",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682526-evidence.json",
+        "bytes": 4534,
+        "sha256": "35e888324c92950f9bdad18f1d043d7979e88e50584615a6a726a766d88b6c58",
+        "computedGitBlobSha": "f0425165fce86ce540f654610e2fa1b4792258de",
+        "publishedBlobSha": "f0425165fce86ce540f654610e2fa1b4792258de",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682607,
+      "name": "Offline frontend tests (2/4)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682607,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:24:54 UTC",
+        "bytes": 262477,
+        "sha256": "3b66dad699ae8b74f62652ed9074427f1a8de1d03f5eee6c2fe5e9fac9629ea4",
+        "computedGitBlobSha": "f5f492d44fdbf59f1b5e37b2ecb4a0f7638e4f51",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682607-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "f5f492d44fdbf59f1b5e37b2ecb4a0f7638e4f51",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682607-evidence.json",
+        "bytes": 2857,
+        "sha256": "fb5c9daa83c3c0f4301366dc75ce4529d97ca3db27e9d917cce2437010063a09",
+        "computedGitBlobSha": "4d36d87622e7fbc6400d7733143a6ad712a58649",
+        "publishedBlobSha": "4d36d87622e7fbc6400d7733143a6ad712a58649",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682686,
+      "name": "Offline Host Desktop (linux-x64, opencode)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682686,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:19:13 UTC",
+        "bytes": 293754,
+        "sha256": "90b9824217288d71faca720a156d5b746b4e5a53d4c0a7ab22e5393c57c5018d",
+        "computedGitBlobSha": "18dda163613643eabbd4e52093e982b16175fc60",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682686-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "18dda163613643eabbd4e52093e982b16175fc60",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682686-evidence.json",
+        "bytes": 4434,
+        "sha256": "95ba32e4f160f14f197ff4c299b2e1ae49ff40b79699a33fd844458056bace9d",
+        "computedGitBlobSha": "ff15fe23363ff87f7e31cfc1ae8e0ee8a2bf0aec",
+        "publishedBlobSha": "ff15fe23363ff87f7e31cfc1ae8e0ee8a2bf0aec",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682733,
+      "name": "Offline Host Desktop (linux-x64, management)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682733,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:53:30 UTC",
+        "bytes": 295262,
+        "sha256": "cdc7ae1864bcaf6873498f6629f3217ea6ab19015b504beb3db15724481b6ef2",
+        "computedGitBlobSha": "a27c5dab7051b047eed01569acbc6938afc54544",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682733-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "a27c5dab7051b047eed01569acbc6938afc54544",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682733-evidence.json",
+        "bytes": 4436,
+        "sha256": "b6a9a2b1f53b521480d51741712826912e6dbeb959f96a13cb23faf6bf7809ca",
+        "computedGitBlobSha": "d50c073875ffff7d8070b741dc1e0582a4c07ba4",
+        "publishedBlobSha": "d50c073875ffff7d8070b741dc1e0582a4c07ba4",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682738,
+      "name": "Offline frontend tests (4/4)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682738,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:53:36 UTC",
+        "bytes": 198395,
+        "sha256": "94997acc020961b9e9fb999801612df7b62d7d50fdd7682ebba12246032f32d7",
+        "computedGitBlobSha": "4b1d7c7ff4101bdc47973501edfbb8cefb0c2acb",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682738-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "4b1d7c7ff4101bdc47973501edfbb8cefb0c2acb",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682738-evidence.json",
+        "bytes": 2917,
+        "sha256": "73b502f55123c2802895d51f8ab4359fbc03c3086b4cd055f0404bb2bf2e7e5f",
+        "computedGitBlobSha": "e6cfd14680ae6f01d2a0931db11dc8fee6d345ef",
+        "publishedBlobSha": "e6cfd14680ae6f01d2a0931db11dc8fee6d345ef",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682752,
+      "name": "Offline Host Desktop (darwin-arm64, installer)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682752,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 22:57:32 UTC",
+        "bytes": 288423,
+        "sha256": "9dc39c1423a622db4f4d0483953e63517aabeef950277004cc47fd6d8e42b0f2",
+        "computedGitBlobSha": "dfefac00679f48c9fea048de326a65316544a64d",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682752-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "dfefac00679f48c9fea048de326a65316544a64d",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682752-evidence.json",
+        "bytes": 7348,
+        "sha256": "cd7601e617958ee772b4dfc758cba9e48ff178b2d0404c3e4d21c3bae118b889",
+        "computedGitBlobSha": "fa4806760c6c79da283905ba0da6ff3976c841cc",
+        "publishedBlobSha": "fa4806760c6c79da283905ba0da6ff3976c841cc",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682754,
+      "name": "Offline Host Desktop (linux-x64, taskboard)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682754,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:12:09 UTC",
+        "bytes": 295260,
+        "sha256": "53d4980365942b4b28d90f5bda6b92767965f8828a40ba5401489e3cf0f6a590",
+        "computedGitBlobSha": "227adbcc9407a156dc137502b47fb4158e8709b4",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682754-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "227adbcc9407a156dc137502b47fb4158e8709b4",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682754-evidence.json",
+        "bytes": 4428,
+        "sha256": "341ab785b35f24082f8f11ffa0fd3fcf42d8d2d2325c3be8b98f006b30db54d0",
+        "computedGitBlobSha": "f018b471948e8fc3ada3f20c67ad390a61102b16",
+        "publishedBlobSha": "f018b471948e8fc3ada3f20c67ad390a61102b16",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682766,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682766,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-18 22:54:19 UTC",
+        "bytes": 241910,
+        "sha256": "e0276b385fb8844632de606d2bfa80ee0b600c2d1c64cb93c85a5ce850d927be",
+        "computedGitBlobSha": "11ae8989bfff4c6ab8db0e218813cf208777b426",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682766-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "11ae8989bfff4c6ab8db0e218813cf208777b426",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682766-evidence.json",
+        "bytes": 29937,
+        "sha256": "4a00281edabd42e433ba54ee75923ca8ac51b19c0776bdeee237e53995c40bc1",
+        "computedGitBlobSha": "24995ae3c454c2ccdecacc617e603fac1444594d",
+        "publishedBlobSha": "24995ae3c454c2ccdecacc617e603fac1444594d",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682769,
+      "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682769,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:25:00 UTC",
+        "bytes": 298544,
+        "sha256": "0bbec6d655a8c2c8ead44dda35c842de6d4ff0c5b9bc6d097b9e1399b19a99e4",
+        "computedGitBlobSha": "4cc0c542cbb686c1959d41586008d94b4a7e534a",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682769-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "4cc0c542cbb686c1959d41586008d94b4a7e534a",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682769-evidence.json",
+        "bytes": 4611,
+        "sha256": "01bdba3f5b8abd142ac72fce9c175116679a5d96a2ceb2fd84169c2bcd5c39b6",
+        "computedGitBlobSha": "36cacc247213ce49515f47ee4d86a4dfddefa9f3",
+        "publishedBlobSha": "36cacc247213ce49515f47ee4d86a4dfddefa9f3",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682827,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682827,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-18 23:19:22 UTC",
+        "bytes": 242542,
+        "sha256": "89224dd4c8591739f23643e12eb1da51465c455ae27cd738fab6c2efa418989a",
+        "computedGitBlobSha": "1ab96c77fe05bb241383b3eeac841596f061fd30",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682827-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "1ab96c77fe05bb241383b3eeac841596f061fd30",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682827-evidence.json",
+        "bytes": 28086,
+        "sha256": "151e2bfe609c5234028a29b0b7ef2269da8faf0b068a238c7b8ac436bdca9f4f",
+        "computedGitBlobSha": "51c8ed18084e5f88190d73d86cec7d5b3839eb44",
+        "publishedBlobSha": "51c8ed18084e5f88190d73d86cec7d5b3839eb44",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682844,
+      "name": "Offline frontend tests (3/4)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682844,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:19:43 UTC",
+        "bytes": 194088,
+        "sha256": "a0a288b78cddbadf00e72614d5c1ec477c0ad0dd2665e3ceb7b2c922d4e3997b",
+        "computedGitBlobSha": "2a47b6f6045c547552871fe34f7519927ee15a50",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682844-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "2a47b6f6045c547552871fe34f7519927ee15a50",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682844-evidence.json",
+        "bytes": 2885,
+        "sha256": "313f88c058a083ea72d4957e15d1545ed8015870631900e16465d3787110ea00",
+        "computedGitBlobSha": "521c37efd919df14d22a6a37f54fcea475570085",
+        "publishedBlobSha": "521c37efd919df14d22a6a37f54fcea475570085",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682858,
+      "name": "Offline Host Desktop (linux-x64, import)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682858,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:19:56 UTC",
+        "bytes": 293765,
+        "sha256": "ced29e7c7e64440d708b335895aca9db5d2a5bc224dbf1bc0835762774597ac2",
+        "computedGitBlobSha": "10da2f693dd3ad8ca339e6f6af13a3bf2f58baec",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682858-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "10da2f693dd3ad8ca339e6f6af13a3bf2f58baec",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682858-evidence.json",
+        "bytes": 4475,
+        "sha256": "71fd511ba819f81660f2110d3f7e7c73b8fc28bfcdf7a386a776dfc9ad1bfea3",
+        "computedGitBlobSha": "54d50ef45383a626eedd6eeefa3a6ef9d7e9c779",
+        "publishedBlobSha": "54d50ef45383a626eedd6eeefa3a6ef9d7e9c779",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682886,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682886,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:43:39 UTC",
+        "bytes": 250992,
+        "sha256": "9bc501d6bbf650347e6fdda9c5a93f175546c2838db9336e515312242042806f",
+        "computedGitBlobSha": "7cd04995a5c463b995d9e390c3816fc5e5edc8f7",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682886-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "7cd04995a5c463b995d9e390c3816fc5e5edc8f7",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682886-evidence.json",
+        "bytes": 15819,
+        "sha256": "3972444198a8cb7f9a3791abda813fe22bc6893790191e5777f962b4d475bb93",
+        "computedGitBlobSha": "6ddf01ae5b5af85cadeb72a95515826acf6a241d",
+        "publishedBlobSha": "6ddf01ae5b5af85cadeb72a95515826acf6a241d",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682895,
+      "name": "Offline Host Desktop (linux-x64, collaboration)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682895,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:12:20 UTC",
+        "bytes": 296951,
+        "sha256": "35fd5874fa038d9c2915315e407e2bf54282ee9e354b9c8d0071220f9ce322c0",
+        "computedGitBlobSha": "20ea06bd57bd44f7bc615c0f79b237f1dc51d1ae",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682895-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "20ea06bd57bd44f7bc615c0f79b237f1dc51d1ae",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682895-evidence.json",
+        "bytes": 4474,
+        "sha256": "985e4842ac69c0d33e6ff3e44f084937c1c02ae20f51fc25254d4c2bd60cf6ea",
+        "computedGitBlobSha": "34c06e725520864a247baaf2668d40e41a11fc51",
+        "publishedBlobSha": "34c06e725520864a247baaf2668d40e41a11fc51",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682918,
+      "name": "Offline Host Desktop (linux-x64, review)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682918,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:20:37 UTC",
+        "bytes": 299904,
+        "sha256": "7cbdfda540cd59da78492814a783bc62d057a598b9a87a3bc25fc62777e06f25",
+        "computedGitBlobSha": "cd00356f5e4ffa8fe793060e0360bc01b0591acd",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682918-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "cd00356f5e4ffa8fe793060e0360bc01b0591acd",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682918-evidence.json",
+        "bytes": 5085,
+        "sha256": "06859fdaf95e8453139951ca45ce6d4e730af332a14b7eac05f6627e80116c25",
+        "computedGitBlobSha": "95a4303fb314c69e99a4f0c3d457d8d403ef9cc0",
+        "publishedBlobSha": "95a4303fb314c69e99a4f0c3d457d8d403ef9cc0",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682932,
+      "name": "Offline Host Desktop (linux-x64, selection)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682932,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:21:52 UTC",
+        "bytes": 297056,
+        "sha256": "5671158139c8bb46852058bb1295b7abc1e7263fa05289231e44c94e3a626c25",
+        "computedGitBlobSha": "f2341f5a3a962a513194a5462a5b2d7d3d8098f3",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682932-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "f2341f5a3a962a513194a5462a5b2d7d3d8098f3",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682932-evidence.json",
+        "bytes": 4483,
+        "sha256": "0ce1225b0ec72f5e1943b2ddce1fabb768f16eca522e171c81bce9ba31d727e5",
+        "computedGitBlobSha": "15e690d4737d80a81f521b099f05d110461ccb49",
+        "publishedBlobSha": "15e690d4737d80a81f521b099f05d110461ccb49",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682948,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682948,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:43:46 UTC",
+        "bytes": 247018,
+        "sha256": "ba4537b3bc77e62f8cdd5bd0d7df81ada51c7d9d03f1971959284166cd8faf0f",
+        "computedGitBlobSha": "849f3fd0710ec11fa1ede90cbf10fae402b81e67",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682948-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "849f3fd0710ec11fa1ede90cbf10fae402b81e67",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682948-evidence.json",
+        "bytes": 15977,
+        "sha256": "a26fd8fd01c1a47221aa72eed8766244b1ab5e6593da1eae626431d9a44bbe66",
+        "computedGitBlobSha": "90416b3da2752e79082347113c942db0e2f54041",
+        "publishedBlobSha": "90416b3da2752e79082347113c942db0e2f54041",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682972,
+      "name": "Offline Host Desktop (linux-x64, processes)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682972,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:19:31 UTC",
+        "bytes": 316672,
+        "sha256": "0e3aaddd1cc0a6d19d3068c5817ff09ac7261a8bdd70c537e39272653785c687",
+        "computedGitBlobSha": "cebdbc3b74ca2d121e42cc40ef1ff5515e191a7d",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682972-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "cebdbc3b74ca2d121e42cc40ef1ff5515e191a7d",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682972-evidence.json",
+        "bytes": 4593,
+        "sha256": "c85d3eb77e747ec0b6d250a4f250f6d8dc0c754b41c7ae7b161c2a16119e4b73",
+        "computedGitBlobSha": "446396293a623bf32d1ccdf758d6b29d4a1c9457",
+        "publishedBlobSha": "446396293a623bf32d1ccdf758d6b29d4a1c9457",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682976,
+      "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682976,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-18 23:54:34 UTC",
+        "bytes": 300973,
+        "sha256": "3edb52d9d99dd5588eee3ca2eb96caaf260ab8d00908a04b667c73ee8c2313a1",
+        "computedGitBlobSha": "b4fb01203719ce43c3feb6c32e1f16c17f1c30a1",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682976-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "b4fb01203719ce43c3feb6c32e1f16c17f1c30a1",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682976-evidence.json",
+        "bytes": 13686,
+        "sha256": "0aad10e1639e9ba7da0616fdfc98e0745320a61c5e80b9fa9a5d98a59968079f",
+        "computedGitBlobSha": "44d3475cfa5f68257b4a0594842d587e0485c395",
+        "publishedBlobSha": "44d3475cfa5f68257b4a0594842d587e0485c395",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167682983,
+      "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167682983,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-19 00:14:56 UTC",
+        "bytes": 228583,
+        "sha256": "824d3c1432b205db68bc6b25c193a8813c95e3cf0b02c46c383f1a5aa7fd26cc",
+        "computedGitBlobSha": "60acef8e22c1d92b5f1f827b78d9bec9e1a94773",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682983-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "60acef8e22c1d92b5f1f827b78d9bec9e1a94773",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682983-evidence.json",
+        "bytes": 40678,
+        "sha256": "1089ee063ae84dd1ef9c652a568591b11188e35ce86c3fbcbd60a783e4d81417",
+        "computedGitBlobSha": "0df90f89159111924257141a0306f6ef94e26fea",
+        "publishedBlobSha": "0df90f89159111924257141a0306f6ef94e26fea",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167683004,
+      "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167683004,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-18 22:25:24 UTC",
+        "bytes": 242897,
+        "sha256": "bdc77944ffc5fc8592968b514572967c9554a23005aec8e4a1cd9ba3eeda3237",
+        "computedGitBlobSha": "c4e55bf7ee1ea175ecb2f0e6a08ddbc4d73bdd14",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167683004-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "c4e55bf7ee1ea175ecb2f0e6a08ddbc4d73bdd14",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167683004-evidence.json",
+        "bytes": 14685,
+        "sha256": "0e81d19be19191ffae83cb6aa8c3c450c91acdc79561e6fadd82ba2d101214ba",
+        "computedGitBlobSha": "2e5e2330c862987cf3428fbed54111ee385fb410",
+        "publishedBlobSha": "2e5e2330c862987cf3428fbed54111ee385fb410",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135167683345,
+      "name": "Offline Host Desktop (linux-x64, codex-login)",
+      "conclusion": "success",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167683345,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 00:20:48 UTC",
+        "bytes": 299493,
+        "sha256": "fb5ccd622deb87095dff06270e39ab3fbdeb1aaaa6db7f6c13ea4cc510d5ea37",
+        "computedGitBlobSha": "9efe4d5db0e4887c8306c61c10955c78aad6bf7d",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167683345-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "9efe4d5db0e4887c8306c61c10955c78aad6bf7d",
+        "exactReadback": true
+      },
+      "compactEvidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167683345-evidence.json",
+        "bytes": 4588,
+        "sha256": "cb0c1916965afad836b13dcb3f5d84db92fd8edaf8816b80267303190bfcee4e",
+        "computedGitBlobSha": "f467c0682424063ba05555354a31bf3b6bc071a2",
+        "publishedBlobSha": "f467c0682424063ba05555354a31bf3b6bc071a2",
+        "exactReadback": true
+      }
+    },
+    {
+      "jobId": 135237877776,
+      "name": "Offline Host Desktop",
+      "conclusion": "failure",
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135237877776,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826474,
+        "runAttempt": 1,
+        "conclusion": "failure",
+        "requestedAt": "2026-11-19 01:00:16 UTC",
+        "bytes": 2383,
+        "sha256": "03577acb5fc15771fc56b019659cc38d138b687a373837cddaac212694e6fbd4",
+        "computedGitBlobSha": "226a139d520c6e644301935a0cbc2f436f701a34",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135237877776-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "226a139d520c6e644301935a0cbc2f436f701a34",
+        "exactReadback": true
+      },
+      "compactEvidence": null
+    }
+  ],
+  "canonicalTerminalMetadata": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/terminal-44407826474-run.json",
+      "bytes": 15777,
+      "sha256": "5d52e37f5fdc35250a15a97533e700a4262c5acd3714836ae8ceb23678b5597f",
+      "computedGitBlobSha": "9d3e20db8c0d790727ce756f53eeeddd259d5cef",
+      "publishedBlobSha": "9d3e20db8c0d790727ce756f53eeeddd259d5cef",
+      "exactReadback": true
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/terminal-44407826474-jobs.json",
+      "bytes": 359401,
+      "sha256": "542596c92765b001d31835dd5e16946d85658f19a58276a8530a17f4712dab0f",
+      "computedGitBlobSha": "8ef04d6e3f37cd50d8c41a2eb4567b9442d66867",
+      "publishedBlobSha": "8ef04d6e3f37cd50d8c41a2eb4567b9442d66867",
+      "exactReadback": true
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/terminal-44407826474-artifacts.json",
+      "bytes": 27639,
+      "sha256": "404d75089d6cfc5a8a2844106e185b3ac5c5d21a0bc0805057fd6be9d623b672",
+      "computedGitBlobSha": "1326eaa2e4c082bf653ec2cabe57278aff58018f",
+      "publishedBlobSha": "1326eaa2e4c082bf653ec2cabe57278aff58018f",
+      "exactReadback": true
+    }
+  ],
+  "aggregate": {
+    "jobId": 135237877776,
+    "checks": {
+      "HOST_EMULATED_MATRIX_RESULT": "failure",
+      "HOST_FRONTEND_TEST_RESULT": "failure"
+    },
+    "conclusion": "failure",
+    "scope": "Aggregate observes the original lane/shard failures and performs no additional E2E."
+  },
+  "retirement": {
+    "workflowRunEndpoint": true,
+    "workflowAttempt1JobsEndpoint": true,
+    "all30OriginalJobLogEndpoints": true,
+    "workflowArtifactInventoryEndpoint": true,
+    "jobEndpointFinalObservationSequence": 59,
+    "lastOriginalJobObservationAt": "2026-11-19 00:59:19 UTC",
+    "allUiRunIdsPermanentlyRetired": [
+      44407826458,
+      44407826474
+    ],
+    "allUiJobLogsRetired": 33
+  },
+  "keyScopeBoundaries": [
+    "Original current030 Host run is FAILURE; seven useful failures are preserved, and no overall parity or release PASS is inferred from partial success.",
+    "F1 cross-team full proof succeeded on original030 including ReviewFlow and three cold owner-routing epochs; rollback cleanup used captured guarded SIGTERM and is not a universal natural-exit claim.",
+    "D1 exact original team lane succeeded including typed lint and complete finite canonical checks; each scope remains linked to its own original proof.",
+    "V2 management Settings succeeded, then its live Team Add failed; later Remove/Restore/Stop/cold membership paths remain unqualified.",
+    "Finite authentic import producer failed before import UI and retained an orphan/cleanup debt; successful other import lane does not substitute.",
+    "Main/native original failures are owned by the separate native watcher and are not overwritten by this UI closure.",
+    "No manual rerun/dispatch/cancel, local app/native/build/install, or real Claude/Codex execution was introduced by evidence capture."
+  ],
+  "sourceMutationByUiEvidenceCapture": false
+}

@@ -10,6 +10,8 @@ export interface LaunchStateWriteResult {
 }
 
 export interface LaunchStateWriteOptions {
+  /** Original owned Claude solo completion may initialize its durable run/session publication. */
+  ownedSoloLaunch?: boolean;
   isAuthorized?: () => boolean;
   allowNoopSkip?: boolean;
   requireTrackedRun?: boolean;
@@ -26,6 +28,7 @@ export interface LaunchStateWriteOptions {
 
 /** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
 export interface LaunchStatePublicationOptions {
+  ownedSoloLaunch?: boolean;
   authorizesNewRun?: () => boolean;
   runId?: string;
   isAuthorized?: () => boolean;
@@ -218,7 +221,11 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
     const admittedOptions = {
       ...options,
-      isAuthorized: () => publicationIsCurrent() && options?.isAuthorized?.() !== false,
+      isAuthorized: () =>
+        publicationIsCurrent() &&
+        (options?.ownedSoloLaunch === true
+          ? options.isAuthorized?.() === true
+          : options?.isAuthorized?.() !== false),
     };
     const result = await this.enqueue(teamName, async () => {
       const writeResult = await this.writeLaunchStateSnapshotNow(
@@ -239,7 +246,12 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult> {
-    if (options?.isAuthorized?.() === false) return { snapshot, wrote: false };
+    if (
+      options?.ownedSoloLaunch === true
+        ? options.isAuthorized?.() !== true
+        : options?.isAuthorized?.() === false
+    )
+      return { snapshot, wrote: false };
     if (!options?.runId && snapshot.publicationRunId)
       options = { ...options, runId: snapshot.publicationRunId };
     const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
@@ -285,12 +297,18 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     }
     const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
     const persisted = await this.ports.launchStateStore.write(teamName, normalizedSnapshot, {
+      ...(options?.ownedSoloLaunch === true ? { ownedSoloLaunch: true } : {}),
       runId: options?.runId,
       republishesExistingLaunch: options?.republishesExistingLaunch,
       authorizesNewRun: () =>
         !!options?.runId && this.ports.getTrackedRunId(teamName) === options.runId,
       isAuthorized: () => {
-        if (options?.isAuthorized?.() === false) return false;
+        if (
+          options?.ownedSoloLaunch === true
+            ? options.isAuthorized?.() !== true
+            : options?.isAuthorized?.() === false
+        )
+          return false;
         if (!options?.runId) return true;
         const tracked = this.ports.getTrackedRunId(teamName);
         return (

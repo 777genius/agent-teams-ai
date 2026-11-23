@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-19",
+  "baseline": "7fe15c471c00e4d8d3252e8e3ee36ec972e2c9fe",
+  "publishedStopCommit": "960ed53c88e664c45a9fe0cc3d054ea83ae50dd3",
+  "scope": "Selected local regression proofs; not full Desktop/native/OS qualification",
+  "node": "v24.22.3",
+  "typescript": "7.0.2",
+  "files": {
+    "scripts/legacy-agent-host/desktop-live-membership-controlled.ts": "b96592ad58674280906cc1dbd5f35f95e5d2eb2276e6fdbf04277f47b3b3304e",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts": "7da3ff28edf185d9a4bc522a71ab7887f28b2a87350b0243c3aeb88a3a8a26e5",
+    "src/main/composition/createDesktopStoppedImportContext.ts": "9c01233953f43cbfcae8071c67fcfde980d4eace0e3363a0c165817d3f405a87",
+    "src/main/services/team/TeamProvisioningService.ts": "d0bf74e2856dfe54f7d1b934a025cf74c23cc83c19dde8fbdc77fc7e61cb5454",
+    "src/main/services/team/provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade.ts": "8649640ee606c63d430cc867667e3b82f384b60ef44cbf175111d78060727a8c",
+    "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts": "164f9f13452d06ec9c1d9084a89a86b07c23b832bc66972eb57b92300ec17d97",
+    "src/main/services/team/provisioning/__tests__/TeamProvisioningServiceFacadeGuard.test.ts": "2e48f8aa97e164aad8a4be3a01b736b6e51a10646732caaf451d48b7ba398246",
+    "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx": "af5dc551d2413864fe6542ad444f28361327ec36dc58a49ead8c000053389f2c",
+    "src/renderer/components/team/dialogs/LaunchTeamProjectSelector.tsx": "ae7a499db4dc57362387b2d20a0fc231d5329aeed0fe3aba857ae317098b0d72",
+    "test/features/agent-backend/capturedOpenCodeLaunchTransfer.test.ts": "8af610ea69e241af5f17763a8611d15ab101a1b337ce0eeef63ed59563858012",
+    "test/main/services/team/LegacyNativeStopOrdering.test.ts": "d6d166192728b7c46623399a3b80ff1be2d1f0bf7640fa01863bfa577183fe15",
+    "test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts": "6670ff6cef32cccfed168419548921b38f40d58f11245f3256c7017c5d48b104",
+    "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts": "8feff14c7e0a5194e5e587d4d73d1f9b00c080827115dd187ae38864aee7fbf3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf"
+  },
+  "checks": [
+    {
+      "check": "aggregate-stop-red",
+      "result": "FAIL",
+      "selectedTests": 4,
+      "log": "stop-chain-red.log",
+      "logSha256": "266ed354d248ff08e321447f3490cd2e748e75433c3fe4c79306dc94d85ede2e",
+      "logBytes": 111597
+    },
+    {
+      "check": "aggregate-stop-regressions",
+      "result": "PASS",
+      "selectedTests": 8,
+      "log": "stop-chain-green.log",
+      "logSha256": "4e236b9a3c1917dd919ed5150ce9f1924654ab0bbe47687b1df5336f61b547d0",
+      "logBytes": 962
+    },
+    {
+      "check": "native-stop-work-sync-ordering",
+      "result": "PASS",
+      "selectedTests": 6,
+      "log": "stop-chain-work-sync-green.log",
+      "logSha256": "26e1ffd287c4be6f7a2197cff0cff5d65cdea7884c4f4260761f25b8cf54f221",
+      "logBytes": 329
+    },
+    {
+      "check": "opencode-legacy-and-product-transfer",
+      "result": "PASS",
+      "selectedTests": 2,
+      "log": "model-transfer-green.log",
+      "logSha256": "1310f067e2828ed021702ca3f3f851e565c1bc0a636a5c8f088bb65a3dce8062",
+      "logBytes": 583
+    },
+    {
+      "check": "source-readiness-and-runtime-projection",
+      "result": "PASS",
+      "selectedTests": 6,
+      "log": "source-scenario-regressions.log",
+      "logSha256": "592a0e449393bc8edf2b5e089bcd3cdf9cd7fb968c108231f98aa2a1376d940b",
+      "logBytes": 1040
+    },
+    {
+      "check": "membership-process-census",
+      "result": "PASS",
+      "selectedTests": 1,
+      "log": "membership-census-focused.log",
+      "logSha256": "00cbf6fa4e1f49e940d6cb3e83fad6a34d89d995e1d6fb91429ca2551d7e216a",
+      "logBytes": 413
+    },
+    {
+      "check": "source-size",
+      "result": "PASS",
+      "selectedTests": null,
+      "log": "source-size-green.log",
+      "logSha256": "372810c5e1fc028fe28e9e1b1be6bddd0102b2015114388e4788cde3aebde388",
+      "logBytes": 249
+    },
+    {
+      "check": "facade-guard-with-old-transfer-fixture",
+      "result": "MIXED: facade8PASS, old transfer fixture FAIL",
+      "selectedTests": 8,
+      "log": "parity-root-targeted.log",
+      "logSha256": "8c15869f910d8e19e3b1a1f73ef886e8cc71181f63bf71b405040717ef898b38",
+      "logBytes": 4115
+    },
+    {
+      "check": "retained-owner-hydration",
+      "result": "PASS",
+      "selectedTests": 11,
+      "log": "parity-retained-hydration-green.log",
+      "logSha256": "b26230dca83c7fd610ba5d764875fecdd1a3a00d6ddcfda1c36d69b8900afe5e",
+      "logBytes": 689
+    },
+    {
+      "check": "typed-lint-affected-files",
+      "result": "PASS: 0 errors,36 warnings",
+      "selectedTests": null,
+      "log": "parity-affected-lint.log",
+      "logSha256": "1157be61cf88f9170472db8d7ec6a7b58f84985b3c8100d2278865782e8f226b",
+      "logBytes": 11669
+    },
+    {
+      "check": "provisioning-architecture",
+      "result": "PASS",
+      "selectedTests": null,
+      "log": "parity-architecture.log",
+      "logSha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c",
+      "logBytes": 245
+    },
+    {
+      "check": "initial-workspace-typecheck",
+      "result": "INCOMPLETE: exit137,no compiler diagnostics",
+      "selectedTests": null,
+      "log": "parity-workspace-typecheck.log",
+      "logSha256": "30c31d7a2b5c85e85ea9ef1deeeff39ce2ca5017aef49f2d759902b30a2e44bd",
+      "logBytes": 1361
+    },
+    {
+      "check": "bounded-canonical-workspace-typecheck",
+      "result": "INCOMPLETE: exit137,no compiler diagnostics",
+      "log": "parity-workspace-typecheck-bounded.log",
+      "command": "GOMEMLIMIT=4GiB GOMAXPROCS=2 pnpm typecheck:workspace",
+      "logSha256": "30c31d7a2b5c85e85ea9ef1deeeff39ce2ca5017aef49f2d759902b30a2e44bd",
+      "logBytes": 1361
+    },
+    {
+      "check": "scoped-app-and-native-typecheck",
+      "result": "PASS",
+      "exitCode": 0,
+      "log": "scoped-app-native-typecheck.log",
+      "explicitChangedFiles": 12,
+      "ambientDeclarations": 6,
+      "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 node node_modules/@typescript/native/bin/tsc --noEmit -p node_modules/.cache/parity-typecheck/app-and-native.json",
+      "configArchivePath": "typecheck/app-and-native.json",
+      "extends": "tsconfig.json",
+      "compilerOptionsOverridden": false,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logBytes": 0
+    },
+    {
+      "check": "scoped-desktop-scripts-typecheck",
+      "result": "PASS",
+      "exitCode": 0,
+      "log": "scoped-desktop-scripts-typecheck.log",
+      "explicitChangedFiles": 2,
+      "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 node node_modules/@typescript/native/bin/tsc --noEmit -p node_modules/.cache/parity-typecheck/desktop-scripts.json",
+      "configArchivePath": "typecheck/desktop-scripts.json",
+      "extends": "tsconfig.legacy-agent-host-scripts.json",
+      "compilerOptionsOverridden": false,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logBytes": 0
+    }
+  ],
+  "reviews": {
+    "stopAndRetainedHydration": {
+      "review": "independent-source-R2",
+      "reviewer": "delivery_review",
+      "baseHead": "7fe15c471c00e4d8d3252e8e3ee36ec972e2c9fe",
+      "outcome": "PASS",
+      "blockingFindings": [],
+      "scope": "Source review only; no GitHub review submitted and no qualification implied",
+      "files": [
+        {
+          "path": "src/main/services/team/TeamProvisioningService.ts",
+          "headSha256": "1b8002babc4b10869e77ae1e365ddf6793b58bb765b9ad4fd36effdc54d6f9f9",
+          "reviewedWorkingTreeSha256": "d0bf74e2856dfe54f7d1b934a025cf74c23cc83c19dde8fbdc77fc7e61cb5454"
+        },
+        {
+          "path": "src/main/services/team/provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade.ts",
+          "headSha256": "f47e35da04031982769d01d9ba181cf974e21466efb39690baeec93a41ac0841",
+          "reviewedWorkingTreeSha256": "8649640ee606c63d430cc867667e3b82f384b60ef44cbf175111d78060727a8c"
+        },
+        {
+          "path": "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+          "headSha256": "d55fcd71e30cb2fc040511c8cf9b0351714b70a658d7a539668c8ca927bbedf7",
+          "reviewedWorkingTreeSha256": "164f9f13452d06ec9c1d9084a89a86b07c23b832bc66972eb57b92300ec17d97"
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+          "headSha256": "c3a7a2108e9b95036c21c8146ba2826cf5731723ee9708d992db9e4bf613b557",
+          "reviewedWorkingTreeSha256": "af5dc551d2413864fe6542ad444f28361327ec36dc58a49ead8c000053389f2c"
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/LaunchTeamProjectSelector.tsx",
+          "headSha256": "3383d82d1f0e92343b0518712bb6c65c1fb8d1887b5527328c005237c933f1ab",
+          "reviewedWorkingTreeSha256": "ae7a499db4dc57362387b2d20a0fc231d5329aeed0fe3aba857ae317098b0d72"
+        }
+      ],
+      "findings": [
+        "Public Stop once again enters inherited aggregate cancellation + finally-await chain, forwarding the same captured native source fence to protected Stop. Existing resource lock/drain semantics and rejection identity remain.",
+        "Retained owner launch hydration uses existing captured source flag after request team/current-epoch/lifetime fences. Existing owner-fields loading lock and same-key hydrate guard remain. Legacy provider-default semantics remain in existing isHostSavedRequest branch.",
+        "OriginalProjectSelector initializes local draft mode and both project paths from captured immutable retained choice. scopeId key remounts on actual rebind, preserving user draft edits across unrelated parent updates. Existing rebind remains mandatory before parent launch fields change."
+      ],
+      "validationScope": "Reviewed exact production diffs and adjacent callsites/hooks; root/parity_review own red/green targeted tests. No duplicate test execution."
+    },
+    "sourceJoinAndTransfer": {
+      "review": "independent-source-R2",
+      "reviewer": "delivery_review",
+      "baseHead": "7fe15c471c00e4d8d3252e8e3ee36ec972e2c9fe",
+      "outcome": "PASS",
+      "blockingFindings": [],
+      "scope": "Source review only; no GitHub review submitted and no native qualification implied",
+      "files": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "headSha256": "6c1025b2a9b95aa86713ab026f7c1633f9102f2bb7b3c955ff99be51633c1ef3",
+          "reviewedWorkingTreeSha256": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf",
+          "workingTreeLines": 794
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+          "headSha256": "f3da2aa3b897dc8addd69656971ac3603c603ede9e21da5b2df2e8e6b6dbbc74",
+          "reviewedWorkingTreeSha256": "8feff14c7e0a5194e5e587d4d73d1f9b00c080827115dd187ae38864aee7fbf3",
+          "workingTreeLines": 383
+        },
+        {
+          "path": "test/features/agent-backend/capturedOpenCodeLaunchTransfer.test.ts",
+          "headSha256": "d84e833a93defb56d0c35e8572d70c158f4281f55749e2ba72507fd7f8dca5c2",
+          "reviewedWorkingTreeSha256": "8af610ea69e241af5f17763a8611d15ab101a1b337ce0eeef63ed59563858012",
+          "workingTreeLines": 262
+        }
+      ],
+      "findings": [
+        "Passive refusal join retains exact original row identity/cardinality/digest/source/epoch checks and evaluation order. Caller validation, failure preservation, byte bounds, clocks, cleanup, and source-parsed marker blocks unchanged. Existing helper pin already covers extracted code.",
+        "Negative transfer branch reads canonical original launch configuration explicitly and retains old source/revision mismatch. Positive branch uses current product model configuration and asserts saved-model source/current roster. Existing held/no-capture/one-probe/no-Runtime oracles unchanged."
+      ],
+      "validationScope": "Source diff and adjacent canonical APIs reviewed. Implementing agent reports transfer2/2, original6 marker/deadline/custody tests6/6, and source guard PASS. No duplicate tests by reviewer."
+    },
+    "membershipCensus": "Root independent source review PASS; missing first non-Host stat excludes current candidate only; Host/later absence,permission errors,and changed identities still refuse"
+  },
+  "remaining": [
+    "Full current-source acceptance and canonical workspace gate",
+    "Retained original Desktop and V2 membership Desktop",
+    "Darwin V2 Review/Resume",
+    "Windows ARM source readiness",
+    "Cross-team final reload and installer original startup",
+    "Cancelled unexecuted chat attachments and Darwin ARM process lanes need current-source execution",
+    "Native V1/V2 coexistence gate",
+    "P09 original-path/writer/consumed-bytes decision"
+  ],
+  "localDesktop": {
+    "result": "UNAVAILABLE",
+    "reason": "Existing Xorg cannot establish its required local/unix listening sockets; original Electron scenarios not executed here",
+    "logSha256": "9619321d28716813709ab257692976ae45aec407d21732fdbc53102ddb51adf6"
+  },
+  "skippedTestsCountAsPass": false,
+  "providerAudit": {
+    "schemaVersion": 1,
+    "auditDate": "2026-11-19",
+    "mode": "read-only-provider-review-and-local-archive-verification",
+    "repository": "agent-teams-ai/old-provider-implementations",
+    "pullRequest": {
+      "number": 8,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/8",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "headRef": "feat/frontend-parity-20261112",
+      "headSha": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "baseRef": "bootstrap",
+      "baseSha": "d58500bc983e897506e23d7b0bc8da1209864edd",
+      "updatedAt": "2026-11-18T21:01:01Z",
+      "inlineReviewThreads": 0,
+      "unresolvedInlineReviewThreads": 0,
+      "reviewSubmissions": 0,
+      "approvalClaimed": false
+    },
+    "conversation": {
+      "commentCount": 1,
+      "commentId": 6949422223,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/8#issuecomment-6949422223",
+      "classification": "historical-coordination-note-for-already-merged-read-settlement-fix",
+      "linkedPullRequest": {
+        "number": 11,
+        "url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/11",
+        "state": "closed",
+        "merged": true,
+        "mergedAt": "2026-11-17T15:59:38Z",
+        "headSha": "4c99b18d95fa08a6c7b145f76449d601f731adda",
+        "mergeCommitSha": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+        "baseRef": "feat/frontend-parity-20261112"
+      },
+      "currentPinInclusion": {
+        "comparisonUrl": "https://github.com/agent-teams-ai/old-provider-implementations/compare/f5d632a6122df2f6995451bd33e6a0fbcda67680...b19494fd2de47538a1c9315e338199ff41bbe497",
+        "base": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+        "head": "b19494fd2de47538a1c9315e338199ff41bbe497",
+        "status": "ahead",
+        "aheadBy": 2,
+        "behindBy": 0,
+        "mergeBase": "f5d632a6122df2f6995451bd33e6a0fbcda67680",
+        "included": true
+      }
+    },
+    "appConsumer": {
+      "repository": "777genius/agent-teams-ai",
+      "localCheckoutHead": "960ed53c88e664c45a9fe0cc3d054ea83ae50dd3",
+      "sourceReceipt": "vendor/provider-migration/captured-config-b19494fd/source-receipt.json",
+      "sourceReceiptBytes": 6011,
+      "sourceReceiptSha256": "eabc4336b239d5981033daa6eb055312c275ec594e649e23ce459ed2b5169c43",
+      "receiptSourceCommit": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "receiptSourceTree": "43c3778781815b87269056d3a6ceafb16cb28f08",
+      "manifest": "packages/legacy-agent-host/package.json",
+      "lockfile": "pnpm-lock.yaml",
+      "exactImplementationArchiveSelectedByManifestAndLock": true,
+      "implementationArchive": {
+        "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 191145,
+        "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+        "integrity": "sha512-HchjDstKjTtlCfY6lQSxxboowxBVd93rTQbuNNeia/0FY98Is8kXm+fI6tLdNPH0ToCawPxJWZBmI1wuaoSpXw==",
+        "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3",
+        "distFiles": 256,
+        "actualBytesMatchReceipt": true,
+        "narrowExportsPresent": [
+          "./captured-configuration",
+          "./codex-mcp-catalog"
+        ]
+      },
+      "sessionSpiArchive": {
+        "path": "vendor/provider-migration/v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+        "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "distFiles": 10,
+        "actualBytesMatchReceipt": true
+      }
+    },
+    "conclusion": "No actionable pending provider #8 review remark or app source/archive pin mismatch found.",
+    "scopeLimits": [
+      "No repository, provider source, archive, PR metadata, or review-state mutation.",
+      "No compiler, source tests, provider executable, native qualification, or CI workflow was run.",
+      "The prior canonical 577-test provider gate remains historical receipt evidence; no new qualification is claimed.",
+      "Commit inclusion is verified by live GitHub compare metadata; archived source-tree identity beyond the existing receipt was not rebuilt."
+    ],
+    "evidenceMethods": [
+      "GitHub get_pr_info for #8 and #11",
+      "GitHub list_pull_request_review_threads for #8",
+      "GitHub list_pull_request_reviews for #8",
+      "GitHub fetch_pr_comments for #8",
+      "GitHub fetch_commit for exact b19494fd head",
+      "GitHub compare_commits for #11 merge inclusion",
+      "Read local receipt, manifest, and lockfile",
+      "Recalculate archive size, SHA-256, SHA-512 integrity, Git blob IDs, dist census, and narrow package exports"
+    ]
+  },
+  "scopedTypecheck": {
+    "result": "PASS",
+    "changedFileCount": 14,
+    "originalCompilerOptions": true,
+    "fullWorkspaceQualification": false,
+    "node": "v24.22.3",
+    "typescript": "7.0.2",
+    "sourceFrozenDuringChecks": true,
+    "note": "Configurations are exact local inputs; absolute repository paths must be relocated to reproduce elsewhere. No ambient stubs or compiler option changes."
+  },
+  "windowsArmAudit": {
+    "source": "7fe15c471c00e4d8d3252e8e3ee36ec972e2c9fe",
+    "jobId": 135613817686,
+    "readiness": "INCOMPLETE",
+    "finalCleanup": true,
+    "originalHandlesAbsent": 7,
+    "missingObservation": "Completion of final source.checkReadiness and subsequent RuntimeOwner.nativeReady publication",
+    "timingQualification": "Provider elapsed and scenario cutoff use different anchors; catalog elapsed cannot be directly subtracted from the scenario budget",
+    "codeChangeJustified": false
+  },
+  "logsArchive": {
+    "path": "parity-fixes-20261119-logs.tar.gz",
+    "bytes": 27865,
+    "sha256": "0d62e01ca2fbf47be5ccbb2520d81052718ea94ee88a0e1ab9c8511276ea3436",
+    "members": 20,
+    "logPathBase": "archive root"
+  }
+}

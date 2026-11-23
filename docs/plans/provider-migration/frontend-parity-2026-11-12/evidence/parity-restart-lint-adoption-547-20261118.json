@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "kind": "READ_ONLY_INCREMENTAL_PARENT_ADOPTION",
+  "reviewer": "review_ready_823",
+  "previousParent": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+  "parent": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+  "parentTree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+  "verdict": "PASS for preserving incoming parent changes and carrying the four already-reviewed source fixes; a new candidate tree requires its own binding check.",
+  "fullTreeComparison": {
+    "previousLeafEntries": 11451,
+    "parentLeafEntries": 11452,
+    "truncated": false,
+    "exactExternalChangedPaths": 6,
+    "changes": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+        "before": "241883388d80bb022b02f1a64efd03593fa70bd6",
+        "after": "6a5386e3b0359c5093235f0d5c5f12fe84f64f8c"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/gui-taskboard-f60dcc10-fixed1536-20261118.json",
+        "before": "e66507f7b0e35f03936795ef248a26e92af072c1",
+        "after": "55168973afc5fe09ee0d65240b7511f9be2e936c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "before": "5c2fb7143c41f9876fa472a4504898c91467b619",
+        "after": "62d217968d05cf5b031225cd5453214f2b49ea9f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "before": "53339a2f6987180dc997bf96a67fcd58411705f9",
+        "after": "017f01ec205e6f4a7a5d74996c469e3f0947595e"
+      },
+      {
+        "path": "scripts/lib/desktop-finite-node-options.ts",
+        "before": "c23a994bc072e57203781e5bd1efa10c2433d658",
+        "after": "60177b5a1cc9669a8938bfa13b922c6c42f09f01"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/gui-taskboard-823ef00a-fixed1536-20261118.json",
+        "before": null,
+        "after": "56f77d2dfb288f27c4ed6283e3c27cfdf8898852"
+      }
+    ]
+  },
+  "fourFixPreimages": [
+    {
+      "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+      "postimageGitBlob": "e5044eb33cda7dda3be51415e6f94d6c265d03fa",
+      "unchangedInParent": true
+    },
+    {
+      "path": "src/features/agent-backend/renderer/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+      "postimageGitBlob": "021024bb4890779c3565931391993e08cc577be6",
+      "unchangedInParent": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+      "postimageGitBlob": "b346b22478aafd5f938fecedb15f835378c8305b",
+      "unchangedInParent": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "6564afa0153446efef60a7dc20e23fcd1f466514",
+      "postimageGitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e",
+      "unchangedInParent": true
+    }
+  ],
+  "sourceSize": {
+    "fullHistoricalEvaluation": "Actual f60 plus four postimages:5162 production,141 frozen,limit800,0violations; not re-executed here.",
+    "incrementalChanges": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts",
+        "parentTransition": "f60→823",
+        "physicalLinesBefore": 223,
+        "physicalLinesAfter": 226,
+        "unchangedBy547": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "parentTransition": "823→547",
+        "physicalLinesBefore": 720,
+        "physicalLinesAfter": 720,
+        "gitBlob": "017f01ec205e6f4a7a5d74996c469e3f0947595e"
+      },
+      {
+        "path": "scripts/lib/desktop-finite-node-options.ts",
+        "parentTransition": "823→547",
+        "physicalLinesBefore": 84,
+        "physicalLinesAfter": 85,
+        "gitBlob": "60177b5a1cc9669a8938bfa13b922c6c42f09f01"
+      }
+    ],
+    "newProductionFiles": 0,
+    "fullEvaluatorRepeated": false
+  },
+  "preserved": {
+    "providerArchivePackageLock": "Unchanged between823 and547 by full leaf tuple comparison.",
+    "externalResourceProfile": "1536_UV4 exact selector and its tests retained; no rerun or memory/GUI success claim.",
+    "externalGuiEvidence": "Both new/updated incoming GUI proof objects retained.",
+    "incomingPlanScope": "TaskboardPASS823, reviewcyclePASSf60, latestreloadINCOMPLETE and footer still unexecuted; incoming observations must not be overwritten by prior plan."
+  },
+  "execution": {
+    "tests": 0,
+    "buildOrInstall": false,
+    "appOrNative": false,
+    "ciRequests": false,
+    "sourceEdits": false,
+    "commitOrRefEdits": false
+  }
+}

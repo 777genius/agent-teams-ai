@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { constants as bufferConstants } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
@@ -11,11 +12,13 @@ import { captureWindowsLauncher, capturedWindowsCommandLine, matchesCapturedWind
 import { buildWindowsShellFallbackCommand, quoteWindowsCmdArg } from '../dist/owned-process/windowsCliLauncher.js';
 import { HostWindowsLaunch } from '../dist/owned-process/HostWindowsLaunch.js';
 import { WindowsCapturedProcess } from '../dist/adapters/providers/WindowsCapturedProcess.js';
+import { createClaudeMemberProvider } from '../dist/adapters/providers/ClaudeMemberProvider.js';
 
 import type { NativeProcessProfile } from '../dist/composition/nativeProcessProfile.js';
+import type { RuntimeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { OwnedLaunchPort, PreparedOwnedProcess, TreeReceipt } from '../dist/owned-process/contract.js';
 
-const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const wrapper = 'C:\\TEST\\provider.cmd';
 const script = 'C:\\TEST\\cli.cjs';
 const interpreter = 'C:\\Captured\\node.exe';
@@ -45,10 +48,13 @@ test('long Windows argument runs retain literal backslashes, quotes and the orig
 function fixture(t: TestContext, content: string) {
   const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
   const original = { lstatSync: fs.lstatSync, realpathSync: fs.realpathSync,
-    readFileSync: fs.readFileSync, existsSync: fs.existsSync };
+    readFileSync: fs.readFileSync, existsSync: fs.existsSync, openSync: fs.openSync,
+    fstatSync: fs.fstatSync, readSync: fs.readSync, closeSync: fs.closeSync };
   const files = new Map<string, string | Buffer>([[wrapper, content], [script, 'TEST script'],
     [interpreter, 'TEST native Node'], ['C:\\Windows\\System32\\cmd.exe', 'TEST cmd image']]);
   const reads = new Map<string, number>();
+  const descriptors = new Map<number, { path: string; bytes: Buffer; position: number }>();
+  let nextDescriptor = 61000;
   const selected = (path: unknown) => typeof path === 'string' && /^[A-Z]:\\/.test(path);
   const read = (path: string) => {
     const value = files.get(path);
@@ -76,12 +82,218 @@ function fixture(t: TestContext, content: string) {
     const bytes = typeof value === 'string' ? Buffer.from(value) : value;
     return options === 'utf8' ? bytes.toString('utf8') : Buffer.from(bytes);
   }) as typeof fs.readFileSync);
+  t.mock.method(fs, 'openSync', ((path, flags, mode) => {
+    if (!selected(path)) return original.openSync(path, flags, mode);
+    assert.equal(flags, 'r');
+    const value = read(String(path)), fd = nextDescriptor++;
+    descriptors.set(fd, { path: String(path), bytes: typeof value === 'string' ? Buffer.from(value) : value, position: 0 });
+    reads.set(String(path), (reads.get(String(path)) ?? 0) + 1);
+    return fd;
+  }) as typeof fs.openSync);
+  t.mock.method(fs, 'fstatSync', ((fd, options) => {
+    const value = descriptors.get(fd);
+    return value ? { isFile: () => true, size: value.bytes.length } : original.fstatSync(fd, options);
+  }) as typeof fs.fstatSync);
+  t.mock.method(fs, 'readSync', ((fd: number, buffer: Buffer, offset: number, length: number, position?: number | null) => {
+    const value = descriptors.get(fd);
+    if (!value) return Reflect.apply(original.readSync, fs, [fd, buffer, offset, length, position]);
+    const start = position ?? value.position;
+    const count = value.bytes.copy(buffer, offset, start, start + length);
+    if (position == null) value.position += count;
+    return count;
+  }) as typeof fs.readSync);
+  t.mock.method(fs, 'closeSync', (fd: number) => {
+    if (!descriptors.delete(fd)) original.closeSync(fd);
+  });
   syncBuiltinESMExports();
   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports();
-    Object.defineProperty(process, 'platform', platform); });
+    Object.defineProperty(process, 'platform', platform);
+    assert.equal(descriptors.size, 0, 'Every original launcher reader closes its descriptor'); });
   const profile: NativeProcessProfile = { cwd: 'C:\\TEST', environment: { PATH: 'C:\\Captured' },
     executable: { path: wrapper, sha256: hash(content) } };
-  return { files, profile, reads };
+  return { files, profile, reads, descriptors };
+}
+
+test('fresh Windows interpreter digest keeps one bounded read buffer and original identity', t => {
+  const f = fixture(t, '@echo off\r\nTEST wrapper\r\n');
+  const bytes = Buffer.alloc(3 * 512 * 1024 + 17, 0x5a);
+  f.files.set(interpreter, bytes);
+  const captured = captureWindowsLauncher({ ...f.profile,
+    executable: { path: interpreter, sha256: hash(bytes) } });
+  let largest = 0;
+  for (const method of ['from', 'alloc', 'allocUnsafe'] as const) {
+    const original = Buffer[method];
+    t.mock.method(Buffer, method, ((...args: unknown[]) => {
+      const result = Reflect.apply(original, Buffer, args) as Buffer;
+      largest = Math.max(largest, result.length);
+      return result;
+    }) as typeof original);
+  }
+  verifyCapturedWindowsLauncher(captured);
+  assert.equal(captured.executable.sha256, hash(bytes));
+  assert.equal(f.reads.get(interpreter), 1, 'One fresh original descriptor/read, without a readiness cache');
+  assert.ok(largest <= 512 * 1024, `Digest-only reader allocated ${largest} bytes`);
+});
+
+function digestFixture(t: TestContext, bytes = Buffer.from('TEST original interpreter')) {
+  const f = fixture(t, '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n');
+  f.files.set(interpreter, bytes);
+  const captured = captureWindowsLauncher({ ...f.profile,
+    executable: { path: interpreter, sha256: hash(bytes) } });
+  return { ...f, captured, verify: () => verifyCapturedWindowsLauncher(captured) };
+}
+
+for (const mode of ['short-read', 'initial-size', 'zero-size', 'nonregular'] as const) {
+  test(`Windows digest preserves Node 24 ${mode} bytes and one original descriptor`, t => {
+    const bytes = Buffer.from('TEST original interpreter'), f = digestFixture(t, bytes);
+    const originalStat = fs.fstatSync, originalRead = fs.readSync;
+    const known = mode === 'short-read' || mode === 'initial-size';
+    const size = mode === 'initial-size' ? 9 : known ? bytes.length : 0;
+    const captured = { ...f.captured, files: [{ path: interpreter, sha256: hash(bytes.subarray(0, known ? size : bytes.length)) }] };
+    const lengths: number[] = [], buffers = new Set<Buffer>(), handles = new Set<number>();
+    t.mock.method(fs, 'fstatSync', ((fd, options) => f.descriptors.has(fd)
+      ? { isFile: () => mode !== 'nonregular', size } : originalStat(fd, options)) as typeof fs.fstatSync);
+    t.mock.method(fs, 'readSync', ((fd: number, buffer: Buffer, offset: number, length: number, position?: number | null) => {
+      lengths.push(length); buffers.add(buffer); handles.add(fd);
+      assert.equal(position, null, 'The original descriptor offset is used');
+      return originalRead(fd, buffer, offset, Math.min(3, length), position);
+    }) as typeof fs.readSync);
+    syncBuiltinESMExports();
+    verifyCapturedWindowsLauncher(captured);
+    assert.equal(handles.size, 1); assert.equal(buffers.size, 1);
+    assert.equal(f.reads.get(interpreter), 1);
+    assert.equal(lengths.length, Math.ceil((known ? size : bytes.length) / 3) + (known ? 0 : 1));
+    if (!known) assert.ok(lengths.every(length => length === 8192));
+  });
+}
+
+for (const mutation of ['append', 'truncate', 'replace'] as const) {
+  test(`Windows digest refuses ${mutation} during the same original read`, t => {
+    const bytes = Buffer.alloc(512 * 1024 + 17, 0x5a), f = digestFixture(t, bytes);
+    const originalRead = fs.readSync, originalStat = fs.lstatSync;
+    let changed = false, observed = 0;
+    t.mock.method(fs, 'readSync', ((fd: number, buffer: Buffer, offset: number, length: number, position?: number | null) => {
+      const count = originalRead(fd, buffer, offset, length, position ?? null); observed += count;
+      const retained = f.descriptors.get(fd)!;
+      if (!changed) {
+        changed = true;
+        const next = mutation === 'append' ? Buffer.concat([bytes, Buffer.from('TEST append')])
+          : mutation === 'truncate' ? bytes.subarray(0, 512 * 1024) : bytes;
+        f.files.set(interpreter, next);
+        if (mutation !== 'replace') retained.bytes = next;
+      }
+      return count;
+    }) as typeof fs.readSync);
+    t.mock.method(fs, 'lstatSync', ((path, options) => {
+      const stat = originalStat(path, options);
+      return String(path) === interpreter && changed && mutation === 'replace' ? { ...stat, ino: 9n,
+        isFile: () => true, isSymbolicLink: () => false } : stat;
+    }) as typeof fs.lstatSync);
+    syncBuiltinESMExports();
+    assert.throws(f.verify, /Captured Windows launcher unavailable/);
+    assert.ok(changed); assert.equal(f.descriptors.size, 0);
+    assert.equal(observed, mutation === 'truncate' ? 512 * 1024 : bytes.length,
+      'The original initial-size boundary excludes appended bytes');
+  });
+}
+
+test('Windows digest closes and checks each file before reading the next selected file', t => {
+  const f = digestFixture(t), captured = captureWindowsLauncher(f.profile);
+  const originalOpen = fs.openSync, originalClose = fs.closeSync, originalStat = fs.lstatSync;
+  const order: string[] = [];
+  t.mock.method(fs, 'openSync', ((path, flags, mode) => {
+    order.push(`open:${String(path)}`); return originalOpen(path, flags, mode);
+  }) as typeof fs.openSync);
+  t.mock.method(fs, 'closeSync', (fd: number) => {
+    order.push(`close:${f.descriptors.get(fd)!.path}`); originalClose(fd);
+  });
+  t.mock.method(fs, 'lstatSync', ((path, options) => {
+    order.push(`stat:${String(path)}`); return originalStat(path, options);
+  }) as typeof fs.lstatSync);
+  syncBuiltinESMExports();
+  verifyCapturedWindowsLauncher(captured);
+  assert.deepEqual(order, [wrapper, interpreter, script].flatMap(path =>
+    [`stat:${path}`, `open:${path}`, `close:${path}`, `stat:${path}`]));
+});
+
+for (const phase of ['open', 'fstat', 'allocation', 'read', 'size-limit', 'close',
+  'fstat-close', 'allocation-close', 'read-close', 'size-limit-close'] as const) {
+  test(`Windows digest preserves ${phase} refusal and original close precedence`, t => {
+    const f = digestFixture(t), operation = Object.assign(new Error('TEST original operation'), { code: 'ENOENT' });
+    const closeFailure = new Error('TEST original close'), originalClose = fs.closeSync, originalStat = fs.fstatSync;
+    let closes = 0, reads = 0;
+    if (phase === 'open') t.mock.method(fs, 'openSync', () => { throw operation; });
+    else if (phase.startsWith('fstat')) t.mock.method(fs, 'fstatSync', () => { throw operation; });
+    else if (phase.startsWith('allocation')) t.mock.method(Buffer, 'allocUnsafe', () => { throw operation; });
+    else if (phase.startsWith('size-limit')) t.mock.method(fs, 'fstatSync', ((fd, options) =>
+      f.descriptors.has(fd) ? { isFile: () => true, size: 2 ** 31 } : originalStat(fd, options)) as typeof fs.fstatSync);
+    const originalRead = fs.readSync;
+    t.mock.method(fs, 'readSync', ((...args: unknown[]) => {
+      reads++; if (phase.startsWith('read')) throw operation;
+      return Reflect.apply(originalRead, fs, args);
+    }) as typeof fs.readSync);
+    t.mock.method(fs, 'closeSync', (fd: number) => {
+      closes++; originalClose(fd);
+      if (phase.endsWith('close')) throw closeFailure;
+    });
+    syncBuiltinESMExports();
+    assert.throws(f.verify, (error: unknown) => {
+      if (phase.endsWith('close')) assert.equal(error, closeFailure);
+      else if (phase === 'fstat') {
+        assert.ok(error instanceof TypeError); assert.equal('code' in error, false);
+      } else if (phase === 'size-limit') {
+        assert.ok(error instanceof RangeError); assert.equal(Reflect.get(error, 'code'), 'ERR_FS_FILE_TOO_LARGE');
+      } else assert.equal(error, operation);
+      return true;
+    });
+    assert.equal(closes, phase === 'open' ? 0 : 1);
+    if (phase !== 'close' && !phase.startsWith('read')) assert.equal(reads, 0);
+    assert.equal(f.descriptors.size, 0);
+  });
+}
+
+test('Windows interpreter fstat failure cannot select a later PATH entry', t => {
+  const f = fixture(t, '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n');
+  f.profile.environment.PATH += ';C:\\Later'; f.files.set('C:\\Later\\node.exe', 'TEST foreign interpreter');
+  t.mock.method(fs, 'fstatSync', () => { throw Object.assign(new Error('TEST fstat'), { code: 'ENOENT' }); });
+  syncBuiltinESMExports();
+  assert.throws(() => captureWindowsLauncher(f.profile), TypeError);
+  assert.equal(f.reads.get(interpreter), 1); assert.equal(f.reads.get('C:\\Later\\node.exe'), undefined);
+});
+
+test('Windows unknown-size digest retains the post-close Buffer length refusal', t => {
+  const f = digestFixture(t), originalStat = fs.fstatSync;
+  t.mock.method(fs, 'fstatSync', ((fd, options) => f.descriptors.has(fd)
+    ? { isFile: () => true, size: 0 } : originalStat(fd, options)) as typeof fs.fstatSync);
+  let reads = 0;
+  // Model the accumulated-length boundary without materializing or reading a large file.
+  t.mock.method(fs, 'readSync', () => ++reads === 1 ? bufferConstants.MAX_LENGTH + 1 : 0);
+  syncBuiltinESMExports();
+  assert.throws(f.verify, (error: unknown) => {
+    assert.ok(error instanceof RangeError); assert.equal(Reflect.get(error, 'code'), 'ERR_OUT_OF_RANGE');
+    assert.equal(f.descriptors.size, 0); return true;
+  });
+  assert.equal(reads, 2, 'The original EOF and close happen before final length validation');
+});
+
+for (const closeFails of [false, true]) {
+  test(`Windows unknown-size allocation refusal preserves its error with close failure ${closeFails}`, t => {
+    const f = fixture(t, '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n');
+    f.profile.environment.PATH += ';C:\\Later'; f.files.set('C:\\Later\\node.exe', 'TEST foreign interpreter');
+    const allocation = new RangeError('TEST original allocation'), originalClose = fs.closeSync, originalStat = fs.fstatSync;
+    let closes = 0;
+    t.mock.method(fs, 'fstatSync', ((fd, options) => f.descriptors.has(fd)
+      ? { isFile: () => true, size: 0 } : originalStat(fd, options)) as typeof fs.fstatSync);
+    t.mock.method(Buffer, 'allocUnsafe', () => { throw allocation; });
+    t.mock.method(fs, 'closeSync', (fd: number) => {
+      closes++; originalClose(fd);
+      if (closeFails) throw Object.assign(new Error('TEST close must not enable PATH fallback'), { code: 'ENOENT' });
+    });
+    syncBuiltinESMExports();
+    assert.throws(() => captureWindowsLauncher(f.profile), error => error === allocation);
+    assert.equal(closes, 1); assert.equal(f.descriptors.size, 0);
+    assert.equal(f.reads.get(interpreter), 1); assert.equal(f.reads.get('C:\\Later\\node.exe'), undefined);
+  });
 }
 
 test('known wrapper pins original, selected interpreter and script; later PATH never changes its argv', t => {
@@ -305,6 +517,61 @@ test('retained Windows port shares one immutable original selection only with it
   assert.equal(port.originalLauncher(reordered), captured);
   assert.equal(connections, 0, 'Selection association never invokes the original Main transport');
 });
+
+for (const suggestions of [false, true]) {
+  test(`Claude suggestion preference ${suggestions} shares the exact captured Windows launch environment`, async t => {
+    const f = fixture(t, '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n');
+    f.profile.windowsBroker = stagedBroker(t, f.files);
+    f.files.set(f.profile.cwd, 'TEST directory');
+    const stat = fs.statSync;
+    t.mock.method(fs, 'statSync', ((file, options) => String(file) === f.profile.cwd
+      ? { isDirectory: () => true } : stat(file, options)) as typeof fs.statSync);
+    syncBuiltinESMExports();
+    const profile: RuntimeMemberProfile = {
+      ...f.profile, provider: 'claude', teamId: 'TEST-team', memberId: 'alice',
+      principalId: 'TEST-principal', sessionId: 'TEST-session', generation: 1,
+      configRevision: 'TEST-revision', model: 'TEST-model', accountBinding: 'TEST-account',
+      environment: { ...f.profile.environment, HOME: f.profile.cwd, CLAUDE_CONFIG_DIR: f.profile.cwd,
+        CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: 'false' },
+      nativeTools: [], autoAllowedTools: [],
+      limits: { queuedInputs: 1, inputBytes: 1024, outputBytes: 1024, outputEvents: 10,
+        pendingInteractions: 1, timeoutMs: 1000 },
+    };
+    const original = structuredClone(profile);
+    const retained = new HostWindowsLaunch(() => assert.fail('TEST construction cannot allocate a process'));
+    const port = retained.port.bind(retained);
+    let retainedProfile: NativeProcessProfile | undefined;
+    t.mock.method(retained, 'port', (...args: Parameters<typeof retained.port>) => {
+      retainedProfile = args[0];
+      assert.ok(Object.isFrozen(retainedProfile) && Object.isFrozen(retainedProfile.environment));
+      return port(...args);
+    });
+    const provider = createClaudeMemberProvider({
+      profile, retainedWindowsLaunch: retained,
+      request: { tenantId: 'TEST-tenant', projectId: 'TEST-project', sessionId: profile.sessionId,
+        generation: 1, configRevision: profile.configRevision, requiredCapabilities: ['session.conversation'] },
+      endpoint: { url: 'http://127.0.0.1:1/TEST', bearerToken: 'TEST-private',
+        binding: { backendId: 'TEST-backend', teamId: profile.teamId, teamName: 'test-team',
+          runId: 'TEST-run', memberId: profile.memberId, generation: '1' },
+        revoke() {}, async close() {} },
+      connection: { execute() { assert.fail('TEST no input'); }, lookup: () => undefined,
+        getTask() { assert.fail('TEST no task'); }, listTasks: () => [] },
+      instructions: 'TEST no vendor process', isCurrent: () => true, canAllocate: () => true,
+      readCheckpoint: async () => undefined, onProgress() {},
+      ...(suggestions ? { promptSuggestions: { eligible: () => false,
+        offer() { assert.fail('TEST no suggestion'); } } } : {}),
+    });
+    try {
+      assert.equal(retainedProfile?.environment.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION,
+        suggestions ? 'true' : 'false');
+      assert.deepEqual(profile, original, 'Captured launch preference never rewrites the saved provider profile');
+      assert.equal(provider.isReady(), false);
+    } finally {
+      provider.seal();
+      assert.equal(await provider.cleanup(), true, 'No original native process was allocated');
+    }
+  });
+}
 
 for (const boundary of ['launch', 'prepare', 'install-owner'] as const) {
   for (const changed of [wrapper, interpreter, script]) {

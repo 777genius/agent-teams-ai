@@ -1,6 +1,7 @@
 import { channel } from 'node:diagnostics_channel';
-import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
+import { createModelReadinessTiming } from '../diagnostics/modelReadinessTiming.js';
+import type { ModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
 import { teamModelProbeProfile, teamModelProbeEffort, teamModelProbeActionDigest } from './teamLaunchModelProbe.js';
@@ -129,15 +130,6 @@ function captureOpenCodeProbeAccountInspection(
   const before = bracket && capturedOrigin
     ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
   if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
-  let capturedConfig: Record<string, unknown> | undefined;
-  const source = captureOpenCodeConfigurationSource(profile,
-    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
-    bracket ? value => { capturedConfig = value; } : undefined);
-  const policy = before ?? (capturedOrigin
-    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
-  const raw = bracket ? capturedConfig ?? held() : source.read();
-  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
-  const options = object(provider) && object(provider.options) ? provider.options : {};
   const resolve = (value: unknown): unknown => {
     if (typeof value !== 'string') return value;
     if (value.includes('{file:')) return held();
@@ -148,8 +140,22 @@ function captureOpenCodeProbeAccountInspection(
         return selected;
       });
   };
-  const configuredKey = (policy || profile.nativeGeneration === 'v2') &&
-    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey);
+  let capturedConfig: Record<string, unknown> | undefined, capturedConfiguredKey: unknown;
+  const source = captureOpenCodeConfigurationSource(profile,
+    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
+    bracket ? value => {
+      capturedConfig = value;
+      const provider = object(value.provider) ? value.provider[input.providerId] : undefined;
+      const apiKey = object(provider) && object(provider.options) ? provider.options.apiKey : undefined;
+      capturedConfiguredKey = typeof apiKey === 'string' && apiKey.includes('{file:') ? apiKey : resolve(apiKey);
+    } : undefined);
+  const policy = before ?? (capturedOrigin
+    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
+  const raw = bracket ? capturedConfig ?? held() : source.read();
+  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
+  const options = object(provider) && object(provider.options) ? provider.options : {};
+  const configuredKey = bracket ? capturedConfiguredKey : ((policy || profile.nativeGeneration === 'v2') &&
+    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey));
   const selectedUrl = policy ? policy.policy?.baseUrl
     : object(provider) && provider.npm === '@ai-sdk/openai-compatible' ? resolve(options.baseURL) : undefined;
   const configured = policy?.policy?.hasConfiguredApiKey ??
@@ -200,9 +206,9 @@ function captureOpenCodeProbeAccountInspection(
     ...(profile.nativeGeneration === 'v2' && nativeCredentialScopeDigest !== undefined ? { nativeCredentialScopeDigest } : {}),
   };
   if (bracket) {
-    // No weak currentness facet escapes: only the two intermediate origin reads
-    // are grouped. Native files/account remain freshly captured on every call.
-    if (configuration || key || fileProof || !nativeCurrent()) held();
+    // The pure configured-key read is inside source capture's closing freshness check.
+    // No source effect/await intervenes; future account checks still use nativeCurrent.
+    if (configuration || key || fileProof) held();
     const target = memberTarget!();
     return { account, origin: policy, memberReference: {
       target, originCurrent: policy!.isCurrent(), accountDigest: account.digest,
@@ -219,6 +225,7 @@ export function capturePreparedModelReference(options: {
   context: string;
   kind?: 'native';
   isCurrent(): boolean;
+  withAccountRead?: <T>(read: () => T) => T;
   observeAccount?(account: ReturnType<typeof captureOpenCodeProbeAccount>): void;
 }): ModelReadinessReference {
   return readPreparedModelReference(options);
@@ -226,18 +233,21 @@ export function capturePreparedModelReference(options: {
 
 function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0],
   memberInspection = false, accountTiming?: () => () => void): ModelReadinessReference {
-  const original = options.management.probes.readRetainedProbe(options.commandId, options.context);
-  const candidate = { ...teamModelProbeProfile(options.profile),
-    profileId: original.profileId, configRevision: original.configRevision };
-  if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
-      original.providerId !== options.profile.nativeOptions.providerId ||
-      openCodeModelId(original.providerId, original.modelId) !==
-        openCodeModelId(original.providerId, options.profile.model) ||
-      original.effort !== options.profile.nativeOptions.variant ||
-      (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
-      (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
-      modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
+    const inspect = () => {
+    // The qualified invocation's fresh receipt also supplies candidate validation.
+    // Its source/authority checks share the account fence before every expiry gate.
+    const original = saved;
+    const candidate = { ...teamModelProbeProfile(options.profile),
+      profileId: original.profileId, configRevision: original.configRevision };
+    if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
+        original.providerId !== options.profile.nativeOptions.providerId ||
+        openCodeModelId(original.providerId, original.modelId) !==
+          openCodeModelId(original.providerId, options.profile.model) ||
+        original.effort !== options.profile.nativeOptions.variant ||
+        (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
+        (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
+        modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
     let inspected: ReturnType<typeof captureOpenCodeProbeAccountInspection> = undefined;
     if (saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined) {
       const endAccount = accountTiming?.();
@@ -259,6 +269,8 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
     return { target: options.management.readinessTarget(candidate),
       originCurrent: (!origin || origin.isCurrent()) && options.isCurrent(),
       ...(account ? { accountDigest: account.digest } : {}) };
+    };
+    return options.withAccountRead ? options.withAccountRead(inspect) : inspect();
   });
 }
 
@@ -336,6 +348,8 @@ export async function prepareCapturedLaunchReadiness(options: {
 export function inspectMemberModelReadiness(options: {
   management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
+  withAccountRead?: <T>(read: () => T) => T;
+  authorityTiming?: ModelReadinessAuthorityTiming;
   hostIncarnation: string; phase?: 'preclaim' | 'allocation';
 }): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
@@ -347,48 +361,15 @@ export function inspectMemberModelReadiness(options: {
     phase: options.phase ?? 'preclaim' });
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
   let refusalObserved = false;
-  const currentCalls = { count: 0, totalMs: 0, maxMs: 0, lastMs: null as number | null, truncated: false };
-  let regions: Record<string, number> | undefined;
+  const timings = createModelReadinessTiming(readinessRefusal);
+  let authorityTiming: ModelReadinessAuthorityTiming | undefined;
+  try { authorityTiming = options.authorityTiming; } catch { /* Optional observation cannot replace an authority check. */ }
   const current = () => {
     let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
     let cutoff: number | null = null, observedAt: number | null = null;
-    let started: number | undefined, failed = false;
-    let accountStarted: number | undefined, accountMs: number | undefined, accountAuthorityMs: number | undefined;
-    let beginAccount: (() => () => void) | undefined;
-    let boundary: ((next?: 'readConsumer' | 'reference' | 'finalAuthority', ended?: number) => void) | undefined;
-    try {
-      if (readinessRefusal.hasSubscribers && !refusalObserved) {
-        currentCalls.lastMs = null;
-        if (currentCalls.count < 4096) {
-          currentCalls.count++; started = performance.now();
-          const totals = regions ??= { initialAuthorityCount: 0, initialAuthorityMs: 0, readConsumerCount: 0, readConsumerMs: 0,
-            referenceCount: 0, referenceMs: 0, finalAuthorityCount: 0, finalAuthorityMs: 0,
-            referenceAccountCount: 0, referenceAccountMs: 0, referenceAccountAuthorityCount: 0, referenceAccountAuthorityMs: 0 };
-          let region: string | undefined = 'initialAuthority', entered = started;
-          boundary = (next, ended) => {
-            try {
-              const now = ended ?? performance.now(), elapsed = Math.round(now - entered);
-              if (region !== undefined) {
-                const count = totals[region + 'Count']!, total = totals[region + 'Ms']! + elapsed;
-                if (Number.isSafeInteger(elapsed) && elapsed >= 0 && Number.isSafeInteger(total)) {
-                  totals[region + 'Count'] = count + 1; totals[region + 'Ms'] = total;
-                } else currentCalls.truncated = true;
-              }
-              region = next; entered = now;
-            } catch { region = undefined; currentCalls.truncated = true; }
-          };
-          beginAccount = () => {
-            try { accountStarted = performance.now(); } catch { currentCalls.truncated = true; }
-            return () => {
-              try { if (accountStarted !== undefined) accountMs = performance.now() - accountStarted; }
-              catch { currentCalls.truncated = true; }
-              finally { accountStarted = undefined; }
-            };
-          };
-        }
-        else currentCalls.truncated = true;
-      }
-    } catch { currentCalls.truncated = true; }
+    let failed = false;
+    const timing = timings.begin(!refusalObserved, authorityTiming);
+    const { boundary, beginAccount } = timing;
     try {
       options.assertCurrent(); phase = 'read-consumer';
       boundary?.('readConsumer');
@@ -412,22 +393,13 @@ export function inspectMemberModelReadiness(options: {
       boundary?.('reference');
       const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
         commandId: current.reference.commandId, context: current.reference.context,
+        ...(options.withAccountRead ? { withAccountRead: options.withAccountRead } : {}),
         ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
         observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
         isCurrent: () => {
-          let authorityStarted: number | undefined;
-          try { if (accountStarted !== undefined) authorityStarted = performance.now(); }
-          catch { currentCalls.truncated = true; }
+          const endAuthority = timing.beginAccountAuthority();
           try { options.assertCurrent(); return true; } catch { return false; }
-          finally {
-            try {
-              if (authorityStarted !== undefined) {
-                const elapsed = performance.now() - authorityStarted;
-                if (!Number.isFinite(elapsed) || elapsed < 0) currentCalls.truncated = true;
-                else accountAuthorityMs = (accountAuthorityMs ?? 0) + elapsed;
-              }
-            } catch { currentCalls.truncated = true; }
-          }
+          finally { endAuthority(); }
         } }, true, beginAccount);
       boundary?.();
       phase = 'equality';
@@ -437,24 +409,7 @@ export function inspectMemberModelReadiness(options: {
     } catch (error) {
       failed = true; throw error;
     } finally {
-      if (started !== undefined) try {
-        const ended = performance.now(), elapsed = Math.round(ended - started);
-        boundary?.(undefined, ended);
-        if (!Number.isSafeInteger(elapsed) || elapsed < 0 || !Number.isSafeInteger(currentCalls.totalMs + elapsed))
-          currentCalls.truncated = true;
-        else { currentCalls.totalMs += elapsed; currentCalls.maxMs = Math.max(currentCalls.maxMs, elapsed); currentCalls.lastMs = elapsed; }
-        // Nested callbacks accumulate raw durations; each region counts and rounds once per outer call.
-        for (const [name, raw] of [['referenceAccount', accountMs], ['referenceAccountAuthority', accountAuthorityMs]] as const) {
-          if (raw === undefined) continue;
-          const milliseconds = Math.round(raw), total = regions![name + 'Ms']! + milliseconds;
-          if (!Number.isFinite(raw) || raw < 0 || !Number.isSafeInteger(milliseconds) || !Number.isSafeInteger(total))
-            currentCalls.truncated = true;
-          else {
-            regions![name + 'Count'] = regions![name + 'Count']! + 1;
-            regions![name + 'Ms'] = total;
-          }
-        }
-      } catch { currentCalls.truncated = true; }
+      timing.finish();
       if (failed && !refusalObserved) {
         refusalObserved = true;
         try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({
@@ -462,7 +417,7 @@ export function inspectMemberModelReadiness(options: {
           groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),
             contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),
           consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt,
-          currentCalls: { ...currentCalls, ...(regions ? { regions: { ...regions } } : {}) },
+          currentCalls: timings.snapshot(),
         }); } catch { /* Original TEST subscriber handles its own errors; preserve this refusal. */ }
       }
     }
@@ -475,7 +430,10 @@ export function inspectMemberModelReadiness(options: {
       assertReadinessCredential(scopeDigest: string) {
         current();
         const account = observedAccount.value;
-        if (!account || !account.isCurrent() || account.nativeCredentialScopeDigest !== scopeDigest) held();
+        if (!account) held();
+        const read = () => account.isCurrent();
+        if (!(options.withAccountRead ? options.withAccountRead(read) : read()) ||
+            account.nativeCredentialScopeDigest !== scopeDigest) held();
       },
     } : {}) };
 }

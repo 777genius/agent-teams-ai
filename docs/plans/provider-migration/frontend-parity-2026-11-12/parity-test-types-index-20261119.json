@@ -1,0 +1,1260 @@
+{
+  "schemaVersion": 1,
+  "kind": "two-existing-test-type-only-followup-with-original-ci-and-recovery",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "fixedBase": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "delivery": {
+    "pr": 1192,
+    "draft": true,
+    "branch": "fix/frontend-parity-completion-20261113",
+    "route": [
+      1192,
+      1186,
+      982
+    ]
+  },
+  "candidate": {
+    "sourcePaths": [
+      {
+        "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4a64e6228f2b44f42ec9f3d24cca63272915291e",
+        "sha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "bytes": 52832,
+        "preimage": "1e4522ba6e600545535c116e59a53a95f6120b37",
+        "lines": 744,
+        "scope": "Two erased explicit generic arguments on existing strict empty-array assertions; no production or runtime change"
+      },
+      {
+        "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "36728b28d564cac2d107f17be0add0ab5dafb43c",
+        "sha256": "1b6a05cb460ada5596bce3f2553a917777e86545e2af8e23995606c44cfd5900",
+        "bytes": 28238,
+        "preimage": "7ca326f89632042a98c5bc459250df221980bdd4",
+        "lines": 689,
+        "scope": "Only the existing synthetic TEST ChildProcess view declares its exitCode mutable; no production or runtime behavior changes"
+      }
+    ],
+    "productionPathsChanged": 0,
+    "runtimeDelta": "Both complete transformed test JavaScript outputs remain identical to their original preimages; only type declarations and formatting change",
+    "acceptance": "Focused/excerpt actualTS7 RED→GREEN and existing finite loader/frame/positiveStop cases only; original successor full/native/E2E acceptance is still required"
+  },
+  "statusDocument": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "fd4dc5e8707561c56fa69e2ec398760606145f80",
+    "sha256": "3be35bbe851408b6467cb9284e899e969cd63c907928f12239fffb8cb9e0d954",
+    "bytes": 81039,
+    "preimage": "4a0cb44e3616a214dc7c6ff69fb9f842bdb9a21c"
+  },
+  "evidence": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-manifest-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ab34fa4e08c365dba324e062aa62b2b4695a3eec",
+      "sha256": "54ed710405256cf64199e91cfab5c540edaa3f1737b213ee2365727ef8d025dc",
+      "bytes": 1107,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-manifest-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-verification-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bc1759cba496c59c519fafbc7c4c38fba2751ea9",
+      "sha256": "6d6eb69d87863a9b72cc07c9d8f9cf044c2543f5fce473068c47b90fa4764941",
+      "bytes": 17280,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-verification-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "414a18cf191e21170e157ae838a4e4a3738b271e",
+      "sha256": "cbede748a521aec43e7f5d2073e362c0274ef0eb5c8493b7be722e8ae85beda7",
+      "bytes": 6346,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-r2-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-20261119.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b9614152548b846349b52ca91a4bffab6b749a19",
+      "sha256": "06931113a12bfc7f8258085aeac20ac5b8da3bcd60a174782201d6da4f6c1738",
+      "bytes": 1017,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-20261119.patch"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-original-ci-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6764914c3099dba4fb84a60b770f25d33f2b5a26",
+      "sha256": "a8fbbc42e2d9ca70694172eecdd38094fd06353652b54644a812d7582baff780",
+      "bytes": 11673,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-original-ci-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-raw-20261119.json.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9a42bb4126e17def50a46dfd27e451069e855e4b",
+      "sha256": "67a9388126267da4c2f919a47466bad4692f4042e7bf838551569c8d2882fc98",
+      "bytes": 30834,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-raw-20261119.json.gz"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-host-test-types-raw-manifest-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1fb7a51f79e33f7b7ff1c1b7d73c996d59563ae7",
+      "sha256": "74cf2a46d6a7015209c0929baa5ddd0c8c6c1bb4307a626b10ad3f5a7addb371",
+      "bytes": 3199,
+      "preimage": null,
+      "relativeFile": "parity-host-test-types-raw-manifest-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-parent-tree-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8d9a05b56e95a26998e66368b61e975c06b7543c",
+      "sha256": "0ac6f2180352cc0a63cbb68ecd7c8249a728c9b52001620ea8f2975610aacfd7",
+      "bytes": 3164,
+      "preimage": null,
+      "relativeFile": "parity-42a4-parent-tree-r2-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-parent-tree-reconstruction-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "114fec2039a0700e7db979126ee10040bb23d2a4",
+      "sha256": "5871e315e94934aca7776127c1477c37db92773433246ecb521743b24270cf35",
+      "bytes": 39169,
+      "preimage": null,
+      "relativeFile": "parity-42a4-parent-tree-reconstruction-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-host-five-platform-compile-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c44847f7a61c09a6e199a15662fe079be4b3790d",
+      "sha256": "fc85d231ce970e7b72c798aa5d2e201bba4e0fa59ce8bbeb42e5269e829772cd",
+      "bytes": 10973,
+      "preimage": null,
+      "relativeFile": "parity-42a4-host-five-platform-compile-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-host-terminal-capture-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "482e26e7465555ff1a71a528d69ddd2bd0f797d1",
+      "sha256": "4ebf69f2749705caf47af617d0dcec83643445c637aaa51399a848552de1052a",
+      "bytes": 72723,
+      "preimage": null,
+      "relativeFile": "parity-42a4-host-terminal-capture-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-manifest-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5b5b231add2ca75b4821e613f2d2659392527954",
+      "sha256": "1d37ab907a6c6b5a60514945379a423431a432120d38e3d6b93982fac7ce982b",
+      "bytes": 1183,
+      "preimage": null,
+      "relativeFile": "parity-solo-exitcode-types-manifest-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-verification-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b42720578a82efe00f968e1e2d3ea96b6553cc94",
+      "sha256": "f4210a0e5dddb470b72ca36506d479dcfeb1206efa2212c67b2b214f5d992ad5",
+      "bytes": 20414,
+      "preimage": null,
+      "relativeFile": "parity-solo-exitcode-types-verification-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6a94fb979c15eb62a26bef33c3a0d3fee8167299",
+      "sha256": "fed04650932b59c13504abdcceb883228784c4525d22426a6c7745eeaaed160d",
+      "bytes": 5036,
+      "preimage": null,
+      "relativeFile": "parity-solo-exitcode-types-r2-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-20261119.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ed6216e2e2bc4ee83f13f8690538fc470e34b951",
+      "sha256": "61c50b56cbdd75263cfcbf89df4799c1c1198618bd905713b3c78d3471dd5eff",
+      "bytes": 717,
+      "preimage": null,
+      "relativeFile": "parity-solo-exitcode-types-20261119.patch"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-raw-20261119.json.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d592aeda8ecfa65ca1faf1a1f9cb65c36282d498",
+      "sha256": "820dff22b34148f2b5e4e6059a448292a607ceac4115b539689f44a4d2c9429b",
+      "bytes": 400600,
+      "preimage": null,
+      "relativeFile": "parity-solo-exitcode-types-raw-20261119.json.gz"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-exitcode-types-raw-manifest-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fbc6e62a295e4f2666925b673d0aa2825fdb5688",
+      "sha256": "05289151ce083b4540923cbcbb659b20dcba715fd4508b10c91f3cce286f68ff",
+      "bytes": 4411,
+      "preimage": null,
+      "relativeFile": "parity-solo-exitcode-types-raw-manifest-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-teams-ubuntu-compile-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a7470f355a30b6257b81dab3837add9e0dcefce6",
+      "sha256": "a59e0332b8391782d2c658918ab54f1b63404359b872109fe59f7a2f0daf67f4",
+      "bytes": 4717,
+      "preimage": null,
+      "relativeFile": "parity-42a4-teams-ubuntu-compile-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-teams-windows-compile-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ed1db159f720af2dbed2484c4ecc4ebea88495d9",
+      "sha256": "398043560ab140996e82b7f606a53f1fce599d1283025f95d6a1f6d60ac34704",
+      "bytes": 4697,
+      "preimage": null,
+      "relativeFile": "parity-42a4-teams-windows-compile-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-win-arm-success-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2f150f1da04ce64073b7b052b2eb08f4c74649f",
+      "sha256": "9d9b5c46cc49a20e0ba035cc0ca1db7b70f877f2ae6acec2818c83020b73f6ff",
+      "bytes": 23889,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-win-arm-success-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-win-arm-original-artifact-20261119.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c7f1442228c8235c8b1d5ec50db6774c8e7a8f10",
+      "sha256": "54a0e88f8d92d04d21113fd6964949aec144d7945ba3c8ffc941b3223ccfcf2e",
+      "bytes": 14682,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-win-arm-original-artifact-20261119.zip"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-win-arm-artifact-inventory-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d31a739c0be0d4c38560c0b185c8bf8563850f65",
+      "sha256": "ba4bda870fca5cd2b23856ea8a311e58056cd667c2df97c99704c8252ac756f3",
+      "bytes": 4715,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-win-arm-artifact-inventory-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-darwin-x64-posix-witness-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "288d0957318d1015e20b4712f4fecf66484b75e9",
+      "sha256": "f249eeca1b21862adc631a6d4b8e83ddf73d9e776c400d8804c617e6bba4f457",
+      "bytes": 24992,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-darwin-x64-posix-witness-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-darwin-x64-original-artifact-20261119.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e295307252b87b51c48d20c1f650ea02367ab6f",
+      "sha256": "5017d7f533d61726e2140601192f888bb00bdf2e2431fc443657b73b85678464",
+      "bytes": 11121,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-darwin-x64-original-artifact-20261119.zip"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-darwin-arm-posix-witness-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "874f0c09b99c39f6f81fe41caea74d80816bdd82",
+      "sha256": "5b7e180ec2cfa1eebe7db6a2c4c25ed629289266058a8666e76f926c1e85c609",
+      "bytes": 25153,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-darwin-arm-posix-witness-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-native-darwin-arm-original-artifact-20261119.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "211d33cbd81b5163164c8165142108dcbe54f659",
+      "sha256": "32c6187fac486be2313b5184089c7b08685d3601eb207cdc050d0437f2f454e7",
+      "bytes": 11061,
+      "preimage": null,
+      "relativeFile": "parity-42a4-native-darwin-arm-original-artifact-20261119.zip"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-darwin-posix-witness-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e0863e22348894345496db99afd0afd436002cd",
+      "sha256": "987db860374aafd9e05d35218ce1a446b9f33a309f242ebe6fbfa0b33a0d824a",
+      "bytes": 10984,
+      "preimage": null,
+      "relativeFile": "parity-42a4-darwin-posix-witness-r2-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-frontend-shard2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "770327d15a55e3a7d172dd60e8e6d125f0f42c16",
+      "sha256": "7e0bc60e225b067a4ad7a8966ea2ba9dbbb67f5a3bec731e95ae65890350b186",
+      "bytes": 4151,
+      "preimage": null,
+      "relativeFile": "parity-42a4-frontend-shard2-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-finite-codex-ui-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "97b68f036cae9ff75ed703706bf5820503225edd",
+      "sha256": "a1dd0325f441dadd5cbda20e3d8958ace787083222f97e57c09212e86c819adf",
+      "bytes": 4922,
+      "preimage": null,
+      "relativeFile": "parity-42a4-finite-codex-ui-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-installer-ui-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3ac702a7eb86d905bff18dfc2a0b4774fe9fddf9",
+      "sha256": "b6c0c3a8d7dfb284f7cee43155ec258bc318bb43b33fe4c7207cc6fb3e653037",
+      "bytes": 5011,
+      "preimage": null,
+      "relativeFile": "parity-42a4-installer-ui-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-test-types-additional-raw-20261119.json.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d461242e9f7a8912664c1f9befc947011d362206",
+      "sha256": "aec35e5f52b030f3c8a998aba60a826c04dbf5e5f19b17afd1ecd8c124c876c3",
+      "bytes": 283790,
+      "preimage": null,
+      "relativeFile": "parity-test-types-additional-raw-20261119.json.gz"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-test-types-additional-raw-manifest-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "beb0ee243dfa0e4a65a0c9bd4bac6d162b4756d6",
+      "sha256": "ae4b9a68d9ead25b4603514a370b17c0b58f81382cd6ef046c57c11c97e9e16f",
+      "bytes": 3358,
+      "preimage": null,
+      "relativeFile": "parity-test-types-additional-raw-manifest-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-executor-outage-recovery-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "343b31fba16ab3515553b073291ac31ab926b5d5",
+      "sha256": "f9d4f47a856123a3d323fa212503841512f67c11e69f9e42ebc5fe1a9fe4cd2d",
+      "bytes": 24299,
+      "preimage": null,
+      "relativeFile": "parity-executor-outage-recovery-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-final32-index-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca3d8517ae982b3f22e35030396f81037531529",
+      "sha256": "2d0b3813953b6df0b2e24e827643a645aa84710595451e917de082a8cf2b2a22",
+      "bytes": 46845,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-final32-index-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-frontend-four-shards-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b7e41a326c0d14147cbaac704c31a4d5a5713935",
+      "sha256": "0391b813d1bfd9f904d3a7239682e3be1317bc79bb0cc967ee3b354602203422",
+      "bytes": 7429,
+      "preimage": null,
+      "relativeFile": "parity-42a4-frontend-four-shards-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-type-tree-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5f267813046b375d12b615c7eafbf5fbeb98b483",
+      "sha256": "a86f01a42c465b89bd2d7a8a0b614f91ea9f085d6ff316ed104f658ab1e85686",
+      "bytes": 11312,
+      "preimage": null,
+      "relativeFile": "parity-type-tree-r2-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468308-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44bbd09a7bb7ca5be99517ba07b1faefb4f30b85",
+      "sha256": "c2c577c4f76a0570c7b936e1e2a10e8de4b1bb5b38633d93edf67adba0184780",
+      "bytes": 69682,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261468308-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468613-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7b3dbab4e72f44a5831b9182b6e1e0f89880a004",
+      "sha256": "fe64125f4e2756e2f65b97bc564fdf962d5174a48a0b478734508f888d286606",
+      "bytes": 3324,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261468613-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468613-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "756cdb85e636f2006021a6a5c254f2d943d17736",
+      "sha256": "c28596a2fecebb270ed336ae604a8a9d692d3267d518475256cee368ddd60feb",
+      "bytes": 49748,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261468613-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468624-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d7fa81fd328ca91d682480b0d37ea1464021620",
+      "sha256": "75a164af8d1bfe4e595cbcd51dc1621d01442fb140a6549d005934a55b9d5deb",
+      "bytes": 47766,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261468624-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470422-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c3e519c955f2de38d6241a528b29df36ce4760b3",
+      "sha256": "e8d87da2a79527ce5fee61a60e9e623c21f608bb8402910a5eae4c636c924b93",
+      "bytes": 267102,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470422-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470570-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9ac2da89c21fb40857d72035d28b3cd1b0309635",
+      "sha256": "fd5d497991756ed15a63be9ebdbe89efe61e90ac74b64edcbd5ce46fb4a10939",
+      "bytes": 2975,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470570-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470570-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "28fbb8e1e688ab9a2acd1624e42e5b80223a3c4e",
+      "sha256": "c9d089a8ab87c04618f766e6ec3dd04568a40de2b3e8d047a26526ed3bb018cc",
+      "bytes": 194179,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470570-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470581-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ef159a826e2ecd4c48e963b62193d4b1fcf20eb9",
+      "sha256": "cf4c9a9d89b7fab1274addfc62b6e5c1f9674205d111390af0a280464f925a84",
+      "bytes": 3138,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470581-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470581-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "23b300bab5681d1ff9f7ca13c6ddb0a162c886ba",
+      "sha256": "27ed965c7cdd8d55f7843e5e89bc16228bdd92ebaaec7cf3914f763cb0c5bd1e",
+      "bytes": 175939,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470581-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470745-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b62add6a461354a998b93bfe5bf25480030f09a4",
+      "sha256": "9152601d7890f5d65ac01439a13f01d31f9e7e73eff8e69f6906a86e8424b5cb",
+      "bytes": 4707,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470745-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470745-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "59df5953cedad01343daabb484912fba5f27f91d",
+      "sha256": "de6ec30709f8231813cf319086044d7fe72c51a3b8bd30641eeb59a8aa88a769",
+      "bytes": 296479,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470745-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470831-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "20db3dbf12347fa587d9723261f934231c34eca9",
+      "sha256": "a7dae0ba60b62e6975e059ee7dc143e8eef923c2913d7cf60a8557a2a7b21424",
+      "bytes": 2793,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470831-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470831-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fc7bed650bde857afd4a7a2e875254d43e5ac916",
+      "sha256": "e30a84b93cc13813f340c2843b37085a6621edcc24dfdf67dbfcff8ea29a8fb8",
+      "bytes": 196351,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470831-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470836-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "30209e755c1dba8f51ed6c1cd035906fc03b28f4",
+      "sha256": "d1ed1b55f20f7bfc90142036ec3404c5540ce63d4e386217645b307127226578",
+      "bytes": 4799,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470836-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470836-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "37714a3305e2610a254b6a19c171132a42a78c7a",
+      "sha256": "d7f3f1216738517366c0e5e82b7dfec4ab0b6e2a89e443aaefa3ec80c96a9863",
+      "bytes": 298050,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470836-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470873-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d310e59c2e969d0572a420d5f2937e4397aee0d2",
+      "sha256": "8517c16cf6cd16bb19ec79cac7f2633de8bda4a4f0771ba4151013025b2725ab",
+      "bytes": 4728,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470873-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470873-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f361f56cd1d10e52ceb93caceb9c44c0e942cce7",
+      "sha256": "297041931b6e411bf46ed70fe81d6c633cc505aa6ac9ff56204cfdbac85d96f8",
+      "bytes": 296748,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470873-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470882-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e78d127ec2693548b62d13abbbb8c2a491df8cd4",
+      "sha256": "4cc053b0f7399719828c87816c1591c38f0d9c046de2e02047f782542e188bc3",
+      "bytes": 4950,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470882-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470882-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bfa29712cacb749d73686583540af067d1e9a623",
+      "sha256": "3179ba60a1c81ee50aebcc8fe2ebce3b29ede9cb0fb8d3c7cb6bbf94bde7b8d4",
+      "bytes": 302963,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470882-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470887-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a1948ed4c5887ba868e32be28beb363384fa7163",
+      "sha256": "9cf75483de1d49876489a9c9bf709b783b919a8fb4d81fcdbc5586494284cf2b",
+      "bytes": 4780,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470887-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470887-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9814b9fdaaa16fe5d8e0c8862e584f018b811bc8",
+      "sha256": "563bc3131e5b2fd1bf27066c2d506d77aeeaa7aa1064f6fb82269c8398682c33",
+      "bytes": 298268,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470887-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470910-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6db6a8fc8eed97dd56f8e659c12e64c0454eaaa",
+      "sha256": "5abf00b610c75737ac1e38cdfc0ea98818dea91aa067abe1eaa3b9081e7f426b",
+      "bytes": 292341,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470910-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470918-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60a7f9545a4c65a30c2b4c8b76b224aec08b7b23",
+      "sha256": "b22367a5aa24222cbd914df124aefede49a48935fbec25739d003656fdbd1fc0",
+      "bytes": 4953,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470918-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470918-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a66c0242a28d36f4e20cbd91e25e14e84968eeb3",
+      "sha256": "2635135d1da83089c060d4bee02e28001845f038ddf0f730760b194e5390e28e",
+      "bytes": 300146,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470918-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470937-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f1a4cf1b45a2953f0dfb48e60108205495e7f081",
+      "sha256": "9ca3e5fb663a1131a18bb718be9d2670fb304cfb1b36421ba971276f10ab6ce6",
+      "bytes": 31887,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470937-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470937-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "98df9ec5cdd61c49a049cdb4241000ec6164cda2",
+      "sha256": "a94f99b97f7718810b03c8251212109973ec0c5b46f4dfc7cebc1b42d4102b43",
+      "bytes": 306235,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470937-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470952-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b9ef0f133c03fe9f3f5223e8756d6c849dca8567",
+      "sha256": "0e972341c472dd940511ca09b4807b0d971b7e4751bddf6c04016746ab9b3a66",
+      "bytes": 4947,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470952-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470952-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7390adef942644a50023f5c9c9dd4afec8c9e0be",
+      "sha256": "0ebee0ea90197aed8eaca3fdd12da9bca4ee3e0f4f53ce110f8113f82f4c7658",
+      "bytes": 318389,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470952-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470953-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a6559950d4d633a56791819789b69f159899a9a8",
+      "sha256": "0909c48c19c31bfc68f42da571cef0a65fe38f77ebe8bfae1855685213eb408f",
+      "bytes": 5374,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470953-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470953-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d8587b7afcaca11300ce502debd262a12fd6042a",
+      "sha256": "40c221b69744e9a8bfee6687538bf80195b25cf4d0c785e2ff3de6ba85af420b",
+      "bytes": 302750,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470953-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470979-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fe19d4ccbabbd08edcff63021e1b24912a00b077",
+      "sha256": "353db439a734033f433eff2e15bd54710b407e4b6ebe923fc151b1e1c44c5a47",
+      "bytes": 41591,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470979-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470979-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f484878afd4d50fe6cf58d65c6d55fb7aaadb497",
+      "sha256": "dc12365a19858d4c1400973723270722b5c7c84712eddde6e687a54a0ee7191e",
+      "bytes": 302264,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470979-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470984-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0542d24b32e1191a666a1b6bf9bc8b5c4c085642",
+      "sha256": "62ab290c96971226d632c9f56f62c59a588792264de6c50d4ee0fbe3f35384d0",
+      "bytes": 4747,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470984-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470984-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3072c4d5a12cf8c518d7ec1574a42d56ff7d37d9",
+      "sha256": "ca8601a17983696fff340756420f39a4f7214f52bf582bef8b160e6f397185d9",
+      "bytes": 298027,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261470984-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471007-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "abf1200353c65ecf52eaf11bf1abf83b5ad7567c",
+      "sha256": "24298b3438bf789d18913dcf4f87688bb8116eb03ae7e0e82eb96c5d6afd90dd",
+      "bytes": 19183,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471007-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471007-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "117048b8e6546aff6c46dd80c2111d0998b0a0be",
+      "sha256": "aa2c90a8d2df747ba17ba4659fed71fc5a8c310f6ed580d4c139502c1aa0d816",
+      "bytes": 242898,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471007-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471038-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7d0b6c79a27d73108d1034f09db700aaf79a349a",
+      "sha256": "c0f273105a68bc5427766e637f43901807c7cdf8219cc9b01a3ffef03cf0244b",
+      "bytes": 4744,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471038-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471038-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a1aa3570a4bbb7f0048d8b92655b78c0fd64958a",
+      "sha256": "209e47753ffe2ecd62365694c46d67a35741ae7ad9f72fda76076018a4b7f865",
+      "bytes": 297992,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471038-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471040-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "950c174320b0407c950fc9ce6afdf4b92d64307f",
+      "sha256": "67cff0dc91057382d5d18d5fc11d908d8176735fdb01b0a657921359174f1ab1",
+      "bytes": 5093,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471040-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471040-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d7a3513b6d7d5ab7d83bb9d8818fe41e698d25e6",
+      "sha256": "93aeb73213bb963400d712679a1b1f57d4b00996919525e0b89165f0f485c50a",
+      "bytes": 279099,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471040-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471063-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2b93c23d73f26a2ea6737811579077bf181342d4",
+      "sha256": "87442993810547d152f52ddfd3df22d2a9159f28bde8eb5cccfe849faae4dbb3",
+      "bytes": 4805,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471063-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471063-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8ae28e4ff861b9ebd3b4b43772a2396e5b5c642b",
+      "sha256": "dae8d9e5d587ba638cc1e9648865483de65188eb14cd0ba4493aa70aeaac72a3",
+      "bytes": 294755,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471063-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471070-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8bcebea9550f69bea2a15655451f0787472d689a",
+      "sha256": "6a097158fef11f307e1cca983843257d07a7831a49464b04cb7504d7f766bf07",
+      "bytes": 4442,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471070-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471070-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2fa959be806bc1bbf78775ec333a580abd36bbb9",
+      "sha256": "e3d6d4382c7dcfb758439be3fcb7c0fcc6d1adbf667f24e8bbffa1e8c3c6fadc",
+      "bytes": 251145,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471070-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471094-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8549e6ad1f2f782819facc839fd5d6e071d68fe0",
+      "sha256": "281a4994800a7d8778882cec605b140f00a3cc8ff7a4deea40a72d1624d59ca1",
+      "bytes": 4750,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471094-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471094-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6856d02714c7eedf8e488e3150de7713e7fcaafa",
+      "sha256": "66ea84fc8804fd2a18f0cefbf23e01792fb96c7b7a8f72078e1813bf8ca484d4",
+      "bytes": 295212,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471094-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471102-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "11a26285642c71757d3cfe77854938cca365cf28",
+      "sha256": "8d936aa4f10f48bd20a8e08b798b3d49f95d5d9441135fdb869a5a61d5db3b0a",
+      "bytes": 30101,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471102-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471102-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f85c0b6605e1e59b6529aac1572734b537f28b93",
+      "sha256": "4b1924ce6b918d675c3455dd42be07afc0df1e903f85b1948942227189fd7a1d",
+      "bytes": 228403,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471102-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471115-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c36773baf82a66e2be1186ca329d51373a8e4722",
+      "sha256": "eff7940b7d8decee36e69c7b881d0c48a9c47c765908fa86c129db39ad67dd9d",
+      "bytes": 4797,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471115-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471115-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "330c8d45983c413baef0ae5ed16b67578a9ff198",
+      "sha256": "9215c0e5a4f8e4cc9e693623aacd53bc9d069c28335cc0a3ddbfd90717af5d7c",
+      "bytes": 297271,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471115-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471120-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "130a50861453d6f587f9ab4c0942e5d70948bd2c",
+      "sha256": "d8e92bd2e892f5c95eb3587721d61b12b8d14005ced568de8efc8a691d029689",
+      "bytes": 4458,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471120-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471120-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "55c21e6053a4eca6cb43f26f783308323418c330",
+      "sha256": "fc6a420b0b632b80afb9fe5e5c0fab8bc557a926633b228d76155ba2ea4722b2",
+      "bytes": 251386,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471120-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471138-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c0e8ecb462d176a84417647d585e4d1b26ee69ae",
+      "sha256": "0257fea434ec8cfd313826994e5a5cb9b1b813b7c747c22bfa75e618e3007e72",
+      "bytes": 298435,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471138-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471191-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5fc1ccb21268d31c1cc5ca76393250894ca79b9b",
+      "sha256": "6d011e8d272c65b5e8bd1c23d0533e49c128971ce4ec30baed9cb60452c5f882",
+      "bytes": 37071,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471191-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471191-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d2572a97c875cf8c07b8cf2239b0f48c3a534859",
+      "sha256": "d657ec60b9cde85b9ad7a42f3e57a945861a18ced337261b3264b22c1acb81a2",
+      "bytes": 241505,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471191-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471212-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29e132a2020ef990d9250ff02ddf9d50c3ef6a29",
+      "sha256": "a0acc4def51536d9234c37e9bc12e39d0e0e80c31d34ae9e05b98dfdad1ca6c9",
+      "bytes": 4841,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471212-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471212-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2006aea9a21d8c91addfc8cf037595beccac50ce",
+      "sha256": "4ca39d9da34dee4191765286af5865287d59552c35b503acf36e2ede2d5c104f",
+      "bytes": 296746,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471212-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471246-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3ebd792e8ac0e5c83ad25f17d6c9f67000d7d7e",
+      "sha256": "4fed713edbc2e4ea7d79a209e1aac48d8cda9ce31aab9d26dfb2a416ba17bafd",
+      "bytes": 22481,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471246-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471246-original-20261119.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "88b82e8c5ee5b461b688c57d3ca7597a17484363",
+      "sha256": "0e30d27000efb9f460ab2b84fdba4fe68c6f2df9fc91b24fc87eb8e15e8151f3",
+      "bytes": 241507,
+      "preimage": null,
+      "relativeFile": "parity-42a4-ui-job-135261471246-original-20261119.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-outage-jobs-44434982617-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2772377a7329a9d1857c7eddbb3ad7752f3ff9db",
+      "sha256": "ac6c2f493d350dc99cddc9fc9f1c457ae626fbd467e08e7d5f839ff50f7056f6",
+      "bytes": 113286,
+      "preimage": null,
+      "relativeFile": "parity-42a4-outage-jobs-44434982617-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-outage-jobs-44434982410-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4423e0dbdd4a4f9c3938d6fa6bb85df17925d042",
+      "sha256": "90da9a5e835c7d21ecdfd14ed9373e1e0735d3c9e7a1ae0f3445ad6103fe057c",
+      "bytes": 61512,
+      "preimage": null,
+      "relativeFile": "parity-42a4-outage-jobs-44434982410-20261119.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-outage-jobs-44434982606-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f24d4b060c11112bf63e430d3479f75e2bf385c",
+      "sha256": "a2e10a9cc23068e3cc7936257e51258eb9022bc981af2c5a6b8ab752e3fb5da5",
+      "bytes": 555946,
+      "preimage": null,
+      "relativeFile": "parity-42a4-outage-jobs-44434982606-20261119.json"
+    }
+  ],
+  "unchangedProductionSize": {
+    "basis": "Compared all5162 previously counted production paths/blobs against exact42a4 base; both candidate source paths are excluded tests and all production leaves remain identical",
+    "publishedProof": "8f215f414a4b4d67fa8bddec78d4ea6d5ad8d663",
+    "productionFiles": 5162,
+    "legacyCaps": 141,
+    "newLimit": 800,
+    "originalViolations": 0,
+    "newGuardRunClaimed": false
+  },
+  "limits": [
+    "All original Host five-platform compile failures and Teams compile failures remain failed; their blocked runtime steps remain unentered.",
+    "Solo type verification uses exact source excerpts with actual Node declarations; not a fullfile/project typecheck.",
+    "Prepared pure type/schema/runtime inputs were reused; no local app/native/build/install, real Claude/Codex or fresh full build.",
+    "Original42a4 WindowsARM native manual/auto and custody passes retain exact platform/source qualification and do not replace Desktop/vendor/release gates.",
+    "Root must obtain fresh current-useful-job/ref/PR/base gates before each commit and immediate expected-head nonforce push.",
+    "All earlier retired endpoints stay retired; current workflow observation remains attempt1 pull_request only.",
+    "No merge, Ready, release, default activation, Stage2, rerun, cancel, dispatch or external message.",
+    "P09 writer/path/consumed-byte contract remains unselected."
+  ],
+  "recovery": {
+    "record": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-executor-outage-recovery-20261119.json",
+    "recordSha": "343b31fba16ab3515553b073291ac31ab926b5d5",
+    "frozenSourceTree": "a7c092df216f79504d93d2be94cc3e92bb4bba0a",
+    "independentFrozenSourceReview": "5f267813046b375d12b615c7eafbf5fbeb98b483",
+    "sourceChangesBeyondFrozenTypeOnlyTree": 0,
+    "environment": "unavailable",
+    "otherLocalCandidatesIncluded": false,
+    "original42Ui": [
+      {
+        "jobId": 135261468308,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-teams-windows-compile-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468308-original-20261119.log"
+      },
+      {
+        "jobId": 135261468613,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468613-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468613-original-20261119.log"
+      },
+      {
+        "jobId": 135261468624,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-teams-ubuntu-compile-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261468624-original-20261119.log"
+      },
+      {
+        "jobId": 135261470422,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-frontend-shard2-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470422-original-20261119.log"
+      },
+      {
+        "jobId": 135261470570,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470570-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470570-original-20261119.log"
+      },
+      {
+        "jobId": 135261470581,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470581-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470581-original-20261119.log"
+      },
+      {
+        "jobId": 135261470745,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470745-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470745-original-20261119.log"
+      },
+      {
+        "jobId": 135261470831,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470831-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470831-original-20261119.log"
+      },
+      {
+        "jobId": 135261470836,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470836-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470836-original-20261119.log"
+      },
+      {
+        "jobId": 135261470873,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470873-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470873-original-20261119.log"
+      },
+      {
+        "jobId": 135261470882,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470882-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470882-original-20261119.log"
+      },
+      {
+        "jobId": 135261470887,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470887-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470887-original-20261119.log"
+      },
+      {
+        "jobId": 135261470910,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-installer-ui-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470910-original-20261119.log"
+      },
+      {
+        "jobId": 135261470918,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470918-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470918-original-20261119.log"
+      },
+      {
+        "jobId": 135261470937,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470937-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470937-original-20261119.log"
+      },
+      {
+        "jobId": 135261470952,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470952-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470952-original-20261119.log"
+      },
+      {
+        "jobId": 135261470953,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470953-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470953-original-20261119.log"
+      },
+      {
+        "jobId": 135261470979,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470979-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470979-original-20261119.log"
+      },
+      {
+        "jobId": 135261470984,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470984-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261470984-original-20261119.log"
+      },
+      {
+        "jobId": 135261471007,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471007-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471007-original-20261119.log"
+      },
+      {
+        "jobId": 135261471038,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471038-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471038-original-20261119.log"
+      },
+      {
+        "jobId": 135261471040,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471040-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471040-original-20261119.log"
+      },
+      {
+        "jobId": 135261471063,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471063-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471063-original-20261119.log"
+      },
+      {
+        "jobId": 135261471070,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471070-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471070-original-20261119.log"
+      },
+      {
+        "jobId": 135261471094,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471094-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471094-original-20261119.log"
+      },
+      {
+        "jobId": 135261471102,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471102-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471102-original-20261119.log"
+      },
+      {
+        "jobId": 135261471115,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471115-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471115-original-20261119.log"
+      },
+      {
+        "jobId": 135261471120,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471120-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471120-original-20261119.log"
+      },
+      {
+        "jobId": 135261471138,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-finite-codex-ui-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471138-original-20261119.log"
+      },
+      {
+        "jobId": 135261471191,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471191-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471191-original-20261119.log"
+      },
+      {
+        "jobId": 135261471212,
+        "conclusion": "success",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471212-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471212-original-20261119.log"
+      },
+      {
+        "jobId": 135261471246,
+        "conclusion": "failure",
+        "compact": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471246-20261119.json",
+        "rawLog": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-42a4-ui-job-135261471246-original-20261119.log"
+      }
+    ],
+    "qualification": "No new full/native/E2E acceptance is claimed; all new files are documentation or already captured original evidence."
+  }
+}

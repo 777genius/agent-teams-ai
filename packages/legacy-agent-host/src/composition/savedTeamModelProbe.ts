@@ -35,16 +35,25 @@ type Options = {
 };
 
 /** Model-only compilation of saved choices; retained history requires its original offline proof. */
-function source(options: Options) {
-  options.assertCurrent();
+function source(options: Options, precedingAuthority?: 'read' | 'control') {
   const { profile, team } = options;
-  const authority = team.owner.withLaunchAuthority(
-    profile.principalId,
-    'read',
-    (revision) => revision
-  );
+  const readAuthority = (inheritedNamespace?: true) => {
+    options.assertCurrent();
+    return team.owner.withLaunchAuthority(
+      profile.principalId,
+      'read',
+      (authority) => ({ authority,
+        hasCaptures: team.owner.runtimeCaptures(profile.principalId, true).length > 0 }),
+      inheritedNamespace
+    );
+  };
+  // A currentness check's adjacent control/read observation shares only this
+  // synchronous Team fence. Keep both authority reads and namespace boundaries;
+  // Runtime history, roster and source/recipe work start after its release.
+  const { authority, hasCaptures } = precedingAuthority === undefined ? readAuthority()
+    : team.owner.withLaunchAuthority(profile.principalId, precedingAuthority, () => readAuthority(true));
   if (
-    team.owner.runtimeCaptures(profile.principalId).length ||
+    hasCaptures ||
     team.definition.members.some((member) => member.delivery)
   ) {
     if (!options.assertRuntimeHistory) throw new TeamLaunchError('hold', 'saved-model-runtime-history');
@@ -150,13 +159,9 @@ export function captureSavedTeamModelProbe(
   const effective = applyTeamModelProbeSelection(selected, input);
   const current = () => {
     try {
-      team.owner.withLaunchAuthority(
-        profile.principalId,
-        action === 'start' ? 'control' : 'read',
-        () => undefined
-      );
       return (
-        source(options).sourceId === saved.sourceId && runtimeDigest(recipe()) === selectionDigest
+        source(options, action === 'start' ? 'control' : 'read').sourceId === saved.sourceId &&
+        runtimeDigest(recipe()) === selectionDigest
       );
     } catch {
       return false;

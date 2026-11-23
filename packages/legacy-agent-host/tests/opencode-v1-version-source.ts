@@ -33,6 +33,10 @@ const inputs = [
   'packages/task-change-ledger/src',
   'packages/task-change-ledger/package.json',
   'packages/task-change-ledger/tsconfig.json',
+  // ControllerAdapter loads the original controller's filesystem lock directly.
+  'agent-teams-controller/src',
+  'agent-teams-controller/package.json',
+  'agent-teams-controller/scripts/build.mjs',
   'vendor/provider-migration',
   'scripts/legacy-agent-host',
   'scripts/stage-runtime.mjs',

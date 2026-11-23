@@ -89,6 +89,9 @@ export interface TeamOwnerOptions {
   crossTeamSourceAuthority?(intent: CapturedCrossTeamIntent): boolean;
 }
 
+/** Internal synchronous continuation; the existing Team owner retains its original fence. */
+export type CapturedProviderCurrent = (owner: TeamOwner, binding: RuntimeMemberBinding) => void;
+
 /**
  * One Team's product owner. All local transitions are synchronous within the same
  * filesystem authority fence. Native delivery is deliberately not dispatched here.
@@ -262,7 +265,9 @@ export class TeamOwner {
   runtimeCapture(principalId: string) {
     return this.runtimeRegistration.current(principalId);
   }
-  runtimeCaptures(principalId: string) {
+  runtimeCaptures(principalId: string, inheritedNamespace?: true) {
+    // A joined original read retains both inventory namespace observations.
+    if (inheritedNamespace) return this.store.fenced(() => this.runtimeRegistration.all(principalId));
     return this.runtimeRegistration.all(principalId);
   }
   hasRuntimeCapture(principalId: string, binding: RuntimeMemberBinding): boolean {
@@ -277,16 +282,20 @@ export class TeamOwner {
     return this.roster.matchesCaptured(members, savedSettings);
   }
 
-  /** Closed trusted provider check; no callback, retained state or Runtime lookup escapes. */
+  /** Trusted provider check; an optional closed same-Team guard cannot retain state or do Runtime work. */
   capturedProviderAuthority(principalId: string, binding: RuntimeMemberBinding, expectedRevision: string,
     expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'> | undefined,
-    savedSettings?: TeamSavedSettings): 'current' | 'roster-not-applicable' {
+    savedSettings?: TeamSavedSettings, onCurrent?: CapturedProviderCurrent): 'current' | 'roster-not-applicable' {
     return this.store.fenced(() => {
       const state = this.state(), grant = authorizeTeamGrant(state, this.store, principalId, 'read');
       if (!this.deliveryAuthority.providerAuthorized(state, grant, binding)) throw new TeamOwnerError('forbidden');
       const current = this.roster.capturedMemberCurrentInState(state, expectedRevision, expected, savedSettings);
       // Recovery and policy reads precede this original nested namespace revalidation.
-      return this.store.fenced(() => current ? 'current' : 'roster-not-applicable');
+      return this.store.fenced(() => {
+        if (!current) return 'roster-not-applicable';
+        if (onCurrent?.(this, binding) !== undefined) throw new TeamOwnerError('hold');
+        return 'current';
+      });
     });
   }
 
@@ -393,11 +402,16 @@ export class TeamOwner {
   withLaunchAuthority<T>(
     principalId: string,
     action: 'read' | 'control',
-    callback: (authorityRevision: number) => T
+    callback: (authorityRevision: number) => T,
+    inheritedNamespace?: true
   ): T {
     return this.store.fenced(() => {
-      const grant = this.authorize(principalId, action === 'read' ? 'read' : 'admin');
-      return callback(grant.revision ?? 1);
+      const read = () => {
+        const grant = this.authorize(principalId, action === 'read' ? 'read' : 'admin');
+        return callback(grant.revision ?? 1);
+      };
+      // A joined original fence still observes both original entry namespace boundaries.
+      return inheritedNamespace ? this.store.fenced(read) : read();
     });
   }
 

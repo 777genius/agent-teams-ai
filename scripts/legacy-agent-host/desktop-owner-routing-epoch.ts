@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { ChildProcess, execFileSync } from 'node:child_process';
 
 import {
   groupMembers,
@@ -12,9 +12,69 @@ import {
 import { bounded } from './desktop-proof-bounds.ts';
 import { requestObservedDesktopClose } from './startup-passive-observer.ts';
 
-import type { ChildProcess } from 'node:child_process';
 import type { DesktopCdpPort } from './desktop-captured-app.ts';
 import type { OwnerRoutingRow } from './desktop-owner-routing-fixture.ts';
+
+/** A refused invocation is never signal authority; only original exit and absence may settle it. */
+async function observeOriginalEpochNaturalExit(input: {
+  app: ChildProcess;
+  group: number;
+  initialMembers: ReturnType<typeof groupMembers>;
+  hosts: readonly { pid: number }[];
+  expectedIdentity: string;
+  observedIdentity: string;
+  deadline: number;
+}) {
+  const initialMemberCount = input.initialMembers.length, hostCount = input.hosts.length;
+  const initialMembers = initialMemberCount <= 256
+    ? input.initialMembers.map((member) => ({ ...member })) : [];
+  const hostPids = hostCount <= 256 ? input.hosts.map((host) => host.pid) : [];
+  const originalPids = new Set(initialMembers.map((member) => member.pid));
+  const leader = initialMembers.find((member) => member.pid === input.group);
+  const identity = /^([A-Za-z]{3} [A-Za-z]{3} [ \d]\d \d{2}:\d{2}:\d{2} \d{4})\s+(.+)$/;
+  const expected = identity.exec(input.expectedIdentity), observed = identity.exec(input.observedIdentity);
+  let remaining: ReturnType<typeof groupMembers> | null = null;
+  let originalPidsAbsent: boolean | null = null, hostsAbsent: boolean | null = null;
+  const result = (settled: boolean, reason: string) => ({
+    settled, reason, initialMemberCount, initialMembers, hostCount, hostPids,
+    remaining: remaining?.slice(0, 256) ?? null, remainingCount: remaining?.length ?? null,
+    originalPidsAbsent, hostsAbsent, appExitCode: input.app.exitCode, appSignalCode: input.app.signalCode,
+    signalAuthority: false,
+  });
+  if (
+    (process.platform !== 'darwin' && process.platform !== 'linux') ||
+    !(input.app instanceof ChildProcess) ||
+    !Number.isSafeInteger(input.group) || input.group <= 0 || input.app.pid !== input.group ||
+    !Number.isFinite(input.deadline) || !expected || !observed || expected[1] !== observed[1] ||
+    !/(?:^|\/)node\s+/.test(expected[2]!) || !/(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!) ||
+    initialMemberCount === 0 || initialMemberCount > 256 || originalPids.size !== initialMemberCount ||
+    initialMembers.some((member) => !Number.isSafeInteger(member.pid) || member.pid <= 0 || member.pgid !== input.group) ||
+    leader?.ppid !== process.pid || leader.pgid !== input.group ||
+    hostCount === 0 || hostCount > 256 || new Set(hostPids).size !== hostCount ||
+    hostPids.some((pid) => !Number.isSafeInteger(pid) || pid <= 0 || pid === input.group)
+  ) return result(false, 'ineligible-original-epoch-exit-observation');
+
+  // The observed argv stays refused. This read-only path does not classify a display alias as owned.
+  while (Date.now() < input.deadline) {
+    if (input.app.pid !== input.group || input.app.signalCode !== null ||
+        (input.app.exitCode !== null && input.app.exitCode !== 0))
+      return result(false, 'original-child-exit-not-natural-zero');
+    const table = processTable();
+    remaining = table.filter((member) => member.pgid === input.group);
+    originalPidsAbsent = initialMembers.every((original) => !table.some((member) => member.pid === original.pid));
+    hostsAbsent = hostPids.every((pid) => !table.some((member) => member.pid === pid));
+    if (Date.now() >= input.deadline) break;
+    if (input.app.pid !== input.group || input.app.signalCode !== null ||
+        (input.app.exitCode !== null && input.app.exitCode !== 0))
+      return result(false, 'original-child-exit-not-natural-zero');
+    if (input.app.exitCode === 0 && remaining.length === 0 && originalPidsAbsent && hostsAbsent)
+      return result(true, 'original-natural-exit-and-fresh-absence');
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, Math.min(100, Math.max(0, input.deadline - Date.now())))
+    );
+  }
+  return result(false, 'original-observation-deadline');
+}
 
 /** Only this owner-proof epoch: the ordinary harness identity/signal rules remain unchanged. */
 export async function finishDesktopOwnerRoutingEpoch(options: {
@@ -31,6 +91,7 @@ export async function finishDesktopOwnerRoutingEpoch(options: {
   let remaining: ReturnType<typeof groupMembers> | null = null;
   let hostsAbsent: boolean | null = null;
   let signalAttempted = false;
+  let naturalExit: Awaited<ReturnType<typeof observeOriginalEpochNaturalExit>> | undefined;
   const pause = () => new Promise<void>((done) => setTimeout(done, 100));
   try {
     if (cdp) {
@@ -100,25 +161,56 @@ export async function finishDesktopOwnerRoutingEpoch(options: {
             epoch.originalZombieGuard = { group, state, status: 'verified-original-zombie' };
           }
         }
-        assert.ok(
-          observedIdentity === appIdentity || originalZombie,
-          'original epoch invocation identity remains current'
-        );
-        signalAttempted = true;
-        try {
-          process.kill(-group, 'SIGTERM');
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+        if (observedIdentity !== appIdentity && !originalZombie) {
+          naturalExit = await observeOriginalEpochNaturalExit({
+            app, group, initialMembers: remaining, hosts,
+            expectedIdentity: appIdentity, observedIdentity, deadline: observationDeadline,
+          });
+          epoch.originalNaturalExit = naturalExit;
+          if (naturalExit.settled) remaining = naturalExit.remaining!;
         }
-        const deadline = Date.now() + 30_000;
-        while (Date.now() < deadline && (remaining = groupMembers(group)).length) await pause();
+        if (remaining.length) {
+          assert.ok(
+            observedIdentity === appIdentity || originalZombie,
+            'original epoch invocation identity remains current'
+          );
+          signalAttempted = true;
+          try {
+            process.kill(-group, 'SIGTERM');
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+          }
+          const deadline = Date.now() + 30_000;
+          while (Date.now() < deadline && (remaining = groupMembers(group)).length) await pause();
+        }
       }
     }
+    if (naturalExit?.settled)
+      assert.ok(Date.now() < observationDeadline, 'original natural-exit deadline before final census');
     const finalTable = processTable();
     hostsAbsent = hosts.every((host) => !finalTable.some((entry) => entry.pid === host.pid));
+    if (naturalExit?.settled) {
+      remaining = finalTable.filter((entry) => entry.pgid === group);
+      const originalPidsAbsent = naturalExit.initialMembers.every((original) =>
+        !finalTable.some((entry) => entry.pid === original.pid));
+      const originalHostsAbsent = naturalExit.hostPids.every((pid) =>
+        !finalTable.some((entry) => entry.pid === pid));
+      epoch.originalNaturalExitFinal = {
+        originalPidsAbsent, originalHostsAbsent, remainingCount: remaining.length,
+        appExitCode: app.exitCode, appSignalCode: app.signalCode,
+      };
+      assert.ok(app.pid === group && app.exitCode === 0 && app.signalCode === null,
+        'original retained child still exited naturally before the next epoch');
+      assert.equal(originalPidsAbsent, true, 'every original epoch PID remains absent in the final census');
+      assert.equal(originalHostsAbsent, true, 'every original owner Host remains absent in the final census');
+    }
     assert.deepEqual(remaining, [], 'no next configuration while the captured epoch group remains');
     assert.equal(hostsAbsent, true, 'every captured owner Host is absent before the next epoch');
+    if (naturalExit?.settled)
+      assert.ok(Date.now() < observationDeadline, 'original natural-exit deadline after final census');
     assert.equal(await portOccupied(), false);
+    if (naturalExit?.settled)
+      assert.ok(Date.now() < observationDeadline, 'original natural-exit deadline after port qualification');
   } catch (error) {
     epoch.cleanupFailure =
       error instanceof Error ? error.message.slice(0, 4000) : 'epoch cleanup unavailable';

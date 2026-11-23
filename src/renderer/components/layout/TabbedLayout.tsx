@@ -24,7 +24,7 @@ import {
   TaskDetailEditorRouteFeedback,
   TaskDetailReadCoordinator,
   TaskDetailReviewRouteFeedback,
-} from '@features/team-task-detail/renderer';
+} from '@features/team-task-detail/renderer/shell';
 import { isElectronMode } from '@renderer/api';
 import { getTrafficLightPaddingForZoom } from '@renderer/constants/layout';
 import { useFullScreen } from '@renderer/hooks/useFullScreen';

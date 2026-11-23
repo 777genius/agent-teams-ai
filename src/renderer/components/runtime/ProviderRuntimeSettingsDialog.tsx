@@ -19,6 +19,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { NativeNextPromptProviderSetting } from '@features/native-prompt-suggestions/renderer';
 import { RuntimeProviderManagementPanel } from '@features/runtime-provider-management/renderer';
 import { api } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
@@ -2468,6 +2469,7 @@ export const ProviderRuntimeSettingsDialog = ({
                     </div>
                   </div>
                 ) : null}
+                <NativeNextPromptProviderSetting providerId={selectedProvider.providerId} disabled={connectionBusy} />
 
                 {selectedProvider.providerId === 'codex' ? (
                   <div

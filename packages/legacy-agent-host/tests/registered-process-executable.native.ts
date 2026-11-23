@@ -253,6 +253,8 @@ type PosixExecObservation = {
   originalReaped: boolean;
   originalGroupAbsent: boolean;
   cleanup: boolean;
+  mappingOpened: boolean;
+  mappingReleased: boolean;
 };
 
 function readPosixExecObservation(bytes: string): PosixExecObservation {
@@ -261,7 +263,8 @@ function readPosixExecObservation(bytes: string): PosixExecObservation {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   const row = value as Record<string, unknown>;
   const booleans = ['stoppedBeforeUser', 'payloadMarkersAbsentBeforeGate', 'kernelImageObserved',
-    'imageMatched', 'resumed', 'originalReaped', 'originalGroupAbsent', 'cleanup'];
+    'imageMatched', 'resumed', 'originalReaped', 'originalGroupAbsent', 'cleanup',
+    'mappingOpened', 'mappingReleased'];
   const numbers = ['errno', 'execErrno', 'mutationAfterCheckErrno', 'codeSigningFlags',
     'originalPid', 'exitCode', 'exitSignal'];
   const identities = ['originalBirth', 'originalDev', 'originalIno', 'kernelDev', 'kernelIno'];
@@ -315,12 +318,30 @@ function runPosixExecActor(file: string, args: string[], options: {
   });
 }
 
-test('POSIX original-path pre-user image gate keeps explicit mutation counterexamples', {
+async function readPosixOutput(path: string): Promise<string> {
+  try { assert.ok((await lstat(path)).size <= 8192); return await readFile(path, 'utf8'); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''; throw error; }
+}
+
+function assertPosixOutput(text: string, selected: string, directory: string, script: boolean, tag: string): void {
+  const pairs = text.trim().split('\n').filter(Boolean).map(line => {
+    const at = line.indexOf('='); assert.ok(at > 0); return [line.slice(0, at), line.slice(at + 1)];
+  });
+  assert.equal(new Set(pairs.map(pair => pair[0])).size, pairs.length);
+  assert.deepEqual(Object.fromEntries(pairs), {
+    tag, argv0: selected, arg1: '--version', arg2: 'TEST argument with spaces',
+    env: 'TEST_EXACT_ENV', cwd: directory, asset: 'TEST_SIBLING_ASSET',
+    ...(!script ? { shared: '17', ...(process.platform === 'linux' ? { execfn: selected } : {}) } : {}),
+  });
+}
+
+test('POSIX original-path trusted-writer contract A preserves legacy mutation verdicts', {
   timeout: 120_000,
   skip: process.env.OPENCODE_V2_POSIX_EXEC_GO !== '1',
 }, async t => {
   assert.ok(process.platform === 'linux' || process.platform === 'darwin');
   assert.equal(process.version, 'v24.21.0');
+  assert.ok(!candidateBuild, 'this original product-path lane admits no module mock');
   const repo = join(import.meta.dirname, '../../..');
   const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
   assertNativeV1Source(repo, sourceHead);
@@ -341,6 +362,11 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
   const toolsBefore = { compiler: await digest(compiler), hashTool: await digest(hashTool),
     node: await digest(process.execPath) };
   const observations: Record<string, unknown>[] = [];
+  const productObservations: Record<string, unknown>[] = [];
+  const trustedWriter: Record<string, unknown> = {
+    precondition: 'All source writers preserve the copied path/digest revision through cleanup of all consuming scopes; no writer exclusion is claimed.',
+    productPath: 'CapturedProcess', observations: productObservations,
+  };
   const evidence: Record<string, unknown> = {
     kind: 'TEST_POSIX_PRE_USER_EXEC_IMAGE', sourceHead, sourceSha256,
     platform: process.platform, arch: process.arch, nodeVersion: process.version,
@@ -350,9 +376,14 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
     tools: toolsBefore, observations, productQualified: false, installedRuntimeQualified: false,
     customExecutableQualified: false, scriptQualified: false,
   };
-  let failure: unknown, cleanup = true, nativeQualified = true;
+  let failure: unknown, legacyFailure: unknown, cleanup = true, nativeQualified = true, trustedWriterComplete = false;
   try {
     await mkdir(env.HOME, { mode: 0o700 });
+    remaining();
+    const hostBuild = await buildNativeV1Host(repo, sourceHead);
+    remaining();
+    trustedWriter.hostBuild = hostBuild;
+    const { CapturedProcess } = await import('../dist/adapters/providers/CapturedProcess.js');
     const controller = join(root, 'controller');
     const compile = (args: string[]) => execFileSync(compiler, args, {
       cwd: root, env, timeout: Math.min(15_000, remaining()), maxBuffer: 64 * 1024,
@@ -405,25 +436,31 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
       `printf 'cwd='; pwd\nprintf 'asset=%s\\n' "$asset"\n`;
     const cases = [
       ...variants.flatMap(variant => variant.modes.map(mode => ({ variant, mode, script: false }))),
-      ...['plain', 'script-negative'].map(mode => ({ variant: variants[0]!, mode, script: true })),
+      ...['plain', 'script-negative', ...(process.platform === 'darwin' ? ['script-mmap-negative'] : [])]
+        .map(mode => ({ variant: variants[0]!, mode, script: true })),
     ];
-    for (const item of cases) {
-      const label = `${item.script ? 'script' : item.variant.name}:${item.mode}`;
-      const directory = join(root, `case-${observations.length}`);
+    const prepareCase = async (directory: string, variantDirectory: string, isScript: boolean) => {
       await mkdir(directory, { mode: 0o700 });
       const selected = join(directory, 'selected'), replacement = join(directory, 'replacement');
       const marker = join(directory, 'markers'), output = join(directory, 'output');
       await writeFile(join(directory, 'payload-root.txt'), 'TEST_SIBLING_ASSET\n', { flag: 'wx', mode: 0o600 });
-      if (item.script) {
+      if (isScript) {
         await writeFile(selected, script('A'), { flag: 'wx', mode: 0o700 });
         await writeFile(replacement, script('B'), { flag: 'wx', mode: 0o700 });
       } else {
-        await copyFile(join(item.variant.directory, 'A'), selected);
-        await copyFile(join(item.variant.directory, 'B'), replacement);
-        await copyFile(join(item.variant.directory, libraryName), join(directory, libraryName));
+        await copyFile(join(variantDirectory, 'A'), selected);
+        await copyFile(join(variantDirectory, 'B'), replacement);
+        await copyFile(join(variantDirectory, libraryName), join(directory, libraryName));
         await chmod(selected, 0o700); await chmod(replacement, 0o700);
       }
       const expected = await digest(selected), replacementHash = await digest(replacement);
+      return { selected, replacement, marker, output, expected, replacementHash };
+    };
+    for (const item of cases) {
+      const label = `${item.script ? 'script' : item.variant.name}:${item.mode}`;
+      const directory = join(root, `case-${observations.length}`);
+      const { selected, replacement, marker, output, expected, replacementHash } =
+        await prepareCase(directory, item.variant.directory, item.script);
       let result: Awaited<ReturnType<typeof runPosixExecActor>>, fact: PosixExecObservation;
       try {
         result = await runPosixExecActor(controller,
@@ -432,32 +469,42 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
         fact = readPosixExecObservation(result.stdout);
       } catch (error) { cleanup = false; throw error; }
       cleanup = cleanup && fact.cleanup;
-      const readOutput = async (path: string) => {
-        try { assert.ok((await lstat(path)).size <= 8192); return await readFile(path, 'utf8'); }
-        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''; throw error; }
-      };
-      const markers = await readOutput(marker), text = await readOutput(output);
+      const markers = await readPosixOutput(marker), text = await readPosixOutput(output);
       const markerLines = markers.trim().split('\n').filter(Boolean);
       assert.ok(markerLines.length <= 8 && markerLines.every(line =>
         ['LIB', 'BIN:A', 'BIN:B', 'MAIN:A', 'MAIN:B', 'SCRIPT:A', 'SCRIPT:B'].includes(line)));
-      const observation = { label, expectedSha256: expected, replacementSha256: replacementHash,
+      const observation = { label, contractA: item.mode === 'plain' ? 'COMPATIBILITY_CONTROL'
+        : item.mode === 'baseline' ? 'LEGACY_IMAGE_PROOF_ONLY' : 'OUTSIDE_A',
+        expectedSha256: expected, replacementSha256: replacementHash,
         ...fact, markerLines,
         outputBytes: Buffer.byteLength(text), outputSha256: createHash('sha256').update(text).digest('hex'),
         controllerInterrupted: result.interrupted, result: 'INCOMPLETE' };
       observations.push(observation);
       assert.ok(fact.cleanup && result.code === 0 && result.signal === null && !result.interrupted,
         'original actor and all original selected children must complete cleanup');
-      const outputMatches = (tag: string) => {
-        const pairs = text.trim().split('\n').filter(Boolean).map(line => {
-          const at = line.indexOf('='); assert.ok(at > 0); return [line.slice(0, at), line.slice(at + 1)];
-        });
-        assert.equal(new Set(pairs.map(pair => pair[0])).size, pairs.length);
-        assert.deepEqual(Object.fromEntries(pairs), {
-          tag, argv0: selected, arg1: '--version', arg2: 'TEST argument with spaces',
-          env: 'TEST_EXACT_ENV', cwd: directory, asset: 'TEST_SIBLING_ASSET',
-          ...(!item.script ? { shared: '17', ...(process.platform === 'linux' ? { execfn: selected } : {}) } : {}),
-        });
-      };
+      assert.equal(fact.originalSha256, expected, 'collector must retain the selected source');
+      assert.ok(fact.originalPid > 1 && fact.originalReaped && fact.originalGroupAbsent);
+      assert.equal(fact.mappingOpened, item.mode === 'script-mmap-negative');
+      assert.equal(fact.mappingReleased, item.mode === 'script-mmap-negative');
+      const execDenied = process.platform === 'linux' && item.mode === 'writer-open'
+        && fact.stage === 'trace-exec' && fact.errno === constants.errno.ETXTBSY
+        && fact.execErrno === constants.errno.ETXTBSY;
+      // Only the old image-proof availability is separate from A. Collector,
+      // original birth/group identity, byte reads, resume and cleanup still gate A.
+      const imageProofUnavailable = process.platform === 'darwin' && item.variant.name === 'compiler-default'
+        && item.mode === 'baseline' && fact.stage === 'kernel-image-validity'
+        && fact.errno === constants.errno.EACCES && fact.codeSigningError === -67062; // errSecCSUnsigned
+      assert.ok(fact.errno === 0 || execDenied || imageProofUnavailable,
+        `original collector failed at ${fact.stage}: ${fact.errno}`);
+      if (item.mode !== 'plain' && !execDenied) {
+        assert.ok(fact.stoppedBeforeUser && fact.payloadMarkersAbsentBeforeGate && fact.originalBirth !== '0');
+      }
+      if (!execDenied && ['after-check', 'writer-open', 'script-negative', 'script-mmap-negative'].includes(item.mode)
+        && fact.mutationAfterCheckErrno !== -1) {
+        assert.ok(fact.mutationAfterCheckErrno === 0 || fact.mutationAfterCheckErrno === constants.errno.ETXTBSY,
+          'original mutation collector must complete or observe kernel write refusal');
+      }
+      const outputMatches = (tag: string) => assertPosixOutput(text, selected, directory, item.script, tag);
       try {
         assert.equal(fact.originalSha256, expected);
         if (item.mode === 'plain') {
@@ -503,8 +550,10 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
           }
         }
         observation.result = item.script && item.mode === 'script-negative' ? 'COUNTEREXAMPLE' : 'PASS';
+        if (item.mode === 'script-mmap-negative') observation.result = 'COUNTEREXAMPLE';
       } catch (error) {
-        failure ??= error;
+        legacyFailure ??= error;
+        if (item.mode === 'plain' || (item.mode === 'baseline' && !imageProofUnavailable)) failure ??= error;
         if (!item.script) nativeQualified = false;
         if (!item.script && (item.mode === 'after-check' || item.mode === 'writer-open')) {
           try {
@@ -526,19 +575,107 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
         // Retain every bounded original observation; a failed primitive never becomes a skipped PASS.
       }
     }
+    for (const isScript of [false, true]) {
+      for (const mode of ['original-profile', 'prelaunch-rename', 'prelaunch-inplace', 'prelaunch-currentness']) {
+        const label = `${isScript ? 'script' : 'compiler-default'}:${mode}`;
+        const directory = join(root, `product-${productObservations.length}`);
+        const { selected, replacement, marker, expected, replacementHash } =
+          await prepareCase(directory, defaults, isScript);
+        const row: Record<string, unknown> = { label, expectedSha256: expected,
+          replacementSha256: replacementHash, result: 'INCOMPLETE', cleanup: false };
+        productObservations.push(row);
+        const profile = { provider: 'opencode' as const, executable: { path: selected, sha256: expected },
+          cwd: directory, environment: { ...env, TEST_POSIX_MARKER: marker } };
+        let current = true;
+        const custody = new CapturedProcess(profile, () => current);
+        let outcome: string;
+        try {
+          const request = { command: selected, args: ['--version', 'TEST argument with spaces'], cwd: directory };
+          if (mode === 'original-profile') {
+            profile.executable.path = replacement; profile.executable.sha256 = replacementHash;
+            profile.cwd = root; profile.environment.TEST_POSIX_VALUE = 'TEST_CALLER_MUTATED_ENV';
+            profile.environment.TEST_POSIX_MARKER = join(directory, 'retargeted-markers');
+            assert.throws(() => custody.launch({ ...request, command: replacement }), /Native launch unavailable/);
+            assert.equal(custody.isRunning(), false); assert.equal(custody.observeStopped(), true);
+            const signal = AbortSignal.any([t.signal, AbortSignal.timeout(remaining())]);
+            const child = custody.launch({ ...request, signal });
+            assert.ok(child instanceof ChildProcess && child.pid !== undefined && child.pid > 1);
+            const completed = await new Promise<{ text: string; code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+              let text = '', stderr = '', bytes = 0;
+              const receive = (part: Buffer, isError: boolean) => {
+                bytes += part.length;
+                if (bytes > 8192) { reject(new Error('Original TEST product output exceeded bound')); return; }
+                if (isError) stderr += part.toString('utf8'); else text += part.toString('utf8');
+              };
+              child.stdout.on('data', (part: Buffer) => receive(part, false));
+              child.stderr.on('data', (part: Buffer) => receive(part, true));
+              child.once('error', reject);
+              child.once('close', (code, signal) => {
+                if (stderr) reject(new Error('Original TEST product wrote unexpected stderr'));
+                else resolve({ text, code, signal });
+              });
+              child.stdin.on('error', reject); child.stdin.end();
+            });
+            assert.equal(completed.code, 0); assert.equal(completed.signal, null);
+            assertPosixOutput(completed.text, selected, directory, isScript, 'A');
+            assert.equal(await readPosixOutput(marker), isScript ? 'SCRIPT:A\n' : 'LIB\nBIN:A\nMAIN:A\n');
+            assert.equal(await readPosixOutput(join(directory, 'retargeted-markers')), '');
+            Object.assign(row, { originalPid: child.pid, originalClosed: true, exitCode: completed.code,
+              outputBytes: Buffer.byteLength(completed.text),
+              outputSha256: createHash('sha256').update(completed.text).digest('hex'),
+              callerProfileMutation: 'copied-original-selection-retained' });
+            outcome = 'original-path-completed';
+          } else {
+            if (mode === 'prelaunch-rename') await rename(replacement, selected);
+            if (mode === 'prelaunch-inplace') {
+              const before = await lstat(selected);
+              await writeFile(selected, await readFile(replacement));
+              assert.equal((await lstat(selected)).ino, before.ino);
+            }
+            if (mode === 'prelaunch-currentness') current = false;
+            assert.throws(() => custody.launch(request), mode === 'prelaunch-currentness'
+              ? /Native launch unavailable/ : /Native executable (unavailable|changed)/);
+            assert.equal(custody.isRunning(), false); assert.equal(custody.observeStopped(), true);
+            assert.equal(await readPosixOutput(marker), '');
+            Object.assign(row, { isRunning: false, observeStopped: true,
+              sourceSha256After: await digest(selected), current });
+            // Public refusal observations; controlled tests separately count zero spawn calls.
+            outcome = 'prelaunch-refused';
+          }
+        } finally {
+          custody.seal();
+          let stopped = false;
+          try { stopped = await custody.confirmStopped(); }
+          finally { cleanup = cleanup && stopped; row.cleanup = stopped; }
+          assert.equal(stopped, true, 'original product scope must confirm cleanup');
+        }
+        if (mode === 'original-profile' || mode === 'prelaunch-currentness') assert.equal(await digest(selected), expected);
+        Object.assign(row, { outcome, result: 'PASS' });
+      }
+    }
+    assert.equal(productObservations.length, 8);
+    assert.ok(productObservations.every(row => row.result === 'PASS' && row.cleanup === true));
     assert.equal(await digest(source), sourceSha256);
     assert.deepEqual(await Promise.all(pins.map(digest)), pinHashes);
     assert.deepEqual({ compiler: await digest(compiler), hashTool: await digest(hashTool),
       node: await digest(process.execPath) }, toolsBefore);
-    assertNativeV1Source(repo, sourceHead);
+    await assertNativeV1Build(repo, sourceHead, hostBuild);
+    remaining();
+    trustedWriterComplete = true;
   } catch (error) { failure ??= error; }
   finally {
     if (cleanup) await rm(root, { recursive: true, force: true }).catch(error => { failure ??= error; cleanup = false; });
-    Object.assign(evidence, { cleanup, nativeFixtureQualified: nativeQualified && !failure,
-      status: !failure && cleanup ? 'PASS_NATIVE_FIXTURE_ONLY' : 'INCOMPLETE' });
+    Object.assign(evidence, { cleanup, nativeFixtureQualified: nativeQualified && !legacyFailure && !failure,
+      status: !legacyFailure && !failure && cleanup ? 'PASS_NATIVE_FIXTURE_ONLY' : 'INCOMPLETE' });
+    const trustedWriterFixtureQualified = trustedWriterComplete && !failure && cleanup;
+    const result = { kind: 'TEST_POSIX_ORIGINAL_PATH_CONTRACT_A', contractVersion: 1,
+      sourceHead, sourceSha256, platform: process.platform, arch: process.arch, nodeVersion: process.version,
+      legacyStrict: evidence, trustedWriter, trustedWriterFixtureQualified,
+      installedRuntimeQualified: false, releaseQualified: false, cleanup,
+      status: trustedWriterFixtureQualified ? 'PASS_TRUSTED_WRITER_FIXTURE_ONLY' : 'INCOMPLETE' };
     const receipt = process.env.OPENCODE_V2_POSIX_EXEC_RECEIPT;
     assert.ok(receipt, 'explicit TEST receipt path is required');
-    const serialized = JSON.stringify(evidence, null, 2) + '\n';
+    const serialized = JSON.stringify(result, null, 2) + '\n';
     assert.ok(Buffer.byteLength(serialized) <= 64 * 1024);
     await writeFile(receipt, serialized, { mode: 0o600, flag: 'wx' });
   }

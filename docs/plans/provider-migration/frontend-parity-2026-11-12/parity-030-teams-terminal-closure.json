@@ -1,0 +1,468 @@
+{
+  "schema": "original-current-head-teams-gui-terminal-closure-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826458,
+  "event": "pull_request",
+  "runAttempt": 1,
+  "run": {
+    "id": 44407826458,
+    "name": "Teams creation page Electron E2E",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "event": "pull_request",
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826458",
+    "created_at": "2026-11-18T22:03:43Z",
+    "updated_at": "2026-11-18T22:59:07Z",
+    "run_started_at": "2026-11-18T22:03:43Z"
+  },
+  "jobCensus": {
+    "total": 3,
+    "success": 3,
+    "failure": 0,
+    "cancelled": 0,
+    "running": 0,
+    "queued": 0
+  },
+  "jobs": [
+    {
+      "id": 135167669631,
+      "name": "Creation page (macos-latest)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826458,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T22:55:14Z",
+      "completed_at": "2026-11-18T22:59:07Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826458/job/135167669631",
+      "runner_name": "GitHub Actions 1000395290"
+    },
+    {
+      "id": 135167669943,
+      "name": "Creation page (ubuntu-latest)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826458,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T22:50:54Z",
+      "completed_at": "2026-11-18T22:55:58Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826458/job/135167669943",
+      "runner_name": "GitHub Actions 1000395271"
+    },
+    {
+      "id": 135167670062,
+      "name": "Creation page (windows-latest)",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_id": 44407826458,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-18T22:24:51Z",
+      "completed_at": "2026-11-18T22:33:59Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826458/job/135167670062",
+      "runner_name": "GitHub Actions 1000395136"
+    }
+  ],
+  "artifactInventory": {
+    "total_count": 3,
+    "artifacts": [
+      {
+        "id": 14478484215,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3ODQ4NDIxNQ==",
+        "name": "teams-create-page-macos-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "size_in_bytes": 2299914,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478484215",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478484215/zip",
+        "expired": false,
+        "digest": "sha256:4be9f30def6257d13e2ec8f9e6cce44c8ec829b129244c0e5c9271c5bf05935d",
+        "created_at": "2026-11-18T22:59:02Z",
+        "updated_at": "2026-11-18T22:59:02Z",
+        "expires_at": "2026-12-02T22:59:01Z",
+        "workflow_run": {
+          "id": 44407826458,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14478228973,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3ODIyODk3Mw==",
+        "name": "teams-create-page-ubuntu-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "size_in_bytes": 2903940,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478228973",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14478228973/zip",
+        "expired": false,
+        "digest": "sha256:7888b6f626dbe6fc17539b308256f2db125e66f406d306456bff0c76c6d5e738",
+        "created_at": "2026-11-18T22:55:55Z",
+        "updated_at": "2026-11-18T22:55:55Z",
+        "expires_at": "2026-12-02T22:55:53Z",
+        "workflow_run": {
+          "id": 44407826458,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      },
+      {
+        "id": 14476884996,
+        "node_id": "MDg6QXJ0aWZhY3QxNDQ3Njg4NDk5Ng==",
+        "name": "teams-create-page-windows-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "size_in_bytes": 1824252,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14476884996",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14476884996/zip",
+        "expired": false,
+        "digest": "sha256:ad84f29e6343a332750e594f90fe0e3fbed52c9d883b79a2da674c3d13053d2a",
+        "created_at": "2026-11-18T22:33:53Z",
+        "updated_at": "2026-11-18T22:33:53Z",
+        "expires_at": "2026-12-02T22:33:52Z",
+        "workflow_run": {
+          "id": 44407826458,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+        }
+      }
+    ]
+  },
+  "jobProofs": [
+    {
+      "jobId": 135167669631,
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167669631,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826458,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 23:00:37 UTC",
+        "bytes": 65917,
+        "sha256": "593f3bbda32c5c2cb89775463f4c60908339cca4796baf590628c81b756c76a8",
+        "computedGitBlobSha": "01f5f7ca60a371ccfb35cffc7d02dfdf2affd65e",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167669631-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "01f5f7ca60a371ccfb35cffc7d02dfdf2affd65e",
+        "exactReadback": true
+      },
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167669631-evidence.json",
+        "bytes": 4938,
+        "sha256": "0cd5ffc4706a821bc61b28641f906e9605478a2e88309b714e5877b278a74ade",
+        "computedGitBlobSha": "cea5b5ce5234693077a8207849008285f0401e3f",
+        "publishedBlobSha": "cea5b5ce5234693077a8207849008285f0401e3f",
+        "exactReadback": true
+      },
+      "originalSuccessJson": {
+        "success": true,
+        "scheduleUiEvidence": {
+          "scheduleLabel": "schedule-visual-e2e-5f1e8aaa",
+          "scheduleId": "63e92bb7-f642-496d-81b5-714dfc9970f7",
+          "createdAndDeleted": true
+        },
+        "zhTwMcpUiEvidence": {
+          "locale": "zh-TW",
+          "taskDetailUiEvidence": {
+            "taskId": "77",
+            "locale": "zh-TW",
+            "dialogOpenTabAction": "在獨立分頁中開啟",
+            "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+            "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+            "nativeTaskTabVisible": true
+          },
+          "strictAllowlistVisible": true,
+          "placeholder": "github, sentry",
+          "parsedServerNames": [
+            "github",
+            "sentry"
+          ],
+          "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+          "controlEditedThroughNativeCdp": true
+        },
+        "unique": "create-page-e2e-692a5e9d",
+        "retainedAcrossBack": true,
+        "retainedAcrossTabSwitch": true,
+        "manageProvidersNavigationRetainsDraft": true,
+        "retainedAcrossProcessRestart": true,
+        "advancedCliRetainedAcrossRename": true,
+        "teammateModeOverridePersistedThroughNativeUi": true,
+        "teammateModeOverrideValidatedThroughNativeUi": true,
+        "missingRequiredCliValueRejectedThroughNativeUi": true,
+        "advancedCliRetainedAcrossPaneSplit": true,
+        "advancedCliRetainedAcrossBackRemount": true,
+        "advancedCliRestoresUneditedDefaults": true,
+        "unnamedAdvancedCliEditsRetained": true,
+        "launchStillModal": true,
+        "launchContentLoaded": true,
+        "configOnlyCreatedThroughUi": true,
+        "nativeConfigOnlyRejectionKeepsDraft": true,
+        "copiedTeamUsesSharedEditor": true,
+        "copiedDraftDoesNotReplaySeed": true,
+        "templateReplacementCancelledAndConfirmed": true,
+        "organizationPlacementPersistedViaNativeApi": true,
+        "duplicateNameValidationRecovered": true,
+        "themeDarkLightRendered": true,
+        "cssZoom200Rendered": true,
+        "nativeElectronZoom200Rendered": true,
+        "splitPaneSingleEditor": true,
+        "macInputSelectionFallbackCount": 0,
+        "sandboxRoot": "/private/var/folders/q2/p1t6rgxj5fj32g1dc7dmd49r0000gn/T/teams-create-page-e2e-YRhz1X",
+        "cleanup": {
+          "processGroupAbsent": true,
+          "windowsTaskkillExitedZero": null,
+          "windowsExactOwnedProcessesAbsent": null,
+          "windowsTeardowns": null,
+          "temporaryProfileRemoved": true
+        }
+      }
+    },
+    {
+      "jobId": 135167669943,
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167669943,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826458,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 22:57:38 UTC",
+        "bytes": 70630,
+        "sha256": "33e92bd9f7e94d9b7312ddc2cb5c2bca5d6605908a5284352bb51706cace868b",
+        "computedGitBlobSha": "a9f14bf9209b20aede2571c794e8c2169c263514",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167669943-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "a9f14bf9209b20aede2571c794e8c2169c263514",
+        "exactReadback": true
+      },
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167669943-evidence.json",
+        "bytes": 5129,
+        "sha256": "c6dd53c0d652db08053e86baf7f44a3d623cb83ebe41b8672f25339f9b4fbdac",
+        "computedGitBlobSha": "bbcd92705e99d3988d963537ef6fe6ab4ed68e93",
+        "publishedBlobSha": "bbcd92705e99d3988d963537ef6fe6ab4ed68e93",
+        "exactReadback": true
+      },
+      "originalSuccessJson": {
+        "success": true,
+        "scheduleUiEvidence": {
+          "scheduleLabel": "schedule-visual-e2e-15bdb8a2",
+          "scheduleId": "88e4c5e4-34db-4a36-86bf-8e158f7193a1",
+          "createdAndDeleted": true
+        },
+        "zhTwMcpUiEvidence": {
+          "locale": "zh-TW",
+          "taskDetailUiEvidence": {
+            "taskId": "77",
+            "locale": "zh-TW",
+            "dialogOpenTabAction": "在獨立分頁中開啟",
+            "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+            "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+            "nativeTaskTabVisible": true
+          },
+          "strictAllowlistVisible": true,
+          "placeholder": "github, sentry",
+          "parsedServerNames": [
+            "github",
+            "sentry"
+          ],
+          "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+          "controlEditedThroughNativeCdp": true
+        },
+        "unique": "create-page-e2e-049d3e90",
+        "retainedAcrossBack": true,
+        "retainedAcrossTabSwitch": true,
+        "manageProvidersNavigationRetainsDraft": true,
+        "retainedAcrossProcessRestart": true,
+        "advancedCliRetainedAcrossRename": true,
+        "teammateModeOverridePersistedThroughNativeUi": true,
+        "teammateModeOverrideValidatedThroughNativeUi": true,
+        "missingRequiredCliValueRejectedThroughNativeUi": true,
+        "advancedCliRetainedAcrossPaneSplit": true,
+        "advancedCliRetainedAcrossBackRemount": true,
+        "advancedCliRestoresUneditedDefaults": true,
+        "unnamedAdvancedCliEditsRetained": true,
+        "launchStillModal": true,
+        "launchContentLoaded": true,
+        "configOnlyCreatedThroughUi": true,
+        "nativeConfigOnlyRejectionKeepsDraft": true,
+        "copiedTeamUsesSharedEditor": true,
+        "copiedDraftDoesNotReplaySeed": true,
+        "templateReplacementCancelledAndConfirmed": true,
+        "organizationPlacementPersistedViaNativeApi": true,
+        "duplicateNameValidationRecovered": true,
+        "themeDarkLightRendered": true,
+        "cssZoom200Rendered": true,
+        "nativeElectronZoom200Rendered": true,
+        "splitPaneSingleEditor": true,
+        "macInputSelectionFallbackCount": 0,
+        "sandboxRoot": "/tmp/teams-create-page-e2e-edfB8D",
+        "cleanup": {
+          "processGroupAbsent": true,
+          "windowsTaskkillExitedZero": null,
+          "windowsExactOwnedProcessesAbsent": null,
+          "windowsTeardowns": null,
+          "temporaryProfileRemoved": true
+        }
+      }
+    },
+    {
+      "jobId": 135167670062,
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135167670062,
+        "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "runId": 44407826458,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-18 22:36:01 UTC",
+        "bytes": 100602,
+        "sha256": "ab0662e20c33c4d16f6ddb908d1cf82cc82c809f284098fedc8076e2a93aeb3a",
+        "computedGitBlobSha": "2851491238040ab77c911a117df6f5cfa846765b",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167670062-terminal.log",
+        "endpointRetired": true,
+        "publishedBlobSha": "2851491238040ab77c911a117df6f5cfa846765b",
+        "exactReadback": true
+      },
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167670062-evidence.json",
+        "bytes": 5817,
+        "sha256": "dc92270dc6a24cdc69150eea7e2432644498c81f0480d3b2764e4ac1b2718b21",
+        "computedGitBlobSha": "916f0f2b86ed93c5da53208423d79fe46b403da6",
+        "publishedBlobSha": "916f0f2b86ed93c5da53208423d79fe46b403da6",
+        "exactReadback": true
+      },
+      "originalSuccessJson": {
+        "success": true,
+        "scheduleUiEvidence": {
+          "scheduleLabel": "schedule-visual-e2e-0e0ed913",
+          "scheduleId": "ee8c9b88-7f0a-4abe-8f6b-f93e75943081",
+          "createdAndDeleted": true
+        },
+        "zhTwMcpUiEvidence": {
+          "locale": "zh-TW",
+          "taskDetailUiEvidence": {
+            "taskId": "77",
+            "locale": "zh-TW",
+            "dialogOpenTabAction": "在獨立分頁中開啟",
+            "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+            "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+            "nativeTaskTabVisible": true
+          },
+          "strictAllowlistVisible": true,
+          "placeholder": "github, sentry",
+          "parsedServerNames": [
+            "github",
+            "sentry"
+          ],
+          "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+          "controlEditedThroughNativeCdp": true
+        },
+        "unique": "create-page-e2e-af02ba48",
+        "retainedAcrossBack": true,
+        "retainedAcrossTabSwitch": true,
+        "manageProvidersNavigationRetainsDraft": true,
+        "retainedAcrossProcessRestart": true,
+        "advancedCliRetainedAcrossRename": true,
+        "teammateModeOverridePersistedThroughNativeUi": true,
+        "teammateModeOverrideValidatedThroughNativeUi": true,
+        "missingRequiredCliValueRejectedThroughNativeUi": true,
+        "advancedCliRetainedAcrossPaneSplit": true,
+        "advancedCliRetainedAcrossBackRemount": true,
+        "advancedCliRestoresUneditedDefaults": true,
+        "unnamedAdvancedCliEditsRetained": true,
+        "launchStillModal": true,
+        "launchContentLoaded": true,
+        "configOnlyCreatedThroughUi": true,
+        "nativeConfigOnlyRejectionKeepsDraft": true,
+        "copiedTeamUsesSharedEditor": true,
+        "copiedDraftDoesNotReplaySeed": true,
+        "templateReplacementCancelledAndConfirmed": true,
+        "organizationPlacementPersistedViaNativeApi": true,
+        "duplicateNameValidationRecovered": true,
+        "themeDarkLightRendered": true,
+        "cssZoom200Rendered": true,
+        "nativeElectronZoom200Rendered": true,
+        "splitPaneSingleEditor": true,
+        "macInputSelectionFallbackCount": 0,
+        "sandboxRoot": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\teams-create-page-e2e-74Ti4L",
+        "cleanup": {
+          "processGroupAbsent": null,
+          "windowsTaskkillExitedZero": true,
+          "windowsExactOwnedProcessesAbsent": true,
+          "windowsTeardowns": [
+            {
+              "launcherPid": 10144,
+              "taskkillAttempted": true,
+              "taskkillExitCode": 0,
+              "observedIdentityCount": 17,
+              "exactOwnedProcessesAbsent": true,
+              "cdpPortAbsent": true
+            },
+            {
+              "launcherPid": 10212,
+              "taskkillAttempted": true,
+              "taskkillExitCode": 0,
+              "observedIdentityCount": 17,
+              "exactOwnedProcessesAbsent": true,
+              "cdpPortAbsent": true
+            },
+            {
+              "launcherPid": 3468,
+              "taskkillAttempted": true,
+              "taskkillExitCode": 0,
+              "observedIdentityCount": 17,
+              "exactOwnedProcessesAbsent": true,
+              "cdpPortAbsent": true
+            }
+          ],
+          "temporaryProfileRemoved": true
+        }
+      }
+    }
+  ],
+  "rawCapturePins": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/terminal-44407826458-run.json",
+      "bytes": 15791,
+      "sha256": "f416129a9c5f79b605ac474c1ce8c1d3c2c54aa1eed12517051edfb6d3e55973"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/terminal-44407826458-jobs.json",
+      "bytes": 18006,
+      "sha256": "6db4b7dea730cec8ca6013d649fd63fba1759266cfa35b5f8a6ee6ab95e4979c"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/terminal-44407826458-artifacts.json",
+      "bytes": 2888,
+      "sha256": "94f7f81795df0b866e54eeafef5c1d087c3cf2d47cc4ee528682bbd79f7a7926"
+    }
+  ],
+  "visualInspection": {
+    "artifactId": 14476884996,
+    "platform": "Windows",
+    "originalPngsViewed": 8,
+    "totalOriginalPngs": 40,
+    "evidence": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167670062-artifact-visual-evidence.json",
+      "bytes": 12837,
+      "sha256": "e66249c2f6103733d752ae6b3af25e5c43590f90b7b37411c5de4d3c873f1dc2",
+      "computedGitBlobSha": "8d747cbfa00ff16d7378546312fa0eb46f95da1b",
+      "publishedBlobSha": "8d747cbfa00ff16d7378546312fa0eb46f95da1b",
+      "exactReadback": true
+    },
+    "scope": "Eight named original Windows viewport frames only; no Ubuntu/macOS screenshot inspection in this cohort."
+  },
+  "retirement": {
+    "workflowRunEndpoint": true,
+    "workflowAttempt1JobsEndpoint": true,
+    "allThreeOriginalJobLogEndpoints": true,
+    "workflowArtifactInventoryEndpoint": true
+  },
+  "scope": "Current030 original pull_request attempt1 Teams creation Electron GUI succeeded on all three original OS jobs; exact post-cleanup success JSON is preserved per job. This does not qualify full cross-team Taskboard or workspace-wide typecheck/lint."
+}

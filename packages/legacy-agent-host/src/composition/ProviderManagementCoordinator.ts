@@ -25,6 +25,7 @@ import type { OpenCodeV1Coordination } from '../adapters/providers/OpenCodeCoord
 import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
 import { createOpenCodeV2CredentialOperation } from '../adapters/providers/OpenCodeV2CredentialOperation.js';
 import { OpenCodeV2CredentialScope } from '../adapters/providers/OpenCodeV2CredentialScope.js';
+import { createOpenCodeCatalogDiagnostic } from '../adapters/providers/createClaudeCloseDiagnostic.js';
 
 import type { ProviderManagementCatalog, ProviderOAuthSnapshot } from '../management/contracts.js';
 import type {
@@ -596,7 +597,7 @@ export class ProviderManagementCoordinator {
     return host;
   }
 
-  async catalog(raw: unknown): Promise<ProviderManagementCatalog> {
+  async catalog(raw: unknown, requestId?: string | number): Promise<ProviderManagementCatalog> {
     const input = z
       .object({
         profileId: z.string().min(1).max(256),
@@ -610,17 +611,24 @@ export class ProviderManagementCoordinator {
     if (profile.nativeGeneration === 'v2') {
       const deadline = Date.now() + profile.timeoutMs;
       const target = this.credentialTarget(profile);
+      const observe = createOpenCodeCatalogDiagnostic(requestId, input);
       // Status, directory and provider reads share this original metadata owner.
       // Complete the whole previous read before another mode can close its child.
       const previous = this.v2CatalogReads.get(profile.profileId) ?? Promise.resolve();
       const pending = previous.catch(() => {}).then(async () => {
+        observe('started');
         const current = this.select(input.profileId, input.configRevision);
         assertManagementTarget(target, this.credentialTarget(current));
         if (Date.now() >= deadline) throw new OpenCodeManagementError('held');
         return this.readV2Catalog(current, input, deadline);
       });
       this.v2CatalogReads.set(profile.profileId, pending);
-      try { return await pending; }
+      observe('queued');
+      try {
+        const result = await pending;
+        observe('returned');
+        return result;
+      }
       finally {
         if (this.v2CatalogReads.get(profile.profileId) === pending)
           this.v2CatalogReads.delete(profile.profileId);

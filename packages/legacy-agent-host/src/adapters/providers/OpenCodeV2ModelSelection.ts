@@ -22,17 +22,25 @@ interface NativeCatalog {
 export async function attestOpenCodeV2ModelSelection(
   client: { readCatalog(providerId: string): Promise<NativeCatalog> },
   selection: SelectedModel,
-  options: { signal: AbortSignal; deadline: number; isCurrent(): boolean; requireTools?: boolean }
+  options: { signal: AbortSignal; deadline: number; isCurrent(): boolean; requireTools?: boolean },
+  observePhase?: (phase: 'catalog-read-returned' | 'catalog-current-returned' | 'catalog-repeat') => void
 ): Promise<void> {
+  const observe = (phase: Parameters<NonNullable<typeof observePhase>>[0]) => {
+    try { observePhase?.(phase); } catch { /* Passive diagnostics cannot replace the original result. */ }
+  };
   const current = () => {
     options.signal.throwIfAborted();
     if (!options.isCurrent() || Date.now() >= options.deadline)
       throw new ManagementCommandError('held');
   };
+  let reads = 0;
   for (;;) {
     current();
+    if (++reads === 2) observe('catalog-repeat');
     const catalog = await client.readCatalog(selection.providerID);
+    if (reads === 1) observe('catalog-read-returned');
     current();
+    if (reads === 1) observe('catalog-current-returned');
     const model = catalog.models.find((row) => row.id === selection.id);
     if (catalog.provider && model) {
       if (

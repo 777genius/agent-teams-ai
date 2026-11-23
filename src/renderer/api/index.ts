@@ -18,6 +18,7 @@ import {
   createHostCrossTeamApi,
   createHostGroupChatsApi,
   createHostReviewApi,
+  createHostReviewFlowApi,
   isHostTeamSelectionKey,
 } from '@features/agent-backend/renderer';
 
@@ -113,6 +114,8 @@ function getImpl(): ElectronAPI {
  */
 export const isElectronMode = (): boolean => !!window.electronAPI;
 
+const hostReviewFlowAdapters = new WeakMap<ElectronAPI, ElectronAPI['reviewFlow']>();
+
 const extensionAdapters = new WeakMap<object, object>();
 
 export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
@@ -122,6 +125,7 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
       (prop === 'teams' ||
         prop === 'agentBackend' ||
         prop === 'review' ||
+        prop === 'reviewFlow' ||
         prop === 'crossTeam' ||
         prop === 'teamGroupChats') &&
       impl.agentBackend
@@ -146,6 +150,15 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
           hostCrossTeamAdapters.set(impl, crossTeam);
         }
         return crossTeam;
+      }
+      if (prop === 'reviewFlow') {
+        if (!impl.reviewFlow) return undefined;
+        let reviewFlow = hostReviewFlowAdapters.get(impl);
+        if (!reviewFlow) {
+          reviewFlow = createHostReviewFlowApi(impl.reviewFlow, adapter.backend, captureReviewContext);
+          hostReviewFlowAdapters.set(impl, reviewFlow);
+        }
+        return reviewFlow;
       }
       if (prop === 'review') {
         let review = hostReviewAdapters.get(impl);

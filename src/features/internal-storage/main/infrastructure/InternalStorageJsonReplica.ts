@@ -22,7 +22,9 @@ export type InternalStorageReplicaRecoverySource<TSnapshot> =
 export class InternalStorageFallbackUnsafeError extends Error {
   constructor(
     readonly replicaPath: string,
-    reason: string
+    reason: string,
+    /** Machine-readable cause for diagnostics; the error still fails closed. */
+    readonly meta?: { code: 'incarnation_mismatch'; foreignIncarnation: string }
   ) {
     super(`Internal storage JSON fallback is unsafe: ${reason}`);
     this.name = 'InternalStorageFallbackUnsafeError';
@@ -44,11 +46,13 @@ export class InternalStorageJsonReplica<TSnapshot> {
     ) => AdmittedLegacySourceWrite | undefined
   ) {}
 
-  async markDirty(teamName: string): Promise<void> {
+  async markDirty(teamName: string, incarnation?: string): Promise<void> {
+    if (incarnation !== undefined) this.validateIncarnation(teamName, incarnation);
     await this.write(teamName, {
       schemaVersion: 1,
       state: 'dirty',
       updatedAt: new Date().toISOString(),
+      ...(incarnation === undefined ? {} : { incarnation }),
     });
   }
 
@@ -85,7 +89,8 @@ export class InternalStorageJsonReplica<TSnapshot> {
     if ('incarnation' in envelope && envelope.incarnation !== incarnation) {
       throw new InternalStorageFallbackUnsafeError(
         this.getPath(teamName),
-        'replica incarnation mismatch'
+        'replica incarnation mismatch',
+        { code: 'incarnation_mismatch', foreignIncarnation: String(envelope.incarnation) }
       );
     }
     if (envelope.state === 'dirty' && !('snapshot' in envelope)) {
@@ -106,8 +111,35 @@ export class InternalStorageJsonReplica<TSnapshot> {
       : { state: 'dirty', candidate: envelope.snapshot };
   }
 
+  /** Persisted metadata only; the caller must validate ownership under its publication lock. */
+  async readBoundClean(
+    teamName: string
+  ): Promise<{ incarnation: string; snapshot: TSnapshot } | null> {
+    const envelope = await this.readEnvelope(teamName, false);
+    if (!envelope || !Object.hasOwn(envelope, 'incarnation')) return null;
+    const incarnation = envelope.incarnation!;
+    this.validateIncarnation(teamName, incarnation);
+    if (
+      envelope.state !== 'clean' ||
+      !Number.isFinite(Date.parse(envelope.updatedAt)) ||
+      Object.keys(envelope).some(
+        (key) => !['schemaVersion', 'state', 'updatedAt', 'incarnation', 'snapshot'].includes(key)
+      ) ||
+      !this.isSnapshot(envelope.snapshot, teamName)
+    )
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'bound clean replica is invalid'
+      );
+    return { incarnation, snapshot: envelope.snapshot };
+  }
+
   private validateIncarnation(teamName: string, incarnation: string): void {
-    if (!incarnation.trim() || incarnation !== incarnation.trim()) {
+    if (
+      typeof incarnation !== 'string' ||
+      !incarnation.trim() ||
+      incarnation !== incarnation.trim()
+    ) {
       throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'invalid incarnation');
     }
   }

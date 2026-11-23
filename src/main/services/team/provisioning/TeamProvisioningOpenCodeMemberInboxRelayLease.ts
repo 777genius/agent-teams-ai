@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { INBOX_RELAY_IN_FLIGHT_LEASE_MS } from './TeamProvisioningInboxRelayCandidates';
 
 import type { OpenCodeMemberInboxRelayResult } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
@@ -14,6 +16,32 @@ const openCodeMemberInboxRelayLeases = new WeakMap<
   Map<string, OpenCodeMemberInboxRelayLease>
 >();
 let nextOpenCodeMemberInboxRelayGeneration = 0;
+
+export async function withOpenCodeRelayFollowUpOwner(
+  inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>,
+  relayKey: string,
+  action: (isCurrent: () => boolean) => Promise<OpenCodeMemberInboxRelayResult>
+): Promise<OpenCodeMemberInboxRelayResult> {
+  // Own the pending follow-up through cleanup without changing the base work's lease.
+  const key = `${relayKey}:follow-up:${randomUUID()}`;
+  const {
+    promise: work,
+    resolve,
+    reject,
+  } = Promise.withResolvers<OpenCodeMemberInboxRelayResult>();
+  inFlight.set(key, work);
+  try {
+    // Start the existing caller timeout synchronously, before control returns to its caller.
+    resolve(action(() => inFlight.get(key) === work));
+  } catch (error) {
+    reject(error);
+  }
+  try {
+    return await work;
+  } finally {
+    if (inFlight.get(key) === work) inFlight.delete(key);
+  }
+}
 
 function getOpenCodeMemberInboxRelayLeaseStore(
   inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>

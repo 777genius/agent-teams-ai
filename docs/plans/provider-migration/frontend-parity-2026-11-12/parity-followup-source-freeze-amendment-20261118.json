@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-freeze-integration-amendment",
+  "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+  "basedOnQuitPostimage": {
+    "bytes": 25480,
+    "lines": 393,
+    "sha256": "fba68b86f35af79174bf7c74af45e50f2c6157baa993e5e5a09e7955e644abe3",
+    "gitBlob": "c60111361cf3dba3bf395081ec751ec8d3bb8681"
+  },
+  "postimage": {
+    "bytes": 25644,
+    "lines": 396,
+    "sha256": "d3a459914d1bcf231bc5ee44daec991a252f1c2d2fc57ca94d0377a8b58fd992",
+    "gitBlob": "741dbdc6f296a7a67a8639b7a928e6664886cab2"
+  },
+  "addedExistingProductionPaths": [
+    "src/main/services/schedule/JsonScheduleRepository.ts",
+    "src/main/services/schedule/ScheduleRepository.ts",
+    "src/main/services/schedule/SchedulerService.ts"
+  ],
+  "assertions": [
+    "Only three finite literal source pins added; all original and four Quit dependency/test pins preserved.",
+    "Existing deduplication, before/after hash capture and comparison bodies unchanged.",
+    "No workflow/matrix or runtime behavior mutation.",
+    "The historical Quit candidate proof remains bound to its exact intermediate supplementary postimage; final composition separately binds this additive amendment."
+  ]
+}

@@ -99,7 +99,9 @@ export class MemberWorkSyncTeamChangeRouter {
           runAfterMs: 30_000,
         });
       } else {
-        void this.enqueueTeam(event.teamName, 'member_spawned', 30_000).catch(() => undefined);
+        this.runTracked(event.teamName, () =>
+          this.enqueueTeam(event.teamName, 'member_spawned', 30_000)
+        );
       }
       return;
     }
@@ -173,8 +175,11 @@ export class MemberWorkSyncTeamChangeRouter {
   }
 
   async awaitTeamIdle(teamName: string): Promise<void> {
+    const key = teamName.trim().toLowerCase();
     while (true) {
-      const pending = [...(this.inFlightByTeam.get(teamName.trim()) ?? [])];
+      const pending = [...this.inFlightByTeam].flatMap(([name, work]) =>
+        name.trim().toLowerCase() === key ? [...work] : []
+      );
       if (pending.length === 0) return;
       await Promise.allSettled(pending);
     }

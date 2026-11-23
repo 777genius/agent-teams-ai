@@ -760,44 +760,37 @@ export class SchedulerService {
   // ===========================================================================
 
   private async resetConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh || fresh.consecutiveFailures === 0) return;
-
-    const updated: Schedule = {
+    await this.repository.updateSchedule(schedule.id, (fresh) => fresh.consecutiveFailures === 0 ? null : ({
       ...fresh,
       consecutiveFailures: 0,
       updatedAt: new Date().toISOString(),
-    };
-    await this.repository.saveSchedule(updated, { mustExist: true });
+    }));
   }
 
   private async incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh) return;
-    const newCount = fresh.consecutiveFailures + 1;
-    const shouldAutoPause = newCount >= fresh.maxConsecutiveFailures;
+    let shouldAutoPause = false;
+    const updated = await this.repository.updateSchedule(schedule.id, (fresh) => {
+      const newCount = fresh.consecutiveFailures + 1;
+      shouldAutoPause = newCount >= fresh.maxConsecutiveFailures;
+      if (shouldAutoPause) {
+        logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
+      }
+      return {
+        ...fresh,
+        consecutiveFailures: newCount,
+        status: shouldAutoPause ? 'paused' : fresh.status,
+        updatedAt: new Date().toISOString(),
+      };
+    });
 
-    const updated: Schedule = {
-      ...fresh,
-      consecutiveFailures: newCount,
-      status: shouldAutoPause ? 'paused' : fresh.status,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (shouldAutoPause) {
-      logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
-    }
-
-    await this.repository.saveSchedule(updated, { mustExist: true });
-
-    if (shouldAutoPause) {
+    if (updated && shouldAutoPause) {
       this.cronJobs.get(schedule.id)?.pause();
       this.clearWarmUpTimer(schedule.id);
       this.emitChange({
         type: 'schedule-paused',
         scheduleId: schedule.id,
         teamName: schedule.teamName,
-        detail: `auto-paused after ${newCount} consecutive failures`,
+        detail: `auto-paused after ${updated.consecutiveFailures} consecutive failures`,
       });
     }
   }
@@ -807,25 +800,21 @@ export class SchedulerService {
   // ===========================================================================
 
   private async updateScheduleTimestamps(schedule: Schedule): Promise<void> {
-    // Reload fresh from repo to avoid overwriting changes from incrementConsecutiveFailures
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh) return;
-
-    const now = new Date().toISOString();
-    const nextRunAt = computeScheduleNextRunAt(fresh);
-
-    const updated: Schedule = {
-      ...fresh,
-      lastRunAt: now,
-      nextRunAt: nextRunAt ?? undefined,
-      updatedAt: now,
-    };
-
-    await this.repository.saveSchedule(updated, { mustExist: true });
+    // Pause and edits may commit while a run finishes; retain their latest fields.
+    const updated = await this.repository.updateSchedule(schedule.id, (fresh) => {
+      const now = new Date().toISOString();
+      return {
+        ...fresh,
+        lastRunAt: now,
+        nextRunAt: computeScheduleNextRunAt(fresh) ?? undefined,
+        updatedAt: now,
+      };
+    });
+    if (!updated) return;
     this.emitChange({
       type: 'schedule-updated',
-      scheduleId: fresh.id,
-      teamName: fresh.teamName,
+      scheduleId: updated.id,
+      teamName: updated.teamName,
     });
   }
 

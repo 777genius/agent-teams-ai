@@ -1,0 +1,20 @@
+{
+  "command": [
+    "pnpm",
+    "--config.verify-deps-before-run=false",
+    "exec",
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-name-pattern=Runtime projection privately|original passive Runtime projection receiver",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 3.563,
+  "sourcePins": {
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "cf2d799ca4db3015779ccf2e755879e2a44f14d23fe9ea6b6f39ad426bff9311",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "6c1025b2a9b95aa86713ab026f7c1633f9102f2bb7b3c955ff99be51633c1ef3",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "a3d3f0eced2fcf66cfca03eff85e75b8acc0d48f6f453cecd166add7fdcae241"
+  },
+  "logSha256": "9fa6e27419637cc8d981d102918c18484f00f9ad71dd0683344f12ea7cf109a7"
+}

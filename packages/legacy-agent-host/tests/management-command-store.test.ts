@@ -6,13 +6,87 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { managementDigest } from '../dist/management/identity.js';
 
-import type { StoredRuntimeSourceCommand } from '../dist/management/commandRecords.js';
+import type { StoredManagementCommand, StoredRuntimeSourceCommand } from '../dist/management/commandRecords.js';
 
 const receipt: StoredRuntimeSourceCommand = { schemaVersion: 1, kind: 'runtime.source', commandId: 'TEST-prepared',
   profileId: 'TEST-profile', configRevision: 'TEST-config', providerId: 'codex', fingerprint: 'a'.repeat(64),
   selectionDigest: 'b'.repeat(64), resourceId: 'c'.repeat(64), sourceId: 'c'.repeat(64), revision: 'd'.repeat(64),
   expectedRevision: 'b'.repeat(64), resourceHeld: false, phase: 'prepared', publicationJson: '{}' };
+
+const identity = { schemaVersion: 1 as const, commandId: 'TEST-kind-routing', profileId: 'TEST-profile',
+  configRevision: 'TEST-config', providerId: 'codex', fingerprint: 'a'.repeat(64),
+  selectionDigest: 'b'.repeat(64), resourceId: 'c'.repeat(64), resourceHeld: true };
+const commandCases: { valid: StoredManagementCommand; invalid: Record<string, unknown>[] }[] = [
+  { valid: { ...identity, kind: 'skill.mutation', phase: 'claimed', targetId: 'd'.repeat(64),
+      intentDigest: 'e'.repeat(64), action: 'upsert', scope: 'user', rootKind: 'codex' },
+    invalid: [{ resourceHeld: false }, { phase: 'completed' }, { trash: { path: '/TEST-trash',
+      dev: 1, ino: 2, parentDev: 1, parentIno: 3, token: 'f'.repeat(64) } }] },
+  ...(['credential.set', 'credential.forget', 'credential.refresh'] as const).map(kind => ({
+    valid: { ...identity, kind, phase: 'claimed' as const },
+    invalid: [{ resourceHeld: false }, { phase: 'completed' }, { finishedAtMs: 1 },
+      { terminalRejection: true }, { refreshCompletedAtMs: 2 }],
+  })),
+  { valid: { ...identity, kind: 'oauth', phase: 'authorizing', methodIndex: 0,
+      completionMethod: 'auto', sequence: 1, expiresAt: 1000 },
+    invalid: [{ resourceHeld: false }, { phase: 'completed' }, { phase: 'failed', resourceHeld: false },
+      { completionCommandId: 'TEST-completion' }, { reason: 'native-rejected' }] },
+  { valid: { ...identity, kind: 'model.probe', phase: 'running', modelId: 'TEST-model',
+      expiresAt: 1000, ok: false },
+    invalid: [{ resourceHeld: false }, { phase: 'completed' }, { ok: true },
+      { purpose: 'native-local-readiness-v1' }, { phase: 'cancelled' }] },
+  { valid: { ...identity, kind: 'extension.mutation', phase: 'claimed', action: 'mcp.install',
+      scope: 'user', targetId: 'd'.repeat(64), intentDigest: 'e'.repeat(64) },
+    invalid: [{ resourceHeld: false }, { phase: 'completed', resourceHeld: false },
+      { phase: 'failed', resourceHeld: false }, { finishedAtMs: 1 }] },
+  { valid: receipt, invalid: [{ resourceHeld: true }, { phase: 'verifying' }, { phase: 'verified' },
+      { reason: 'source-changed' }] },
+];
+
+for (const { valid, invalid } of commandCases) {
+  test('management journal preserves closed fields and state refinements for ' + valid.kind, () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-management-kind-')));
+    try {
+      const store = new FileManagementCommandStore(root);
+      store.write(valid);
+      assert.deepEqual(store.read(valid.commandId), valid);
+      assert.deepEqual([...new FileManagementCommandStore(root, true).list()], [valid]);
+      const path = join(root, 'management-commands', managementDigest(valid.commandId) + '.json');
+      const original = readFileSync(path);
+      for (const patch of [{ unrecognized: true }, { fingerprint: 'TEST-invalid' }, ...invalid]) {
+        const body = { ...valid, ...patch };
+        assert.throws(() => store.write(body as StoredManagementCommand), JSON.stringify(patch));
+        assert.deepEqual(readFileSync(path), original, 'invalid writes preserve the original receipt');
+        // A matching digest cannot make a malformed state or cross-kind field authoritative.
+        writeFileSync(path, JSON.stringify({ ...body, digest: managementDigest(body) }));
+        assert.throws(() => store.read(valid.commandId), { code: 'held' });
+        assert.throws(() => [...store.list()], { code: 'held' });
+        writeFileSync(path, original);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
+test('management journal refuses absent, unknown, inherited-name and cross-kind discriminators', () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-management-unknown-kind-')));
+  try {
+    const store = new FileManagementCommandStore(root);
+    store.write(receipt);
+    const path = join(root, 'management-commands', managementDigest(receipt.commandId) + '.json');
+    const { kind: _kind, ...withoutKind } = receipt;
+    for (const body of [withoutKind, ...[null, 0, {}, 'TEST-unknown', '__proto__', 'constructor',
+      'toString', 'credential.set'].map(kind => ({ ...receipt, kind }))]) {
+      writeFileSync(path, JSON.stringify({ ...body, digest: managementDigest(body) }));
+      assert.throws(() => store.read(receipt.commandId), { code: 'held' });
+      assert.throws(() => [...store.list()], { code: 'held' });
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('Windows receipt mode bits do not impersonate POSIX permissions; original bytes/digest remain required', () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-management-windows-mode-')));

@@ -1,0 +1,83 @@
+{
+  "schema": "current-head-original-ui-job-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682738,
+    "name": "Offline frontend tests (4/4)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:45:27Z",
+    "completed_at": "2026-11-18T23:52:53Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682738",
+    "runner_name": "GitHub Actions 1000395485"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682738,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 23:53:36 UTC",
+    "bytes": 198395,
+    "sha256": "94997acc020961b9e9fb999801612df7b62d7d50fdd7682ebba12246032f32d7",
+    "computedGitBlobSha": "4b1d7c7ff4101bdc47973501edfbb8cefb0c2acb",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682738-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "4b1d7c7ff4101bdc47973501edfbb8cefb0c2acb",
+    "exactReadback": true
+  },
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify source and capture the original Host test runtime",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:45:48Z",
+      "completed_at": "2026-11-18T23:45:48Z"
+    },
+    {
+      "name": "Run the complete safe frontend shard",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-18T23:46:30Z",
+      "completed_at": "2026-11-18T23:52:50Z"
+    }
+  ],
+  "jobLogEndpointRetired": true,
+  "finalCounts": {
+    "files": {
+      "passed": 549,
+      "skipped": 2,
+      "failed": 0,
+      "total": 551
+    },
+    "tests": {
+      "passed": 6790,
+      "skipped": 7,
+      "failed": 0,
+      "total": 6797
+    },
+    "durationSeconds": 377.78
+  },
+  "originalFinalSummaryLines": [
+    " Test Files  549 passed | 2 skipped (551)",
+    "      Tests  6790 passed | 7 skipped (6797)",
+    "   Duration  377.78s (transform 37.47s, setup 18.23s, collect 300.46s, tests 230.06s, environment 103.00s, prepare 32.98s)",
+    "JSON report written to /home/runner/work/_temp/host-offline-tests-4.json"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14482813568,
+    "bytes": 326445,
+    "sha256": "e02bce1f3584b449c5169671cc42020d7243f8488d8a826ad394d46552a2d3a6",
+    "downloaded": false
+  },
+  "scope": "Full original current030 frontend shard4/4 succeeded; no full-four-shard PASS is claimed and no historical shard is substituted. Shard1 failed; shard3 remains queued as of original lease40."
+}

@@ -24,6 +24,19 @@ import {
 } from './desktop-emulated-collaboration-fixture.ts';
 
 type Row = Record<string, unknown>;
+type PeerRefusal = Readonly<{
+  phase: 'before-first-team-read' | 'after-team-read';
+  hostPid: number; pid: number; parentPid: number; processGroup: number;
+  commandBytes: number;
+  commandKind: 'selected-node-other-entry' | 'selected-peer-shell-bootstrap' | 'process-observer' | 'other';
+}>;
+const peerRefusals = new WeakMap<object, PeerRefusal>();
+
+/** Closed TEST evidence from the first original census refusal; never launch or signal authority. */
+export function readDesktopEmulatedPeerRefusal(fixture: object): PeerRefusal | undefined {
+  return peerRefusals.get(fixture);
+}
+
 const record = (value: unknown): Row => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row;
 };
@@ -33,7 +46,13 @@ export const desktopRuntimePeerSources = [
 ] as const;
 
 /** TEST executables implement a finite native protocol; the original Host and D remain unchanged. */
-export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime']) {
+export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime'], finiteStoppedImport?: true) {
+  if (finiteStoppedImport !== undefined) {
+    assert.equal(finiteStoppedImport, true); assert.equal(provider, 'claude');
+    assert.equal(variant, undefined); assert.equal(candidateRuntime, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
+    assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'emulated-import-lifecycle-ui');
+  }
   if (candidateRuntime) assert.ok(provider === 'claude' && variant === 'lifecycle', 'One captured packaged Launch/Stop lifecycle');
   if (variant === 'collaboration') {
     assert.equal(provider, 'claude'); return prepareDesktopEmulatedCollaborationFixture(repo, pnpmEntry);
@@ -42,7 +61,8 @@ export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEnt
   if (variant === 'installer') {
     assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
   }
-  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true, ...(candidateRuntime ? { candidateRuntime } : {}) });
+  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true,
+    ...(candidateRuntime ? { candidateRuntime } : {}), ...(finiteStoppedImport ? { finiteStoppedImport } : {}) });
   const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] :
     [...desktopRuntimePeerSources, ...(provider === 'opencode'
       ? ['packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js'] : [])];
@@ -193,14 +213,32 @@ export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<Retur
   assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
   assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
   const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
-  assert.equal(profile.runtime?.members.length, 1); assert.equal(profile.runtime?.providerTemplates?.length, 1);
+  assert.equal(profile.runtime?.providerTemplates?.length, 1);
+  const template = profile.runtime!.providerTemplates![0]!;
+  const finiteImport = template.environment.TEST_DESKTOP_IMPORT_LIFECYCLE === 'current-solo-v1';
+  assert.equal(finiteImport, process.env.LEGACY_DESKTOP_PROOF_MODE === 'emulated-import-lifecycle-ui');
+  if (finiteImport) {
+    assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
+    assert.equal(selected.provider, 'claude'); assert.equal(selected.variant, undefined);
+    assert.deepEqual(profile.runtime?.members, []);
+    assert.deepEqual(selected.peers.map(peer => [peer.role, peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE]),
+      [['runtime', 'current-solo-v1'], ['management', 'current-solo-v1']]);
+    assert.deepEqual(selected.sources.map(source => source.path),
+      [join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs')]);
+    assert.equal(selected.executable.path, join(fixture.root, 'bin/TEST-claude-peer'));
+    const descriptor = record(JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
+    assert.deepEqual(descriptor.creation, {
+      owner: { ownerId: profile.owner.ownerId, revision: profile.owner.revision },
+      contextIds: ['local'], importAuthority: { principalId: profile.principalId },
+    });
+  } else assert.equal(profile.runtime?.members.length, 1);
   assert.equal(profile.management?.length, 1);
   for (const row of [...profile.runtime!.members, ...profile.runtime!.providerTemplates!, ...profile.management!]) {
     assert.equal(row.provider, selected.provider); assert.deepEqual(row.executable, selected.executable);
     const peer = selected.peers.find(peer => peer.role === row.environment.TEST_PEER_ROLE);
     assert.ok(peer); assert.deepEqual(row.environment, peer.environment);
   }
-  const member = profile.runtime!.members[0]!;
+  const member = finiteImport ? profile.runtime!.providerTemplates![0]! : profile.runtime!.members[0]!;
   return { executable: selected.executable, sources: selected.sources, provider: selected.provider,
     ...(selected.installer ? { installer: await verifyDesktopEmulatedCodexInstaller(selected.installer) } : {}),
     ...(selected.variant === 'selection' || selected.variant === 'installer' ? { selectionVariant: 'two-models-v1' } : {}),
@@ -213,16 +251,27 @@ export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<Retur
 
 /** Only direct children of the original Host, with immutable TEST entrypoints and original launch rows. */
 export async function observeDesktopEmulatedRuntimeChildren(group: number,
-  fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>, phase: 'before-first-team-read' | 'after-team-read') {
-  if (isDesktopEmulatedCollaborationFixture(fixture)) return observeDesktopEmulatedCollaborationChildren(group, fixture, phase);
-  assertOwnedCdpListener(group); await verifyDesktopEmulatedRuntimeFixture(fixture);
-  const deadline = performance.now() + 3000;
+  fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>, phase: 'before-first-team-read' | 'after-team-read',
+  startupDeadline?: number) {
+  if (isDesktopEmulatedCollaborationFixture(fixture)) {
+    assert.equal(startupDeadline, undefined, 'Captured packaged startup has one original provider');
+    return observeDesktopEmulatedCollaborationChildren(group, fixture, phase);
+  }
+  const assertStartupCurrent = () => {
+    if (startupDeadline !== undefined) assert.ok(Number.isFinite(startupDeadline) && performance.now() < startupDeadline,
+      'Original peer observation deadline');
+  };
+  assertStartupCurrent(); assertOwnedCdpListener(group); assertStartupCurrent();
+  await verifyDesktopEmulatedRuntimeFixture(fixture); assertStartupCurrent();
+  // The first packaged census may race permitted asynchronous metadata startup.
+  // Its caller supplies the already-running app startup cutoff, never a fresh budget.
+  const deadline = startupDeadline ?? performance.now() + 3000;
   // One observation budget, including the original census; these facts never authorize signals.
   const census = () => {
     const remaining = Math.floor(deadline - performance.now());
     assert.ok(remaining > 0, 'Original peer observation deadline');
     const output = execFileSync('/bin/ps', ['-axww', '-o', 'pid=,ppid=,pgid=,lstart=,command='], {
-      encoding: 'utf8', timeout: remaining, maxBuffer: 2 * 1024 * 1024,
+      encoding: 'utf8', timeout: Math.min(3000, remaining), maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', LC_ALL: process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8' },
     });
     const lines = output.trim().split('\n'); assert.ok(lines.length <= 20_000);
@@ -240,13 +289,23 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   const table = census(), hosts = table.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
   await readDesktopEmulatedRuntimeEffects(fixture);
-  assert.ok(performance.now() < deadline, 'Original peer journal validation exceeded its deadline');
+  assert.ok(performance.now() < deadline, 'Original peer launch read exceeded its deadline');
   const installed = fixture.emulatedRuntime.installer ? await readDesktopEmulatedCodexInstallation(fixture.emulatedRuntime.installer) : undefined;
+  assert.ok(performance.now() < deadline, 'Original peer observation deadline');
   const prefixes = [fixture.emulatedRuntime.commandPrefix,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
   for (const host of hosts) for (const child of table.filter(row => row.ppid === host.pid)) {
     assert.equal(child.pgid, child.pid);
-    assert.ok(prefixes.some(prefix => child.command.startsWith(prefix)), 'Only an exact pinned TEST executable from the original seed or stock installation');
+    const pinnedExecutable = prefixes.some(prefix => child.command.startsWith(prefix));
+    if (!pinnedExecutable && !peerRefusals.has(fixture)) try {
+      const shellPrefix = `/bin/sh ${fixture.emulatedRuntime.executable.path}`;
+      const commandKind = child.command.startsWith(fixture.node + ' ') ? 'selected-node-other-entry'
+        : child.command === shellPrefix || child.command.startsWith(shellPrefix + ' ') ? 'selected-peer-shell-bootstrap'
+          : child.command === '/bin/ps' || child.command.startsWith('/bin/ps ') ? 'process-observer' : 'other';
+      peerRefusals.set(fixture, Object.freeze({ phase, hostPid: host.pid, pid: child.pid,
+        parentPid: child.ppid, processGroup: child.pgid, commandBytes: Buffer.byteLength(child.command), commandKind }));
+    } catch { /* Diagnostic failure cannot change the original assertion. */ }
+    assert.ok(pinnedExecutable, 'Only an exact pinned TEST executable from the original seed or stock installation');
     let absent = false;
     for (;;) {
       assert.ok(performance.now() < deadline, 'Original peer observation deadline');

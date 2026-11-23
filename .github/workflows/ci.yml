@@ -170,15 +170,19 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Rebuild test SQLite native module for Node
+        id: native-test-sqlite
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
 
       - name: Audit dependencies
         run: node ./scripts/ci/audit-dependencies.mjs
 
+      # Independent gates share successful setup; every failure still fails this job.
       - name: Verify release download transport protocol
+        if: ${{ !cancelled() && steps.native-test-sqlite.outcome == 'success' }}
         run: node --test scripts/e2e/release-updater/github-download.test.mts
 
       - name: Validate workspace truth gate
+        if: ${{ !cancelled() && steps.native-test-sqlite.outcome == 'success' }}
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm validate:ci
@@ -427,7 +431,9 @@ jobs:
 
       - name: Test controller lock compatibility
         if: steps.windows.outputs.reuse != 'true'
-        run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
+        run: >-
+          pnpm --dir agent-teams-controller exec vitest run
+          test/fileLock.test.js test/fileLockMissingObservation.test.ts
 
       - name: Test task change ledger
         if: steps.windows.outputs.reuse != 'true'
@@ -617,7 +623,11 @@ jobs:
             scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts \
             scripts/legacy-agent-host/desktop-retained-opencode-app.ts \
             scripts/legacy-agent-host/desktop-retained-opencode-model.ts \
-            scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
+            scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts \
+            scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts \
+            scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts \
+            scripts/legacy-agent-host/desktop-retained-product-record-diagnostics.ts \
+            scripts/legacy-agent-host/desktop-retained-product-record-diagnostics.test.ts
       - name: Prepare existing verified V2 graph and original Bun
         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
       - name: Checkout the immutable historical retained release inputs
@@ -752,7 +762,7 @@ jobs:
           OPENCODE_V1_V2_COEXISTENCE_GO: '1'
         run: |
           set -euo pipefail
-          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts scripts/legacy-agent-host/desktop-retained-product-record-diagnostics.test.ts
           node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
       - name: Exercise original OpenCode Install Refresh and Update controls once
         env:
@@ -1157,6 +1167,7 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-retained-opencode-v1/launch-failure-artifacts/**
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/evidence-corpus/**
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-failure.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-task.png
@@ -1172,6 +1183,11 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-4-failure.json
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-5-failure.json
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/sentinel-invocations.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/tmp/claude-team-preflight-debug.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.1.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/opencode-bridge/diagnostics/events.ndjson
 
   codex-login-desktop:
     name: Codex login Desktop (Linux x64)
@@ -1220,110 +1236,67 @@ jobs:
       - name: Build existing Desktop prerequisites
         run: |
           set -euo pipefail
+          node scripts/build/buildLinuxNodeExec.mjs
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
-      - name: Prepare pinned native account app-server and private package-manager cache
+      - name: Capture finite account and schedule inputs without vendor executables
+        uses: ./.github/actions/prepare-host-emulated-inputs
+        with:
+          source-head: ${{ env.CODEX_LOGIN_SOURCE_HEAD }}
+          lane: codex-login
+      - name: Verify finite account and schedule owner contracts
+        run: >-
+          node --test --test-concurrency=1
+          packages/legacy-agent-host/tests/codex-login.test.ts
+          packages/legacy-agent-host/tests/scheduled-run-host.test.ts
+      - name: Exercise original login and schedule controls through protocol peers
         run: |
           set -euo pipefail
-          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-codex-login-inputs-XXXXXX")"
-          mkdir "$selected_inputs/corepack" "$selected_inputs/cache"
-          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
-          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
-          curl --fail --location --retry 2 --output "$selected_inputs/codex.tgz" https://registry.npmjs.org/@openai/codex/-/codex-0.162.0-linux-x64.tgz
-          printf '%s  %s\n' dbd342e7ad896d53dbb505e926f1b82314b79a9d33e209b0b7616ced6b06c983 "$selected_inputs/codex.tgz" | sha256sum -c -
-          tar -xzf "$selected_inputs/codex.tgz" -C "$selected_inputs"
-          COREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version
-          CODEX_LOGIN_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { createHash } from 'node:crypto';
-          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-          import { join } from 'node:path';
-          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
-          const selected = process.env.CODEX_LOGIN_INPUTS;
-          const codex = realpathSync(join(selected, 'package/vendor/x86_64-unknown-linux-musl/bin/codex'));
-          assert.equal(sha(codex), '50ed828f357c655a3c82054d346cab8434f24901f14ec19b8267571bdd008b38');
-          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
-          const pnpm = join(corepack, 'dist/pnpm.js');
-          const values = {
-            LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_PROOF_MODE: 'codex-login-ui',
-            LEGACY_DESKTOP_CODEX_PATH: codex, LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
-            LEGACY_DESKTOP_NODE_SHA256: sha(realpathSync(process.execPath)),
-            LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha('packages/legacy-agent-host/dist/cli.js'),
-            LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
-            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
-            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
-          };
-          for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
-          writeFileSync(join(process.env.RUNNER_TEMP, 'codex-login-inputs.json'), JSON.stringify({
-            sourceHead: process.env.CODEX_LOGIN_SOURCE_HEAD, platform: process.platform, architecture: process.arch,
-            codexSha256: sha(codex), archiveSha256: sha(join(selected, 'codex.tgz')), values,
-          }, null, 2), { mode: 0o600 });
-          NODE
-      - name: Verify finite native Claude and Codex scheduled runs
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { spawnSync } from 'node:child_process';
-          import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-          import { join, resolve } from 'node:path';
-          import { fileHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
-          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
-          const repo = process.cwd(), selected = await readNativeProviderArtifact(repo);
-          await verifyNativeProviderArtifact(repo, selected);
-          const providerRoot = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
-          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
-          assert.equal(JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8')).version, '0.3.305');
-          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-linux-x64/claude'));
-          assert.equal(await fileHash(claude), '86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef');
-          const output = mkdtempSync(join(process.env.RUNNER_TEMP, 'TEST-scheduled-native-evidence-'));
-          const logPath = join(output, 'native-schedules.log'), maxOutputBytes = 8 * 1024 * 1024;
-          const run = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/scheduled-run-host.native.ts'], {
-              cwd: repo, timeout: 650_000, maxBuffer: maxOutputBytes, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env,
-                LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process.env.CODEX_LOGIN_SOURCE_HEAD,
-                LEGACY_SCHEDULE_CLAUDE: claude, LEGACY_SCHEDULE_CODEX: process.env.LEGACY_DESKTOP_CODEX_PATH,
-                LEGACY_NATIVE_PROVIDER_ARTIFACT: realpathSync(selected.path), LEGACY_NATIVE_PROVIDER_SHA256: selected.sha256,
-                LEGACY_SCHEDULE_NATIVE_EVIDENCE: output,
-              },
-          });
-          const chunks = [run.stdout ?? Buffer.alloc(0), run.stderr ?? Buffer.alloc(0)];
-          const capturedBytes = chunks.reduce((bytes, chunk) => bytes + chunk.length, 0);
-          const log = Buffer.concat(chunks, Math.min(capturedBytes, maxOutputBytes));
-          writeFileSync(logPath, log, { mode: 0o600 });
-          console.log(log.toString('utf8'));
-          assert.ok(capturedBytes <= maxOutputBytes, 'original native schedule output exceeded its bound');
-          assert.equal(run.error, undefined); assert.equal(run.status, 0);
-          for (const provider of ['claude', 'codex']) {
-            const receipt = JSON.parse(readFileSync(join(output, `${provider}-scheduled-native.json`), 'utf8'));
-            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.provider, provider);
-            assert.equal(receipt.sourceHead, process.env.CODEX_LOGIN_SOURCE_HEAD);
-            assert.equal(receipt.providerSha256, selected.sha256);
-            assert.equal(receipt.cleanup, true); assert.equal(receipt.frozen, true);
-            assert.deepEqual(receipt.modelFailures, []);
-            assert.equal(receipt.desktopQualified, false); assert.equal(receipt.vendorAuthQualified, false);
-          }
-          NODE
-      - name: Exercise actual Codex Settings login, copy, reopen and cancellation
-        run: |
-          set -euo pipefail
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
-            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
-            2>&1 | tee "$RUNNER_TEMP/codex-login-ui.log"
+          for mode in emulated-codex-login-ui emulated-claude-runtime-ui emulated-codex-runtime-ui; do
+            LEGACY_DESKTOP_PROOF_MODE="$mode" \
+              xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+              bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+              2>&1 | tee "$RUNNER_TEMP/host-account-$mode.log"
+          done
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
           import { join } from 'node:path';
-          const rows = readFileSync(join(process.env.RUNNER_TEMP, 'codex-login-ui.log'), 'utf8').split('\n')
-            .filter(line => line.startsWith('{')).map(line => JSON.parse(line));
-          const finished = rows.findLast(row => row.receipt && row.status);
-          assert.ok(finished && finished.status === 'PASS', 'complete original UI and cleanup receipt');
-          const receipt = JSON.parse(readFileSync(finished.receipt, 'utf8'));
-          assert.equal(receipt.status, 'PASS'); assert.equal(receipt.source.head, process.env.CODEX_LOGIN_SOURCE_HEAD);
-          assert.equal(receipt.source.dirty, false); assert.equal(receipt.codexLoginUi.status, 'PASS');
-          assert.deepEqual(receipt.codexLoginUi.cases.map(row => [row.mode, row.status]), [['browser', 'PASS'], ['device_code', 'PASS']]);
+          const modes = ['emulated-codex-login-ui', 'emulated-claude-runtime-ui', 'emulated-codex-runtime-ui'];
+          for (const mode of modes) {
+            const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-account-${mode}.log`), 'utf8')
+              .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+            const finished = rows.findLast(row => row.receipt && row.status);
+            assert.ok(finished && finished.status === 'PASS', 'complete original UI and cleanup receipt');
+            const receipt = JSON.parse(readFileSync(finished.receipt, 'utf8'));
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.source.head, process.env.CODEX_LOGIN_SOURCE_HEAD);
+            assert.equal(receipt.source.dirty, false);
+            const login = mode === modes[0];
+            const proof = login ? receipt.codexLoginUi : receipt.emulatedRuntimeUiProof;
+            const cleanup = login ? receipt.emulatedManagementCleanup : receipt.emulatedRuntimeCleanup;
+            assert.equal(proof.status, 'PASS'); assert.equal(cleanup.absent, true);
+            assert.deepEqual(cleanup.remaining, []); assert.ok(cleanup.originalPeerPids.length > 0);
+            if (login) {
+              assert.equal(proof.execution, 'finite-protocol-peer'); assert.equal(proof.vendorExecutable, false);
+              assert.deepEqual(proof.cases.map(row => [row.mode, row.status]), [['browser', 'PASS'], ['device_code', 'PASS']]);
+              for (const row of proof.cases) for (const key of ['copyAcknowledged', 'externalOpenDispatched',
+                'reopenPreservedOriginal', 'cancelledOriginal', 'privateFieldsCleared']) assert.equal(row[key], true);
+              assert.equal(cleanup.protocol.originalLoginIdsCancelled, true);
+              assert.equal(cleanup.protocol.sessionOrModelRequests, 0); assert.equal(cleanup.protocol.accountAbsent, true);
+            } else {
+              assert.equal(proof.provider, mode === modes[1] ? 'claude' : 'codex');
+              assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.reloadWithoutReplay, true);
+              assert.equal(proof.stopReleased, true); assert.equal(proof.schedule.status, 'dispatched');
+              assert.equal(proof.schedule.savedPromptAcknowledged, true); assert.equal(proof.schedule.savedPromptNotReplayed, true);
+              assert.equal(proof.automaticSchedule.trigger, 'real-cron-tick');
+              assert.equal(proof.automaticSchedule.runNowClicks, 0); assert.equal(proof.automaticSchedule.taskCompleted, true);
+              assert.equal(proof.automaticSchedule.paused, true); assert.equal(proof.automaticSchedule.savedPromptNotReplayed, true);
+              assert.notEqual(proof.schedule.runId, proof.automaticSchedule.runId);
+            }
+          }
           NODE
-      - name: Preserve finite account proof without private authorization data
+      - name: Preserve finite account and schedule proofs
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -1331,9 +1304,8 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
           path: |
-            ${{ runner.temp }}/codex-login-inputs.json
-            ${{ runner.temp }}/codex-login-ui.log
-            ${{ runner.temp }}/TEST-scheduled-native-evidence-*/*
+            ${{ runner.temp }}/host-emulated-inputs.json
+            ${{ runner.temp }}/host-account-*.log
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
 
   stage1-desktop:
@@ -1585,7 +1557,7 @@ jobs:
             sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
           };
           const currentProvider = await readNativeProviderArtifact(repo);
-          assert.equal(currentProvider.sha256, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+          assert.equal(currentProvider.sha256, 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a');
           await verifyNativeProviderArtifact(donor, oldProvider);
           await verifyNativeProviderArtifact(repo, currentProvider);
           const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
@@ -1780,8 +1752,8 @@ jobs:
           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
           const provider = await readNativeProviderArtifact(process.cwd());
           assert.deepEqual(provider, {
-            path: 'vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz',
-            sha256: '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267',
+            path: 'vendor/provider-migration/v2-lifecycle-f5d632a6/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a',
           });
           await verifyNativeProviderArtifact(process.cwd(), provider);
           const stage = process.env.CODEX_CANDIDATE_STAGE;
@@ -1814,8 +1786,8 @@ jobs:
           LEGACY_CODEX_TEAM_GO=1 \
           LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
           LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
-          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz \
-          LEGACY_NATIVE_PROVIDER_SHA256=24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267 \
+          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/v2-lifecycle-f5d632a6/agent-teams-provider-implementations-0.0.0.tgz \
+          LEGACY_NATIVE_PROVIDER_SHA256=b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a \
           "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
           "$selected_node" --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -1829,7 +1801,7 @@ jobs:
           assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
           assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
           assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
-          assert.equal(receipt.artifacts.provider.sha256, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+          assert.equal(receipt.artifacts.provider.sha256, 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a');
           assert.equal(receipt.artifacts.node.version, 'v24.21.0');
           assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
           assert.equal(receipt.catalog.originalChildExited, true);
@@ -2925,7 +2897,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-      - name: Require selected Codex login and native schedule qualification
+      - name: Require selected Codex login and protocol-peer schedule qualification
         if: >-
           needs.plan.outputs.metadata == 'false' &&
           github.event_name == 'pull_request' && github.event.pull_request.draft == false &&

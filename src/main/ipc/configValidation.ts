@@ -458,7 +458,6 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'theme',
     'defaultTab',
     'multimodelEnabled',
-    'nativeNextPromptSuggestionsEnabled',
     'claudeRootPath',
     'agentLanguage',
     'appLocale',
@@ -542,7 +541,6 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         }
         result.appLocale = value;
         break;
-      case 'nativeNextPromptSuggestionsEnabled':
       case 'multimodelEnabled':
       case 'autoExpandAIGroups':
       case 'useNativeTitleBar':
@@ -652,6 +650,7 @@ function validateProviderConnectionsSection(
         if (
           connectionKey !== 'authMode' &&
           connectionKey !== 'fastModeDefault' &&
+          connectionKey !== 'nativeNextPromptSuggestionsEnabled' &&
           connectionKey !== 'compatibleEndpoint'
         ) {
           return {
@@ -737,11 +736,11 @@ function validateProviderConnectionsSection(
         if (typeof connectionValue !== 'boolean') {
           return {
             valid: false,
-            error: 'providerConnections.anthropic.fastModeDefault must be a boolean',
+            error: `providerConnections.anthropic.${connectionKey} must be a boolean`,
           };
         }
 
-        anthropicUpdate.fastModeDefault = connectionValue;
+        anthropicUpdate[connectionKey] = connectionValue;
       }
 
       result.anthropic = anthropicUpdate as ProviderConnectionsConfig['anthropic'];
@@ -752,6 +751,17 @@ function validateProviderConnectionsSection(
 
     for (const [connectionKey, connectionValue] of Object.entries(value)) {
       if (connectionKey === 'apiKeyBetaEnabled' || connectionKey === 'authMode') {
+        continue;
+      }
+
+      if (connectionKey === 'nativeNextPromptSuggestionsEnabled') {
+        if (typeof connectionValue !== 'boolean') {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.nativeNextPromptSuggestionsEnabled must be a boolean',
+          };
+        }
+        codexUpdate.nativeNextPromptSuggestionsEnabled = connectionValue;
         continue;
       }
 

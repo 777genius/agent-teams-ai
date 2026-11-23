@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OpenCodePromptDeliveryWatchdogScheduler } from '../../opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
+import { countStoppedImportKeys } from '../../stopped-import/ownerFacts';
+import { INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS } from '../TeamProvisioningInboxRelayCandidates';
 import {
   type OpenCodeMemberInboxRelayResult,
   type RelayOpenCodeMemberInboxMessagesPorts,
   relayOpenCodeMemberInboxMessagesWithPorts,
 } from '../TeamProvisioningOpenCodeMemberInboxRelay';
+import { withOpenCodeRelayFollowUpOwner } from '../TeamProvisioningOpenCodeMemberInboxRelayLease';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { RelayInboxMessage } from '../TeamProvisioningInboxRelayPolicy';
@@ -410,5 +414,267 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay follow-up wake chains', () =>
 
     expect(woken).toEqual(['row-b', 'row-c']);
     expect(lane.deliver).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('TeamProvisioningOpenCodeMemberInboxRelay follow-up admission cancellation', () => {
+  const cleanups: (() => void)[] = [];
+  const relayKey = 'opencode:team:worker';
+  const identity = {
+    ok: true as const,
+    canonicalMemberName: 'worker',
+    laneId: 'lane-worker',
+    laneIdentity: { laneId: 'lane-worker', laneKind: 'secondary' as const },
+  };
+  const rows = () => [message({ messageId: 'row-a' }), message({ messageId: 'row-b' })];
+  const pendingDelivery = { delivered: true, responsePending: true };
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(async () => {
+    for (const cleanup of cleanups.splice(0)) cleanup();
+    await vi.advanceTimersByTimeAsync(0);
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+  function watchdog(
+    ports: RelayOpenCodeMemberInboxMessagesPorts,
+    full = false,
+    isCurrent?: () => boolean,
+    start = true
+  ) {
+    const scheduler = new OpenCodePromptDeliveryWatchdogScheduler({
+      canDeliverToTeamRuntime: () => true,
+      recoverBeforeDelivery: async () => false,
+      relay: (input) =>
+        relayOpenCodeMemberInboxMessagesWithPorts(
+          {
+            teamName: input.teamName,
+            memberName: input.memberName,
+            relayKey,
+            options: {
+              ...(full ? {} : { onlyMessageId: input.messageId }),
+              source: 'watchdog',
+              isCurrent: input.isCurrent,
+            },
+          },
+          ports
+        ),
+      getInboxMessages: async () => [],
+      resolveIdentity: async () => null,
+      isLaneActive: async () => false,
+      isRecordNotFoundError: () => false,
+      info: () => {},
+      warn: () => {},
+      debug: () => {},
+      diagnostic: () => {},
+      getErrorMessage: String,
+    });
+    ports.scheduleOpenCodeMemberInboxDeliveryWake = vi.fn((input) => scheduler.schedule(input));
+    cleanups.push(() => scheduler.cancelTeam('team'));
+    if (start)
+      scheduler.schedule({
+        teamName: 'team',
+        memberName: 'worker',
+        messageId: 'row-a',
+        delayMs: 500,
+        isCurrent,
+      });
+    return scheduler;
+  }
+  function cancel(
+    ports: RelayOpenCodeMemberInboxMessagesPorts,
+    scheduler: OpenCodePromptDeliveryWatchdogScheduler
+  ) {
+    // Production cleanup deletes the relay generation before cancelling scheduler jobs.
+    for (const key of ports.inFlight.keys())
+      if (key.startsWith('opencode:team:')) ports.inFlight.delete(key);
+    scheduler.cancelTeam('team');
+  }
+  it.each(
+    (['identity', 'ledger'] as const).flatMap((boundary) =>
+      [false, true].flatMap((timedOut) =>
+        [false, true].map((cancelled) => ({ boundary, timedOut, cancelled }))
+      )
+    )
+  )(
+    'cancel=$cancelled during $boundary after caller timeout=$timedOut',
+    async ({ boundary, timedOut, cancelled }) => {
+      const pending = deferred<void>();
+      cleanups.push(() => pending.resolve(undefined));
+      const ports = createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue(rows()),
+        resolveOpenCodeMemberDeliveryIdentity: vi
+          .fn()
+          .mockResolvedValueOnce(identity)
+          .mockImplementation(async () => {
+            if (boundary === 'identity') await pending.promise;
+            return identity;
+          }),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+          getByInboxMessage: vi.fn(async ({ inboxMessageId }: { inboxMessageId: string }) => {
+            if (boundary === 'ledger' && inboxMessageId === 'row-b') await pending.promise;
+            return null;
+          }),
+        })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+        deliverOpenCodeMemberMessage: vi.fn().mockResolvedValue(pendingDelivery),
+      });
+      const scheduler = watchdog(ports);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+      expect(ports.resolveOpenCodeMemberDeliveryIdentity).toHaveBeenCalledTimes(2);
+      expect(scheduler.readStoppedTeamImportFacts('team')).toEqual({
+        timers: 0,
+        queued: 0,
+        inFlight: 1,
+      });
+      if (timedOut) await vi.advanceTimersByTimeAsync(INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS);
+      expect(ports.inFlight.size).toBe(1);
+      if (cancelled) cancel(ports, scheduler);
+      pending.resolve(undefined);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(ports.inFlight.size).toBe(0);
+      expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+      expect(scheduler.readStoppedTeamImportFacts('team')).toEqual({
+        timers: cancelled ? 0 : 1,
+        queued: 0,
+        inFlight: 0,
+      });
+      expect(ports.scheduleOpenCodeMemberInboxDeliveryWake).toHaveBeenCalledTimes(
+        cancelled ? 0 : 1
+      );
+      if (!cancelled)
+        expect(
+          vi.mocked(ports.scheduleOpenCodeMemberInboxDeliveryWake).mock.calls[0][0].isCurrent
+        ).toBeUndefined();
+    }
+  );
+  it.each(
+    (['existing', 'inbox', 'identity', 'ledger'] as const).flatMap((boundary) =>
+      [false, true].map((cancelled) => ({ boundary, cancelled }))
+    )
+  )(
+    'unscoped coalesced cancel=$cancelled during $boundary owns its pending continuation',
+    async ({ boundary, cancelled }) => {
+      const existing = deferred<OpenCodeMemberInboxRelayResult>(),
+        pending = deferred<void>();
+      const result = { attempted: 0, delivered: 0, relayed: 0, failed: 0 };
+      cleanups.push(() => {
+        pending.resolve(undefined);
+        existing.resolve(result);
+      });
+      const ports = createRelayPorts({
+        readInboxMessages: vi.fn(async () => {
+          if (boundary === 'inbox') await pending.promise;
+          return [message({ messageId: 'row-late' })];
+        }),
+        resolveOpenCodeMemberDeliveryIdentity: vi.fn(async () => {
+          if (boundary === 'identity') await pending.promise;
+          return identity;
+        }),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+          getByInboxMessage: vi.fn(async () => {
+            if (boundary === 'ledger') await pending.promise;
+            return null;
+          }),
+        })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+      });
+      ports.inFlight.set(relayKey, existing.promise);
+      const scheduler = watchdog(ports, true, undefined, false);
+      const call = relayOpenCodeMemberInboxMessagesWithPorts(
+        { teamName: 'team', memberName: 'worker', relayKey },
+        ports
+      );
+      expect(countStoppedImportKeys(ports.inFlight.keys(), 'team')).toBe(2);
+      if (boundary !== 'existing') existing.resolve(result);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(countStoppedImportKeys(ports.inFlight.keys(), 'team')).toBe(
+        boundary === 'existing' ? 2 : 1
+      );
+      if (cancelled) cancel(ports, scheduler);
+      pending.resolve(undefined);
+      existing.resolve(result);
+      expect(await call).toBe(result);
+      expect(ports.inFlight.size).toBe(0);
+      expect(ports.deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
+      expect(scheduler.readStoppedTeamImportFacts('team')).toEqual({
+        timers: cancelled ? 0 : 1,
+        queued: 0,
+        inFlight: 0,
+      });
+    }
+  );
+  it('keeps the original coalesced caller cutoff before synchronous caller work', async () => {
+    const existing = deferred<OpenCodeMemberInboxRelayResult>(),
+      ports = createRelayPorts();
+    cleanups.push(() => existing.resolve({ attempted: 0, delivered: 0, relayed: 0, failed: 0 }));
+    ports.inFlight.set(relayKey, existing.promise);
+    const settled = vi.fn();
+    const call = relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey },
+      ports
+    );
+    void call.then(settled);
+    vi.advanceTimersByTime(INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect((await call).lastDelivery?.reason).toBe('opencode_member_inbox_relay_timed_out');
+    expect(ports.inFlight.get(relayKey)).toBe(existing.promise);
+    expect(ports.inFlight.size).toBe(1);
+  });
+  it('releases coalesced ownership and preserves the original rejection', async () => {
+    const existing = Promise.withResolvers<OpenCodeMemberInboxRelayResult>(),
+      ports = createRelayPorts();
+    const failure = new Error('TEST-existing-rejection');
+    ports.inFlight.set(relayKey, existing.promise);
+    const call = relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey },
+      ports
+    );
+    const rejected = expect(call).rejects.toBe(failure);
+    existing.reject(failure);
+    await rejected;
+    expect(ports.inFlight.size).toBe(0);
+    expect(ports.scheduleOpenCodeMemberInboxDeliveryWake).not.toHaveBeenCalled();
+  });
+  it.each([false, true])(
+    'follow-up owner cleanup preserves a replacement; synchronous throw=%s',
+    async (throws) => {
+      const ports = createRelayPorts(),
+        failure = new Error('TEST-owner-rejection');
+      const pending = Promise.withResolvers<OpenCodeMemberInboxRelayResult>();
+      const result = { attempted: 0, delivered: 0, relayed: 0, failed: 0 };
+      const call = withOpenCodeRelayFollowUpOwner(ports.inFlight, relayKey, (isCurrent) => {
+        expect(isCurrent()).toBe(true);
+        if (throws) throw failure;
+        return pending.promise;
+      });
+      const key = [...ports.inFlight.keys()][0],
+        replacement = Promise.resolve(result);
+      ports.inFlight.set(key, replacement);
+      pending.resolve(result);
+      if (throws) await expect(call).rejects.toBe(failure);
+      else expect(await call).toBe(result);
+      expect(ports.inFlight.get(key)).toBe(replacement);
+      ports.inFlight.delete(key);
+    }
+  );
+  it('keeps an admitted follow-up unscoped after its original generation is revoked', async () => {
+    let current = true;
+    const ports = createRelayPorts({
+      readInboxMessages: vi.fn().mockResolvedValue(rows()),
+      deliverOpenCodeMemberMessage: vi.fn().mockResolvedValue(pendingDelivery),
+    });
+    watchdog(ports, false, () => current);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(
+      vi.mocked(ports.scheduleOpenCodeMemberInboxDeliveryWake).mock.calls[0][0].isCurrent
+    ).toBeUndefined();
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(2);
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenLastCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'row-b' })
+    );
   });
 });

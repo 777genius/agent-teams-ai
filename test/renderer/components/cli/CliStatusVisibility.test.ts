@@ -1608,6 +1608,120 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('keeps Settings usable during Codex update with a long OpenCode model list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const previousOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        return Math.floor(Math.max(0, siblings.indexOf(this)) / 3) * 20;
+      },
+    });
+
+    storeState.cliInstallerState = 'idle';
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.139.0',
+      latestVersion: '0.144.1',
+      updateAvailable: true,
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '1.17.18',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      authLoggedIn: true,
+      providers: [
+        createCodexNativeRolloutProvider({ state: 'ready', available: true }),
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: Array.from(
+            { length: 18 },
+            (_, index) => `model-${String(index + 1).padStart(2, '0')}`
+          ),
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: true },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderSettings = () =>
+      React.createElement(CliStatusBanner, { isDashboardActive: true, mode: 'settings' });
+
+    try {
+      await act(async () => {
+        root.render(renderSettings());
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('+13 more');
+
+      const updateButton = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('v0.139.0 → v0.144.1')
+      );
+      expect(updateButton).toBeDefined();
+
+      await act(async () => {
+        updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      const dialogUpdateButton = Array.from(
+        document.body.querySelector('[role="dialog"]')?.querySelectorAll('button') ?? []
+      ).find((button) => button.textContent?.includes('v0.139.0 → v0.144.1'));
+      expect(dialogUpdateButton).toBeDefined();
+
+      await act(async () => {
+        dialogUpdateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
+
+      const previousStatus = storeState.cliStatus;
+      if (!previousStatus) throw new Error('Missing CLI status fixture');
+      storeState.cliStatus = {
+        ...previousStatus,
+        providers: (previousStatus.providers as Array<Record<string, unknown>>).map((provider) => ({
+          ...provider,
+          models: [...(provider.models as string[])],
+        })),
+      };
+      await act(async () => {
+        root.render(renderSettings());
+        await Promise.resolve();
+      });
+
+      expect(host.querySelector('[data-testid="provider-status-banner"]')).not.toBeNull();
+      expect(host.textContent).toContain('+13 more');
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      if (previousOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', previousOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
   it.each(['V1', 'V2 native', 'V2 support', 'V2 support checking'] as const)(
     'shows OpenCode %s install progress on the dashboard provider card',
     async (generation) => {

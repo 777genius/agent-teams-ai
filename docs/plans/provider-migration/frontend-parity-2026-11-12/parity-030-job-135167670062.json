@@ -1,0 +1,163 @@
+{
+  "schema": "current-head-original-teams-create-job-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826458,
+  "job": {
+    "id": 135167670062,
+    "name": "Creation page (windows-latest)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826458,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T22:24:51Z",
+    "completed_at": "2026-11-18T22:33:59Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826458/job/135167670062",
+    "runner_name": "GitHub Actions 1000395136"
+  },
+  "testAndGuiSteps": [
+    {
+      "name": "Typecheck application before Electron startup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9,
+      "started_at": "2026-11-18T22:28:28Z",
+      "completed_at": "2026-11-18T22:29:08Z"
+    },
+    {
+      "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13,
+      "started_at": "2026-11-18T22:29:57Z",
+      "completed_at": "2026-11-18T22:33:51Z"
+    }
+  ],
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167670062,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826458,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 22:36:01 UTC",
+    "bytes": 100602,
+    "sha256": "ab0662e20c33c4d16f6ddb908d1cf82cc82c809f284098fedc8076e2a93aeb3a",
+    "computedGitBlobSha": "2851491238040ab77c911a117df6f5cfa846765b",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167670062-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "2851491238040ab77c911a117df6f5cfa846765b",
+    "exactReadback": true
+  },
+  "originalCensusTeardownUnitTotals": {
+    "tests": 28,
+    "suites": 0,
+    "pass": 28,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 1219.1886
+  },
+  "originalSuccessJson": {
+    "success": true,
+    "scheduleUiEvidence": {
+      "scheduleLabel": "schedule-visual-e2e-0e0ed913",
+      "scheduleId": "ee8c9b88-7f0a-4abe-8f6b-f93e75943081",
+      "createdAndDeleted": true
+    },
+    "zhTwMcpUiEvidence": {
+      "locale": "zh-TW",
+      "taskDetailUiEvidence": {
+        "taskId": "77",
+        "locale": "zh-TW",
+        "dialogOpenTabAction": "在獨立分頁中開啟",
+        "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+        "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+        "nativeTaskTabVisible": true
+      },
+      "strictAllowlistVisible": true,
+      "placeholder": "github, sentry",
+      "parsedServerNames": [
+        "github",
+        "sentry"
+      ],
+      "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "controlEditedThroughNativeCdp": true
+    },
+    "unique": "create-page-e2e-af02ba48",
+    "retainedAcrossBack": true,
+    "retainedAcrossTabSwitch": true,
+    "manageProvidersNavigationRetainsDraft": true,
+    "retainedAcrossProcessRestart": true,
+    "advancedCliRetainedAcrossRename": true,
+    "teammateModeOverridePersistedThroughNativeUi": true,
+    "teammateModeOverrideValidatedThroughNativeUi": true,
+    "missingRequiredCliValueRejectedThroughNativeUi": true,
+    "advancedCliRetainedAcrossPaneSplit": true,
+    "advancedCliRetainedAcrossBackRemount": true,
+    "advancedCliRestoresUneditedDefaults": true,
+    "unnamedAdvancedCliEditsRetained": true,
+    "launchStillModal": true,
+    "launchContentLoaded": true,
+    "configOnlyCreatedThroughUi": true,
+    "nativeConfigOnlyRejectionKeepsDraft": true,
+    "copiedTeamUsesSharedEditor": true,
+    "copiedDraftDoesNotReplaySeed": true,
+    "templateReplacementCancelledAndConfirmed": true,
+    "organizationPlacementPersistedViaNativeApi": true,
+    "duplicateNameValidationRecovered": true,
+    "themeDarkLightRendered": true,
+    "cssZoom200Rendered": true,
+    "nativeElectronZoom200Rendered": true,
+    "splitPaneSingleEditor": true,
+    "macInputSelectionFallbackCount": 0,
+    "sandboxRoot": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\teams-create-page-e2e-74Ti4L",
+    "cleanup": {
+      "processGroupAbsent": null,
+      "windowsTaskkillExitedZero": true,
+      "windowsExactOwnedProcessesAbsent": true,
+      "windowsTeardowns": [
+        {
+          "launcherPid": 10144,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        },
+        {
+          "launcherPid": 10212,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        },
+        {
+          "launcherPid": 3468,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        }
+      ],
+      "temporaryProfileRemoved": true
+    }
+  },
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14476884996,
+    "sizeInBytes": 1824252,
+    "name": "teams-create-page-windows-latest-030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "digestLogLines": [
+      "2026-11-18T22:33:53.5821561Z SHA256 digest of uploaded artifact zip is ad84f29e6343a332750e594f90fe0e3fbed52c9d883b79a2da674c3d13053d2a"
+    ],
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original Windows Electron Teams creation scenario success and its original post-cleanup JSON; no claim for cross-team Taskboard or full workspace typecheck/lint acceptance",
+  "endpointRetired": true
+}

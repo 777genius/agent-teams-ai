@@ -1,0 +1,41 @@
+{
+  "kind": "bounded-membership-diagnostic-evidence-index",
+  "baseHead": "90b7fb4a7095f47c4416b58a183769761d837cb3",
+  "originalFailureSourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "files": [
+    {
+      "path": "candidate-manifest.json",
+      "bytes": 3184,
+      "sha256": "e6e1585ec779784167d4d2b37b04a2f0d14f7ed493eff4ade3ea10f9000e7168"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 2469,
+      "sha256": "ba934de6af2e5c1b69bc27e7e6cddad6282c0c1897059fac8236bbfb2f57cd49"
+    },
+    {
+      "path": "original-membership-failure.json",
+      "bytes": 9345,
+      "sha256": "4dc2aacdfaf1467b283c62f19002d8d65593303ace5d7213a726716fb25de051"
+    },
+    {
+      "path": "artifact-index.json",
+      "bytes": 11574,
+      "sha256": "b9334e443f70b20da1b3d3fec516c5090806178e858ebe78bc42f51f95c79c40"
+    },
+    {
+      "path": "r2-review.json",
+      "bytes": 1377,
+      "sha256": "67f269de7170940f0a79d97f0f9c31aa497ac92b2ba1b033f33bdb64fb1d337d"
+    }
+  ],
+  "sourcePaths": [
+    "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+    "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+    "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+    "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+    "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+  ],
+  "scope": "Source and finite diagnostic validation only; original GUI verdict remains INCOMPLETE."
+}
