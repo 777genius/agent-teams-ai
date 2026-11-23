@@ -204,3 +204,124 @@ Pick **one delivery engine** for the default install:
 Then confirm **(i)** external notifications outbound-only for the MVP, **(ii)** whether native presets or link to a URL Builder is acceptable, and **(iii)** whether additional binaries may ship in the desktop app. Do not implement or merge provider choice before these answers.
 
 Suggested narrow follow-up after choice: one implementation PR, small domain route policy, one selected engine adapter, initial 2 priority events, guided UI, tests, packaged E2E. Keep the User Attention Inbox PR independent.
+
+
+---
+
+## 11. Deep dive (2026-11-23): actual TypeScript libraries, not just CLI/servers
+
+This section supersedes the five-option shortlist as the **current discovery set**. It DOES NOT approve an implementation. Compare standalone NPM packages before deciding to ship a Go/Python executable. All numerical scores/LOC below are estimates, NOT benchmark results. Sources were inspected at their actual project files and published docs. Reverify installed NPM tarball, version and lockfile before adoption.
+
+### 11.1 The strongest ergonomic fit: `@ambersecurityinc/notifly` 0.7.2
+
+Primary source: https://github.com/ambersecurityinc/notifly (actual `package.json`, `src/dispatcher.ts`, `src/builder/index.ts`, `src/builder/schemas.ts`, `src/services/{telegram,webhook,ntfy}.ts`, `src/security.ts` and tests).
+NPM: https://www.npmjs.com/package/@ambersecurityinc/notifly
+Web: https://notifly.sh/
+
+What is **already built** (not a promise):
+- `notify({ urls }, { title, body, type })` with capped concurrent sends (source dispatcher sets `MAX_CONCURRENCY = 10`), preserving per-destination success/failure;
+- Service registry with URL schemes: Discord, Slack, Telegram, ntfy, Gotify, email **via HTTP gateway** (not SMTP), Microsoft Teams classic and Workflows, Pushover, Pushbullet and generic webhook. Roughly 10-11 service entries, some aliases, **not 183 Apprise plugins**.
+- `@ambersecurityinc/notifly/builder` exports `getServiceSchemas`, `searchServices`, `validateFields`, `buildUrl`, `decomposeUrl` and `smartParse`. Schema fields carry label, helpText, required, sensitive, validation pattern, select options. **This genuinely cuts custom settings form code**.
+- `smartParse` can recognize copied raw Discord/Slack/Teams/Gotify/ntfy webhook URLs, not any arbitrary provider.
+- It uses standard `fetch`, no extra runtime server/binary/Python, and the version's own `package.json` uses TypeScript **7.0.2**. npm readme reports **zero runtime dependencies** and MIT.
+
+Important **safety/quality limitations found by source audit**:
+1. The repo is very young (created 2026-03-26, `0` GitHub stars and `0` forks at inspection, NPM around **tens** of weekly downloads; popularity is **not** maturity). It has tests, but **no independent shipping/E2E evidence for our desktop**. Pin exact version and check maintenance/releases. This can be a reason to reject it after audit.
+2. `validateHost()` in `src/security.ts` explicitly documents that hostname-only checking does **not** mitigate DNS rebinding; generic `fetch` follows redirects unless constrained. The default generic webhook adapter cannot be treated as a hardened SSRF boundary; validated **connect-time** DNS/IP or a restricted destination policy is required when users can configure destinations and a remote HTTP client can access settings.
+3. The generic webhook deliberately **blocks plaintext HTTP and private/loopback IPs**. That is safe-by-default but conflicts with a user's legitimate LAN/self-hosted endpoints (Gotify/ntfy) and local-only development. Do not silently promise arbitrary `localhost` or LAN webhooks; decide either public HTTPS-only v1 or an explicit advanced local trusted-host policy implemented at our network boundary. No unrestricted opt-out.
+4. Service URLs encode **secrets** (Telegram token, Slack/Discord webhook token, Gotify token, Workflows `sig`). The URL Builder outputs complete URLs. Never write those into ordinary `AppConfig`, renderer telemetry, logs, app deep links, or support bundles. The UI can hold typed fields ephemerally; transport to trusted application service, then encrypted store and masked previews. Reconstruct URL in memory only for send.
+5. `src/services/base.ts` and `webhook.ts` turn non-2xx into errors; `src/errors.ts` hides response body from enumeration, but `errorMessage()` returns ordinary `err.message`. Recheck all transport/framework error paths for URL/secret leakage and normalize messages at **our** boundary. No assumption that `success:false` means provider definitely did not receive message after timeout.
+6. `webhook.ts` composes the target from host+pathname and parses custom query into header/body overrides, so not every signed arbitrary query URL survives unchanged; use a separately validated raw HTTPS webhook path only if required by user workflows, otherwise advertise the limited schema.
+7. `registerService` mutates a global registry (could overwrite built-in schemes). Do not expose user-provided code/plugins via this feature. Use only pinned built-in names or app-vetted adapters.
+
+**Recommendation level:** **best initial UX/implementation spike**, conditional on security/audit gates below; **not** an unconditional dependency choice.
+
+### 11.2 `@thinwrap/notifications` 1.x (TypeScript alternative)
+
+Sources:
+- https://github.com/thinwrap/notifications-ts
+- https://www.npmjs.com/package/@thinwrap/notifications
+
+- Unified TypeScript `Email`/`Sms`/`Push`/`Chat` facades with typed provider IDs; NPM lists **35 providers** across **four categories**, not 35 chat-style destinations. Chat catalog contains Telegram, Slack, Discord, Microsoft Teams, WhatsApp Business, Google Chat, Mattermost, Rocket.Chat, LINE. It does **not** claim ntfy/Gotify in its published catalog.
+- No vendor SDKs, zero runtime dependencies, injected `fetch` and normalized provider errors (source README explicitly describes URL secret/redaction precautions); MIT, Node 18+.
+- **No published schema-driven configuration builder / Smart Paste equivalent**. We would implement more settings field metadata ourselves or adopt a separate schema package, which erodes DRY and increases maintenance.
+- No server/binary required, but many providers assume a paid/managed API account. Strong fit for B2B Email/SMS/Push expansion, **weaker for fast end-user Telegram/ntfy/webhook onboarding**.
+- New project (created 2026-06), modest adoption; security review still required. Verify NPM current version (website snapshots show 1.1.1 while publisher listing mentions 1.2.0) rather than hardcode a stale version.
+
+**Recommendation level:** viable fallback if broader commercial delivery APIs matter more than ready-made UI metadata.
+
+### 11.3 Established engines versus implementation ergonomics
+
+**Shoutrrr fork (Go CLI):**
+- https://github.com/nicholas-fedor/shoutrrr and https://shoutrrr.nickfedor.com/v0.22.1/usage/cli/generate/
+- Source-doc `generate` is an **interactive terminal prompt**, including a Telegram-specific wizard that can discover user chat IDs after a message. It is *not a ready React UI component*, but its user prompts provide UX design inspiration. The playground is a public web form/URL generator, not a local private configuration authority.
+- `send` can consume `SHOUTRRR_URL` env and body from stdin, so the app can spawn once per delivery with `shell:false` and no resident backend. URLs in environment variables still have leak risk; process memory and platform packaging must be audited.
+- Go toolchain (source currently declares Go 1.27) is a **build requirement**; end users do not need Go if a binary is correctly bundled. Every supported desktop architecture must have trusted, signed/pinned artifacts, including Windows ARM64 if shipped.
+- Better breadth/maturity of service catalog than young TS libs, but less direct UI reuse than Notifly's headless builder; binary release provenance/licensing and integration test required.
+
+**Apprise Python CLI and API:**
+- https://github.com/caronc/apprise/releases and https://appriseit.com/url-builder/
+- 2026-11 `v2.2.0` adds total **183 services** and contains a security fix. The public URL Builder is **client-side** but is not a local settings store or notification sender. Source code is mature and broad; official CLI still needs a Python runtime (if bundled as desktop default).
+- Apprise API supplies an actual ready-made browser configuration UI; an **Apprise API server must stay running during the entire desktop runtime if it is also the sender**. Shutting it off when the setup page closes would break delivery. Requires additional auth, process supervision and duplicate-setting reconciliation.
+- Avoid embedding as default unless >100 plugins and web-admin outweigh packaging cost. Optional **externally configured Apprise API destination** is viable but moves server ownership to user.
+
+**`@novu/providers`:** despite being a separate stateless package, the published 2.6.6 snapshot has ~**41 runtime dependencies**, NPM release appears much older than the 2026 platform; lacks a ready standalone channel setup UI, so **reject as the local-first default**. Novu Cloud/CLI channel connection is a different, hosted model. Sources: https://www.npmjs.com/package/@novu/providers and https://www.npmjs.com/package/novu .
+
+### 11.4 Quantified comparison (2026-11-23, realistic App-owned code)
+
+All numbers below estimate **feature code added/changed in our repo**, not lines in third-party libraries, native packages, binaries, or localization translations for every language. Test estimates include targeted unit/adapter and a modest E2E suite, **not** proving real API delivery on all platforms.
+
+| Engine | No resident service | Headless React-ready form metadata | Approximate ready channels | Owned production LOC | Tests/E2E LOC | Integration ease / confidence |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| **Notifly 0.7.2** | Yes | **Yes, built-in** | ~10-11 | **850-1,500** | **500-900** | **9/10** ease, **6/10** confidence |
+| **Thinwrap** | Yes | No | 35 total, **9 chat** | 1,000-1,750 | 550-950 | 7/10, 6/10 |
+| **Shoutrrr Go CLI** | Yes | Terminal wizard, **not native UI** | many service plugins | 950-1,800 | 550-1,050 | 6/10, 7/10 |
+| **Apprise CLI** | Yes | External URL Builder, not embedded | **183** | 1,250-2,300 | 600-1,100 | 4/10, 8/10 engine / 4/10 packaging |
+| **Apprise API sidecar** | **No** (process during app use) | **Yes, separate web UI** | **183** | 1,600-3,000 | 800-1,500 | 3/10, 6/10 |
+| **Novu Providers** | SDK only: yes | No | 40+ transitive packages; many provider types | 1,100-1,900 | 650-1,100 | 4/10, 5/10 |
+
+**Notifly breakdown (indicative 850-1,500 production LOC):** thin dispatch adapter 100-180; secure credential persistence/validation 160-300; event-to-destination preferences + bounded outcomes 190-320; schema-driven settings UI 260-420; IPC/HTTP composition & localization wiring 140-280. Existing notification event types and Radix settings controls are reused; do not add own Telegram/Slack/Discord sender implementations.
+
+**Why published provider counts don't settle the choice:** Apprise includes obscure services; Thinwrap mixes email/SMS/push/chat; Notifly covers most requested household integrations. Mature catalog breadth vs UX code footprint are separate axes.
+
+### 11.5 Concrete in-app configuration UX (no local website needed)
+
+Suggested in `Settings → Notifications → Delivery channels`:
+
+```text
+Desktop [On, existing]     Telegram [Connect]      Discord [Connect]
+Slack [Connect]            ntfy [Connect]          Webhook [Advanced]
+[Add destination] -> search services (library searchServices)
+   -> dynamic Radix form from schema (label, sensitive, helpText)
+   -> for Discord/Slack "Paste webhook URL" via smartParse
+   -> Telegram: bot token, chat ID; explain BotFather & start conversation
+   -> Save masked credentials to trusted application port; show a named destination
+   -> [Send test] [Disable] [Edit] [Remove]
+Routing:
+  Agent sends message directly to you     Desktop [x]  Telegram [ ]
+  Task needs your clarification          Desktop [x]  Telegram [ ]
+  Tool approval (future separate bridge) Desktop [x]  Telegram [ ]
+```
+
+Do **not** open an external public web page with secrets in query params or embed a remote page in Electron. For a remote builder, show an explicit **"Open help/URL builder"** link only; secrets typed there are outside our trust boundary. Creating a bare localhost settings server is unnecessary if the library already supplies UI schemas for the existing React settings page.
+
+**Source of truth:** existing NotificationManager for committed event identity; one small external-destinations settings model + encrypted secret store; existing desktop toasts unchanged. No new generic notification database or message bus. Destination provider never sees app filesystem paths, full prompts or internal logs. User can opt into sanitized preview (default off). Encrypted secrets remain main-owned; dynamic fields in renderer are ephemeral entry values.
+
+### 11.6 Short risk-first spike to authorize a provider
+
+Gate `N0` (~100-220 **spike code lines**, discard after review): install exact pinned Notifly release in disposable branch/sandbox, inspect NPM tarball versus GitHub source and TypeScript 7 compatibility. Verify `getServiceSchemas` / `buildUrl` / `smartParse` and `notify`. Simulate Telegram, Discord, ntfy and webhook with injected/mock fetch. **No real token/test message without explicit opt-in**.
+
+Gate `N1` security (~150-300 test lines): prove no secret in error string/logger/config, invalid token is masked, URL parser rejects malformed targets, malicious redirects/private-IP-DNS do not escape HTTP policy (or keep custom webhook **disabled in v1**). Test Android/mobile push is **provider service behavior**, not an app feature; no assurance of background delivery after app exits.
+
+Gate `N2` packaging (~150-250 E2E lines): actual Electron pack/dev renderer and Mac/Windows/Linux artifact smoke for zero extra executable, no dependency on browser DOM, private route auth and no config leak through HTTP. Perform same scripted send contract against Shoutrrr on failure to qualify Notifly (including binary provenance and secret handling).
+
+**Go/no-go:** Choose Notifly only if source and distribution audit are acceptable; choose Shoutrrr if catalog maturity/coverage is worth packaging; choose Apprise CLI/API only for breadth/ready remote UI. If none qualifies, write down the failed proof and ask owner to select fallback; never quietly rewrite a multi-provider dispatch engine.
+
+### 11.7 Critical-review revisions (additional 4 passes)
+
+1. **Ecosystem review:** original A/B/C/D/E left out native TypeScript OSS packages; added Notifly and Thinwrap, and separated **chat channel count** from all-purpose provider count.
+2. **Real-source review:** Notifly ships useful builder metadata and Smart Paste, **but** is under 1.0 with tiny adoption and incomplete SSRF/DNS redirect protection; made selection conditional and generic webhook advanced-only pending security proof.
+3. **UX/DRY review:** native settings UI can be generated from library schema; external builder/API server is **not necessary** for desktop onboarding. Reuse the project's Radix controls and existing notification toggles; don't build duplicate service-specific forms.
+4. **Packaging/security review:** Shoutrrr needs Go for building but **not** for end user; Apprise CLI needs a bundled Python runtime; local Apprise API must remain running if it sends. Reconfirmed encrypted secret handles and explicit offline limitations.
+
+**Provisional research recommendation (still requires product owner's choice):** favor **Notifly** with a strict security + maintenance spike for a light, native, no-backend first release; keep **Shoutrrr** as a proven functional fallback for broader catalog, subject to its own packaging evidence. Initial rollout only 2 event types: `user_inbox`, `task_clarification`. Do not merge decision into production before approval.
