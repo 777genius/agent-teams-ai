@@ -113,6 +113,52 @@ describe('Thinwrap transport adapter', () => {
     )).toEqual({ success: false, code: 'invalid_recipient' });
   });
 
+  it('honors Teams Workflows and Google Chat native response contracts', async () => {
+    const sender = new ThinwrapDeliverySender();
+    const sent: { url: string; body: Record<string, unknown>; redirect: RequestRedirect | undefined }[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, opts: RequestInit) => {
+      sent.push({
+        url: String(url),
+        body: JSON.parse(String(opts.body)) as Record<string, unknown>,
+        redirect: opts.redirect,
+      });
+      return String(url).includes('chat.googleapis.com')
+        ? new Response(JSON.stringify({ name: 'spaces/test/messages/1' }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          })
+        : new Response(null, { status: 202 });
+    }));
+
+    const teamsUrl =
+      'https://prod-00.westeurope.logic.azure.com/workflows/123456/triggers/manual/paths/invoke?api-version=2016-10-01&sig=secret';
+    const chatUrl =
+      'https://chat.googleapis.com/v1/spaces/ABCDEFG/messages?key=abc&token=xyz';
+    expect(await sender.send(makeChannel('ms-teams'), teamsUrl, 'Task blocked'))
+      .toEqual({ success: true });
+    expect(await sender.send(makeChannel('google-chat'), chatUrl, 'Task blocked'))
+      .toEqual({ success: true });
+    expect(sent).toHaveLength(2);
+    expect(sent[0].redirect).toBe('error');
+    expect(sent[1].redirect).toBe('error');
+    expect(sent[0].body.type).toBe('message');
+    expect(JSON.stringify(sent[0].body)).toContain('Task blocked');
+    expect(sent[1].body.text).toBe('Task blocked');
+    expect(sent[1].url).toBe(chatUrl);
+  });
+
+  it('surfaces sanitized authentication and rate-limit codes', async () => {
+    const sender = new ThinwrapDeliverySender();
+    const tokenUrl = 'https://hooks.slack.com/services/T123/B123/abcdefgh';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('invalid_token', { status: 403 })));
+    expect(await sender.send(makeChannel('slack'), tokenUrl, 'Task blocked'))
+      .toEqual({ success: false, code: 'authentication_failed' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('too_many_requests', {
+      status: 429, headers: { 'retry-after': '10' },
+    })));
+    expect(await sender.send(makeChannel('slack'), tokenUrl, 'Task blocked'))
+      .toEqual({ success: false, code: 'rate_limited' });
+  });
+
   it('refuses local/webhook impostors without making a request', async () => {
     const network = vi.fn(async () => new Response('ok', { status: 200 }));
     vi.stubGlobal('fetch', network);
