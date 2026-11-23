@@ -73,6 +73,7 @@ describe('Attention Inbox pure domain', () => {
         teamDisplayName: 'One',
         tasks: [],
         messages: [dm, dm, group],
+        groupNames: { g1: 'Architecture decisions' },
       }],
     };
     const unread = buildAttentionModel(snapshot, () => ({
@@ -82,6 +83,7 @@ describe('Attention Inbox pure domain', () => {
     expect(unread.unreadMessageCount).toBe(2);
     expect(unread.chatCount).toBe(2);
     expect(unread.chats.some((c) => c.scope.kind === 'team-feed')).toBe(false);
+    expect(unread.chats.find((c) => c.scope.kind === 'group')?.name).toBe('Architecture decisions');
 
     const afterRead = buildAttentionModel(snapshot, () => ({
       direct: new Set(['dm1']),
