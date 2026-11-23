@@ -549,4 +549,53 @@ describe('current Host live-roster snapshot handoff', () => {
         expect(apply({ ...previous, [map]: { [ignored]: key } }, next)).toEqual({});
     }
   );
+
+  it('rejects a fresh Host roster revision when either tuple has this owner in an ignored-owner array', async () => {
+    const f = fixture(),
+      previous = pin(await f.api.getMemberSpawnStatuses(key));
+    f.view.launch.rosterRevision = 'TEST-next';
+    const next = await f.api.getMemberSpawnStatuses(key);
+    const owners = Object.freeze(['TEST-other-owner', key]);
+
+    for (const map of ['ignoredRuntimeRunIds', 'ignoredProvisioningRunIds'] as const) {
+      for (const ignored of [runId, next.runId!]) {
+        const ignoredOwners = Object.freeze({ [ignored]: owners });
+        const state = { ...previous, [map]: ignoredOwners };
+        expect(apply(state, next), `${map} must retain the ignored tuple ${ignored}`).toEqual({});
+        expect(state[map]).toBe(ignoredOwners);
+        expect(owners).toEqual(['TEST-other-owner', key]);
+        expect(state.currentRuntimeRunIdByTeam[key]).toBe(runId);
+      }
+    }
+  });
+
+  it('preserves another ignored owner when a fresh Host revision retires its predecessor', async () => {
+    const f = fixture(),
+      previous = pin(await f.api.getMemberSpawnStatuses(key));
+    const owners = Object.freeze(['TEST-other-owner']);
+    const ignoredRuntimeRunIds = Object.freeze({
+      [runId]: owners,
+      'TEST-unrelated-run': 'TEST-unrelated-owner',
+    });
+    const ignoredProvisioningRunIds = Object.freeze({ [runId]: owners });
+    previous.ignoredRuntimeRunIds = ignoredRuntimeRunIds;
+    previous.ignoredProvisioningRunIds = ignoredProvisioningRunIds;
+    f.view.launch.rosterRevision = 'TEST-next';
+    const next = await f.api.getMemberSpawnStatuses(key);
+    const changed = apply(previous, next);
+
+    expect(changed.currentRuntimeRunIdByTeam?.[key]).toBe(next.runId);
+    expect(changed.memberSpawnSnapshotsByTeam?.[key]).toBe(next);
+    expect(changed.memberSpawnStatusesByTeam?.[key]).toEqual(next.statuses);
+    expect(changed.ignoredRuntimeRunIds).toEqual({
+      [runId]: ['TEST-other-owner', key],
+      'TEST-unrelated-run': 'TEST-unrelated-owner',
+    });
+    expect(changed.ignoredRuntimeRunIds).not.toBe(ignoredRuntimeRunIds);
+    expect(previous.ignoredRuntimeRunIds).toBe(ignoredRuntimeRunIds);
+    expect(previous.ignoredRuntimeRunIds[runId]).toBe(owners);
+    expect(owners).toEqual(['TEST-other-owner']);
+    expect(previous.currentRuntimeRunIdByTeam[key]).toBe(runId);
+    expect({ ...previous, ...changed }.ignoredProvisioningRunIds).toBe(ignoredProvisioningRunIds);
+  });
 });

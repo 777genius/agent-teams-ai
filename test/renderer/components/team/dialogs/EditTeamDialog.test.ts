@@ -4,6 +4,11 @@ import { createRoot } from 'react-dom/client';
 import { MembersEditorSection } from '@renderer/components/team/members/MembersEditorSection';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice')>(),
+  ProjectContextRecoveryNotice: () => React.createElement('div', { 'data-testid': 'project-recovery' }, 'Open blocking project'),
+}));
+
 vi.mock('@renderer/api', () => ({
   api: {
     gatewayProvider: {
@@ -1252,10 +1257,10 @@ describe('EditTeamDialog', () => {
     });
   });
 
-  it('surfaces partial-save feedback when team settings save but member changes fail', async () => {
+  it.each([false, true])('surfaces a partial roster refusal with recovery only when required (%s)', async (projectRefusal) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
-    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(new Error('disk write failed'));
+    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(Object.assign(new Error('disk write failed'), projectRefusal ? { failure: { code: 'TEAM_PROJECT_CONTEXT_UNRECONCILED' } } : {}));
     const onSaved = vi.fn();
 
     const host = document.createElement('div');
@@ -1301,6 +1306,7 @@ describe('EditTeamDialog', () => {
       'Team settings were saved, but member changes failed: disk write failed'
     );
     expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(Boolean(host.querySelector('[data-testid="project-recovery"]'))).toBe(projectRefusal);
 
     await act(async () => {
       root.unmount();

@@ -219,6 +219,69 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   });
 
+  it.each([
+    {
+      code: 'RESTART_REQUIRED',
+      error: 'Stop the team, edit the roster, then relaunch.',
+      outcome: undefined,
+    },
+    {
+      code: 'TEAM_MUTATION_UNCERTAIN',
+      error: 'The edit may be partially applied. Read the team before retrying.',
+      outcome: { state: 'partial', configurationRevision: 'revision-after-partial-edit' },
+    },
+  ])('preserves $code and its outcome through the MCP stdio serializer', async (refusal) => {
+    const context = {
+      appInstanceId: 'sandbox-live-edit-refusal',
+      dataRootFingerprint: 'sandbox-root',
+      connectionGeneration: 1,
+    };
+    const teamName = 'sandbox-edit-refusal';
+    const payload = {
+      expectedContext: context,
+      expectedRevision: 'revision-before-edit',
+      members: [{ name: 'alice', role: 'Reviewer' }],
+    };
+    const requests: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const control = await startControlServer((request) => {
+      requests.push(request);
+      return { statusCode: 409, body: refusal };
+    });
+    const client = new McpStdIoClient(
+      serverPath,
+      workspaceRoot,
+      ['--transport', 'stdio', '--tool-profile', 'management'],
+      {
+        AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+      }
+    );
+    try {
+      await client.initialize();
+      const response = await client.callTool('team_update', { teamName, ...payload });
+      expect(response).toEqual({
+        jsonrpc: '2.0',
+        id: 3,
+        result: {
+          content: [{ type: 'text', text: `[${refusal.code}] ${refusal.error}` }],
+          isError: true,
+          structuredContent: {
+            code: refusal.code,
+            ...(refusal.outcome ? { outcome: refusal.outcome } : {}),
+          },
+        },
+      });
+      expect(requests).toEqual([
+        { method: 'POST', url: `/api/teams/${teamName}/update`, body: payload },
+      ]);
+      expect(await client.endInput()).toBe(0);
+    } finally {
+      await client.close();
+      await control.close();
+    }
+  });
+
   it.each(['task_complete', 'task_set_status'])(
     'issue-618 enforces dependencies and delivers one unblock notice via %s over stdio',
     async (completionTool) => {

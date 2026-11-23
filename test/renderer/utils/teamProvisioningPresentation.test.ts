@@ -2,6 +2,27 @@ import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvision
 import { describe, expect, it } from 'vitest';
 
 describe('buildTeamProvisioningPresentation', () => {
+  it('explains unsupported manual approvals while retaining the diagnostic code', () => {
+    const progress = {
+      runId: 'failed-run',
+      teamName: 'builders',
+      state: 'failed' as const,
+      message: 'Launch failed',
+      error: 'run_manual_permission_unsupported',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:01.000Z',
+    };
+    const presentation = buildTeamProvisioningPresentation({
+      progress,
+      members: [],
+      memberSpawnStatuses: {},
+    });
+    expect(presentation?.panelMessage).toBe(
+      'This launch method does not support manual tool approval. Choose a launch method that supports approvals, then retry.'
+    );
+    expect(presentation?.progress.error).toBe('run_manual_permission_unsupported');
+  });
+
   it('uses a lead-online compact detail for ready teams without teammates', () => {
     const presentation = buildTeamProvisioningPresentation({
       progress: {

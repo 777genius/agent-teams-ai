@@ -14,13 +14,15 @@ import type { TeamCreateRequest, TeamCreateResponse } from '@shared/types/team';
 export async function createHostTeamFromDialog(
   request: TeamCreateRequest,
   get: () => TeamSlice,
-  poll: (get: () => TeamSlice, runId: string) => Promise<void>
+  poll: (get: () => TeamSlice, runId: string) => Promise<void>,
+  isContextCurrent: () => boolean
 ): Promise<TeamCreateResponse> {
   const epoch = captureContextScopedRequestEpoch();
   get().subscribeProvisioningProgress();
   const response = await unwrapIpc('team:create', () => api.teams.createTeam(request));
-  if (!isContextScopedRequestEpochCurrent(epoch))
+  if (!isContextScopedRequestEpochCurrent(epoch) || !isContextCurrent()) {
     throw new Error('Team context changed after Create.');
+  }
   if (
     !response.teamName ||
     parseHostTeamSelectionKey(response.teamName) !== parseHostTeamRunId(response.runId).handleId
@@ -30,12 +32,15 @@ export async function createHostTeamFromDialog(
   await get()
     .fetchTeams()
     .catch(() => undefined);
-  if (!isContextScopedRequestEpochCurrent(epoch))
+  if (!isContextScopedRequestEpochCurrent(epoch) || !isContextCurrent()) {
     throw new Error('Team context changed after Create.');
+  }
   if (response.launchStatus === 'unconfirmed') return response;
   await get()
     .getProvisioningStatus(response.runId)
     .catch(() => undefined);
-  if (isContextScopedRequestEpochCurrent(epoch)) void poll(get, response.runId);
+  if (isContextScopedRequestEpochCurrent(epoch) && isContextCurrent()) {
+    void poll(get, response.runId);
+  }
   return response;
 }

@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} nie udało się uruchomić",
         "teammatesFailedToStart": "{{count}} członkom zespołu nie udało się uruchomić",
-        "teammatesFailedRatio": "{{count}}/{{total}} członkom zespołu nie udało się uruchomić"
+        "teammatesFailedRatio": "{{count}}/{{total}} członkom zespołu nie udało się uruchomić",
+        "manualPermissionUnsupported": "Ten sposób uruchamiania nie obsługuje ręcznego zatwierdzania narzędzi. Wybierz sposób obsługujący zatwierdzenia i spróbuj ponownie."
       },
       "skipped": {
         "memberSkipped": "{{name}} pominięty w tym uruchomieniu",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Uruchomienie zespołu w projekcie „{{project}}” nie zostało ukończone. Spróbuj ponownie.",
+    "unknown": "Nie potwierdzono zatrzymania poprzedniego uruchomienia w projekcie „{{project}}”. Sprawdź jego stan przed ponownym uruchomieniem.",
+    "retryLaunch": "Uruchom ponownie",
+    "recoveryProject": "Sprawdź nieukończone uruchomienie w projekcie „{{project}}” przed edycją zespołu.",
+    "openProject": "Otwórz projekt"
   }
 }

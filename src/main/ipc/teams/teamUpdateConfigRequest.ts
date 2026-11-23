@@ -32,3 +32,9 @@ export function parseUpdateConfigRequest(updates: unknown): ParsedUpdateConfig {
   }
   return { ok: true, value: { name, description, color, prompt } };
 }
+
+/** Validate before a live definition edit creates its recovery marker. */
+export async function preflightConfigUpdate(_teamName: string, updates: unknown): Promise<void> {
+  const parsed = parseUpdateConfigRequest(updates);
+  if (!parsed.ok) throw new Error(parsed.error);
+}

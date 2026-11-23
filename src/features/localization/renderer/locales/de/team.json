@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} nicht starten",
         "teammatesFailedToStart": "{{count}} Teamkollegen konnten nicht starten",
-        "teammatesFailedRatio": "{{count}}/{{total}} Teamkollegen konnten nicht starten"
+        "teammatesFailedRatio": "{{count}}/{{total}} Teamkollegen konnten nicht starten",
+        "manualPermissionUnsupported": "Diese Startmethode unterstützt keine manuelle Werkzeugfreigabe. Wähle eine Startmethode mit Freigaben und versuche es erneut."
       },
       "skipped": {
         "memberSkipped": "{{name}} übersprungen für diesen Start",
@@ -3314,5 +3315,12 @@
         "invalidRequest": "The export request was invalid."
       }
     }
+  },
+  "projectContextView": {
+    "incomplete": "Der Teamstart im Projekt „{{project}}“ wurde nicht abgeschlossen. Starte das Team erneut.",
+    "unknown": "Es ist nicht bestätigt, dass der vorherige Lauf im Projekt „{{project}}“ gestoppt wurde. Prüfe seinen Status vor einem erneuten Start.",
+    "retryLaunch": "Erneut starten",
+    "recoveryProject": "Prüfe den unvollständigen Start im Projekt „{{project}}“, bevor du dieses Team bearbeitest.",
+    "openProject": "Projekt öffnen"
   }
 }

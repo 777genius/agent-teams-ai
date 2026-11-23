@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} 시작 실패",
         "teammatesFailedToStart": "{{count}} 팀메이트는 시작 실패",
-        "teammatesFailedRatio": "{{count}}/{{total}} 팀메이트는 시작 실패"
+        "teammatesFailedRatio": "{{count}}/{{total}} 팀메이트는 시작 실패",
+        "manualPermissionUnsupported": "이 시작 방식은 도구의 수동 승인을 지원하지 않습니다. 승인을 지원하는 방식을 선택한 후 다시 시도하세요."
       },
       "skipped": {
         "memberSkipped": "{{name}}는 이 발사를 위해 건너 뛰었습니다",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "프로젝트 “{{project}}”에서 팀 시작이 완료되지 않았습니다. 다시 시작해 주세요.",
+    "unknown": "프로젝트 “{{project}}”의 이전 실행이 중지되었는지 확인되지 않았습니다. 다시 시작하기 전에 상태를 확인해 주세요.",
+    "retryLaunch": "시작 다시 시도",
+    "recoveryProject": "이 팀을 편집하기 전에 프로젝트 “{{project}}”의 미완료 시작을 확인해 주세요.",
+    "openProject": "프로젝트 열기"
   }
 }

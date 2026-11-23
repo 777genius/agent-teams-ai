@@ -59,6 +59,7 @@ const NativeProjectScopedTeamDetailView = ({
   isPaneFocused = true,
 }: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const { t: translateCommon } = useAppTranslation('common');
   const {
     repositoryGroups,
     projects,
@@ -81,6 +82,7 @@ const NativeProjectScopedTeamDetailView = ({
   // A launch can start in Create Team or Team List, before this view owns a launchRef.
   const provisioningActive = useStore((s) => isTeamProvisioningActive(s, teamName));
   const provisioningError = useStore((s) => s.provisioningErrorByTeam[teamName] ?? null);
+  const provisioningRunId = useStore((s) => s.currentProvisioningRunIdByTeam[teamName] ?? null);
   const selectedTeamName = useStore((s) => s.selectedTeamName);
   const selectedProjectPath = useMemo(
     () =>
@@ -112,18 +114,31 @@ const NativeProjectScopedTeamDetailView = ({
   const launchRef = useRef<{ key: string; runId: string | null } | null>(null);
   const launching = launchingKey === key;
 
+  const latestViewRequest = useRef(0);
   const refresh = useCallback(
     async (isCurrent: () => boolean): Promise<void> => {
+      const requestId = ++latestViewRequest.current;
       try {
         const context = await api.teams.getProjectContextView(teamName, selectedProjectPath);
-        if (isCurrent() && activeKeyRef.current === key) {
+        if (
+          isCurrent() &&
+          activeKeyRef.current === key &&
+          requestId === latestViewRequest.current
+        ) {
           setResult({ key, context });
-          if (context.state === 'ready') {
+          if (
+            context.state === 'ready' ||
+            (context.state === 'pending' && context.reason !== 'launching')
+          ) {
             setAwaitingReadyKey((current) => (current === key ? null : current));
           }
         }
       } catch (error) {
-        if (isCurrent() && activeKeyRef.current === key) {
+        if (
+          isCurrent() &&
+          activeKeyRef.current === key &&
+          requestId === latestViewRequest.current
+        ) {
           setResult({ key, error: error instanceof Error ? error.message : String(error) });
         }
       }
@@ -160,35 +175,21 @@ const NativeProjectScopedTeamDetailView = ({
   const state = result?.key === key ? result.context?.state : undefined;
   useEffect(() => {
     let alive = true;
-    void refresh(() => alive);
-    // Poll only while native provisioning is pending or immediately after an
-    // explicit launch. A ready context requires no persistent background timer.
+    // Wait for each read before scheduling another, so slow responses are not
+    // perpetually superseded. Explicit refreshes still use the request-ID fence.
     const shouldPoll = isActive && (state === 'pending' || awaitingReadyKey === key);
-    const timer = shouldPoll
-      ? setInterval(() => {
-          void refresh(() => alive);
-        }, POLL_INTERVAL_MS)
-      : null;
-    // Native provisioning may be interrupted without a final progress event.
-    // Allow explicit retry after the bounded wait; runtime admission still
-    // refuses a parallel process or an unowned/incomplete physical context.
-    const timeout =
-      awaitingReadyKey === key
-        ? setTimeout(() => {
-            if (alive && activeKeyRef.current === key) {
-              setAwaitingReadyKey((current) => (current === key ? null : current));
-              launchRef.current = null;
-              setResult({
-                key,
-                error: 'Project provisioning has not completed. Check the team status and retry.',
-              });
-            }
-          }, 120_000)
-        : null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = async (): Promise<void> => {
+      await refresh(() => alive);
+      if (alive && shouldPoll)
+        timer = setTimeout(() => {
+          void poll();
+        }, POLL_INTERVAL_MS);
+    };
+    void poll();
     return () => {
       alive = false;
-      if (timer !== null) clearInterval(timer);
-      if (timeout !== null) clearTimeout(timeout);
+      if (timer !== null) clearTimeout(timer);
     };
   }, [isActive, state, awaitingReadyKey, key, refresh]);
 
@@ -339,13 +340,17 @@ const NativeProjectScopedTeamDetailView = ({
     );
   }
 
+  const showPendingBanner =
+    context?.state === 'pending' && context.runId !== null && context.runId === provisioningRunId;
+  const incomplete = context?.state === 'pending' && context.reason === 'incomplete';
+  const unresolved = context?.state === 'pending' && context.reason === 'unknown';
   const canStart =
     Boolean(selectedProjectPath) &&
     launchingKey === null &&
     awaitingReadyKey !== key &&
     !provisioningActive &&
     !error &&
-    (context?.state === 'empty' || context?.state === 'pending');
+    (context?.state === 'empty' || incomplete);
   // Only invite to Launch when the button is really there, and say "in this
   // project": the team may already be running in another one.
   const showEmptyPrompt = canStart && context?.state === 'empty';
@@ -364,11 +369,20 @@ const NativeProjectScopedTeamDetailView = ({
     message = showEmptyPrompt
       ? t('projectContextView.empty', { team: logicalDisplayName })
       : t('projectContextView.pending');
-  } else if (context?.state === 'pending') message = t('projectContextView.pending');
+  } else if (context?.state === 'pending') {
+    message = t(
+      incomplete
+        ? 'projectContextView.incomplete'
+        : unresolved
+          ? 'projectContextView.unknown'
+          : 'projectContextView.pending',
+      { project: context.projectPath ?? selectedProjectPath ?? '' }
+    );
+  }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {context?.state === 'pending' && (
+      {showPendingBanner && (
         <div className="px-4 pt-3">
           <TeamProvisioningBanner teamName={teamName} />
         </div>
@@ -379,7 +393,7 @@ const NativeProjectScopedTeamDetailView = ({
         >
           {showEmptyPrompt ? t('projectContextView.emptyTitle') : logicalDisplayName}
         </h2>
-        {!(context?.state === 'pending' && provisioningError) && (
+        {(!(showPendingBanner && provisioningError) || incomplete || unresolved) && (
           <p className="max-w-md text-xs text-text-secondary" role={error ? 'alert' : 'status'}>
             {message}
           </p>
@@ -391,17 +405,17 @@ const NativeProjectScopedTeamDetailView = ({
             onClick={() => setLaunchDialogOpen(true)}
             disabled={launching}
           >
-            {t('detail.actions.launch')}
+            {t(incomplete ? 'projectContextView.retryLaunch' : 'detail.actions.launch')}
           </button>
         )}
-        {error && (
+        {(error || unresolved) && (
           <Button
             variant="outline"
             onClick={() => {
               void refresh(() => activeKeyRef.current === key);
             }}
           >
-            {t('projectContextView.retry')}
+            {unresolved ? translateCommon('actions.refresh') : t('projectContextView.retry')}
           </Button>
         )}
         {canEditHere && (

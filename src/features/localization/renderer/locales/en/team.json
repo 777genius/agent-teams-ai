@@ -132,7 +132,12 @@
     "emptyTitle": "Not launched in this project yet",
     "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
     "projectMissing": "This history belongs to a project that is no longer in your project list.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "incomplete": "The team launch in project “{{project}}” did not finish. Retry the launch.",
+    "unknown": "The previous run in project “{{project}}” has not been confirmed stopped. Check its status before launching again.",
+    "retryLaunch": "Retry launch",
+    "recoveryProject": "Check the unfinished launch in project “{{project}}” before editing this team.",
+    "openProject": "Open project"
   },
   "create": {
     "actions": {
@@ -2608,7 +2613,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} failed to start",
         "teammatesFailedToStart": "{{count}} teammates failed to start",
-        "teammatesFailedRatio": "{{count}}/{{total}} teammates failed to start"
+        "teammatesFailedRatio": "{{count}}/{{total}} teammates failed to start",
+        "manualPermissionUnsupported": "This launch method does not support manual tool approval. Choose a launch method that supports approvals, then retry."
       },
       "skipped": {
         "memberSkipped": "{{name}} skipped for this launch",

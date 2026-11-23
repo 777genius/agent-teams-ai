@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} gagal dimulakan",
         "teammatesFailedToStart": "{{count}} rakan pasukan gagal dimulakan",
-        "teammatesFailedRatio": "{{count}}/{{total}} rakan pasukan gagal dimulakan"
+        "teammatesFailedRatio": "{{count}}/{{total}} rakan pasukan gagal dimulakan",
+        "manualPermissionUnsupported": "Kaedah pelancaran ini tidak menyokong kelulusan alat secara manual. Pilih kaedah yang menyokong kelulusan, kemudian cuba lagi."
       },
       "skipped": {
         "memberSkipped": "{{name}} dilangkau untuk pelancaran ini",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Pelancaran pasukan dalam projek “{{project}}” tidak selesai. Cuba lancarkan semula.",
+    "unknown": "Proses sebelumnya dalam projek “{{project}}” belum disahkan berhenti. Semak statusnya sebelum melancarkan semula.",
+    "retryLaunch": "Cuba lancarkan semula",
+    "recoveryProject": "Semak pelancaran yang belum selesai dalam projek “{{project}}” sebelum menyunting pasukan ini.",
+    "openProject": "Buka projek"
   }
 }

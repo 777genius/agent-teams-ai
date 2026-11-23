@@ -60,6 +60,11 @@ import {
   captureTeamManagementRefreshScope,
   continueAcceptedTeamManagementChange,
 } from './team/teamManagementNotices';
+import {
+  addIgnoredTeamRun,
+  isTeamRunIgnored,
+  removeIgnoredTeamRunOwner,
+} from './team/teamProvisioningRunIdentity';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
 import { getVisibleTeamNamesInAnyPane, subscribeVisiblePhysicalTeamChanges } from './team/teamViewVisibility';
 import { applyToolApprovalEvent } from './team/toolApprovalEvents';
@@ -1563,8 +1568,8 @@ export function initializeNotificationListeners(): () => void {
         if (!event.runId) return false;
         const state = useStore.getState();
         return (
-          state.ignoredProvisioningRunIds[event.runId] === event.teamName ||
-          state.ignoredRuntimeRunIds[event.runId] === event.teamName
+          isTeamRunIgnored(state.ignoredProvisioningRunIds, event.runId, event.teamName) ||
+          isTeamRunIgnored(state.ignoredRuntimeRunIds, event.runId, event.teamName)
         );
       })();
       if (isIgnoredRuntimeRun) {
@@ -1588,11 +1593,7 @@ export function initializeNotificationListeners(): () => void {
               ...prev.currentRuntimeRunIdByTeam,
               [event.teamName]: event.runId ?? null,
             },
-            ignoredRuntimeRunIds: Object.fromEntries(
-              Object.entries(prev.ignoredRuntimeRunIds).filter(
-                ([, teamName]) => teamName !== event.teamName
-              )
-            ),
+            ignoredRuntimeRunIds: removeIgnoredTeamRunOwner(prev.ignoredRuntimeRunIds, event.teamName),
           }));
         }
       };
@@ -1650,10 +1651,7 @@ export function initializeNotificationListeners(): () => void {
             nextState.currentRuntimeRunIdByTeam = { ...prev.currentRuntimeRunIdByTeam };
             delete nextState.currentRuntimeRunIdByTeam[event.teamName];
             nextState.ignoredRuntimeRunIds = event.runId
-              ? {
-                  ...prev.ignoredRuntimeRunIds,
-                  [event.runId]: event.teamName,
-                }
+              ? addIgnoredTeamRun(prev.ignoredRuntimeRunIds, event.runId, event.teamName)
               : prev.ignoredRuntimeRunIds;
             clearToolActivityTimersForTeam(event.teamName);
             clearTaskLogActivityTimersForTeam(event.teamName);

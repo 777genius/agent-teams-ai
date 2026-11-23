@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} nu a reușit să pornească",
         "teammatesFailedToStart": "{{count}} coechipieri nu au reușit să pornească",
-        "teammatesFailedRatio": "{{count}}/{{total}} coechipieri nu au reușit să pornească"
+        "teammatesFailedRatio": "{{count}}/{{total}} coechipieri nu au reușit să pornească",
+        "manualPermissionUnsupported": "Această metodă de pornire nu acceptă aprobarea manuală a instrumentelor. Alege o metodă care acceptă aprobări și încearcă din nou."
       },
       "skipped": {
         "memberSkipped": "{{name}} omis pentru această lansare",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Pornirea echipei în proiectul „{{project}}” nu s-a încheiat. Încearcă din nou.",
+    "unknown": "Oprirea rulării anterioare din proiectul „{{project}}” nu este confirmată. Verifică starea înainte de a porni din nou.",
+    "retryLaunch": "Reîncearcă pornirea",
+    "recoveryProject": "Verifică pornirea neterminată din proiectul „{{project}}” înainte de a edita această echipă.",
+    "openProject": "Deschide proiectul"
   }
 }

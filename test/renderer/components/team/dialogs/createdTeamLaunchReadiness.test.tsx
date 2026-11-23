@@ -354,8 +354,17 @@ describe('original Create launch flow scoped evidence', () => {
     createTeam
       .mockRejectedValueOnce(new Error('original outcome unknown'))
       .mockResolvedValue(partial);
-    const create = async (request: TeamCreateRequest) =>
-      (await createHostTeamFromDialog(request, () => state as TeamSlice, poll)).teamName!;
+    const create = async (request: TeamCreateRequest) => {
+      const contextId = context.activeContextId;
+      return (
+        await createHostTeamFromDialog(
+          request,
+          () => state as TeamSlice,
+          poll,
+          () => context.activeContextId === contextId
+        )
+      ).teamName!;
+    };
     await expect(f.submit()(f.input.request, create)).rejects.toThrow('original outcome unknown');
     expect(console.error).toHaveBeenCalledExactlyOnceWith(
       '[Renderer:unwrapIpc]',

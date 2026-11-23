@@ -61,6 +61,7 @@ import {
 } from '@renderer/store/slices/teamSlice';
 import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+import { describeMemberLaunchFailureReason } from '@renderer/utils/memberLaunchFailureReasonText';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
@@ -71,12 +72,7 @@ import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDef
 import { supportsScheduleExecutionLimits } from '@shared/utils/scheduleLimits';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { bindTeamProvisioningContext } from '@shared/utils/teamProvisioningContext';
-import {
-  AlertTriangle,
-  Check,
-  Info,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, Check, Info, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { HistoricalPromptReview } from '../schedule/HistoricalPromptReview';
@@ -2989,7 +2985,7 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
         {activeError ? (
           <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            <span>{activeError}</span>
+            <span>{describeMemberLaunchFailureReason(activeError, t)}</span>
           </div>
         ) : null}
         <DialogFooter

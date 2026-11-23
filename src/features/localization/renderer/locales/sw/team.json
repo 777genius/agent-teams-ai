@@ -2340,7 +2340,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} ameshindwa kuanza",
         "teammatesFailedToStart": "wenzako {{count}} wa timu wameshindwa kuanza",
-        "teammatesFailedRatio": "wenzako {{count}}/{{total}} wa timu wameshindwa kuanza"
+        "teammatesFailedRatio": "wenzako {{count}}/{{total}} wa timu wameshindwa kuanza",
+        "manualPermissionUnsupported": "Njia hii ya kuanzisha hairuhusu idhini ya zana kwa mkono. Chagua njia inayoruhusu idhini, kisha ujaribu tena."
       },
       "skipped": {
         "memberSkipped": "{{name}} ameruka kwa uzinduzi huu",
@@ -3316,5 +3317,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Uanzishaji wa timu katika mradi “{{project}}” haukukamilika. Jaribu kuanzisha tena.",
+    "unknown": "Haijathibitishwa kuwa utekelezaji wa awali katika mradi “{{project}}” umesimama. Angalia hali yake kabla ya kuanzisha tena.",
+    "retryLaunch": "Jaribu kuanzisha tena",
+    "recoveryProject": "Angalia uanzishaji ambao haujakamilika katika mradi “{{project}}” kabla ya kuhariri timu hii.",
+    "openProject": "Fungua mradi"
   }
 }

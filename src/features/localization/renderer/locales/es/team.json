@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} no comenzó",
         "teammatesFailedToStart": "Los compañeros de equipo {{count}} no comenzaron",
-        "teammatesFailedRatio": "{{count}}/{{total}}compañeros de equipo no comenzaron"
+        "teammatesFailedRatio": "{{count}}/{{total}}compañeros de equipo no comenzaron",
+        "manualPermissionUnsupported": "Este método de inicio no admite la aprobación manual de herramientas. Elige uno que admita aprobaciones y vuelve a intentarlo."
       },
       "skipped": {
         "memberSkipped": "{{name}} saltó para este lanzamiento",
@@ -3314,5 +3315,12 @@
         "invalidRequest": "The export request was invalid."
       }
     }
+  },
+  "projectContextView": {
+    "incomplete": "El inicio del equipo en el proyecto «{{project}}» no terminó. Vuelve a iniciarlo.",
+    "unknown": "No se ha confirmado que la ejecución anterior del proyecto «{{project}}» se haya detenido. Comprueba su estado antes de volver a iniciarla.",
+    "retryLaunch": "Volver a iniciar",
+    "recoveryProject": "Comprueba el inicio incompleto en el proyecto «{{project}}» antes de editar este equipo.",
+    "openProject": "Abrir proyecto"
   }
 }

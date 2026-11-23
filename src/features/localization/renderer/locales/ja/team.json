@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}}が起動できなかった",
         "teammatesFailedToStart": "{{count}} チームメイトが起動できなかった",
-        "teammatesFailedRatio": "{{count}}/{{total}} チームメイトが起動できなかった"
+        "teammatesFailedRatio": "{{count}}/{{total}} チームメイトが起動できなかった",
+        "manualPermissionUnsupported": "この起動方法はツールの手動承認に対応していません。承認に対応した起動方法を選び、再試行してください。"
       },
       "skipped": {
         "memberSkipped": "{{name}}はこの起動のためにスキップしました",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "プロジェクト「{{project}}」でチームの起動が完了しませんでした。もう一度起動してください。",
+    "unknown": "プロジェクト「{{project}}」で前回の実行が停止したことを確認できません。再起動する前に状態を確認してください。",
+    "retryLaunch": "起動を再試行",
+    "recoveryProject": "このチームを編集する前に、プロジェクト「{{project}}」の未完了の起動を確認してください。",
+    "openProject": "プロジェクトを開く"
   }
 }

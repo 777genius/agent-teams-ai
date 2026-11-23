@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} در شروع ناموفق بود",
         "teammatesFailedToStart": "{{count}} هم‌تیمی در شروع ناموفق بودند",
-        "teammatesFailedRatio": "{{count}}/{{total}} هم‌تیمی در شروع ناموفق بودند"
+        "teammatesFailedRatio": "{{count}}/{{total}} هم‌تیمی در شروع ناموفق بودند",
+        "manualPermissionUnsupported": "این روش راه‌اندازی از تأیید دستی ابزارها پشتیبانی نمی‌کند. روشی با پشتیبانی از تأیید انتخاب کنید و دوباره تلاش کنید."
       },
       "skipped": {
         "memberSkipped": "{{name}} برای این راه‌اندازی رد شد",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "راه‌اندازی تیم در پروژهٔ «{{project}}» کامل نشد. دوباره راه‌اندازی کنید.",
+    "unknown": "توقف اجرای قبلی در پروژهٔ «{{project}}» تأیید نشده است. پیش از راه‌اندازی مجدد، وضعیت آن را بررسی کنید.",
+    "retryLaunch": "تلاش دوباره برای راه‌اندازی",
+    "recoveryProject": "پیش از ویرایش این تیم، راه‌اندازی ناتمام در پروژهٔ «{{project}}» را بررسی کنید.",
+    "openProject": "باز کردن پروژه"
   }
 }

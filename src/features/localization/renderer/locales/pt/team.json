@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "Não foi possível iniciar o {{name}}",
         "teammatesFailedToStart": "Não foi possível iniciar os companheiros de equipa {{count}}",
-        "teammatesFailedRatio": "Não foi possível iniciar os colegas de equipa {{count}}/{{total}}"
+        "teammatesFailedRatio": "Não foi possível iniciar os colegas de equipa {{count}}/{{total}}",
+        "manualPermissionUnsupported": "Este método de inicialização não aceita aprovação manual de ferramentas. Escolha um método que aceite aprovações e tente novamente."
       },
       "skipped": {
         "memberSkipped": "{{name}} pulou para este lançamento",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "A inicialização da equipe no projeto “{{project}}” não terminou. Tente novamente.",
+    "unknown": "Não foi confirmado que a execução anterior no projeto “{{project}}” parou. Verifique o estado antes de iniciar novamente.",
+    "retryLaunch": "Tentar iniciar novamente",
+    "recoveryProject": "Verifique a inicialização incompleta no projeto “{{project}}” antes de editar esta equipe.",
+    "openProject": "Abrir projeto"
   }
 }

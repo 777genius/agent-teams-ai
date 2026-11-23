@@ -132,7 +132,12 @@
     "emptyTitle": "此專案尚未啟動團隊",
     "pending": "正在準備此專案的工作環境。執行環境就緒後將顯示任務與訊息。",
     "projectMissing": "此歷史紀錄屬於已不在您專案清單中的專案。",
-    "retry": "重試"
+    "retry": "重試",
+    "incomplete": "團隊在專案「{{project}}」中的啟動未完成。請重試啟動。",
+    "unknown": "尚未確認專案「{{project}}」中的上一次執行已停止。請先檢查狀態，再重新啟動。",
+    "retryLaunch": "重試啟動",
+    "recoveryProject": "編輯此團隊前，請檢查專案「{{project}}」中未完成的啟動。",
+    "openProject": "開啟專案"
   },
   "create": {
     "actions": {
@@ -2575,7 +2580,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} 啟動失敗",
         "teammatesFailedToStart": "{{count}} 隊友啟動失敗",
-        "teammatesFailedRatio": "{{count}}/{{total}} 隊友啟動失敗"
+        "teammatesFailedRatio": "{{count}}/{{total}} 隊友啟動失敗",
+        "manualPermissionUnsupported": "此啟動方式不支援手動核准工具操作。請選擇支援核准操作的啟動方式，然後重試。"
       },
       "skipped": {
         "memberSkipped": "{{name}} 跳過本次啟動",

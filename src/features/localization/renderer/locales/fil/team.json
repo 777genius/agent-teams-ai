@@ -2338,7 +2338,8 @@
       "failed": {
         "memberFailedToStart": "Nabigong magsimula si {{name}}",
         "teammatesFailedToStart": "{{count}} teammate ang nabigong magsimula",
-        "teammatesFailedRatio": "{{count}}/{{total}} teammate ang nabigong magsimula"
+        "teammatesFailedRatio": "{{count}}/{{total}} teammate ang nabigong magsimula",
+        "manualPermissionUnsupported": "Hindi sinusuportahan ng paraang ito ang manu-manong pag-apruba ng mga tool. Pumili ng paraang may suporta sa pag-apruba, at subukang muli."
       },
       "skipped": {
         "memberSkipped": "Nilaktawan si {{name}} para sa paglunsad na ito",
@@ -3314,5 +3315,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Hindi natapos ang paglulunsad ng team sa project na “{{project}}”. Subukang ilunsad muli.",
+    "unknown": "Hindi pa nakumpirmang huminto ang nakaraang proseso sa project na “{{project}}”. Suriin ang status bago ilunsad muli.",
+    "retryLaunch": "Subukang ilunsad muli",
+    "recoveryProject": "Suriin ang hindi natapos na paglulunsad sa project na “{{project}}” bago i-edit ang team.",
+    "openProject": "Buksan ang project"
   }
 }

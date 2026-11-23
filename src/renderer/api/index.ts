@@ -29,10 +29,11 @@ import {
 
 import { createContextScopedExtensionApi } from './createContextScopedExtensionApi';
 import { HttpAPIClient } from './httpClient';
+import { withTeamDefinitionEdits } from './teamDefinitionEdits';
 
 import type { ReviewOriginScope } from '@agent-teams/task-change-ledger/review-transport';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
-import type { CrossTeamAPI, ElectronAPI, ReviewAPI } from '@shared/types/api';
+import type { CrossTeamAPI, ElectronAPI, ReviewAPI, TeamsAPI } from '@shared/types/api';
 
 /**
  * Resolves the base URL for the HTTP API client.
@@ -64,7 +65,11 @@ function captureReviewContext(): () => boolean {
 function hostAdapter(impl: ElectronAPI): ReturnType<typeof createHostBackendRenderer> {
   let adapter = hostAdapters.get(impl);
   if (!adapter) {
-    adapter = createHostBackendRenderer(impl.teams, impl.agentBackend, captureReviewContext);
+    adapter = createHostBackendRenderer(
+      withTeamDefinitionEdits(impl.teams),
+      impl.agentBackend,
+      captureReviewContext
+    );
     hostAdapters.set(impl, adapter);
   }
   return adapter;
@@ -181,6 +186,8 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
       return adapter;
     }
     const value = Reflect.get(impl, prop, receiver) as unknown;
+    if (prop === 'teams' && value && typeof value === 'object')
+      return withTeamDefinitionEdits(value as TeamsAPI);
     if (typeof value === 'function') {
       return (value as (...args: unknown[]) => unknown).bind(impl);
     }
