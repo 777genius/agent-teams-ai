@@ -9,6 +9,7 @@ export function isLocalNotificationChannelsMutation(request: FastifyRequest): bo
   const origin = request.headers.origin;
   const site = request.headers['sec-fetch-site'];
   if (!/^(127\.0\.0\.1|localhost):[0-9]{1,5}$/.test(host)) return false;
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.ip)) return false;
   if (origin !== 'http://' + host) return false;
   return site === undefined || site === 'same-origin' || site === 'none';
 }
