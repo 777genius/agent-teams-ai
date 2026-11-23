@@ -1,16 +1,16 @@
 import { useCallback } from 'react';
 
-import { useStore } from '@renderer/store';
 import { useAppTranslation } from '@features/localization/renderer';
+import { useStore } from '@renderer/store';
 
 import { useAttentionInbox } from '../hooks/useAttentionInbox';
 import { requestAttentionChatNavigation } from '../hooks/conversationAttentionNavigation';
 
 import { AttentionInboxPanel } from './AttentionInboxPanel';
 
-import type { AttentionChat } from '../../core/domain/buildAttention';
-import type { AttentionTaskCandidate } from '../../contracts';
 import type { ConversationScope } from '@features/team-direct-chats/renderer';
+import type { AttentionTaskCandidate } from '../../contracts';
+import type { AttentionChat } from '../../core/domain/buildAttention';
 
 export function AttentionInboxView({ variant = 'full' }: {
   variant?: 'compact' | 'full';
