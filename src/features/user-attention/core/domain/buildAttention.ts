@@ -1,7 +1,7 @@
 import {
   conversationScopeKey,
   createDirectScope,
-  isAttentionUnread,
+  isUserUnreadMessage,
   normalizeConversationParticipant,
 } from '@features/team-direct-chats';
 
@@ -41,7 +41,7 @@ function timeMs(timestamp: string | null | undefined): number {
 }
 
 /** A human-facing conversation has a single canonical home, never also team-feed. */
-export function conversationForAttentionMessage(message: InboxMessage): {
+export function conversationForAttentionMessage(message: InboxMessage, groupName?: string): {
   scope: ConversationScope;
   name: string;
 } {
@@ -84,7 +84,7 @@ export function buildAttentionModel(
       if (seenMessages.has(key)) continue;
       seenMessages.add(key);
       const readSet = message.groupChatId ? reads.group : reads.direct;
-      if (!isAttentionUnread(message, readSet, toMessageKey)) continue;
+      if (!isUserUnreadMessage(message, readSet, toMessageKey)) continue;
 
       const conversation = conversationForAttentionMessage(
         message, message.groupChatId ? team.groupNames?.[message.groupChatId] : undefined
