@@ -171,9 +171,9 @@ test('Kanban-only changes trigger dedicated E2E, not unrelated create/template E
   const sharedTeam = 'src/renderer/components/team/TeamDetailView.tsx';
   const create = 'src/renderer/components/team/CreateTeamPage.tsx';
   const template = 'src/features/custom-team-templates/renderer/ui/CustomTemplateDialog.tsx';
-  const scenarios = [
-    ['custom-team-templates-desktop-e2e', ['pull_request'] as const],
-    ['teams-create-page-desktop-e2e', ['pull_request', 'push'] as const],
+  const scenarios: ReadonlyArray<readonly [string, readonly string[]]> = [
+    ['custom-team-templates-desktop-e2e', ['pull_request']],
+    ['teams-create-page-desktop-e2e', ['pull_request', 'push']],
   ];
   for (const [name, events] of scenarios) {
     for (const event of events) {
