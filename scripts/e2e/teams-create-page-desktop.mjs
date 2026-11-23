@@ -430,6 +430,39 @@ class CdpClient {
 
   async fill(selector, value) {
     const expression = `document.querySelector(${JSON.stringify(selector)})`;
+    // Radix may remove a picker before its exiting overlay stops intercepting clicks.
+    // Wait for the actual input hit target instead of clicking through the overlay.
+    const inputHitTest = `(() => {
+      const input = ${expression};
+      if (!input || !input.isConnected || input.disabled || input.readOnly) return false;
+      input.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const rect = input.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2, rect.top + rect.height / 2
+      );
+      return rect.width > 0 && rect.height > 0 &&
+        (hit === input || input.contains(hit));
+    })()`;
+    try {
+      await this.waitFor(inputHitTest, `unobstructed input ${selector}`, 10_000);
+    } catch (error) {
+      const blocker = await this.evaluate(`(() => {
+        const input = ${expression};
+        if (!input) return { missing: true };
+        const rect = input.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2, rect.top + rect.height / 2
+        );
+        return {
+          tag: hit?.tagName ?? null,
+          role: hit?.getAttribute('role') ?? null,
+          testId: hit?.getAttribute('data-testid') ?? null,
+          className: String(hit?.className ?? '').slice(0, 160),
+          activeTag: document.activeElement?.tagName ?? null,
+        };
+      })()`);
+      throw new Error(`Input remained covered: ${selector} ${JSON.stringify(blocker)}`, { cause: error });
+    }
     await this.click(expression);
     // A Radix dialog can finish restoring focus after its DOM has closed.
     // Do not send the keyboard accelerator before a real click focuses the input.
@@ -442,17 +475,7 @@ class CdpClient {
       // A cold macOS CI Electron window can receive CDP mouse events without
       // acquiring native keyboard focus. Never bypass a covered/disabled field:
       // a genuine user would not be able to click it either.
-      const unobstructed = await this.evaluate(`(() => {
-        const input = ${expression};
-        if (!input || input.disabled || input.readOnly) return false;
-        input.scrollIntoView({ block: 'center', inline: 'nearest' });
-        const rect = input.getBoundingClientRect();
-        const hit = document.elementFromPoint(
-          rect.left + rect.width / 2, rect.top + rect.height / 2
-        );
-        return rect.width > 0 && rect.height > 0 &&
-          (hit === input || input.contains(hit));
-      })()`);
+      const unobstructed = await this.evaluate(inputHitTest);
       assert(unobstructed, `Input is obscured after real CDP clicks: ${selector}`);
       if (process.platform === 'darwin') {
         // Fixture-only focus recovery, separately counted in the E2E receipt.
