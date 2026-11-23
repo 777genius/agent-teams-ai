@@ -5,3 +5,5 @@ export {
   normalizeConversationParticipant,
   TEAM_FEED_SCOPE,
 } from './core/domain/conversationScope';
+
+export { isUserAttentionMessage, isUserUnreadMessage, isAttentionUnread } from './core/domain/isUserUnreadMessage';
