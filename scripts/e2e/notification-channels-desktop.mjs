@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -206,7 +206,12 @@ async function run() {
   const metadataPath = path.join(userData, 'data', 'notification-channels.json');
   const metadata = await readFile(metadataPath, 'utf8');
   assert(!metadata.includes(TOKEN), 'Credential leaked into settings JSON');
-  evidence.checks.push('React form → IPC → safe metadata + credential reference');
+  const vaultPath = path.join(claude, 'api-keys.json');
+  const vaultOnDisk = await readFile(vaultPath, 'utf8');
+  assert(!vaultOnDisk.includes(TOKEN), 'Credential must be encrypted at rest');
+  assert.equal((await stat(vaultPath)).mode & 0o077, 0, 'Secret file must be owner-only');
+  assert.equal((await stat(metadataPath)).mode & 0o077, 0, 'Metadata file must be owner-only');
+  evidence.checks.push('React form → IPC → encrypted credential + owner-only metadata');
 
   await click(button('Test'));
   await until(async () => (await readAudit()).length === 1, 'real Thinwrap test POST');

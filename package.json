@@ -123,7 +123,8 @@
     "test:native:parity": "vitest run --config scripts/local-checks/vitest.native-parity.config.ts",
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
     "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
-    "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts"
+    "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts",
+    "test:e2e:notification-channels": "node scripts/e2e/notification-channels-desktop.mjs"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [

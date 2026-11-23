@@ -68,6 +68,7 @@ import type {
 } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
+import { NOTIFICATION_CHANNELS_HTTP } from '@features/notification-channels/contracts';
 import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
@@ -744,12 +745,12 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   notificationChannels: NotificationChannelsApi = {
-    list: () => this.get('/api/notification-channels'),
-    save: (request) => this.post('/api/notification-channels', request),
+    list: () => this.get(NOTIFICATION_CHANNELS_HTTP),
+    save: (request) => this.post(NOTIFICATION_CHANNELS_HTTP, request),
     remove: async (id) => {
-      await this.del('/api/notification-channels/' + encodeURIComponent(id));
+      await this.del(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id));
     },
-    test: (id) => this.post('/api/notification-channels/' + encodeURIComponent(id) + '/test'),
+    test: (id) => this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test'),
   };
 
   notifications: NotificationsAPI = {
