@@ -210,6 +210,14 @@ async function run() {
   const vaultOnDisk = await readFile(vaultPath, 'utf8');
   assert(!vaultOnDisk.includes(TOKEN), 'Credential must be encrypted at rest');
   assert.equal((await stat(vaultPath)).mode & 0o077, 0, 'Secret file must be owner-only');
+  const privateKeyName = JSON.parse(vaultOnDisk)[0]?.envVarName;
+  assert(privateKeyName, 'Private credential reference missing');
+  const genericKeys = await rendererCall('window.electronAPI.apiKeys.list()');
+  assert(!JSON.stringify(genericKeys).includes(privateKeyName),
+    'Private notification key leaked through generic key listing');
+  const genericLookup = await rendererCall('window.electronAPI.apiKeys.lookup(' +
+    JSON.stringify([privateKeyName]) + ')');
+  assert.equal(genericLookup.length, 0, 'Private key leaked through generic key lookup');
   assert.equal((await stat(metadataPath)).mode & 0o077, 0, 'Metadata file must be owner-only');
   evidence.checks.push('React form → IPC → encrypted credential + owner-only metadata');
 
@@ -268,6 +276,8 @@ async function run() {
     'window.electronAPI.notificationChannels.list()')).length === 0, 'deleted channel');
   const metadataAfter = await readFile(metadataPath, 'utf8');
   assert(!metadataAfter.includes(TOKEN));
+  assert.equal(JSON.parse(await readFile(vaultPath, 'utf8')).length, 0,
+    'Deleted channel must remove its encrypted secret');
   evidence.checks.push('Delete removes destination and does not expose credential');
   evidence.passed = true;
 }
