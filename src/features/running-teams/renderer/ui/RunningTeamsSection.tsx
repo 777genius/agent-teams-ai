@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { useAttentionInbox } from '@features/user-attention/renderer';
 import { TeamTaskStatusSummary } from '@renderer/components/team/TeamTaskStatusSummary';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';
 import { FolderOpen, UsersRound } from 'lucide-react';
@@ -21,6 +22,7 @@ export function RunningTeamsSection({
 }: Readonly<RunningTeamsSectionProps>): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
   const { rows, hidden, openRunningTeam } = useRunningTeamsSection(searchQuery);
+  const { model } = useAttentionInbox();
 
   if (hidden) {
     return null;
@@ -57,6 +59,14 @@ export function RunningTeamsSection({
                 <FolderOpen className="size-3 shrink-0" />
                 <span className="truncate">{row.projectLabel}</span>
               </span>
+              {model?.countsByTeam.get(row.teamName) &&
+                ((model.countsByTeam.get(row.teamName)?.tasks ?? 0) > 0 ||
+                  (model.countsByTeam.get(row.teamName)?.chats ?? 0) > 0) ? (
+                <span className="mt-1.5 block text-[10px] font-medium text-red-400">
+                  Attention: {model.countsByTeam.get(row.teamName)?.tasks ?? 0} tasks ·{' '}
+                  {model.countsByTeam.get(row.teamName)?.chats ?? 0} chats
+                </span>
+              ) : null}
               <TeamTaskStatusSummary
                 counts={row.taskCounts}
                 showProgress={false}
