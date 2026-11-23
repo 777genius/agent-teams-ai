@@ -110,6 +110,13 @@ export class NotificationChannelsService {
       const secret = input.secret;
       if (!previous && !secret) throw new Error('Enter a channel credential');
       if (secret) validateProviderCredential(input.provider, secret);
+      // Enabling a previously configured destination requires a currently
+      // readable credential. UI checks cannot protect the local HTTP/IPC APIs.
+      // Disabling a destination must remain possible after OS vault loss.
+      if (input.enabled && previous && !secret &&
+        !(await this.readSecret(previous.credentialId))) {
+        throw new Error('Restore the channel credential before enabling');
+      }
       let credentialId = previous?.credentialId;
       if (secret) {
         credentialId = await this.deps.credentials.create(input.name, secret);
@@ -139,7 +146,11 @@ export class NotificationChannelsService {
       if (previous && secret) {
         await this.deps.credentials.remove(previous.credentialId).catch(() => undefined);
       }
-      return toDto(next);
+      return {
+        ...toDto(next),
+        // Rotation or OS backend changes can make an existing vault unreadable.
+        hasCredential: Boolean(await this.readSecret(next.credentialId)),
+      };
     });
   }
 

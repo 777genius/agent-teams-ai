@@ -125,6 +125,30 @@ describe('Notification Channels application', () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
+  it('allows disabling a lost-credential channel but requires restoring it before enabling', async () => {
+    const id = await add(true);
+    const keyId = records[0].credentialId;
+    secrets.delete(keyId);
+
+    await service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: false,
+      events: ['user_inbox'], chatId: '123456',
+    });
+    expect(records[0].enabled).toBe(false);
+    expect((await service.list())[0].hasCredential).toBe(false);
+    await expect(service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: true,
+      events: ['user_inbox'], chatId: '123456',
+    })).rejects.toThrow('Restore the channel credential before enabling');
+    expect(records[0].enabled).toBe(false);
+    const restored = await service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: true,
+      events: ['user_inbox'], chatId: '123456', secret: TOKEN,
+    });
+    expect(restored.enabled).toBe(true);
+    expect(restored.hasCredential).toBe(true);
+  });
+
   it('rejects provider change without new credential', async () => {
     const id = await add();
     await expect(service.save({
