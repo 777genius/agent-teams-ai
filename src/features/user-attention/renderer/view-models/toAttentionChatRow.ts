@@ -4,16 +4,19 @@ import type { AttentionChat } from '../../core/domain/buildAttention';
 import type { ChatListViewItem } from '@features/team-direct-chats/renderer';
 
 export function toAttentionChatRow(chat: AttentionChat): ChatListViewItem {
-  const preview = getChatMessagePreview(chat.latestUnread, '');
-  return {
-    scope: chat.scope,
-    displayName: chat.name,
-    member: chat.scope.kind === 'direct' ? { name: chat.name } : undefined,
-    unreadCount: chat.unreadCount,
-    attentionCount: chat.unreadCount,
-    previewTimestamp: chat.latestUnread.timestamp,
-    ...preview,
-  };
+  // Reuse Messenger's canonical presentation (sender attribution,
+  // sanitized previews, avatars and unread styling) rather than cloning it.
+  return toChatListViewItems([
+    {
+      scope: chat.scope,
+      displayName: chat.name,
+      member: chat.scope.kind === 'direct' ? { name: chat.name } : undefined,
+      previewMessage: chat.latestUnread,
+      latestActivityTimestamp: chat.latestUnread.timestamp,
+      unreadCount: chat.unreadCount,
+      attentionCount: chat.unreadCount,
+    },
+  ], '')[0];
 }
 
 export function relativeAttentionAge(

@@ -46,6 +46,7 @@ export {
   buildChatListView,
   getChatMessagePreview,
   projectChatPreview,
+  toChatListViewItems,
 } from './view-models/chatListViewModel';
 
 export const teamDirectChatsRenderer = {

@@ -24,9 +24,10 @@ vi.mock('@features/team-direct-chats/renderer', () => ({
       {item.displayName}
     </button>
   ),
-  getChatMessagePreview: (message: { text: string; from: string }) => ({
-    previewText: message.text, previewFrom: message.from,
-  }),
+  toChatListViewItems: (items: Array<{ scope: unknown; displayName: string; unreadCount: number; attentionCount: number; previewMessage: { text: string; from: string; timestamp: string } }>) => items.map((item) => ({
+    ...item, previewText: item.previewMessage.text, previewFrom: item.previewMessage.from,
+    previewTimestamp: item.previewMessage.timestamp,
+  })),
 }));
 
 const onOpenTask = vi.fn();

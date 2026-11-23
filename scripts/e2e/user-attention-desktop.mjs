@@ -200,6 +200,13 @@ async function checkDesktop() {
     'document.querySelector("button[aria-label=\\"Needs your attention\\"]") !== null');
   assert(toolbar, 'separate header attention button exists');
   evidence.checks.push('dashboard + header');
+  const clickedAttention = await cdp.evaluate('(() => { const button = document.querySelector("button[aria-label=\\\"Needs your attention\\\"]"); if (!button) return false; button.click(); return true; })()');
+  assert(clickedAttention, 'attention header icon opens the tab');
+  await cdp.waitFor(
+    'window.__agentTeamsDevStore.getState().openTabs.some((tab) => tab.type === "attention")',
+    'full Attention tab opened');
+  evidence.checks.push('header-to-full-tab navigation');
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
 
   const opened = await cdp.evaluate(`(() => {
     const panel = document.querySelector('[data-testid=user-attention-inbox]');
@@ -214,6 +221,31 @@ async function checkDesktop() {
     'window.__agentTeamsDevStore.getState().globalTaskDetail?.taskId === "1"',
     'task detail routed by canonical task ID');
   evidence.checks.push('task deep link');
+
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()');
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().setMessagesPanelMode("sidebar")');
+  const clickedChat = await cdp.evaluate(`(() => {
+    const panel = document.querySelector('[data-testid=user-attention-inbox]');
+    const button = [...panel.querySelectorAll('button')].find((b) =>
+      b.getAttribute('aria-label')?.includes('alice'));
+    if (!button) return false;
+    button.click();
+    return true;
+  })()`);
+  assert(clickedChat, 'user-addressed chat is clickable');
+  await cdp.waitFor(
+    'window.__agentTeamsDevStore.getState().openTabs.some((tab) => tab.type === "team" && tab.teamName === ${JSON.stringify(first)})',
+    'exact team tab opened for chat');
+  await until(async () => cdp.evaluate(`(async () => {
+    const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
+    const scope = ui.getTeamMessagesSidebarUiState(
+      JSON.stringify(['local', ${JSON.stringify(first)}])
+    ).conversationScope;
+    return scope?.kind === 'direct' && scope.participant === 'alice';
+  })()`), 'exact direct thread opened', 60000);
+  evidence.checks.push('exact Messenger conversation navigation');
+
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
 
   // Engage the team watch scope before modifying its disposable task file.
   await cdp.evaluate(`window.electronAPI.teams.getData(${JSON.stringify(first)})`);
