@@ -56,14 +56,18 @@ function legacySlugify(value: string): string {
   );
 }
 
-function slugify(value: string): string {
-  const full =
+function normalizedSlug(value: string): string {
+  return (
     value
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9._-]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'member';
-  // Long names must not share a checkout or branch just because their prefixes match.
+      .replace(/^-+|-+$/g, '') || 'member'
+  );
+}
+
+function slugify(value: string): string {
+  const full = normalizedSlug(value);
   return full.length <= 48 ? full : `${full.slice(0, 37)}-${shortHash(full)}`;
 }
 
@@ -147,19 +151,32 @@ export class TeamMemberWorktreeManager {
     const projectSlug = legacySlugify(path.basename(baseRepoPath));
     const teamSlug = slugify(request.teamName);
     const memberSlug = slugify(request.memberName);
-    const branchName = `agent-teams/${teamSlug}/${memberSlug}-${repoHash}`;
+    // Extra path/ref segments make long-name IDs disjoint from every old short-name ID.
+    const teamPrefix = normalizedSlug(request.teamName).length > 48 ? ['_long-teams'] : [];
+    const memberPrefix = normalizedSlug(request.memberName).length > 48 ? ['_long-members'] : [];
+    const branchName = [
+      'agent-teams',
+      ...teamPrefix,
+      teamSlug,
+      ...memberPrefix,
+      `${memberSlug}-${repoHash}`,
+    ].join('/');
     const worktreePath = path.join(
       getAppDataPath(),
       'team-worktrees',
       `${projectSlug}-${repoHash}`,
+      ...teamPrefix,
       teamSlug,
+      ...memberPrefix,
       memberSlug
     );
     const legacyWorktreePath = path.join(
       getClaudeBasePath(),
       'team-worktrees',
       repoHash,
+      ...teamPrefix,
       teamSlug,
+      ...memberPrefix,
       memberSlug
     );
 
@@ -214,7 +231,7 @@ export class TeamMemberWorktreeManager {
     // Never silently attach a second member to one of those older checkouts.
     const oldTeamSlug = legacySlugify(request.teamName);
     const oldMemberSlug = legacySlugify(request.memberName);
-    if (oldTeamSlug !== teamSlug || oldMemberSlug !== memberSlug) {
+    if (teamPrefix.length > 0 || memberPrefix.length > 0) {
       const oldPaths = [
         path.join(
           getAppDataPath(),
@@ -258,17 +275,19 @@ export class TeamMemberWorktreeManager {
     baseRepoPath: string,
     memberName: string
   ): Promise<string> {
-    const [baseCommonRaw, targetCommonRaw, targetBranchRaw, targetRootRaw, listedRaw] =
+    const [baseCommonRaw, targetCommonRaw, targetGitDirRaw, targetBranchRaw, targetRootRaw, listedRaw] =
       await Promise.all([
-      execGit(['rev-parse', '--git-common-dir'], baseRepoPath),
-      execGit(['rev-parse', '--git-common-dir'], worktreePath),
-      execGit(['branch', '--show-current'], worktreePath),
-      execGit(['rev-parse', '--show-toplevel'], worktreePath),
-      execGit(['worktree', 'list', '--porcelain'], baseRepoPath),
-    ]);
-    const [baseCommon, targetCommon] = await Promise.all([
+        execGit(['rev-parse', '--git-common-dir'], baseRepoPath),
+        execGit(['rev-parse', '--git-common-dir'], worktreePath),
+        execGit(['rev-parse', '--git-dir'], worktreePath),
+        execGit(['branch', '--show-current'], worktreePath),
+        execGit(['rev-parse', '--show-toplevel'], worktreePath),
+        execGit(['worktree', 'list', '--porcelain'], baseRepoPath),
+      ]);
+    const [baseCommon, targetCommon, targetGitDir] = await Promise.all([
       resolveGitPath(baseRepoPath, baseCommonRaw),
       resolveGitPath(worktreePath, targetCommonRaw),
+      resolveGitPath(worktreePath, targetGitDirRaw),
     ]);
     if (baseCommon !== targetCommon) {
       throw new Error(`Worktree path belongs to a different git repository: ${worktreePath}`);
@@ -277,7 +296,11 @@ export class TeamMemberWorktreeManager {
       fs.promises.realpath(worktreePath),
       resolveGitPath(worktreePath, targetRootRaw),
     ]);
-    if (canonicalRoot !== canonicalPath || canonicalPath === baseRepoPath) {
+    if (
+      canonicalRoot !== canonicalPath ||
+      canonicalPath === baseRepoPath ||
+      targetGitDir === targetCommon
+    ) {
       throw new Error(`Worktree path is not a separate checkout root: ${worktreePath}`);
     }
     const listedPaths = await Promise.all(
