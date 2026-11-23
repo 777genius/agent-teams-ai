@@ -1,0 +1,333 @@
+# Review-only control workflow. Existing PR workflows and their gates remain unchanged.
+# Exact H3 source; one diagnostic Darwin Review lane does not qualify the full Host acceptance matrix.
+name: PR1220 H3 finite Darwin Review diagnostics (scoped)
+run-name: 'H3 1c855accaea0: original Darwin Review diagnostic lane only'
+'on':
+  push:
+    branches:
+    - review/provider-host-pr1220-review-e2e-1c855accaea0
+permissions:
+  contents: read
+concurrency:
+  group: pr1220-h3-review-e2e-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  desktop-scenario:
+    name: H3 diagnostic Desktop (${{ matrix.platform }}, ${{ matrix.lane }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - lane: opencode-v2-review
+          runner: macos-15
+          platform: darwin-arm64
+          v2Mode: native-review-ui
+          v2ReadbackMode: native-review-readback-ui
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      GIT_OPTIONAL_LOCKS: '0'
+      HOST_EMULATED_SOURCE_HEAD: 1c855accaea0fd21aa239d744bc2424378acf332
+      HOST_EMULATED_LANE: ${{ matrix.lane }}
+      HOST_EMULATED_PLATFORM: ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: 1c855accaea0fd21aa239d744bc2424378acf332
+        persist-credentials: false
+        repository: 777genius/agent-teams-ai
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24.21.0
+        cache: pnpm
+    - name: Verify original checkout and runner tuple
+      run: |
+        set -euo pipefail
+        test "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"
+        node -e "require('node:assert/strict').equal(process.platform + '-' + process.arch, process.env.HOST_EMULATED_PLATFORM)"
+        printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+    - name: Record literal H3 source and separate control event
+      run: |
+        set -euo pipefail
+        node --input-type=module <<'NODE'
+        import assert from 'node:assert/strict';
+        import { execFileSync } from 'node:child_process';
+        import { writeFileSync } from 'node:fs';
+        import { join } from 'node:path';
+        const sourceHead = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+        const sourceTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim();
+        assert.equal(sourceHead, "1c855accaea0fd21aa239d744bc2424378acf332");
+        assert.equal(sourceTree, "0f49a4c00f7c3adc6d6c58792676df3b04e0ccfa");
+        assert.equal(process.env.HOST_EMULATED_SOURCE_HEAD, sourceHead);
+        assert.equal(process.env.GITHUB_EVENT_NAME, 'push');
+        assert.equal(process.env.GITHUB_REF, "refs/heads/review/provider-host-pr1220-review-e2e-1c855accaea0");
+        assert.equal(process.env.GITHUB_RUN_ATTEMPT, '1');
+        assert.match(process.env.GITHUB_SHA, /^[a-f0-9]{40}$/);
+        assert.notEqual(process.env.GITHUB_SHA, sourceHead);
+        writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-control-context.json'), JSON.stringify({
+          sourceHead, sourceTree, controlCommit: process.env.GITHUB_SHA, controlRef: process.env.GITHUB_REF,
+          runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT,
+          lane: process.env.HOST_EMULATED_LANE, platform: process.env.HOST_EMULATED_PLATFORM,
+          isActualPrRequiredCheck: false, scope: 'One original H3 Darwin Review diagnostic lane only; not full Host acceptance.',
+          originalE06RunsUnchanged: true
+        }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+        NODE
+    - name: Prepare private Linux display
+      if: runner.os == 'Linux'
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y xvfb xauth lsof
+    - name: Install frozen workspace and Electron
+      run: |
+        set -euo pipefail
+        node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1
+        node scripts/ensure-electron-install.cjs --strict
+        node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+        pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+    - name: Build existing Desktop prerequisites and verify admission
+      run: |
+        set -euo pipefail
+        if [[ "$RUNNER_OS" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi
+        pnpm --filter @agent-teams/legacy-agent-host build
+        pnpm --filter agent-teams-controller build
+        pnpm --filter agent-teams-mcp build
+        node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-file-digest.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-process.test.ts scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts
+        node --test test/scripts/installDependenciesWithRetry.test.mjs
+    - name: Capture package-manager and Host inputs without vendor executables
+      id: inputs
+      uses: ./.github/actions/prepare-host-emulated-inputs
+      with:
+        source-head: ${{ env.HOST_EMULATED_SOURCE_HEAD }}
+        lane: ${{ matrix.lane }}
+    - name: Prepare unchanged source-pinned original validators
+      run: |
+        set -euo pipefail
+        node --input-type=module <<'NODE'
+        import assert from 'node:assert/strict';
+        import { createHash } from 'node:crypto';
+        import { execFileSync } from 'node:child_process';
+        import { readFileSync, writeFileSync } from 'node:fs';
+        import { join } from 'node:path';
+        import { parse } from 'yaml';
+        const sourceHead = "1c855accaea0fd21aa239d744bc2424378acf332";
+        assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), sourceHead);
+        const bytes = readFileSync(".github/workflows/host-emulated-acceptance.yml");
+        const digest = value => createHash('sha256').update(value).digest('hex');
+        assert.equal(digest(bytes), "3fb5489ad460b944e5c2100350d66bbae1032fc0461523a2409e91d04d328691");
+        const steps = parse(bytes.toString('utf8')).jobs['offline-desktop-scenario'].steps;
+        const selected = {"33":{"name":"Capture original successful V2 journey receipt and compiled epochs","sha256":"edc722550e64d5db75fc5ad8f49f4048e231e05f44ca168da0d728a5d559dab9","bytes":3946},"35":{"name":"Verify original V2 journey receipts, source binding and cleanup","sha256":"385bb53792d015fb227f1b546b446b7e1b80c684442f78339466f7f749a24e45","bytes":20980},"36":{"name":"Verify exact source, original screenshots, receipts and cleanup","sha256":"07854940728fbc6267ac5b3f0a325e5d8f6de03ef5f2e5bbbb85cccdf2df6554","bytes":61250}};
+        const extracted = [];
+        for (const [index, expected] of Object.entries(selected)) {
+          const step = steps[Number(index)];
+          assert.equal(step.name, expected.name);
+          assert.equal(typeof step.run, 'string');
+          const script = Buffer.from(step.run);
+          assert.equal(script.length, expected.bytes);
+          assert.equal(digest(script), expected.sha256);
+          const path = join(process.env.RUNNER_TEMP, 'host-emulated-control-original-' + index + '.sh');
+          writeFileSync(path, script, { flag: 'wx', mode: 0o600 });
+          assert.equal(digest(readFileSync(path)), expected.sha256);
+          extracted.push({ index: Number(index), name: expected.name, path, sha256: expected.sha256 });
+        }
+        writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-control-original-steps.json'), JSON.stringify({
+          sourceHead, controlCommit: process.env.GITHUB_SHA, originalWorkflowSha256: digest(bytes), extracted,
+          qualification: 'Original selected validators preserved byte for byte; no scenario executed by this step.'
+        }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+        NODE
+    - name: Exercise original Skills and cross-Team controls
+      if: contains(fromJSON('["skills", "cross-team"]'), matrix.lane)
+      env:
+        LEGACY_DESKTOP_PROOF_MODE: ${{ matrix.lane == 'skills' && 'skills-ui' || 'task-board-cross-team-ui' }}
+      run: |
+        set -euo pipefail
+        xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+          bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+          2>&1 | tee "$RUNNER_TEMP/host-emulated-$LEGACY_DESKTOP_PROOF_MODE.log"
+    - name: Stage checksum-pinned OpenCode base without executing the legacy CLI
+      if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: node scripts/stage-runtime.mjs --platform "$HOST_EMULATED_PLATFORM"
+    - name: Prepare exact OpenCode V2 Bun and engine graph
+      if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
+      env:
+        OPENCODE_V2_TEST_PLATFORM: ${{ env.HOST_EMULATED_PLATFORM }}
+        OPENCODE_V2_TEST_SOURCE_HEAD: 1c855accaea0fd21aa239d744bc2424378acf332
+        OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/host-emulated-opencode-v2-inputs.json
+      run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+    - name: Exercise original OpenCode V2 credential and scoped model Settings
+      if: matrix.lane == 'opencode-v2-management'
+      env:
+        LEGACY_DESKTOP_PROOF_MODE: opencode-v2-management-ui
+      run: |
+        set -euo pipefail
+        unset LEGACY_DESKTOP_EMULATED_ONLY
+        xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+          bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts' \
+          2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-management-ui.log"
+    - name: Verify original OpenCode V2 UI receipts and physical cleanup
+      if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
+      run: node scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts
+    - name: Exercise original V2 live Team Add Remove Restore Stop and cold history
+      if: matrix.lane == 'opencode-v2-management'
+      env:
+        LEGACY_DESKTOP_PROOF_MODE: native-mixed-create-launch-ui
+        LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1'
+        LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+        LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1'
+      run: |
+        set -euo pipefail
+        unset LEGACY_DESKTOP_EMULATED_ONLY
+        xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+          bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+          2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-live-membership-ui.log"
+    - name: Verify original V2 membership receipts and physical cleanup
+      if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
+      run: node scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
+    - name: Exercise original OpenCode V2 native Desktop journey
+      if: contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
+      env:
+        LEGACY_DESKTOP_PROOF_MODE: ${{ matrix.v2Mode }}
+        LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+        HOST_EMULATED_V2_READBACK_MODE: ${{ matrix.v2ReadbackMode }}
+      run: |
+        set -euo pipefail
+        unset LEGACY_DESKTOP_EMULATED_ONLY LEGACY_DESKTOP_QUIT_SCENARIO LEGACY_DESKTOP_RESUME_PROVIDER LEGACY_DESKTOP_CHAT_ATTACHMENTS
+        case "$HOST_EMULATED_LANE:$LEGACY_DESKTOP_PROOF_MODE:$HOST_EMULATED_V2_READBACK_MODE" in
+          opencode-v2-review:native-review-ui:native-review-readback-ui|opencode-v2-quit-active:native-quit-ui:native-quit-readback-ui) ;;
+          opencode-v2-quit-pending-open:native-quit-ui:native-quit-readback-ui) export LEGACY_DESKTOP_QUIT_SCENARIO=pending-open ;;
+          opencode-v2-resume:native-resume-ui:) export LEGACY_DESKTOP_RESUME_PROVIDER=opencode ;;
+          opencode-v2-chat-attachments:native-conversation-ui:native-readback-ui) export LEGACY_DESKTOP_CHAT_ATTACHMENTS=1 ;;
+          *) printf 'Unsupported original V2 journey selection\n' >&2; exit 1 ;;
+        esac
+        node scripts/legacy-agent-host/desktop-backend-smoke.ts \
+          2>&1 | tee "$RUNNER_TEMP/host-emulated-$HOST_EMULATED_LANE-ui.log"
+    - name: Capture original successful V2 journey receipt and compiled epochs
+      if: contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
+      env:
+        HOST_EMULATED_V2_MODE: ${{ matrix.v2Mode }}
+        HOST_EMULATED_V2_READBACK_MODE: ${{ matrix.v2ReadbackMode }}
+      run: |
+        bash --noprofile --norc -e -o pipefail "$RUNNER_TEMP/host-emulated-control-original-33.sh"
+    - name: Read original V2 journey after cold app and Host restart
+      if: contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) && matrix.v2ReadbackMode != ''
+      env:
+        LEGACY_DESKTOP_PROOF_MODE: ${{ matrix.v2ReadbackMode }}
+        LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+      run: |
+        set -euo pipefail
+        unset LEGACY_DESKTOP_EMULATED_ONLY LEGACY_DESKTOP_QUIT_SCENARIO LEGACY_DESKTOP_RESUME_PROVIDER LEGACY_DESKTOP_CHAT_ATTACHMENTS
+        node scripts/legacy-agent-host/desktop-backend-smoke.ts \
+          2>&1 | tee "$RUNNER_TEMP/host-emulated-$HOST_EMULATED_LANE-readback-ui.log"
+    - name: Verify original V2 journey receipts, source binding and cleanup
+      if: ${{ !cancelled() && steps.inputs.outcome == 'success' && contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
+      env:
+        HOST_EMULATED_V2_MODE: ${{ matrix.v2Mode }}
+        HOST_EMULATED_V2_READBACK_MODE: ${{ matrix.v2ReadbackMode }}
+      run: |
+        bash --noprofile --norc -e -o pipefail "$RUNNER_TEMP/host-emulated-control-original-35.sh"
+    - name: Verify exact source, original screenshots, receipts and cleanup
+      if: ${{ !cancelled() && steps.inputs.outcome == 'success' && !contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
+      run: |
+        bash --noprofile --norc -e -o pipefail "$RUNNER_TEMP/host-emulated-control-original-36.sh"
+    - name: Preserve original Desktop evidence, including failures
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pr1220-h3-1c855accaea0-${{ github.run_id }}-${{ matrix.platform }}-${{ matrix.lane }}
+        retention-days: 14
+        if-no-files-found: warn
+        include-hidden-files: ${{ matrix.lane == 'import-lifecycle' || matrix.lane == 'retained-original' || contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
+        path: |
+          ${{ runner.temp }}/host-emulated-*.json
+          ${{ runner.temp }}/host-emulated-*.log
+          ${{ runner.temp }}/TEST-emulated-ui-inputs-*/linux-child-exec/manifest.json
+          ${{ runner.temp }}/TEST-emulated-ui-inputs-*/linux-child-exec/linux-child-exec
+          ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-ui-capture.json
+          ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/manifest.json
+          ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/mixed-models.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/opencode.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-created-native-mixed/.host-owner/state.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-created-native-mixed/.host-owner/launches/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/cold-membership-epoch1-bundles/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/userData/logs/app-errors*.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-app.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*-failure.png
+          ${{ runner.temp }}/TEST-desktop-backend-*/host-profile.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-descriptor.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/management-commands/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-sources/index.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-sessions/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/*/inboxes/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/*/group-chat*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/tasks/test-stopped-legacy/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/preferences/**/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-review-readback-receipt.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-review-readback-app.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/review-ui-seed.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/review-ui-initial-git-diff.txt
+          ${{ runner.temp }}/TEST-desktop-backend-*/sentinel-invocations.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/TEST-oauth-host-management/native-effects.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-login-processes.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-wire.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/external-open.jsonl
+          ${{ runner.temp }}/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/TEST-codex-install/*.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/runtimes/codex/current.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/*.jsonl
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-checkpoints/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/emulated-cold-resume-epoch1-bundles/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.png
+          ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-*.png
+          ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-selection.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/stopped-import-ui-seed.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/finite-stopped-import-*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/finite-stopped-import-*.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/finite-legacy-peer.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/claude/projects/**/*.jsonl
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-stopped-legacy/.host-owner/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/task-attachments/test-stopped-legacy/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/native-chat-attachment-inputs/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/home/Downloads/source-original.txt
+          ${{ runner.temp }}/TEST-desktop-backend-*/home/Downloads/TEST-native-chat.txt
+          ${{ runner.temp }}/TEST-desktop-backend-*/controlled-process-*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/process-ui-seed.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/process-*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/process-*.ndjson
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-native-review-readback-receipt.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-native-review-readback-app.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/native-review-ui-seed.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-sessions/**/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/tasks/test-desktop-backend/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/state.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/commands/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/outbox/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/events/*.jsonl
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/blobs/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/review-decisions/**/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/native-review.ts
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/.git/index
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/pre-existing-untracked.txt
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-readback-receipt.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/desktop-readback-app.log
+          ${{ runner.temp }}/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
+          ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/launches/*.json
+          ${{ runner.temp }}/TEST-desktop-backend-*/workspace/native-effect.txt
+          ${{ runner.temp }}/TEST-desktop-backend-*/providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite
+          ${{ runner.temp }}/TEST-desktop-backend-*/providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite-wal
+          ${{ runner.temp }}/TEST-desktop-backend-*/providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite-shm
+          ${{ runner.temp }}/host-emulated-control-original-*.sh
