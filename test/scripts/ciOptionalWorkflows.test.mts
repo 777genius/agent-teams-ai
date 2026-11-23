@@ -320,3 +320,35 @@ test('announcements content check uses hosted runner and retains immutable publi
   assert.ok(header.includes(canonicalConcurrency),
     'Announcements must retain exact PR and push supersession policy');
 });
+
+
+test('Windows console and Electron profile E2E defer Draft, retain Ready and exact native matrix', () => {
+  const files = [
+    ['windows-teammate-console-native', ['windows-native', 'windows-electron-console'], true],
+    ['electron-dev-profile-cross-platform', ['profile-path-regressions'], false],
+  ] as const;
+  const requiredGate = "    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true";
+  for (const [name, jobs, manual] of files) {
+    const source = workflow(name);
+    const header = source.split('\njobs:')[0];
+    assert.match(header, /  pull_request:\n    types: \[opened, synchronize, reopened, ready_for_review\]/);
+    assert.match(header, /  push:\n    branches: \[main\]/);
+    assert.equal(header.includes('\n  workflow_dispatch:\n'), manual);
+    assert.ok(header.includes(canonicalConcurrency), name + ': existing per-source CI proof changed');
+    for (const job of jobs) {
+      const anchor = '\n  ' + job + ':\n';
+      assert.equal(source.split(anchor).length, 2, name + ': missing exact job');
+      const section = source.split(anchor)[1].split(/\n  [a-z][\w-]*:\n/)[0];
+      assert.ok(section.includes(requiredGate), name + ': Draft must not start ' + job);
+      assert.doesNotMatch(section, /continue-on-error:\s*true/);
+      assert.match(section, /    timeout-minutes: /);
+    }
+  }
+  const win = workflow('windows-teammate-console-native');
+  assert.match(win, /  windows-electron-console:\n    if: [^\n]+\n    needs: windows-native\n/);
+  assert.equal((win.match(/    runs-on: windows-latest/g) || []).length, 2);
+  assert.match(win, /node scripts\/e2e\/windows-product-teammate-console\.mjs/);
+  const profile = workflow('electron-dev-profile-cross-platform');
+  assert.match(profile, /os: \[ubuntu-latest, windows-latest, macos-latest\]/);
+  assert.match(profile, /pnpm exec vitest run --maxWorkers=1/);
+});
