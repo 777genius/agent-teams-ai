@@ -234,6 +234,7 @@ export const SettingsContent = ({
           {activeSection === 'externalAgentConnection' && isElectronMode() && (
             <ExternalAgentConnectionSettings
               api={api.externalAgentConnection}
+              onOpenTeams={() => useStore.getState().openTeamsTab()}
               local={connectionMode === 'local'}
               cdpEnabled={safeConfig.general.externalAgentCdpEnabled}
               saving={saving}

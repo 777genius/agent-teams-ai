@@ -55,7 +55,7 @@ export const DashboardProviderSummary = ({
 
   return (
     <div
-      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3"
+      className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3"
       style={{ backgroundColor: 'var(--color-surface-raised)' }}
       data-testid="dashboard-provider-summary"
     >

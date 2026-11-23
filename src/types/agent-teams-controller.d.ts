@@ -227,6 +227,7 @@ declare module 'agent-teams-controller' {
   export interface ControllerRuntimeApi {
     /** Keep the shared runtime surface in sync with mcp-server's ambient declaration. */
     getConnectionInfo(): Promise<unknown>;
+    showConnectionConfirmation(flags: Record<string, unknown>): Promise<unknown>;
     getMemberRosterContext(
       memberName: string,
       launchMembers?: { name: string; role?: string; agentType?: string; removedAt?: number }[]

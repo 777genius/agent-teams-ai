@@ -9,6 +9,13 @@ export function registerExternalAgentConnectionIpc(
 ): void {
   ipcMain.handle(EXTERNAL_AGENT_CONNECTION_CHANNELS.getInfo, () => connection.getConnectionInfo());
   ipcMain.handle(EXTERNAL_AGENT_CONNECTION_CHANNELS.retry, () => connection.retryConnection());
+  ipcMain.handle(
+    EXTERNAL_AGENT_CONNECTION_CHANNELS.getConfirmation,
+    () => connection.getPendingConfirmation?.() ?? null
+  );
+  ipcMain.handle(EXTERNAL_AGENT_CONNECTION_CHANNELS.dismissConfirmation, (_event, id: unknown) =>
+    typeof id === 'string' ? connection.dismissConfirmation?.(id) : undefined
+  );
   if (connection.directRun) {
     const run = connection.directRun;
     ipcMain.handle(EXTERNAL_AGENT_RUN_CHANNELS.availability, () => run.getAvailability());
@@ -21,5 +28,7 @@ export function registerExternalAgentConnectionIpc(
 export function removeExternalAgentConnectionIpc(ipcMain: Pick<IpcMain, 'removeHandler'>): void {
   ipcMain.removeHandler(EXTERNAL_AGENT_CONNECTION_CHANNELS.getInfo);
   ipcMain.removeHandler(EXTERNAL_AGENT_CONNECTION_CHANNELS.retry);
+  ipcMain.removeHandler(EXTERNAL_AGENT_CONNECTION_CHANNELS.getConfirmation);
+  ipcMain.removeHandler(EXTERNAL_AGENT_CONNECTION_CHANNELS.dismissConfirmation);
   for (const channel of Object.values(EXTERNAL_AGENT_RUN_CHANNELS)) ipcMain.removeHandler(channel);
 }

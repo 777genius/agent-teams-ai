@@ -1,14 +1,23 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { buildOpenCodeAppProfileScope } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 
-import { BOUND_CONTROL_CONTEXT_ENV, BOUND_CONTROL_URL_ENV } from '../../contracts';
+import {
+  BOUND_CONTROL_CONTEXT_ENV,
+  BOUND_CONTROL_URL_ENV,
+  EXTERNAL_AGENT_CONNECTION_CHANNELS,
+} from '../../contracts';
+import { hasReadyRendererAccess } from '../../core/domain/connectionSetupPrompt';
 import { BoundControlContext } from '../BoundControlContext';
 import { configureDesktopMcpEnvironment } from '../desktopMcpEnvironment';
 import { ExternalAgentConnection } from '../ExternalAgentConnection';
 import { registerBoundControlHttp } from '../registerBoundControlHttp';
 
-import type { AppConnectionContext, ExternalAgentConnectionApi } from '../../contracts';
+import type {
+  AppConnectionContext,
+  ExternalAgentConfirmation,
+  ExternalAgentConnectionApi,
+} from '../../contracts';
 import type { NativeRendererCdp } from '../NativeRendererCdp';
 import type { WebContents } from 'electron';
 import type { FastifyInstance } from 'fastify';
@@ -53,6 +62,7 @@ export function createDesktopExternalAgentConnection(
 ): DesktopExternalAgentConnection {
   const context = new BoundControlContext(deps.appInstanceId, deps.getRoot());
   const profileFingerprint = createHash('sha256').update(deps.userDataPath).digest('hex');
+  let pendingConfirmation: ExternalAgentConfirmation | null = null;
   let tail = Promise.resolve();
   let stopping = false;
   let boundControlUrl: string | null = null;
@@ -130,12 +140,24 @@ export function createDesktopExternalAgentConnection(
       if (!stopping && deps.isLocalContext() && !context.isOpen) return restoreLocalContext();
       return connection.retryConnection();
     });
+  const clearConfirmation = (): void => {
+    if (!pendingConfirmation) return;
+    pendingConfirmation = null;
+    const contents = deps.getMainContents();
+    if (!contents || contents.isDestroyed()) return;
+    try {
+      contents.send(EXTERNAL_AGENT_CONNECTION_CHANNELS.confirmation, null);
+    } catch {
+      // The window may be closing while its connection admission is revoked.
+    }
+  };
   const change = (operation: () => Promise<void> | void, rootChanged: boolean) =>
     serialize(async () => {
       if (stopping) throw new Error('App connection is shutting down');
       await deps.mcp.assertNoLiveConsumers?.();
       deps.assertNoLiveRuntimeConsumers?.();
       await context.closeAdmission();
+      clearConfirmation();
       if (stopping) throw new Error('App connection is shutting down');
       await deps.mcp.stop();
       if (stopping) throw new Error('App connection is shutting down');
@@ -158,6 +180,7 @@ export function createDesktopExternalAgentConnection(
     });
   const closeAdmission = (): Promise<void> => {
     stopping = true;
+    clearConfirmation();
     shutdownDrain ??= context.closeAdmission();
     return shutdownDrain;
   };
@@ -178,6 +201,10 @@ export function createDesktopExternalAgentConnection(
     },
     closeAdmission,
     getConnectionInfo: () => connection.getConnectionInfo(),
+    getPendingConfirmation: async () => pendingConfirmation,
+    dismissConfirmation: async (id) => {
+      if (pendingConfirmation?.id === id) clearConfirmation();
+    },
     retryConnection,
     updateRoot: (applyConfig) => change(applyConfig, true),
     changeContext: (operation) => change(operation, false),
@@ -185,6 +212,56 @@ export function createDesktopExternalAgentConnection(
       registerBoundControlHttp(app, context);
       app.get('/api/app/connection', () => connection.getConnectionInfo());
       app.post('/api/app/connection/retry', () => retryConnection());
+      app.post('/api/app/connection/confirmation', async (request, reply) => {
+        const body = request.body;
+        if (!body || typeof body !== 'object' || Array.isArray(body))
+          return reply.code(400).send({ error: 'Invalid confirmation request.' });
+        const payload = body as Record<string, unknown>;
+        if (
+          Object.keys(payload).some(
+            (key) => !['agentName', 'expectedContext', 'cdpVerified'].includes(key)
+          ) ||
+          (payload.cdpVerified !== undefined && typeof payload.cdpVerified !== 'boolean') ||
+          typeof payload.agentName !== 'string' ||
+          !payload.agentName.trim() ||
+          payload.agentName.length > 80 ||
+          // eslint-disable-next-line no-control-regex -- reject control characters in a displayed name
+          /[\u0000-\u001f\u007f]/.test(payload.agentName)
+        )
+          return reply.code(400).send({ error: 'Invalid agent name.' });
+        if (!deps.isLocalContext())
+          return reply.code(409).send({ error: 'Local app context required.' });
+        const release = context.admit(payload.expectedContext);
+        try {
+          if (payload.cdpVerified === true) {
+            const live = await connection.getConnectionInfo();
+            context.assertExpected(payload.expectedContext);
+            if (!hasReadyRendererAccess(live)) {
+              return reply
+                .code(409)
+                .send({ error: 'Interface access is not ready. Refresh the connection.' });
+            }
+          }
+          const contents = deps.getMainContents();
+          if (!contents || contents.isDestroyed() || contents.isLoadingMainFrame())
+            return reply.code(503).send({ error: 'App window is not ready.' });
+          if (pendingConfirmation) {
+            return reply
+              .code(429)
+              .send({ error: 'Dismiss the current connection confirmation first.' });
+          }
+          const confirmation: ExternalAgentConfirmation = {
+            id: randomUUID(),
+            agentName: payload.agentName.trim(),
+            ...(payload.cdpVerified === true ? { cdpVerified: true } : {}),
+          };
+          contents.send(EXTERNAL_AGENT_CONNECTION_CHANNELS.confirmation, confirmation);
+          pendingConfirmation = confirmation;
+          return { accepted: true };
+        } finally {
+          release();
+        }
+      });
     },
     shutdown() {
       void closeAdmission();

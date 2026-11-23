@@ -38,7 +38,7 @@ function fakeIpcMain(): FakeIpcMain {
 }
 
 describe('custom-team-templates desktop file IPC', () => {
-  it('registers exactly the two desktop file channels', () => {
+  it('registers exactly the desktop file contract channels', () => {
     const ipc = fakeIpcMain();
     const service = {
       importFromFile: vi.fn(),

@@ -312,7 +312,7 @@ async function startApp(fixture) {
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
     // Avoid reading the user's interactive zsh profiles in this disposable UI fixture.
     SHELL: '/bin/sh',
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     // This executable answers only --version and denies every bridge/lifecycle
     // command. The renderer E2E must never touch a real runtime process.

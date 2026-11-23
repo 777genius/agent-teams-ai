@@ -35,7 +35,6 @@ const LEGACY_CONFIG_FILENAMES = [
   'claude-devtools-config.json',
   'claude-code-context-config.json',
 ] as const;
-
 function getDefaultConfigPath(): string {
   const basePath = getClaudeBasePath();
   return migrateLegacyConfigPath(
@@ -402,7 +401,8 @@ const DEFAULT_CONFIG: AppConfig = {
     useNativeTitleBar: false,
     customProjectPaths: [],
     telemetryEnabled: true,
-    externalAgentCdpEnabled: false,
+    externalAgentCdpEnabled: true,
+    externalAgentCdpSettingsVersion: 1,
   },
   providerConnections: {
     anthropic: {
@@ -548,7 +548,6 @@ export class ConfigManager {
   private triggerManager: TriggerManager;
   private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
   private pendingConfigWrite: Promise<void> = Promise.resolve();
-
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
     this.config = this.loadConfig();
@@ -652,6 +651,10 @@ export class ConfigManager {
     const mergedGeneral: GeneralConfig = {
       ...DEFAULT_CONFIG.general,
       ...(loaded.general ?? {}),
+      externalAgentCdpEnabled: loaded.general?.externalAgentCdpSettingsVersion
+        ? (loaded.general.externalAgentCdpEnabled ?? true)
+        : true,
+      externalAgentCdpSettingsVersion: loaded.general?.externalAgentCdpSettingsVersion || 1,
     };
     mergedGeneral.multimodelEnabled = true;
     mergedGeneral.claudeRootPath = normalizeConfiguredClaudeRootPath(mergedGeneral.claudeRootPath);

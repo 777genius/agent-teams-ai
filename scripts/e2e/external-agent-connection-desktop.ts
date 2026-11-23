@@ -131,7 +131,6 @@ await writeFile(
   configPath,
   JSON.stringify({
     general: {
-      externalAgentCdpEnabled: true,
       theme: 'dark',
       appLocale: 'en',
       multimodelEnabled: true,

@@ -235,7 +235,7 @@ async function launch(): Promise<Cdp> {
       AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claudeRoot,
       AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userDataRoot,
       CLAUDE_CONFIG_DIR: claudeRoot,
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       NODE_BINARY: process.execPath,
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: process.execPath,
     },
