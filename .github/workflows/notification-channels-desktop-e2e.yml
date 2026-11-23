@@ -1,0 +1,66 @@
+name: Notification Channels real Electron E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/notification-channels-desktop-e2e.yml'
+      - 'src/features/notification-channels/**'
+      - 'test/features/notification-channels/**'
+      - 'src/main/services/infrastructure/NotificationManager.ts'
+      - 'src/main/index.ts'
+      - 'src/main/standalone.ts'
+      - 'src/main/http/index.ts'
+      - 'src/preload/index.ts'
+      - 'src/shared/types/api.ts'
+      - 'src/renderer/api/httpClient.ts'
+      - 'src/renderer/components/settings/sections/NotificationsSection.tsx'
+      - 'scripts/e2e/notification-channels-desktop.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    name: Real renderer → IPC → encrypted vault → Thinwrap → intercepted HTTPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare Linux virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb fonts-noto-cjk
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron binary
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Exercise real local delivery through Electron
+        env:
+          NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR: ${{ runner.temp }}/notification-channels-evidence
+        run: xvfb-run -a pnpm test:e2e:notification-channels
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-channels-e2e-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/notification-channels-evidence/*.png
+            ${{ runner.temp }}/notification-channels-evidence/receipt.json

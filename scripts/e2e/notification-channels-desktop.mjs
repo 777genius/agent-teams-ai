@@ -20,7 +20,8 @@ import { CdpClient } from './comment-notification/cdp.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 assert.equal(process.platform, 'linux', 'This harness uses the disposable Linux desktop');
-const root = await mkdtemp(path.join(os.tmpdir(), 'delivery-channels-E2E-'));
+const root = process.env.NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR ??
+  await mkdtemp(path.join(os.tmpdir(), 'delivery-channels-E2E-'));
 const home = path.join(root, 'home');
 const claude = path.join(home, '.claude');
 const userData = path.join(root, 'user-data');
