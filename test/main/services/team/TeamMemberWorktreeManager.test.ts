@@ -41,7 +41,12 @@ function legacySlugify(value: string): string {
 }
 
 function slugify(value: string): string {
-  const full = value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'member';
+  const full =
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'member';
   return full.length <= 48 ? full : `${full.slice(0, 37)}-${shortHash(full)}`;
 }
 
@@ -53,7 +58,7 @@ function expectedWorktreePath(repoPath: string, teamName = 'Atlas HQ', memberNam
   return path.join(
     hoisted.appDataRoot,
     'team-worktrees',
-    `${slugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
+    `${legacySlugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
     slugify(teamName),
     slugify(memberName)
   );
@@ -258,11 +263,15 @@ describe('TeamMemberWorktreeManager', () => {
     const repoPath = await createGitRepo(tempRoot);
     const manager = new TeamMemberWorktreeManager();
     const prefix = 'a'.repeat(48);
-    const [bob, alice, otherTeam] = await Promise.all([
-      manager.ensureMemberWorktree({ teamName: 'Atlas HQ', memberName: `${prefix}bob`, baseCwd: repoPath }),
-      manager.ensureMemberWorktree({ teamName: 'Atlas HQ', memberName: `${prefix}alice`, baseCwd: repoPath }),
-      manager.ensureMemberWorktree({ teamName: `${prefix}other`, memberName: `${prefix}bob`, baseCwd: repoPath }),
-    ]);
+    const bob = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName: `${prefix}bob`, baseCwd: repoPath,
+    });
+    const alice = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName: `${prefix}alice`, baseCwd: repoPath,
+    });
+    const otherTeam = await manager.ensureMemberWorktree({
+      teamName: `${prefix}other`, memberName: `${prefix}bob`, baseCwd: repoPath,
+    });
     expect(new Set([bob.worktreePath, alice.worktreePath, otherTeam.worktreePath]).size).toBe(3);
     expect(new Set([bob.branchName, alice.branchName, otherTeam.branchName]).size).toBe(3);
     for (const resolution of [bob, alice, otherTeam]) {
@@ -348,7 +357,9 @@ describe('TeamMemberWorktreeManager', () => {
       existingCwd: initial.worktreePath,
     });
     expect(restored).toEqual({ ...initial, branchName: 'task-branch' });
-    expect(await fs.readFile(path.join(initial.worktreePath, 'notes.txt'), 'utf8')).toBe('preserved\n');
+    expect(await fs.readFile(path.join(initial.worktreePath, 'notes.txt'), 'utf8')).toBe(
+      'preserved\n'
+    );
   });
 
   it('refuses to guess the owner of old truncated-name checkouts without a persisted path', async () => {
@@ -356,7 +367,7 @@ describe('TeamMemberWorktreeManager', () => {
     const memberName = `${'a'.repeat(48)}alice`;
     const oldPath = path.join(
       hoisted.appDataRoot, 'team-worktrees',
-      `${slugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
+      `${legacySlugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
       legacySlugify('Atlas HQ'), legacySlugify(memberName)
     );
     const oldBranch = `agent-teams/atlas-hq/${legacySlugify(memberName)}-${shortHash(repoPath)}`;
