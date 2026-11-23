@@ -141,6 +141,7 @@ import type {
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
+import type { UserAttentionApi } from '@features/user-attention/contracts';
 import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
@@ -852,6 +853,7 @@ export interface ReviewAPI {
 export interface ElectronAPI
   extends
     RecentProjectsElectronApi,
+    UserAttentionApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
