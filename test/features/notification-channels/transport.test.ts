@@ -99,6 +99,19 @@ describe('Notification Channels HTTP boundary', () => {
       expect(save).toHaveBeenCalledOnce();
       const response = await app.inject({ method: 'GET', url });
       expect(response.json()).toEqual([{ id: 'safe', hasCredential: true }]);
+      const remoteRead = await app.inject({
+        method: 'GET', url, headers: { host: 'example.com:3456' },
+      });
+      expect(remoteRead.statusCode).toBe(403);
+      expect(remoteRead.body).not.toContain('safe');
+
+      const forgedOriginRead = await app.inject({
+        method: 'GET', url,
+        headers: { host: '127.0.0.1:3456', origin: 'https://evil.example' },
+      });
+      expect(forgedOriginRead.statusCode).toBe(403);
+      expect(list).toHaveBeenCalledOnce();
+
       expect(response.body).not.toContain('do-not-echo');
     } finally {
       await app.close();

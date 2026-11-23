@@ -4,21 +4,32 @@ import type { NotificationChannelsFeatureFacade } from '../../composition/create
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 /** A localhost browser may manage credentials; cross-origin pages may not. */
-export function isLocalNotificationChannelsMutation(request: FastifyRequest): boolean {
+/** The settings API is local-only, including metadata reads. */
+export function isLocalNotificationChannelsRead(request: FastifyRequest): boolean {
   const host = request.headers.host ?? '';
   const origin = request.headers.origin;
   const site = request.headers['sec-fetch-site'];
   if (!/^(127\.0\.0\.1|localhost):[0-9]{1,5}$/.test(host)) return false;
   if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.ip)) return false;
-  if (origin !== 'http://' + host) return false;
+  if (origin && origin !== 'http://' + host) return false;
   return site === undefined || site === 'same-origin' || site === 'none';
+}
+
+export function isLocalNotificationChannelsMutation(request: FastifyRequest): boolean {
+  return isLocalNotificationChannelsRead(request) &&
+    request.headers.origin === 'http://' + request.headers.host;
 }
 
 export function registerNotificationChannelsHttp(
   app: FastifyInstance,
   feature: NotificationChannelsFeatureFacade
 ): void {
-  app.get(NOTIFICATION_CHANNELS_HTTP, async () => feature.list());
+  app.get(NOTIFICATION_CHANNELS_HTTP, async (request, reply) => {
+    if (!isLocalNotificationChannelsRead(request)) {
+      return reply.code(403).send({ error: 'Local access required' });
+    }
+    return feature.list();
+  });
 
   app.post(NOTIFICATION_CHANNELS_HTTP, async (request, reply) => {
     if (!isLocalNotificationChannelsMutation(request)) {
