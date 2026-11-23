@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import {
   buildConnectionSetupPrompt,
@@ -51,6 +51,10 @@ export function ExternalAgentConnectionSettings({
 }: Readonly<Props>): React.JSX.Element {
   const { t } = useAppTranslation('settings');
   const { info, error, retrying, retry } = useConnectionInfo(api, local);
+  const latestInfo = useRef(info);
+  useLayoutEffect(() => {
+    latestInfo.current = info;
+  }, [info]);
   const [copyStatus, setCopyStatus] = useState('');
   const [lastCopy, setLastCopy] = useState<CopyKind | null>(null);
   const [copying, setCopying] = useState(false);
@@ -81,6 +85,10 @@ export function ExternalAgentConnectionSettings({
       const live = await api.getConnectionInfo();
       if (
         !sameApp(info, live) ||
+        !latestInfo.current ||
+        !sameApp(latestInfo.current, live) ||
+        latestInfo.current.mcp.status !== 'ready' ||
+        latestInfo.current.control.status !== 'ready' ||
         live.mcp.status !== 'ready' ||
         live.control.status !== 'ready' ||
         !live.mcp.url ||
