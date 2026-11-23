@@ -66,7 +66,12 @@ function button(name) {
 }
 
 async function click(expression) {
-  await until(async () => await evaluate('Boolean(' + expression + ')'), 'button: ' + expression);
+  // React can render a row before its preceding save/refresh has cleared "busy".
+  // Clicking a disabled native/Radix button silently does nothing and would
+  // turn a real integration test into a misleading timeout.
+  await until(async () => await evaluate(
+    '(() => { const element = ' + expression + '; return Boolean(element && !element.disabled); })()'
+  ), 'enabled control: ' + expression);
   await evaluate(expression + '.click()');
 }
 
