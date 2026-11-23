@@ -35,9 +35,14 @@ function createGuardedFetch(provider: DeliveryProvider, secret: string): typeof 
 
 function classifyFailure(error: unknown): DeliveryFailureCode {
   if (error instanceof ConnectorError) {
-    if (error.statusCode === 429) return 'rate_limited';
-    if ([401, 403, 404].includes(error.statusCode ?? -1)) return 'authentication_failed';
-    if (error.providerCode === 'provider_unavailable') return 'network_error';
+    // Respect the provider's classification: Telegram 403 is invalid_recipient,
+    // while Teams may classify a 400 webhook error as auth_failed.
+    switch (error.providerCode) {
+      case 'auth_failed': return 'authentication_failed';
+      case 'rate_limited': return 'rate_limited';
+      case 'provider_unavailable': return 'network_error';
+      default: return 'delivery_failed';
+    }
   }
   return 'delivery_failed';
 }

@@ -748,9 +748,9 @@ export class HttpAPIClient implements ElectronAPI {
     list: () => this.get(NOTIFICATION_CHANNELS_HTTP),
     save: (request) => this.post(NOTIFICATION_CHANNELS_HTTP, request),
     remove: async (id) => {
-      await this.del(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id));
+      await this.del(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id), {});
     },
-    test: (id) => this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test'),
+    test: (id) => this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test', {}),
   };
 
   notifications: NotificationsAPI = {

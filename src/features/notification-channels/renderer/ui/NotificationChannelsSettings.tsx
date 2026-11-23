@@ -77,7 +77,7 @@ export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { a
             </div>
             <label className="flex items-center gap-2 text-xs">
               <Checkbox aria-label={'Enable ' + channel.name} checked={channel.enabled}
-                disabled={busy} onCheckedChange={(value) => toggle(channel, value === true)} />
+                disabled={busy || draft?.id === channel.id} onCheckedChange={(value) => toggle(channel, value === true)} />
               Enabled
             </label>
             <Button type="button" size="sm" variant="outline" disabled={busy}

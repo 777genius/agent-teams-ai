@@ -29,6 +29,7 @@ import { ConfigManager } from './services/infrastructure/ConfigManager';
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
   getAppDataBasePath,
+  getAppDataPath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
@@ -151,7 +152,7 @@ async function start(): Promise<void> {
 
   const userDataPath = getAppDataBasePath();
   const notificationChannelsFeature = createNotificationChannelsFeature({
-    storePath: join(userDataPath, 'notification-channels.json'),
+    storePath: join(getAppDataPath(), 'notification-channels.json'),
     apiKeys: new ApiKeyService(getClaudeBasePath()),
     canDeliver: () => {
       const settings = ConfigManager.getInstance().getConfig().notifications;
