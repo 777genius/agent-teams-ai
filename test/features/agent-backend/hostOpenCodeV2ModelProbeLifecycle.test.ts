@@ -19,12 +19,19 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const controlled = vi.hoisted(() => ({
   create: (_options: unknown): unknown => { throw new Error('TEST native factory unset'); },
   spawn: vi.fn(() => { throw new Error('TEST unexpected native spawn'); }),
+  driverFactory: undefined as ((_options: unknown) => unknown) | undefined,
 }));
 vi.mock('node:child_process', async importOriginal => ({
   ...await importOriginal<typeof import('node:child_process')>(), spawn: controlled.spawn,
 }));
 vi.mock('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.js',
   () => ({ createOpenCodeV2EmbeddedServer: (options: unknown) => controlled.create(options) }));
+vi.mock('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js',
+  async importOriginal => {
+    const original = await importOriginal<typeof import('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js')>();
+    return { ...original, createOpenCodeV2DriverFactory: (options: Parameters<typeof original.createOpenCodeV2DriverFactory>[0]) =>
+      controlled.driverFactory ? controlled.driverFactory(options) : original.createOpenCodeV2DriverFactory(options) };
+  });
 
 import * as capturedProcess from '../../../packages/legacy-agent-host/src/adapters/providers/CapturedProcess';
 import * as probeDiagnostics from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
@@ -44,6 +51,7 @@ import type { OpenCodeProbeCloseDiagnostic, OpenCodeProbeDiagnostic } from '../.
 
 afterEach(() => {
   controlled.create = () => { throw new Error('TEST native factory unset'); };
+  controlled.driverFactory = undefined;
   expect(controlled.spawn).not.toHaveBeenCalled();
   controlled.spawn.mockClear();
 });
@@ -532,7 +540,8 @@ function assertCurrentnessSummaries(records: OpenCodeProbeDiagnostic[], expected
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', 'credential-returned', 'attestation', ...catalogPhases, 'catalog-read-returned', 'catalog-current-returned',
-  'attestation-returned', 'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit'];
+  'attestation-returned', 'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned',
+  'driver-open', 'driver-open-returned', 'first-submit', 'first-submit-current-returned'];
 
 test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
   'catalog admissions retain original calls, errors and release with %s in memory', async fault => {
@@ -805,7 +814,8 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
       await expect(f.probe.close()).resolves.toBe(true);
       expect(f.counts().requests).toBe(before.requests);
       expect(f.counts().passwordReads).toBe(before.passwordReads);
-      expect(records).toHaveLength(phases.length + currentnessPhases.length);
+      expect(records).toHaveLength(phases.length + currentnessPhases.length + 1);
+      expect(records.at(-1)).toMatchObject({ phase: 'first-submit-returned', submitStatus: 'refused' });
       f.assertClosed(); expect(f.observations).toEqual([]);
     } finally { diagnostic.mockRestore(); await f?.dispose(); }
   }
@@ -992,5 +1002,136 @@ test.each(['native-launch-returned', 'native-endpoint-resolved'] as const)(
 test.each(['timer', 'lifecycle'] as const)(
   'actual embedded startup observes the existing %s abort without extending it', async reason => {
     await embeddedBoundary('throw', false, reason);
+  }
+);
+
+test.each(['refused', 'accepted', 'threw', 'revoked-open'] as const)(
+  'passive probe handoff preserves original operations and clean close for %s in memory', async mode => {
+    let baseline: string[] | undefined;
+    const originalDiagnostic = probeDiagnostics.createOpenCodeProbeDiagnostic;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-probe-handoff-')));
+      const management = openCodeManagementProfileSchema.parse(
+        teamModelProbeProfile(runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root))));
+      const records: OpenCodeProbeDiagnostic[] = [], operations: string[] = [];
+      const phasePositions = new Map<string, number>();
+      const opened = Promise.withResolvers<void>(), releaseOpen = Promise.withResolvers<void>();
+      const originalFailure = new Error('TEST original submit failure');
+      let current = true, input: { inputId: string; operationRef: string } | undefined;
+      const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+        .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
+          : originalDiagnostic(selected, command, digest, line => {
+            const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+            records.push(record); phasePositions.set(record.phase, operations.length);
+            if (sink === 'throws') throw new Error('TEST diagnostic sink failure');
+          }));
+      const identity = { pid: 48101, startIdentity: 'TEST-original-root', version: '2.1.4' };
+      controlled.create = () => {
+        operations.push('create');
+        return {
+          start: async () => { operations.push('start'); return { ...identity, endpoint: management.endpoint }; },
+          readPassword: () => { operations.push('password'); return 'TEST-private-password'; },
+          readNativeCustody: async () => { operations.push('custody'); return { ...identity }; },
+          stopOwned: async () => { operations.push('stop'); return true; },
+        };
+      };
+      const driver = {
+        sessionRef: 'TEST-private-session',
+        submit: async (value: { inputId: string; operationRef: string }) => {
+          operations.push('submit'); input = value;
+          if (mode === 'threw') throw originalFailure;
+          return mode === 'refused' ? { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' }
+            : { ok: true, value: { ...value, delivery: 'client-consumed', providerAcceptance: 'unknown' } };
+        },
+        observe: async function* () {
+          operations.push('observe'); assert.ok(input);
+          yield { sessionRef: driver.sessionRef, ...input, kind: 'text', text: 'TEST OK' };
+          yield { sessionRef: driver.sessionRef, ...input, kind: 'result', outcome: 'succeeded' };
+        },
+        close: async () => { operations.push('close'); return { cleanup: 'confirmed' }; },
+      };
+      controlled.driverFactory = () => {
+        operations.push('factory');
+        return { open: async () => {
+          operations.push('open-enter'); opened.resolve();
+          await releaseOpen.promise; operations.push('open-return'); return { driver };
+        } };
+      };
+      let requests = 0;
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async request => {
+        const native = request instanceof Request ? request : new Request(String(request));
+        const path = new URL(native.url).pathname;
+        operations.push(native.method + ' ' + path); expect(++requests).toBeLessThanOrEqual(12);
+        const location = { directory: root };
+        if (native.method === 'POST') {
+          expect(path).toBe('/api/session');
+          const body = await native.json() as Record<string, unknown>;
+          expect(body.location).toEqual(location);
+          return new Response(JSON.stringify({ data: { ...body, time: { created: 1 } } }),
+            { headers: { 'content-type': 'application/json' } });
+        }
+        expect(['/api/info', '/api/provider', '/api/model', '/api/model/default']).toContain(path);
+        const value = path === '/api/info' ? { pid: identity.pid, version: identity.version }
+          : path === '/api/provider' ? { location, data: [{ id: 'TEST-provider', name: 'TEST provider', activation: 'enabled' }] }
+            : path === '/api/model' ? { location, data: [{ id: 'TEST-model', providerID: 'TEST-provider', name: 'TEST model',
+              enabled: true, limit: { context: 4096, output: 512 }, capabilities: { tools: false, input: ['text'] }, variants: [{ id: 'high' }] }] }
+              : { location, data: { providerID: 'TEST-provider', id: 'TEST-model' } };
+        return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
+      });
+      const probe = createOpenCodeV2ModelProbe(management, { commandId: 'TEST-handoff', profileId: management.profileId,
+        configRevision: management.configRevision, providerId: 'TEST-provider', modelId: 'TEST-model' },
+      () => { operations.push('current'); return current; });
+      try {
+        const signal = new AbortController().signal, running = probe.run(signal);
+        expect(probe.run(signal)).toBe(running);
+        const settled = running.then(value => ({ value }), error => ({ error }));
+        await within(Promise.race([opened.promise, settled.then(result => {
+          if ('error' in result) throw result.error;
+          throw new Error('TEST run settled before original open');
+        })]), 'original in-memory open');
+        if (mode === 'revoked-open') current = false;
+        releaseOpen.resolve();
+        const result = await settled;
+        if (mode === 'threw') {
+          assert.ok('error' in result); expect(result.error).toBe(originalFailure);
+        }
+        else if (mode === 'revoked-open') expect(result).toMatchObject({ error: { code: 'held' } });
+        else expect(result).toEqual({ value: mode === 'accepted' });
+        const handoffs = records.filter(record => ['driver-open-returned', 'first-submit-current-returned',
+          'first-submit-returned'].includes(record.phase));
+        expect(handoffs.map(record => record.phase)).toEqual(sink === 'absent' ? [] : mode === 'revoked-open'
+          ? ['driver-open-returned'] : mode === 'threw' ? ['driver-open-returned', 'first-submit-current-returned']
+            : ['driver-open-returned', 'first-submit-current-returned', 'first-submit-returned']);
+        if (sink !== 'absent' && (mode === 'refused' || mode === 'accepted'))
+          expect(handoffs.at(-1)).toMatchObject({ submitStatus: mode === 'refused' ? 'refused' : 'ok',
+            submitCode: mode === 'refused' ? 'dependency-unavailable' : null,
+            submitDelivery: mode === 'refused' ? 'known-not-sent' : 'unobserved' });
+        if (sink !== 'absent') {
+          const openAt = phasePositions.get('driver-open-returned')!;
+          expect(operations[openAt - 1]).toBe('open-return'); expect(operations[openAt]).toBe('current');
+          if (mode !== 'revoked-open') {
+            const currentAt = phasePositions.get('first-submit-current-returned')!;
+            expect(operations[currentAt - 1]).toBe('current'); expect(operations[currentAt]).toBe('submit');
+          }
+        }
+        const beforeClose = [...records];
+        await expect(probe.close()).resolves.toBe(true);
+        await expect(probe.close()).resolves.toBe(true);
+        expect(records, 'the submit snapshot is independent of successful cleanup').toEqual(beforeClose);
+        expect(operations.filter(operation => operation === 'create')).toHaveLength(1);
+        expect(operations.filter(operation => operation === 'POST /api/session')).toHaveLength(1);
+        expect(operations.filter(operation => operation === 'submit')).toHaveLength(mode === 'revoked-open' ? 0 : 1);
+        expect(operations.filter(operation => operation === 'observe')).toHaveLength(mode === 'accepted' ? 1 : 0);
+        expect(operations.filter(operation => operation === 'close')).toHaveLength(1);
+        expect(operations.filter(operation => operation === 'stop')).toHaveLength(1);
+        expect(operations.slice(-2)).toEqual(['close', 'stop']);
+        baseline ??= operations; expect(operations).toEqual(baseline);
+        expect(JSON.stringify(records)).not.toContain('TEST-private');
+      } finally {
+        releaseOpen.resolve(); await probe.close();
+        fetch.mockRestore(); diagnostic.mockRestore(); controlled.driverFactory = undefined;
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
   }
 );

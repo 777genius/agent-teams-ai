@@ -416,6 +416,7 @@ export function createOpenCodeV2ModelProbe(
       requiredCapabilities: coordination ? ['text', 'tools'] : ['text'],
     });
     driver = opened.driver;
+    observePhase?.('driver-open-returned');
     assertCurrent(signal);
   }
   async function run(signal: AbortSignal, originalDeadline?: number): Promise<boolean> {
@@ -430,6 +431,7 @@ export function createOpenCodeV2ModelProbe(
     await starting;
     observePhase?.('first-submit');
     assertCurrent(combined);
+    observePhase?.('first-submit-current-returned');
     if (!driver) return unavailable();
     if (coordination) {
       if (options.readiness) {
@@ -442,6 +444,7 @@ export function createOpenCodeV2ModelProbe(
     const inputId = 'model-probe-' + captured.slice(0, 32);
     const operationRef = 'model-probe-operation-' + captured.slice(0, 32);
     const handed = await driver.submit({ inputId, operationRef, content: prompt });
+    observePhase?.('first-submit-returned', handed);
     if (!handed.ok) return false;
     let hasText = false;
     for await (const event of driver.observe()) {

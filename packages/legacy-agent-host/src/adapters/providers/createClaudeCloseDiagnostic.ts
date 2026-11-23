@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { types } from 'node:util';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
@@ -156,7 +157,8 @@ export type OpenCodeProbePhase = OpenCodeV2GraphPhase | OpenCodeCurrentnessPhase
   | `credential-${'catalog' | 'directory' | 'connect' | 'restore' | 'dispose'}-${'start' | 'returned'}`
   | 'credential-returned' | 'catalog-read-returned' | 'catalog-current-returned' | 'catalog-repeat'
   | 'attestation-observe-returned' | 'session-current-returned' | 'session-create-returned'
-  | 'native-ready' | 'credential' | 'attestation' | 'attestation-returned' | 'session-create' | 'driver-open' | 'first-submit';
+  | 'native-ready' | 'credential' | 'attestation' | 'attestation-returned' | 'session-create' | 'driver-open' | 'first-submit'
+  | 'driver-open-returned' | 'first-submit-current-returned' | 'first-submit-returned';
 const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-done', 'native-launch',
   'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
   'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
@@ -171,7 +173,8 @@ const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-do
   'credential-dispose-start', 'credential-dispose-returned', 'credential-returned',
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
-  'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
+  'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit',
+  'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned']);
 const currentnessPhases = new Set<OpenCodeProbePhase>(['identity-currentness-summary',
   'catalog-1-currentness-summary', 'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
   'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary']);
@@ -188,14 +191,37 @@ function currentnessStats(value: unknown): OpenCodeCurrentnessStats | undefined 
   return { currentCalls: calls, currentElapsedMs: elapsed };
 }
 
-/** Last observed phase only: no readiness, failure, process identity or release authority. */
+const submitFailureCodes = new Set(['invalid-config', 'unavailable', 'dependency-unavailable', 'backpressure',
+  'stale', 'unsupported', 'checkpoint-incompatible', 'checkpoint-missing', 'provider-failure', 'output-limit', 'unknown']);
+interface ProbeSubmitSummary {
+  readonly submitStatus: 'ok' | 'refused' | 'unclassified';
+  readonly submitCode: string | null;
+  readonly submitDelivery: 'known-not-sent' | 'unobserved';
+}
+function submitSummary(reply: unknown): ProbeSubmitSummary {
+  const unobserved = { submitStatus: 'unclassified', submitCode: null, submitDelivery: 'unobserved' } as const;
+  // Never reflect through a Proxy or inspect a success payload, even for diagnostics.
+  if (!reply || typeof reply !== 'object' || types.isProxy(reply) || Array.isArray(reply)) return unobserved;
+  const own = (key: string): unknown => {
+    const field = Object.getOwnPropertyDescriptor(reply, key);
+    return field && Object.hasOwn(field, 'value') ? field.value : undefined;
+  };
+  const ok = own('ok');
+  if (ok === true) return { ...unobserved, submitStatus: 'ok' };
+  if (ok !== false) return unobserved;
+  const code = own('code'), delivery = own('delivery');
+  return { submitStatus: 'refused', submitCode: typeof code === 'string' && submitFailureCodes.has(code) ? code : null,
+    submitDelivery: delivery === 'known-not-sent' ? 'known-not-sent' : 'unobserved' };
+}
+
+/** Phase and bounded SPI return only; no provider acceptance, readiness, process identity or release authority. */
 export function createOpenCodeProbeDiagnostic(
   selected: { profileId: string; configRevision: string },
   commandId: string,
   probeDigest: string,
   write: (line: string) => void = writeDiagnostic,
   now: () => number = () => performance.now()
-): (phase: OpenCodeProbePhase, currentness?: OpenCodeCurrentnessStats) => void {
+): (phase: OpenCodeProbePhase, detail?: OpenCodeCurrentnessStats | { readonly ok: boolean }) => void {
   try {
     const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
     const identity = Object.freeze({ profileHash: hash([selected.profileId, selected.configRevision]),
@@ -204,10 +230,10 @@ export function createOpenCodeProbeDiagnostic(
     const observed = new Set<OpenCodeProbePhase>();
     const summaries = new Set<OpenCodeProbePhase>();
     let started: number | undefined, count = 0;
-    return (phase, currentness) => {
+    return (phase, detail) => {
       try {
         if (currentnessPhases.has(phase)) {
-          const stats = currentnessStats(currentness);
+          const stats = currentnessStats(detail);
           if (!valid || started === undefined || !stats || summaries.has(phase)) return;
           summaries.add(phase);
           const at = now(), elapsedMs = Math.round(at - started);
@@ -218,7 +244,7 @@ export function createOpenCodeProbeDiagnostic(
             phase, sequence: count, elapsedMs, ...stats }) + '\n');
           return;
         }
-        if (currentness !== undefined) return;
+        if (detail !== undefined && phase !== 'first-submit-returned') return;
         if (!valid || count >= probePhases.size || !probePhases.has(phase) || observed.has(phase)) return;
         observed.add(phase); count++;
         if (count > 1 && started === undefined) return;
@@ -228,7 +254,8 @@ export function createOpenCodeProbeDiagnostic(
         const elapsedMs = Math.round(at - started);
         if (!Number.isSafeInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > 3_600_000) return;
         write('legacy-agent-host: opencode-probe ' + JSON.stringify({ ...identity,
-          phase, sequence: count, elapsedMs }) + '\n');
+          phase, sequence: count, elapsedMs,
+          ...(phase === 'first-submit-returned' ? submitSummary(detail) : {}) }) + '\n');
       } catch { /* Diagnostics cannot replace an original probe operation or error. */ }
     };
   } catch { return () => {}; }
