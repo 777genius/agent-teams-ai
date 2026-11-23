@@ -9,7 +9,8 @@ import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { isDeepStrictEqual } from 'node:util';
 import { checkpoint } from './desktop-resume-records.ts';
-import { attachRendererDiagnostics, readRendererFailureSnapshot } from './desktop-team-ui-smoke.ts';
+import { attachRendererDiagnostics, prepareDesktopHeadlessViewport, readRendererFailureSnapshot } from './desktop-team-ui-smoke.ts';
+import { desktopFiniteHeadlessSelected } from '../lib/desktop-finite-headless.ts';
 import { assertFirstResumeMetadataAbsent, observeDesktopMetadataClose } from './desktop-opencode-v2-cold-metadata.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -118,6 +119,8 @@ export async function connectCapturedDesktopApp(options: {
   cdpLibrary: DesktopCdpLibrary; evidence: Evidence;
 }) {
   const { app, group, packed, cdpLibrary, evidence } = options;
+  const headless = desktopFiniteHeadlessSelected();
+  if (headless) assert.equal(packed, undefined, 'finite TEST headless retains the original dev app');
   const startupStarted = performance.now();
   const startupBudgetMs = 180_000;
   const startupTimeline: Record<string, unknown>[] = [];
@@ -199,6 +202,12 @@ export async function connectCapturedDesktopApp(options: {
     'attach captured renderer'
   );
   evidence.rendererTarget = { id: target.id, url: target.url };
+  if (headless) {
+    try {
+      evidence.headlessViewport = await prepareDesktopHeadlessViewport(cdp, {
+        deadline: startupStarted + startupBudgetMs, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } catch (error) { await cdp.close().catch(() => undefined); throw error; }
+  }
   return { cdp, target, startupStarted, startupBudgetMs };
 }
 /** Existing descriptor, compiled bytes and safe HOME checks; no product mutation. */

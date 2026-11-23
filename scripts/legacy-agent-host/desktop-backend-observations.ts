@@ -6,6 +6,7 @@ import { createConnection } from 'node:net';
 import { basename, join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { desktopFiniteHeapNodeOptions } from '../lib/desktop-finite-node-options.ts';
+import { desktopFiniteHeadlessSelected } from '../lib/desktop-finite-headless.ts';
 export { projectDesktopHarnessFailure, projectDesktopMixedSettingsFailure } from './desktop-backend-failures.ts';
 
 export interface ProcessIdentity {
@@ -39,6 +40,7 @@ export async function assertDesktopRuntimePins(fixture: {
 /** Preserve explicit TEST admission before even probing the selected renderer port. */
 export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1', 'root must authorize actual pnpm dev:mcp launch');
+  const headless = desktopFiniteHeadlessSelected();
   desktopFiniteHeapNodeOptions();
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY;
   assert.ok(emulatedOnly === undefined || emulatedOnly === '1', 'explicit provider-emulation admission');
@@ -55,7 +57,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
       assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
     }
     // Reject inherited native/scenario selectors before any fixture or model starts.
-    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|TEST_FINITE_HEAP_(?:1536|1536_UV4)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
+    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|TEST_HEADLESS|TEST_FINITE_HEAP_(?:1536|1536_UV4)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
     for (const key of Object.keys(process.env))
       if (key.startsWith('LEGACY_DESKTOP_')) assert.ok(allowed.test(key) ||
         mode === 'review-readback-ui' && /^LEGACY_DESKTOP_READBACK_(?:ROOT|RECEIPT_SHA256)$/u.test(key) ||
@@ -65,7 +67,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.ok(process.platform === 'darwin' ||
     (process.platform === 'linux' && process.arch === 'x64' && (linuxModeAllowed || emulatedOnly === '1')),
     'Linux Desktop portability requires an explicitly bounded proof mode');
-  if (process.platform === 'linux') {
+  if (process.platform === 'linux' && !headless) {
     const display = process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '';
     const loopbackTcp = /^127\.0\.0\.1:(0|[1-9]\d{0,4})$/u.exec(display);
     // An inherited loopback listener still uses X11's fixed 6000 + display port.

@@ -5,6 +5,7 @@ import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
+import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -13,6 +14,9 @@ import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
 import { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import { desktopFiniteHeapNodeOptions, desktopInstallerSourceMapEnvironment, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
+import { desktopFiniteHeadlessSelected, desktopFiniteHeadlessElectronArgs,
+  desktopFiniteHeadlessAppEnvironment } from '../lib/desktop-finite-headless.ts';
+import { resolveElectronViteArgs } from '../lib/dev-remote-debugging.ts';
 import { observeDesktopEmulatedRuntimeChildren, readDesktopEmulatedPeerRefusal } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import { waitForDesktopOpenCodePreflight } from './desktop-launch-ui-smoke.ts';
@@ -137,6 +141,154 @@ test('Linux TEST display admission accepts only the original local form or canon
   process.env.LEGACY_DESKTOP_BACKEND_GO = '1';
   process.env.LEGACY_DESKTOP_CLAUDE_PATH = '/TEST-refused-vendor';
   assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_CLAUDE_PATH/);
+});
+
+const finiteHeadlessEnvironment = {
+  LEGACY_DESKTOP_TEST_HEADLESS: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
+  LEGACY_DESKTOP_EMULATED_ONLY: '1', LEGACY_DESKTOP_PROOF_MODE: 'emulated-import-lifecycle-ui',
+};
+
+test('absent finite headless selection is inert without reading unrelated launch context', () => {
+  const environment = { get LEGACY_DESKTOP_BACKEND_GO(): string { return assert.fail('ordinary launch context is not inspected'); } };
+  for (const platform of ['linux', 'darwin', 'win32']) for (const arch of ['x64', 'arm64']) {
+    assert.equal(desktopFiniteHeadlessSelected(environment, platform, arch), false);
+    assert.deepEqual(desktopFiniteHeadlessElectronArgs(environment, platform, arch), []);
+    assert.deepEqual(desktopFiniteHeadlessAppEnvironment(environment, platform, arch), {});
+  }
+});
+
+test('finite headless selection requires the original finite import scope and exact Linux tuple', () => {
+  assert.equal(desktopFiniteHeadlessSelected(finiteHeadlessEnvironment, 'linux', 'x64'), true);
+  for (const [key, value] of [
+    ...['', '0', 'true', '1 ', '1\n'].map(value => ['LEGACY_DESKTOP_TEST_HEADLESS', value]),
+    ['LEGACY_DESKTOP_BACKEND_GO', undefined], ['LEGACY_DESKTOP_BACKEND_GO', '0'],
+    ['LEGACY_DESKTOP_EMULATED_ONLY', undefined], ['LEGACY_DESKTOP_EMULATED_ONLY', '0'],
+    ...['native-launch-ui', 'emulated-import-ui', 'emulated-claude-lifecycle-ui',
+      'review-readback-ui', 'process-cold-ui', 'emulated-import-lifecycle-ui ']
+      .map(value => ['LEGACY_DESKTOP_PROOF_MODE', value]),
+    ['LEGACY_DESKTOP_TEST_DISPLAY', ':97'], ['LEGACY_DESKTOP_TEST_DISPLAY', ''],
+    ['LEGACY_DESKTOP_TEST_XAUTHORITY', '/TEST/Xauthority'], ['LEGACY_DESKTOP_TEST_XAUTHORITY', ''],
+    ...['', '0', '2'].map(value => ['LEGACY_DESKTOP_TEST_CHILD_TRACE', value]),
+    ...['LEGACY_DESKTOP_PACKED_CAPTURE_PATH', 'LEGACY_DESKTOP_PACKED_CAPTURE_SHA256',
+      'LEGACY_DESKTOP_CLAUDE_PATH', 'LEGACY_DESKTOP_CODEX_PATH', 'LEGACY_DESKTOP_OPENCODE_PATH',
+      'LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH', 'LEGACY_DESKTOP_DONOR_SAVED_ONLY',
+      'LEGACY_DESKTOP_PROCESS_CAPTURE_PATH', 'LEGACY_DESKTOP_READBACK_ROOT',
+      'LEGACY_PROCESS_COLD_UI_GO', 'LEGACY_M19_PROVIDER_UI_GO', 'LEGACY_M19_ORIGINAL_HOST_CRASH_GO']
+      .map(key => [key, 'TEST-refused']),
+    ...['AGENT_TEAMS_HOST_CANDIDATE', 'AGENT_TEAMS_ORG_DEMO']
+      .flatMap(key => ['', '0', '1'].map(value => [key, value])),
+  ] as const) {
+    const context = { ...finiteHeadlessEnvironment, [key!]: value };
+    assert.throws(() => desktopFiniteHeadlessSelected(context, 'linux', 'x64'), /finite TEST headless/);
+    assert.throws(() => desktopFiniteHeadlessElectronArgs(context, 'linux', 'x64'), /finite TEST headless/);
+    assert.throws(() => desktopFiniteHeadlessAppEnvironment(context, 'linux', 'x64'), /finite TEST headless/);
+  }
+  for (const [platform, arch] of [['darwin', 'x64'], ['win32', 'x64'], ['linux', 'arm64']])
+    assert.throws(() => desktopFiniteHeadlessSelected(finiteHeadlessEnvironment, platform, arch), /finite TEST headless requires/);
+});
+
+test('finite headless options carry only the fixed original Electron flags and finite child context', () => {
+  const environment = { ...finiteHeadlessEnvironment, ELECTRON_CLI_ARGS: '["--TEST-ambient"]',
+    NODE_OPTIONS: '--require=/TEST/ambient.cjs', PRIVATE_TEST_MARKER: 'not-forwarded' };
+  assert.deepEqual(desktopFiniteHeadlessElectronArgs(environment, 'linux', 'x64'), [
+    '--', '--ozone-platform=headless', '--headless', '--disable-gpu', '--remote-debugging-address=127.0.0.1',
+  ]);
+  assert.deepEqual(desktopFiniteHeadlessAppEnvironment(environment, 'linux', 'x64'), finiteHeadlessEnvironment);
+  assert.equal(environment.ELECTRON_CLI_ARGS, '["--TEST-ambient"]', 'no ambient environment mutation');
+});
+
+test('finite headless parent admission and closed fixture preserve ordinary X display behavior', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, t => {
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('LEGACY_DESKTOP_')));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_')) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  const environment = () => desktopBackendEnvironment('/TEST/headless-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+  Object.assign(process.env, finiteHeadlessEnvironment);
+  delete process.env.LEGACY_DESKTOP_TEST_HEADLESS;
+  const ordinary = environment();
+  assert.throws(() => assertDesktopProofEnvironment(false), /explicit isolated TEST X display/);
+  process.env.LEGACY_DESKTOP_TEST_HEADLESS = '1';
+  assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+  assert.deepEqual(environment(), { ...ordinary, ...finiteHeadlessEnvironment });
+  assert.deepEqual(desktopFiniteHeadlessElectronArgs(environment()), desktopFiniteHeadlessElectronArgs(finiteHeadlessEnvironment));
+  process.env.LEGACY_DESKTOP_TEST_CHILD_TRACE = '1';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_TEST_CHILD_TRACE/);
+  delete process.env.LEGACY_DESKTOP_TEST_CHILD_TRACE;
+  assert.equal(environment().DISPLAY, ''); assert.equal(environment().XAUTHORITY, '');
+  process.env.LEGACY_DESKTOP_TEST_DISPLAY = ':97';
+  process.env.LEGACY_DESKTOP_TEST_XAUTHORITY = '/TEST/Xauthority';
+  assert.throws(() => assertDesktopProofEnvironment(false), /mixed X display/);
+  assert.throws(environment, /mixed X display/);
+  delete process.env.LEGACY_DESKTOP_TEST_HEADLESS;
+  assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+  assert.equal(Object.hasOwn(environment(), 'LEGACY_DESKTOP_TEST_HEADLESS'), false);
+});
+
+test('the original dev wrapper rejects wrong headless context before preflight and preserves normal launch ordering', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, async (t) => {
+  const source = await fsp.readFile(new URL('../dev-with-runtime.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('async function main() {'), end = source.indexOf('\nmain().catch(', start);
+  assert.ok(start > 0 && end > start);
+  const argumentStart = source.indexOf('const scriptArgs = '), argumentEnd = source.indexOf('const terminalPlatformRootEnv');
+  assert.ok(argumentStart > 0 && argumentEnd > argumentStart && argumentEnd < start);
+  t.mock.method(net, 'createServer', () => {
+    const server = new EventEmitter() as net.Server;
+    server.unref = () => server;
+    server.listen = ((_options: unknown, ready: () => void) => { queueMicrotask(ready); return server; }) as net.Server['listen'];
+    server.close = (closed?: (error?: Error) => void) => { queueMicrotask(() => closed?.()); return server; };
+    return server;
+  });
+  const run = async (env: Record<string, string | undefined>) => {
+    const effects: string[] = [], launches: { command: string; args: string[] }[] = [];
+    const main = runInNewContext(source.slice(argumentStart, argumentEnd) + '\n(' + source.slice(start, end).trim() + ')', {
+      process: { env, execPath: '/TEST/node', stdout: { write() {} },
+        argv: ['/TEST/node', '/TEST/repo/scripts/dev-with-runtime.mjs',
+          '--remoteDebuggingPort', '9222', '--', '--remoteDebuggingPort', '9222', '--noSandbox'] },
+      desktopFiniteHeadlessElectronArgs: () => desktopFiniteHeadlessElectronArgs(env),
+      applyOrganizationDemoMode: () => false,
+      augmentRuntimeToolPath: () => effects.push('original-path-preparation'),
+      resolveRuntimeCli: async () => { effects.push('original-sentinel-preflight'); return {
+        binaryPath: '/TEST/bin/claude', sourceLabel: 'TEST sentinel', versionText: 'TEST-version' }; },
+      formatRuntimeVersionForDisplay: (text: string) => text,
+      stageLinuxNodeExec: () => effects.push('original-node-exec-stage'),
+      normalizeDesktopDevNodeOptions: () => effects.push('original-node-options'), ensureMinimumNodeOldSpaceEnv() {},
+      readPackageManagerCommand: () => 'pnpm', uiRepoRoot: '/TEST/repo', scriptDir: '/TEST/repo/scripts',
+      path: { join },
+      resolveElectronViteArgs: async (args: string[]) => {
+        assert.deepEqual([...args], ['--remoteDebuggingPort', '9222', '--remoteDebuggingPort', '9222', '--noSandbox']);
+        effects.push('original-port-normalization'); return resolveElectronViteArgs([...args]);
+      },
+      runOrExit(command: string, args: string[]) { launches.push({ command, args: [...args] }); },
+      ensureTerminalPlatformRuntime: () => effects.push('original-terminal-override'),
+    }) as () => Promise<void>;
+    return { main, effects, launches };
+  };
+  const rejected = await run({ ...finiteHeadlessEnvironment, LEGACY_DESKTOP_EMULATED_ONLY: '0' });
+  await assert.rejects(rejected.main(), /finite TEST headless requires provider emulation/);
+  assert.deepEqual(rejected.effects, []); assert.deepEqual(rejected.launches, []);
+  for (const key of ['AGENT_TEAMS_HOST_CANDIDATE', 'AGENT_TEAMS_ORG_DEMO']) {
+    const alternate = await run({ ...finiteHeadlessEnvironment, [key]: '1',
+      AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: '/TEST/descriptor.json', AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: 'a'.repeat(64) });
+    await assert.rejects(alternate.main(), new RegExp('finite TEST headless refuses ' + key));
+    assert.deepEqual(alternate.effects, []); assert.deepEqual(alternate.launches, []);
+  }
+  const ordinary = await run({}), headless = await run({ ...finiteHeadlessEnvironment });
+  await ordinary.main(); await headless.main();
+  assert.deepEqual(headless.effects, ordinary.effects);
+  assert.equal(headless.effects.filter(value => value === 'original-sentinel-preflight').length, 1);
+  assert.equal(ordinary.launches.length, 2); assert.equal(headless.launches.length, 2);
+  assert.deepEqual(headless.launches[0], ordinary.launches[0], 'original Electron installation verification retained');
+  assert.deepEqual(ordinary.launches[1], { command: 'pnpm', args: [
+    'exec', 'electron-vite', 'dev', '--noSandbox', '--remoteDebuggingPort=9222',
+  ] });
+  assert.deepEqual(headless.launches[1], { command: 'pnpm', args: [
+    ...ordinary.launches[1]!.args, ...desktopFiniteHeadlessElectronArgs(finiteHeadlessEnvironment),
+  ] });
 });
 
 const finiteEmulatedUiModes = [

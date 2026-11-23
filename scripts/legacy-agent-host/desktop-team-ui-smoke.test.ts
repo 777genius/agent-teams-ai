@@ -7,10 +7,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { setImmediate } from 'node:timers/promises';
+import { performance } from 'node:perf_hooks';
 
 import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
-import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { attachRendererDiagnostics, prepareDesktopHeadlessViewport } from './desktop-team-ui-smoke.ts';
+import { bounded } from './desktop-proof-bounds.ts';
 import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
@@ -29,6 +31,131 @@ function deferred<T>() {
 }
 const ready = { originMatches: true, mainReady: true, errorPresent: false, phase: 'ready',
   uiDidInit: true, storePresent: true, rootChildCount: 1 };
+test('headless viewport configures the original window once and awaits exact dimensions before admission', { timeout: 5000 }, async () => {
+  const commands: { method: string; params?: Record<string, unknown> }[] = [];
+  let reads = 0, owners = 0;
+  const viewport = await prepareDesktopHeadlessViewport({
+    async send(method, params) { commands.push({ method, params }); await setImmediate(); return {}; },
+    async evaluate(expression) {
+      assert.equal(expression, 'innerWidth === 1440 && innerHeight === 1000');
+      await setImmediate(); return ++reads === 1 ? false : true;
+    },
+  }, { deadline: performance.now() + 3000, assertOwnedRenderer() { owners++; } });
+  assert.deepEqual(viewport, { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  assert.deepEqual(commands, [
+    { method: 'Page.enable', params: {} }, { method: 'Page.bringToFront', params: {} },
+    { method: 'Emulation.setFocusEmulationEnabled', params: { enabled: true } },
+    { method: 'Emulation.setDeviceMetricsOverride', params: viewport },
+  ]);
+  assert.equal(reads, 2); assert.ok(owners >= 12, 'each original command/read retains pre/post owner checks');
+});
+
+for (const boundary of ['before-first', 'after-owner', 'after-page-command', 'after-metrics-command', 'after-read'] as const) {
+  test(`headless viewport refuses ${boundary} at the original startup deadline without another mutation`, { timeout: 5000 }, async t => {
+    let now = boundary === 'before-first' ? 100 : 0, owners = 0, reads = 0;
+    const commands: string[] = [];
+    t.mock.method(performance, 'now', () => now);
+    await assert.rejects(prepareDesktopHeadlessViewport({
+      async send(method) {
+        commands.push(method);
+        if (boundary === 'after-page-command' || boundary === 'after-metrics-command' && method === 'Emulation.setDeviceMetricsOverride') now = 100;
+        return {};
+      },
+      async evaluate() { reads++; now = 100; return true; },
+    }, { deadline: 100, assertOwnedRenderer() { if (++owners === 1 && boundary === 'after-owner') now = 100; } }),
+    /original headless viewport startup deadline/);
+    assert.equal(commands.length, boundary === 'before-first' || boundary === 'after-owner' ? 0 : boundary === 'after-page-command' ? 1 : 4);
+    assert.equal(reads, boundary === 'after-read' ? 1 : 0);
+    assert.ok(commands.filter(method => method === 'Emulation.setDeviceMetricsOverride').length <= 1);
+  });
+}
+
+for (const boundary of ['after-command', 'after-read'] as const) {
+  test(`headless viewport retains original owner refusal ${boundary} before admitting readiness`, { timeout: 5000 }, async () => {
+    const refusal = new Error('TEST original renderer revoked');
+    let current = true, reads = 0;
+    const commands: string[] = [];
+    await assert.rejects(prepareDesktopHeadlessViewport({
+      async send(method) {
+        commands.push(method);
+        if (boundary === 'after-command' && method === 'Emulation.setDeviceMetricsOverride') current = false;
+        return {};
+      },
+      async evaluate() { reads++; current = false; return true; },
+    }, { deadline: performance.now() + 3000, assertOwnedRenderer() { if (!current) throw refusal; } }),
+    error => error === refusal);
+    assert.equal(commands.length, 4); assert.equal(reads, boundary === 'after-read' ? 1 : 0);
+  });
+}
+
+for (const boundary of ['command', 'observation'] as const) {
+  test(`headless viewport leaves a pending ${boundary} uncertain at the original deadline without resubmission`, { timeout: 5000 }, async () => {
+    const pending = deferred<unknown>(), commands: string[] = [];
+    let reads = 0;
+    const result = prepareDesktopHeadlessViewport({
+      async send(method) { commands.push(method); return boundary === 'command' ? pending.promise : {}; },
+      async evaluate() { reads++; return pending.promise; },
+    }, { deadline: performance.now() + 100, assertOwnedRenderer() {} });
+    await assert.rejects(result, new RegExp(`original headless viewport ${boundary} timed out; no mutation retry`));
+    pending.resolve(true); await setImmediate();
+    assert.equal(commands.length, boundary === 'command' ? 1 : 4);
+    assert.equal(reads, boundary === 'command' ? 0 : 1);
+  });
+}
+
+test('headless preparation rejects truthy non-boolean viewport observations within the original budget', { timeout: 5000 }, async t => {
+  let now = 0, reads = 0;
+  const commands: string[] = [];
+  t.mock.method(performance, 'now', () => now);
+  await assert.rejects(prepareDesktopHeadlessViewport({
+    async send(method) { commands.push(method); return {}; },
+    async evaluate() { if (++reads === 2) now = 100; return 'true'; },
+  }, { deadline: 100, assertOwnedRenderer() {} }), /original headless viewport startup deadline/);
+  assert.equal(reads, 2); assert.equal(commands.filter(method => method === 'Emulation.setDeviceMetricsOverride').length, 1);
+});
+
+test('captured startup closes its original CDP on headless preparation failure and preserves its original deadline', { timeout: 5000 }, async () => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-captured-app.ts', import.meta.url), 'utf8');
+  const begin = source.indexOf('export async function connectCapturedDesktopApp(');
+  const end = source.indexOf('\nexport async function verifyCapturedDesktopBinding(', begin);
+  assert.ok(begin > 0 && end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end).replace('export ', ''));
+  for (const mode of ['ordinary', 'headless', 'prepare-refused', 'close-refused', 'packed-refused'] as const) {
+    let connects = 0, closes = 0, preparations = 0, portReads = 0;
+    const original = new Error('TEST original preparation failure');
+    const cdp = { async close() { closes++; if (mode === 'close-refused') throw new Error('TEST close refused'); } };
+    const connect = runInNewContext('(' + actual.trim() + ')', {
+      assert, performance: { now: () => 100 }, bounded,
+      desktopFiniteHeadlessSelected: () => mode !== 'ordinary',
+      portOccupied: async () => { portReads++; return true; }, assertOwnedCdpListener: () => 42,
+      getTargets: async () => [{ id: 'TEST-original', type: 'page', url: 'http://localhost:5173/', webSocketDebuggerUrl: 'ws://127.0.0.1:9222/TEST-original' }],
+      safeGroupSnapshot: () => [], tick: () => { assert.fail('the original target is already available'); },
+      prepareDesktopHeadlessViewport: async (received: unknown, options: { deadline: number; assertOwnedRenderer(): void }) => {
+        preparations++; assert.equal(received, cdp); assert.equal(options.deadline, 180100);
+        options.assertOwnedRenderer();
+        if (mode === 'prepare-refused' || mode === 'close-refused') throw original;
+        return { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false };
+      },
+    }) as (options: Record<string, unknown>) => Promise<{ cdp: unknown }>;
+    const attempt = connect({ app: { exitCode: null, signalCode: null }, group: 42, spawnError: () => false,
+      packed: mode === 'packed-refused' ? {} : undefined, evidence: {},
+      cdpLibrary: { CdpClient: { async connect(url: string) {
+        assert.equal(url, 'ws://127.0.0.1:9222/TEST-original'); connects++; return cdp;
+      } } } });
+    if (mode === 'packed-refused') {
+      await assert.rejects(attempt, /retains the original dev app/);
+      assert.equal(portReads, 0); assert.equal(connects, 0); assert.equal(preparations, 0);
+    } else if (mode === 'prepare-refused' || mode === 'close-refused') {
+      await assert.rejects(attempt, error => error === original);
+      assert.equal(connects, 1); assert.equal(preparations, 1); assert.equal(closes, 1);
+    } else {
+      assert.equal((await attempt).cdp, cdp); assert.equal(closes, 0);
+      assert.equal(preparations, mode === 'headless' ? 1 : 0);
+    }
+  }
+});
+
 function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) {
   const listeners = new Map<string, (value: unknown) => void>();
   const acknowledgments = reads.map(() => deferred<void>());

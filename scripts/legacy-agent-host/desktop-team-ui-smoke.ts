@@ -228,6 +228,39 @@ function rendererDocumentMatches(value: unknown, rendererUrl: string): boolean {
   } catch { return false; }
 }
 
+/** Configure the captured Ozone window once, spending only its original startup budget. */
+export async function prepareDesktopHeadlessViewport(
+  cdp: UiCdpPort,
+  options: { deadline: number; assertOwnedRenderer(): void }
+): Promise<{ width: number; height: number; deviceScaleFactor: number; mobile: false }> {
+  const remaining = (): number => {
+    assert.ok(Number.isFinite(options.deadline) && performance.now() < options.deadline,
+      'original headless viewport startup deadline');
+    options.assertOwnedRenderer();
+    const budget = options.deadline - performance.now();
+    assert.ok(budget > 0, 'original headless viewport startup deadline');
+    return budget;
+  };
+  const viewport = { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false as const };
+  for (const [method, params] of [
+    ['Page.enable', {}], ['Page.bringToFront', {}],
+    ['Emulation.setFocusEmulationEnabled', { enabled: true }],
+    ['Emulation.setDeviceMetricsOverride', viewport],
+  ] as const) {
+    const budget = remaining();
+    await bounded(cdp.send(method, params), budget, 'original headless viewport command');
+    remaining();
+  }
+  for (;;) {
+    const budget = remaining();
+    const ready = await bounded(cdp.evaluate('innerWidth === 1440 && innerHeight === 1000'),
+      budget, 'original headless viewport observation');
+    remaining();
+    if (ready === true) return viewport;
+    await new Promise<void>(done => setTimeout(done, Math.min(100, remaining())));
+  }
+}
+
 /** Captures only finite module/load diagnostics, never request headers or bodies. */
 export async function attachRendererDiagnostics(
   cdp: UiCdpPort & {

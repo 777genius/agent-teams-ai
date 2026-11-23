@@ -94,8 +94,12 @@ preload/renderer API за 45.9s, обычный Quit и полную очист�
 Для original finite Create → Stop → Import сценария подготовлен узкий opt-in
 headless launch: только Linux/x64 и прежний finite import mode; настоящий
 `pnpm dev:mcp`, существующий async CDP, custody и общий startup deadline 180s
-сохраняются. Default display path остаётся прежним. Новые source guards и
-regressions проходят отдельное R1/R2 до запуска этого сценария.
+сохраняются. Default display path остаётся прежним. Отдельные R1/R2 завершены:
+существующий набор 470 PASS / один платформенный SKIP; после исправления
+alternate-launch admission и исходного child trace повторены только пять
+затронутых cases — 5/5 PASS. Узкий strict TS7, fast lint (0 errors, одно прежнее
+warning), wrapper syntax и source-size guard PASS; captured-app остаётся
+797 строк. Полный original GUI сценарий ещё необходим.
 
 Последняя полная проверка canonical root TS7 7.0.2 на точном `15deedada` шла
 отдельно от Electron/сборок с Go memory budget, без изменения tsconfig/типов.

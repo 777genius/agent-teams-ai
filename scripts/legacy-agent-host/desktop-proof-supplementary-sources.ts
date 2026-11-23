@@ -34,6 +34,7 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'scripts/lib/desktop-finite-headless.ts',
   // Initial pane load boundaries and fresh namespace traversal retain their full tests.
   'src/renderer/components/layout/PaneContent.tsx',
   'src/renderer/components/layout/PaneContent.test.tsx',
