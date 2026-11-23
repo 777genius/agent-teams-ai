@@ -11,15 +11,15 @@ describe('Notification history HTTP compatibility bridge', () => {
     const api = createHttpNotificationHistoryApi({
       get: async <T>(path: string): Promise<T> => {
         calls.push('GET ' + path);
-        return [] as T;
+        return [] as unknown as T;
       },
       post: async <T>(path: string, _body?: unknown): Promise<T> => {
         calls.push('POST ' + path);
-        return true as T;
+        return true as unknown as T;
       },
       del: async <T>(path: string): Promise<T> => {
         calls.push('DELETE ' + path);
-        return true as T;
+        return true as unknown as T;
       },
       listen: (channel, callback) => {
         subscribers.set(channel, callback);
