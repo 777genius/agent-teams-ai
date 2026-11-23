@@ -67,6 +67,7 @@ const storeState = {
 };
 
 const readHookState = {
+  ready: true,
   readSet: new Set<string>(),
   markRead: vi.fn(),
   markAllRead: vi.fn(),

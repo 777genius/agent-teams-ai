@@ -26,6 +26,7 @@ export function useTeamMessagesRead(
   kind: 'direct' | 'group' = 'direct'
 ): {
   readSet: Set<string>;
+  ready: boolean;
   markRead: (messageKey: string) => void;
   markAllRead: (messageKeys: string[]) => void;
 } {
@@ -80,9 +81,10 @@ export function useTeamMessagesRead(
   return useMemo(
     () => ({
       readSet: teamName ? readSet : EMPTY_READ_SET,
+      ready: Boolean(storageTeam),
       markRead,
       markAllRead,
     }),
-    [markAllRead, markRead, readSet, teamName]
+    [markAllRead, markRead, readSet, storageTeam, teamName]
   );
 }

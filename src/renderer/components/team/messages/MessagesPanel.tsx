@@ -806,7 +806,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     },
   });
 
-  const { readSet, markAllRead } = useMessagesReadState(
+  const { readSet, markAllRead, ready: readsReady } = useMessagesReadState(
     teamName,
     activeContextId,
     canonicalMessages,
@@ -915,10 +915,11 @@ export const MessagesPanel = memo(function MessagesPanel({
     : defaultConversationTitle;
 
   const handleMarkAllRead = useCallback(() => {
+    if (!readsReady) return;
     const keys = scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey);
     markAllRead(keys);
     dismissUnreadKeys(keys);
-  }, [dismissUnreadKeys, markAllRead, readSet, threadCanonicalMessages]);
+  }, [dismissUnreadKeys, markAllRead, readSet, readsReady, threadCanonicalMessages]);
 
   // Auto-clear pending replies when a member actually responds
   useEffect(() => {
@@ -1152,7 +1153,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         onMessageVisible={handleMessageVisible}
         presentation={isConversation ? 'conversation' : 'activity'}
         appearance={useWideChat ? 'wide-chat' : 'compact'}
-        observationEnabled={!isConversation || isActive}
+        observationEnabled={readsReady && (!isConversation || isActive)}
         conversationIdentity={conversationIdentity}
         conversationHandleRef={conversationHandleRef}
         onLatestAvailable={setLatestAvailable}

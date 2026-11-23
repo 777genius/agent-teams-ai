@@ -109,8 +109,12 @@ async function setup() {
     await json(path.join(teamDir, 'inboxes', 'user.json'), [{
       from: team === first ? 'alice' : 'bob',
       to: 'user', text: 'ATTENTION_E2E_DIRECT_' + team,
-      timestamp: nowIso(), read: false, messageId: 'attention-dm-' + team,
-    }]);
+      timestamp: team === first ? stamp : nowIso(), read: false, messageId: 'attention-dm-' + team,
+    }, ...(team === first ? Array.from({ length: 60 }, (_, index) => ({
+      from: 'alice', to: 'user', text: 'Newer already read ' + index,
+      timestamp: new Date(Date.now() - (60 - index) * 1000).toISOString(),
+      read: true, messageId: 'attention-read-filler-' + index,
+    })) : [])]);
     await json(path.join(teamDir, 'inboxes', 'team-lead.json'), []);
   }
   const taskRoot = path.join(claude, 'tasks', first);
@@ -180,14 +184,17 @@ async function checkDesktop() {
   await until(async () => {
     const snap = await getSnapshot();
     return snap.complete && snap.teams.length === 2 &&
-      snap.teams.some((t) => t.teamName === first && t.tasks.length === 1 && t.messages.length === 1);
+      snap.teams.some((t) => t.teamName === first && t.tasks.length === 1 &&
+        t.messages.some((message) => message.messageId === 'attention-dm-' + first));
   }, 'live source-backed global attention');
   let snap = await getSnapshot();
   const oldest = snap.teams.find((t) => t.teamName === first);
   assert(oldest.tasks.some((t) => t.taskId === '1'), 'oldest task survives >500 candidates');
   assert.equal(oldest.tasks[0].requestedAt, null, 'legacy timestamp not fabricated');
+  assert(oldest.messages.some((message) => message.messageId === 'attention-dm-' + first),
+    'old unread message survives 60 newer messages');
   assert.equal(snap.teams.find((t) => t.teamName === second).messages.length, 1);
-  evidence.checks.push('two teams + full task scan + direct unread');
+  evidence.checks.push('two teams + full task scan + old unread beyond first 50 messages');
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
   await cdp.waitFor(
@@ -226,15 +233,16 @@ async function checkDesktop() {
   await cdp.evaluate('window.__agentTeamsDevStore.getState().setMessagesPanelMode("sidebar")');
 
   // Prove the two unread conversations before opening one (opening may mark it read).
-  const bothUnread = await cdp.evaluate(`(() => {
+  await until(async () => cdp.evaluate(`(() => {
     const panel = document.querySelector('[data-testid=user-attention-inbox]');
     if (!panel) return false;
     const labels = [...panel.querySelectorAll('button[aria-label]')]
       .map((button) => button.getAttribute('aria-label') || '');
     return labels.some((label) => label.includes('alice')) &&
-      labels.some((label) => label.includes('bob'));
-  })()`);
-  assert(bothUnread, 'two unread user-directed conversation rows exist');
+      labels.some((label) => label.includes('bob')) &&
+      panel.textContent.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + first)}) &&
+      !panel.textContent.includes('Newer already read');
+  })()`), 'two unread rows, oldest unread preview after migration');
 
   await cdp.evaluate(`(async () => {
     const reads = await import('/utils/teamMessageReadStorage.ts');

@@ -863,7 +863,9 @@ export class HttpAPIClient implements ElectronAPI {
       const config = await this.config.get();
       const fallbackPath = config.general.claudeRootPath ?? '~/.claude';
       return {
-        defaultPath: fallbackPath,
+        // Browser transport has no auto-detection API; do not label an explicit
+        // custom root as the default, or workspace-scoped reads would collide.
+        defaultPath: '~/.claude',
         resolvedPath: fallbackPath,
         customPath: config.general.claudeRootPath,
       };
