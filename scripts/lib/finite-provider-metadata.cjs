@@ -4,7 +4,8 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 // These generated TEST programs answer only metadata; they are not installed vendor packages.
-function prepareVendorMetadataFence(testRoot, userDataDir) {
+function prepareVendorMetadataFence(testRoot, userDataDir, options = {}) {
+  assert.ok(options.openCode === undefined || options.openCode === true);
   const nodeBinary = fs.realpathSync(process.execPath);
   const ledger = path.join(testRoot, 'TEST-provider-metadata.ndjson');
   const codexHome = path.join(testRoot, 'TEST-codex-home');
@@ -18,6 +19,9 @@ function prepareVendorMetadataFence(testRoot, userDataDir) {
   const quote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
   for (const [provider, version] of [
     ['codex', 'codex-cli 0.164.0'], ['claude', '2.1.0 (Claude Code)'],
+    // Recognized V1 metadata keeps both status and bridge discovery on this
+    // TEST peer. Unsupported version text would permit ambient discovery.
+    ...(options.openCode ? [['opencode', '1.16.0']] : []),
   ]) {
     const script = path.join(testRoot, 'TEST-' + provider + '-metadata.cjs');
     const wrapper = process.platform === 'win32' ? script.replace(/\.cjs$/u, '.cmd') : script;
@@ -55,7 +59,11 @@ function prepareVendorMetadataFence(testRoot, userDataDir) {
     binaryPath: cli.codex, integrity: 'TEST-finite-metadata-only',
     installedAt: new Date().toISOString(),
   }), { flag: 'wx', mode: 0o600 });
-  return { CODEX_CLI_PATH: cli.codex, CLAUDE_CLI_PATH: cli.claude, CODEX_HOME: codexHome };
+  return { CODEX_CLI_PATH: cli.codex, CLAUDE_CLI_PATH: cli.claude, CODEX_HOME: codexHome,
+    ...(options.openCode ? {
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: cli.opencode, OPENCODE_BIN_PATH: cli.opencode,
+    } : {}),
+  };
 }
 
 module.exports = { prepareVendorMetadataFence };

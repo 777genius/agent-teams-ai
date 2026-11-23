@@ -6,7 +6,9 @@
  */
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,6 +17,16 @@ import { fileURLToPath } from 'node:url';
 // Existing transport used by the other desktop harnesses.
 // @ts-expect-error Existing JavaScript CDP helper has no declaration file.
 import { CdpClient } from './comment-notification/cdp.mjs';
+
+const { prepareVendorMetadataFence } = createRequire(import.meta.url)(
+  '../lib/finite-provider-metadata.cjs'
+) as {
+  prepareVendorMetadataFence(
+    root: string,
+    userData: string,
+    options: { openCode: true }
+  ): Record<string, string>;
+};
 
 interface Cdp {
   evaluate(expression: string): Promise<unknown>;
@@ -74,6 +86,75 @@ const portable = {
 await Promise.all(
   [claude, userData, output, project].map((dir) => mkdir(dir, { recursive: true }))
 );
+const metadataEnvironment = prepareVendorMetadataFence(root, userData, { openCode: true });
+const metadataLedger = path.join(root, 'TEST-provider-metadata.ndjson');
+const metadataCalibration = await readFile(metadataLedger, 'utf8');
+assert.deepEqual(
+  metadataCalibration
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line)),
+  ['codex', 'claude', 'opencode'].flatMap((provider) => [
+    { provider, kind: 'version', args: ['--version'] },
+    { provider, kind: 'refused', args: ['TEST-forbidden-native-command'] },
+  ])
+);
+async function ownedFileDigest(file: string): Promise<string> {
+  assert(file.startsWith(root + path.sep));
+  assert.equal(await realpath(file), file);
+  const metadata = await lstat(file);
+  assert(metadata.isFile() && !metadata.isSymbolicLink() && metadata.nlink === 1);
+  assert(metadata.size > 0 && metadata.size < 64 * 1024);
+  return createHash('sha256')
+    .update(await readFile(file))
+    .digest('hex');
+}
+const metadataPins = await Promise.all(
+  [
+    metadataEnvironment.CODEX_CLI_PATH,
+    metadataEnvironment.CLAUDE_CLI_PATH,
+    metadataEnvironment.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH,
+    path.join(userData, 'data', 'runtimes', 'codex', 'current.json'),
+  ].map(async (file) => ({ file, sha256: await ownedFileDigest(file) }))
+);
+async function observeFiniteProviders(requireStartupProbes = false): Promise<void> {
+  for (const pin of metadataPins) assert.equal(await ownedFileDigest(pin.file), pin.sha256);
+  const ledger = await lstat(metadataLedger);
+  assert.equal(await realpath(metadataLedger), metadataLedger);
+  assert(ledger.isFile() && !ledger.isSymbolicLink() && ledger.nlink === 1);
+  assert(ledger.size < 128 * 1024);
+  const bytes = await readFile(metadataLedger, 'utf8');
+  assert(bytes.startsWith(metadataCalibration) && bytes.endsWith('\n'));
+  const observed = bytes
+    .slice(metadataCalibration.length)
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { provider: string; kind: string; args: string[] });
+  for (const row of observed) {
+    assert(['codex', 'claude', 'opencode'].includes(row.provider));
+    // The real Create page also asks Codex for account status. The TEST peer
+    // refuses app-server; this is recorded as refusal, never runtime evidence.
+    assert.deepEqual(
+      row,
+      row.provider === 'codex' && row.args[0] === 'app-server'
+        ? { provider: 'codex', kind: 'refused', args: ['app-server'] }
+        : { provider: row.provider, kind: 'version', args: ['--version'] }
+    );
+  }
+  if (requireStartupProbes) {
+    for (const provider of ['codex', 'opencode'])
+      assert(
+        observed.some((row) => row.provider === provider && row.kind === 'version'),
+        `Original startup must observe the private ${provider} metadata peer`
+      );
+  }
+  receipt.providerMetadata = {
+    scope: 'TEST metadata and refused account commands only',
+    pins: metadataPins,
+    observed,
+    managedSeedAndPeersUnchanged: true,
+  };
+}
 await writeFile(fixtureJson, JSON.stringify(portable, null, 2));
 await writeFile(invalidJson, '{invalid');
 await writeFile(invalidEncoding, Buffer.from([0xc3, 0x28]));
@@ -97,6 +178,7 @@ else process.exitCode = 77;
 `
 );
 await chmod(runtime, 0o755);
+metadataPins.push({ file: runtime, sha256: await ownedFileDigest(runtime) });
 
 // Replace only OS dialog selection in the disposable main bundle, before the
 // production adapter is imported. No renderer API or storage response is mocked.
@@ -171,6 +253,13 @@ async function until(expression: string, label: string, timeout = 30_000) {
 const topDialog = `Array.from(document.querySelectorAll('[role="dialog"]')).at(-1)`;
 const button = (text: string, within = 'document') =>
   `Array.from(${within}.querySelectorAll('button')).find(e => e.textContent?.trim() === ${JSON.stringify(text)} && !e.disabled)`;
+const draftCheck = `(async () => { const db = await new Promise((resolve, reject) => { const request = indexedDB.open('keyval-store'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); return await new Promise((resolve, reject) => { const request = db.transaction('keyval').objectStore('keyval').get('createTeamDraft:form'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); })()`;
+const draftSelection = `(${draftCheck}).then(draft => ({
+  ...Object.fromEntries(['projectContextMode', 'runtimeSelectionVersion', 'runtimeProviderId', 'runtimeModel', 'cwdMode', 'selectedProjectPath', 'customCwd', 'limitContext'].map(key => [key, draft?.[key] ?? null])),
+  storedProvider: localStorage.getItem('createTeam:lastSelectedProvider'),
+  storedModel: localStorage.getItem('createTeam:lastSelectedModel:anthropic'),
+  leadModelLabel: document.querySelector('[data-role="lead-row"] button[aria-label*=" provider, "]')?.getAttribute('aria-label') ?? null,
+}))`;
 async function click(expression: string) {
   await until(
     `(() => { const e = ${expression}; if (!(e instanceof HTMLElement)) return false;
@@ -190,6 +279,9 @@ async function click(expression: string) {
 const templateConfirmDialog = `Array.from(document.querySelectorAll('[role="alertdialog"]')).find(e => e.querySelector('h2')?.textContent?.includes('Apply team template?'))`;
 
 async function acceptTemplateSelection(selector: string, appliedPredicate: string) {
+  const previousDraftUpdatedAt = await evaluate<number>(
+    `(${draftCheck}).then(draft => draft?.updatedAt ?? 0)`
+  );
   if (
     !(await evaluate<boolean>(
       `Boolean(document.querySelector('[data-testid="create-team-template-picker"]'))`
@@ -209,6 +301,10 @@ async function acceptTemplateSelection(selector: string, appliedPredicate: strin
     await until(`!(${templateConfirmDialog})`, 'template confirmation closes');
   }
   await until(appliedPredicate, 'chosen template applied');
+  await until(
+    `(${draftCheck}).then(draft => draft?.updatedAt > ${previousDraftUpdatedAt})`,
+    'chosen template saved in the debounced creation draft'
+  );
 }
 
 async function screenshot(name: string) {
@@ -239,6 +335,7 @@ async function closeDialog() {
   await until(`document.querySelectorAll('[role="dialog"]').length < ${count}`, 'dialog closes');
 }
 async function start() {
+  await observeFiniteProviders();
   logs = '';
   app = spawn('pnpm', ['dev:mcp', '--noSandbox', '--config', configPath], {
     cwd: repo,
@@ -246,6 +343,8 @@ async function start() {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
+      ...metadataEnvironment,
+      SHELL: '/bin/sh',
       AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claude,
       AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userData,
       CLAUDE_CONFIG_DIR: path.join(root, 'claude-config'),
@@ -256,6 +355,8 @@ async function start() {
       XDG_CACHE_HOME: path.join(root, 'xdg-cache'),
       XDG_STATE_HOME: path.join(root, 'xdg-state'),
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
+      // dev:mcp removes CLAUDE_CLI_PATH. This ordinary fork remains the TEST
+      // runtime; native Claude availability is stat-only and Direct Run is unused.
       CLAUDE_TERMINAL_DAEMON_BINARY: runtime,
       AGENT_TEAMS_MCP_HTTP: '0',
       NODE_BINARY: process.execPath,
@@ -340,6 +441,73 @@ async function stop() {
     }
   }
   app = undefined;
+}
+
+async function replaceInput(selector: string, value: string) {
+  await click(selector);
+  for (const type of ['rawKeyDown', 'keyUp']) {
+    await cdp!.send('Input.dispatchKeyEvent', {
+      type,
+      key: 'a',
+      code: 'KeyA',
+      windowsVirtualKeyCode: 65,
+      modifiers: 2,
+    });
+  }
+  await cdp!.send('Input.insertText', { text: value });
+}
+
+async function nameTeam(name: string) {
+  await replaceInput("document.querySelector('#team-name')", name);
+  await until(
+    `(${draftCheck}).then(draft => draft?.teamName === ${JSON.stringify(name)} && draft.launchTeam === false)`,
+    'named config-only creation draft'
+  );
+}
+
+async function persistedNativeTeam(
+  name: string,
+  mode: 'per_project' | 'shared',
+  selection: Record<string, unknown>
+) {
+  // The isolated legacy draft starts with the original Anthropic/Opus choice.
+  // No model catalog is supplied by the metadata-only peers; the unchanged
+  // unrestricted Opus selection therefore persists its opus[1m] launch alias.
+  assert.equal(selection.runtimeSelectionVersion, null);
+  assert.equal(selection.runtimeProviderId, null);
+  assert.equal(selection.runtimeModel, null);
+  assert.equal(selection.storedProvider ?? 'anthropic', 'anthropic');
+  assert.equal(selection.storedModel ?? 'opus', 'opus');
+  assert.equal(selection.limitContext, false);
+  assert.match(String(selection.leadModelLabel), /^Anthropic provider, .*Opus/);
+  assert.equal(selection.projectContextMode, mode);
+  assert.equal(selection.cwdMode, 'custom');
+  assert.equal(selection.customCwd, project);
+  const directory = path.join(claude, 'teams', name);
+  assert.equal(await realpath(directory), directory);
+  const meta = JSON.parse(await readFile(path.join(directory, 'team.meta.json'), 'utf8'));
+  await assert.rejects(readFile(path.join(directory, 'config.json')), { code: 'ENOENT' });
+  const saved = await evaluate<Record<string, unknown>>(
+    `window.electronAPI.teams.getSavedRequest(${JSON.stringify(name)})`
+  );
+  assert.equal(meta.projectContextMode, mode);
+  assert.equal(saved.projectContextMode, mode);
+  assert.equal(meta.cwd, project);
+  assert.equal(saved.cwd, project);
+  assert.equal(saved.prompt, portable.teamPrompt);
+  assert.equal(meta.providerId, 'anthropic');
+  assert.equal(saved.providerId, 'anthropic');
+  assert.equal(meta.model, 'opus[1m]');
+  assert.equal(saved.model, 'opus[1m]');
+  return {
+    name,
+    backend: 'original-native-filesystem',
+    historyMode: mode,
+    directory,
+    providerId: saved.providerId,
+    model: saved.model,
+    capturedSelection: selection,
+  };
 }
 
 console.log(
@@ -626,8 +794,15 @@ try {
   await click(button('Create Team'));
   await until(button('Custom path'), 'custom project selector');
   await click(button('Custom path'));
-  await click(`document.querySelector('input[placeholder="/absolute/path/to/project"]')`);
-  await cdp!.send('Input.insertText', { text: project });
+  await replaceInput(
+    `document.querySelector('input[placeholder="/absolute/path/to/project"]')`,
+    project
+  );
+  await until(
+    `(${draftCheck}).then(draft => draft?.projectContextMode === 'per_project' && draft.customCwd === ${JSON.stringify(project)})`,
+    'fresh native draft defaults to separate project history'
+  );
+  const originalSelection = await evaluate<Record<string, unknown>>(draftSelection);
   await until(
     `document.querySelector('[data-testid="open-create-template-picker"]')`,
     'template chooser button'
@@ -646,7 +821,12 @@ try {
   const customOption = `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`;
   const customApplied = `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`;
   await acceptTemplateSelection(customOption, customApplied);
-  assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="Choose team provider"]'))`), false, 'Applying a template must not clear the current provider');
+  assert.deepEqual(await evaluate(draftSelection), originalSelection);
+  assert.equal(
+    await evaluate(`Boolean(document.querySelector('[aria-label="Choose team provider"]'))`),
+    false,
+    'Applying a template must not clear the current provider'
+  );
   await until(
     `Array.from(document.querySelectorAll('[data-testid="create-team-page"] input')).some(input => input.value === 'reviewer')`,
     'custom template roster applied to editable team fields'
@@ -678,10 +858,12 @@ try {
     portable.teamPrompt
   );
   await screenshot('12-confirmation-cancel-retains-draft');
+  assert.deepEqual(await evaluate(draftSelection), originalSelection);
   checks.push('Cancelling a new template selection does not replace the custom prompt or roster.');
 
   const builtinApplied = `document.querySelector('#team-prompt')?.value && document.querySelector('#team-prompt')?.value !== ${JSON.stringify(portable.teamPrompt)}`;
   await acceptTemplateSelection(builtin, builtinApplied);
+  assert.deepEqual(await evaluate(draftSelection), originalSelection);
   await screenshot('13-builtin-template-same-editor');
 
   const noneApplied = `!document.querySelector('[data-testid="create-team-template-picker"]') && !document.querySelector('#team-prompt')`;
@@ -690,33 +872,14 @@ try {
     noneApplied
   );
   await screenshot('14-no-template');
+  assert.deepEqual(await evaluate(draftSelection), originalSelection);
   checks.push('Selecting No template confirms before clearing populated draft content.');
   await acceptTemplateSelection(customOption, customApplied);
+  assert.deepEqual(await evaluate(draftSelection), originalSelection);
 
   const newTeam = 'template-e2e-imported-team';
-  await click("document.querySelector('#team-name')");
-  // The current Create Team page seeds a suggested draft name. Replace it,
-  // rather than append to it; this is a real keyboard interaction in Electron.
-  await cdp!.send('Input.dispatchKeyEvent', {
-    type: 'rawKeyDown',
-    key: 'a',
-    code: 'KeyA',
-    windowsVirtualKeyCode: 65,
-    modifiers: 2,
-  });
-  await cdp!.send('Input.dispatchKeyEvent', {
-    type: 'keyUp',
-    key: 'a',
-    code: 'KeyA',
-    windowsVirtualKeyCode: 65,
-    modifiers: 2,
-  });
-  await cdp!.send('Input.insertText', { text: newTeam });
-  await until(
-    `document.querySelector('#team-name')?.value === ${JSON.stringify(newTeam)}`,
-    'new name entered'
-  );
-  const draftCheck = `(async () => { const db = await new Promise((resolve, reject) => { const request = indexedDB.open('keyval-store'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); return await new Promise((resolve, reject) => { const request = db.transaction('keyval').objectStore('keyval').get('createTeamDraft:form'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); })()`;
+  await nameTeam(newTeam);
+  assert.deepEqual(await evaluate(draftSelection), originalSelection);
   await until(
     `(${draftCheck}).then(draft => draft?.teamName === ${JSON.stringify(newTeam)} && draft.cwdMode === 'custom' && draft.customCwd === ${JSON.stringify(project)} && draft.launchTeam === false)`,
     'sandbox project and config-only creation'
@@ -728,6 +891,7 @@ try {
     60_000
   );
   await screenshot('14-created-team-from-template');
+  const defaultTeam = await persistedNativeTeam(newTeam, 'per_project', originalSelection);
   checks.push('Config-only creation from imported template persists through the real Teams API.');
 
   // Save the newly created real team back into the same library. This proves
@@ -763,6 +927,63 @@ try {
     'Save as Template persists the same prompt, member name, role and workflow after real team creation.'
   );
 
+  await closeDialog();
+  await evaluate('window.__agentTeamsDevStore.getState().openTeamsTab()');
+  await click(button('Create Team'));
+  await click(button('Custom path'));
+  await replaceInput(
+    `document.querySelector('input[placeholder="/absolute/path/to/project"]')`,
+    project
+  );
+  const optionalSettings = `Array.from(document.querySelectorAll('[data-testid="create-team-page"] button[aria-controls]')).find(e => e.textContent?.includes('Optional launch settings') || e.textContent?.includes('Optional settings'))`;
+  if (await evaluate(`(${optionalSettings})?.getAttribute('aria-expanded') !== 'true'`)) {
+    await click(optionalSettings);
+  }
+  await click(`document.querySelector('#team-project-context-mode')`);
+  await click(
+    `Array.from(document.querySelectorAll('[role="option"]')).find(e => e.textContent?.trim() === 'Shared across projects')`
+  );
+  await until(
+    `(${draftCheck}).then(draft => draft?.projectContextMode === 'shared' && draft.customCwd === ${JSON.stringify(project)})`,
+    'explicit shared history persisted in the native draft'
+  );
+  const sharedSelection = await evaluate<Record<string, unknown>>(draftSelection);
+  await acceptTemplateSelection(customOption, customApplied);
+  assert.deepEqual(await evaluate(draftSelection), sharedSelection);
+  await acceptTemplateSelection(builtin, builtinApplied);
+  assert.deepEqual(await evaluate(draftSelection), sharedSelection);
+  await acceptTemplateSelection(
+    `document.querySelector('[data-testid="create-template-option-none"]')`,
+    noneApplied
+  );
+  assert.deepEqual(await evaluate(draftSelection), sharedSelection);
+  await acceptTemplateSelection(customOption, customApplied);
+  assert.deepEqual(await evaluate(draftSelection), sharedSelection);
+  const sharedTeamName = 'template-e2e-shared-history';
+  await nameTeam(sharedTeamName);
+  assert.deepEqual(await evaluate(draftSelection), sharedSelection);
+  await click(button('Create'));
+  await until(
+    `window.electronAPI.teams.list().then(rows => rows.some(t => t.teamName === ${JSON.stringify(sharedTeamName)}))`,
+    'native config-only team with explicit shared history'
+  );
+  const sharedTeam = await persistedNativeTeam(sharedTeamName, 'shared', sharedSelection);
+  await screenshot('17-created-native-shared-history');
+  await stop();
+  await start();
+  assert.deepEqual(
+    await persistedNativeTeam(newTeam, 'per_project', originalSelection),
+    defaultTeam
+  );
+  assert.deepEqual(
+    await persistedNativeTeam(sharedTeamName, 'shared', sharedSelection),
+    sharedTeam
+  );
+  receipt.createdTeams = [defaultTeam, sharedTeam];
+  checks.push(
+    'Native config-only teams retain default per-project and explicit shared history after restart; neither selects the captured Host backend.'
+  );
+
   receipt.cdpPort = port;
   receipt.savedTemplateIds = saved.map((t) => t.templateId);
   receipt.rendererErrors = rendererErrors;
@@ -788,6 +1009,14 @@ try {
   process.exitCode = 1;
 } finally {
   await stop();
+  try {
+    await observeFiniteProviders(true);
+  } catch (error) {
+    receipt.providerMetadataFailure = String(error);
+    receipt.failure ??= receipt.providerMetadataFailure;
+    receipt.passed = false;
+    process.exitCode = 1;
+  }
   await writeFile(path.join(output, 'dev-mcp.log'), logs);
   await writeFile(path.join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(

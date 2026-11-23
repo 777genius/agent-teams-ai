@@ -12,6 +12,7 @@ on:
       # Task-board presentation has its own Linux/native Kanban E2E.
       - '!src/renderer/components/team/kanban/**'
       - 'scripts/e2e/custom-template-import-export-desktop.ts'
+      - 'scripts/lib/finite-provider-metadata.cjs'
       - 'package.json'
   workflow_dispatch:
 
