@@ -24,7 +24,7 @@ function formatDiscordMemberCount(count: number): string {
 
 export const TabBarActions = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
-  const { model: attentionModel } = useAttentionInbox();
+  const { model: attentionModel, supported: attentionSupported } = useAttentionInbox();
   const {
     unreadCount,
     openNotificationsTab,
@@ -169,6 +169,7 @@ export const TabBarActions = (): React.JSX.Element => {
       </Tooltip>
 
       {/* Human attention is distinct from ordinary notification history. */}
+      {attentionSupported && (
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" aria-label={t('attention.title')}
@@ -190,6 +191,7 @@ export const TabBarActions = (): React.JSX.Element => {
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('attention.title')}</TooltipContent>
       </Tooltip>
+      )}
 
       {/* GitHub link */}
       <Tooltip>

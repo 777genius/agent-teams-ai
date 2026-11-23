@@ -1,13 +1,14 @@
 import { api } from '@renderer/api';
 import { subscribeTeamMessageReadStore } from '@renderer/utils/teamMessageReadStorage';
 
-import type { AttentionSnapshot } from '../../contracts';
+import { UserAttentionUnsupportedError, type AttentionSnapshot } from '../../contracts';
 import type { TeamChangeEvent } from '@shared/types/team';
 
 export interface AttentionStoreState {
   contextId: string;
   contextEpoch: number;
   snapshot: AttentionSnapshot | null;
+  supported: boolean;
   loading: boolean;
   error: string | null;
   version: number;
@@ -17,6 +18,7 @@ let state: AttentionStoreState = {
   contextId: '',
   contextEpoch: 0,
   snapshot: null,
+  supported: true,
   loading: false,
   error: null,
   version: 0,
@@ -40,7 +42,7 @@ function publish(changes: Partial<AttentionStoreState> = {}): void {
 }
 
 function scheduleFlush(): void {
-  if (flushTimer || flushing || listeners.size === 0) return;
+  if (!state.supported || flushTimer || flushing || listeners.size === 0) return;
   flushTimer = setTimeout(() => {
     flushTimer = null;
     void flush();
@@ -48,6 +50,7 @@ function scheduleFlush(): void {
 }
 
 function queue(teamName?: string): void {
+  if (!state.supported) return;
   if (!teamName) queuedFull = true;
   else if (!queuedFull) queuedTeams.add(teamName);
   scheduleFlush();
@@ -89,9 +92,17 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
         error: null,
       });
     }
-  } catch {
+  } catch (error) {
     if (requestEpoch === epoch) {
-      publish({ loading: false, error: 'Unable to load attention status' });
+      if (error instanceof UserAttentionUnsupportedError) {
+        queuedFull = false;
+        queuedTeams.clear();
+        // Standalone/older HTTP servers omit the route. Do not keep polling
+        // a missing capability or present a retryable failure to the user.
+        publish({ supported: false, snapshot: null, loading: false, error: null });
+      } else {
+        publish({ loading: false, error: 'Unable to load attention status' });
+      }
     }
   } finally {
     if (!teamName && requestEpoch === epoch) {
@@ -102,7 +113,7 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
 }
 
 async function flush(): Promise<void> {
-  if (flushing || fullLoading || !currentContextId) return;
+  if (!state.supported || flushing || fullLoading || !currentContextId) return;
   flushing = true;
   try {
     if (queuedFull || !state.snapshot) {
@@ -115,7 +126,7 @@ async function flush(): Promise<void> {
       queuedTeams.clear();
       // A bounded fan-out; team events cannot start N copies of the global scan.
       for (const name of names) {
-        if (!currentContextId || queuedFull || epoch !== startedEpoch) break;
+        if (!state.supported || !currentContextId || queuedFull || epoch !== startedEpoch) break;
         await fetchSnapshot(name);
       }
     }
@@ -193,6 +204,7 @@ export function setAttentionContext(contextId: string, contextEpoch: number): vo
     contextId,
     contextEpoch,
     snapshot: null,
+    supported: true,
     loading: Boolean(contextId),
     error: null,
   });

@@ -48,6 +48,11 @@ import {
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
 import {
+  type AttentionSnapshot,
+  USER_ATTENTION_HTTP_ROUTE,
+  UserAttentionUnsupportedError,
+} from '@features/user-attention/contracts';
+import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
   WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
   type WorkspaceTrustElectronApi,
@@ -373,11 +378,12 @@ export class HttpAPIClient implements ElectronAPI {
     ) as T;
   }
 
-  private async get<T>(path: string, reviveDates = true): Promise<T> {
+  private async get<T>(path: string, reviveDates = true, missingRouteError?: Error): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, { signal: controller.signal });
+      if (res.status === 404 && missingRouteError) throw missingRouteError;
       return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
@@ -474,8 +480,12 @@ export class HttpAPIClient implements ElectronAPI {
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
 
-  getUserAttentionSnapshot = (teamName?: string): Promise<import('@features/user-attention/contracts').AttentionSnapshot> =>
-    this.get('/api/user-attention' + (teamName ? '?teamName=' + encodeURIComponent(teamName) : ''), false);
+  getUserAttentionSnapshot = (teamName?: string): Promise<AttentionSnapshot> =>
+    this.get(
+      USER_ATTENTION_HTTP_ROUTE + (teamName ? '?teamName=' + encodeURIComponent(teamName) : ''),
+      false,
+      new UserAttentionUnsupportedError()
+    );
 
   workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
     getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),

@@ -6,7 +6,7 @@ import {
   subscribeAttention,
 } from '../../../../src/features/user-attention/renderer/hooks/attentionSnapshotStore';
 
-import type { AttentionSnapshot, AttentionTeamSnapshot } from '../../../../src/features/user-attention/contracts';
+import { UserAttentionUnsupportedError, type AttentionSnapshot, type AttentionTeamSnapshot } from '../../../../src/features/user-attention/contracts';
 import type { TeamChangeEvent } from '../../../../src/shared/types/team';
 
 const fake = vi.hoisted(() => ({
@@ -82,6 +82,34 @@ describe('Attention snapshot live update scheduling', () => {
     ]);
     expect(getAttentionStoreState().snapshot?.teams.map((row) => row.teamName).sort())
       .toEqual(['alpha', 'beta']);
+  });
+
+  it('stops refreshing a server without the route, but not a transient failure', async () => {
+    const context = 'attention-unsupported-http';
+    fake.fetch.mockRejectedValueOnce(new UserAttentionUnsupportedError());
+    setAttentionContext(context, 11);
+    unsubscribe = subscribeAttention(() => {});
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState()).toMatchObject({
+      supported: false, loading: false, snapshot: null, error: null,
+    });
+
+    fake.changeListener?.(null, { type: 'config', teamName: 'alpha' } as TeamChangeEvent);
+    window.dispatchEvent(new Event('focus'));
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(fake.fetch).toHaveBeenCalledTimes(1);
+
+    fake.fetch.mockRejectedValueOnce(new Error('503 unavailable'));
+    setAttentionContext('attention-reconnected-http', 12);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState()).toMatchObject({
+      supported: true, error: 'Unable to load attention status',
+    });
+    fake.fetch.mockResolvedValue(snapshot('attention-reconnected-http', ['alpha']));
+    window.dispatchEvent(new Event('focus'));
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState()).toMatchObject({ supported: true, error: null });
+    expect(getAttentionStoreState().snapshot?.teams.map((row) => row.teamName)).toEqual(['alpha']);
   });
 
   it('discards old-workspace responses even when they resolve after a root switch', async () => {

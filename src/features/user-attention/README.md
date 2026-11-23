@@ -14,4 +14,8 @@ The default local workspace retains its legacy keys; historical unscoped keys
 are not copied into custom roots or remote contexts. Read observation waits for
 root resolution, so an early visible row is not incorrectly marked as handled.
 
+HTTP clients distinguish an absent Attention route (404) from temporary read
+failures. Standalone servers without team services do not show or repeatedly
+refresh Attention; the desktop HTTP server uses the same feature facade as IPC.
+
 No notification delivery, second database, or new filesystem watcher.

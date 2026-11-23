@@ -3,6 +3,14 @@ import type { InboxMessage } from '@shared/types/team';
 export const USER_ATTENTION_CHANNEL = 'user-attention:get-snapshot';
 export const USER_ATTENTION_HTTP_ROUTE = '/api/user-attention';
 
+/** The backend does not expose this feature, as distinct from a transient read failure. */
+export class UserAttentionUnsupportedError extends Error {
+  constructor() {
+    super('User Attention is not supported by this server');
+    this.name = 'UserAttentionUnsupportedError';
+  }
+}
+
 export interface AttentionTaskCandidate {
   teamName: string;
   /** Visible logical parent when source is a verified project execution alias. */

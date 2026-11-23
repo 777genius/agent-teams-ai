@@ -5,9 +5,10 @@ import { AttentionInboxPanel } from './AttentionInboxPanel';
 
 export function AttentionInboxView({ variant = 'full' }: {
   variant?: 'compact' | 'full';
-}): React.JSX.Element {
-  const { model, loading, error, refresh } = useAttentionInbox();
+}): React.JSX.Element | null {
+  const { model, loading, error, refresh, supported } = useAttentionInbox();
   const { onOpenTask, onOpenChat, onOpenFull } = useAttentionInboxNavigation();
+  if (!supported) return null;
 
   return (
     <div className={variant === 'compact' ? 'mb-6' : 'flex-1 overflow-auto bg-surface px-6 py-8'}>

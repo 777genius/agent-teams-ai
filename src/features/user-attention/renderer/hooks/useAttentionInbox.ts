@@ -74,6 +74,7 @@ export function useAttentionInbox() {
 
   return {
     model,
+    supported: state.contextId !== contextId || state.contextEpoch !== contextEpoch || state.supported !== false,
     loading: state.loading || (!readScope && !readScopeError) ||
       state.contextId !== contextId || state.contextEpoch !== contextEpoch,
     error: state.error ?? readScopeError,
