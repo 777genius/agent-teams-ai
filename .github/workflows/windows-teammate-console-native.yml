@@ -50,6 +50,7 @@ concurrency:
 
 jobs:
   windows-native:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -73,6 +74,7 @@ jobs:
           path: ${{ runner.temp }}/windows-console-native-*.json
 
   windows-electron-console:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     needs: windows-native
     runs-on: windows-latest
     timeout-minutes: 40
