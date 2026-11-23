@@ -36,7 +36,7 @@ function displayTest(status?: ChannelTestStatus): string {
 export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { autoDeliveryPaused?: boolean }): React.JSX.Element {
   const {
     channels, draft, loading, busy, deletePending, error, localSettingsUrl,
-    save, edit, toggle, remove, test, providerChanged, updateDraft, toggleEvent, start, cancel,
+    save, edit, toggle, remove, test, providerChanged, credentialMissing, updateDraft, toggleEvent, start, cancel,
   } = useNotificationChannelsSettings();
   if (localSettingsUrl) {
     return (
@@ -97,12 +97,12 @@ export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { a
               <div className="mt-1 flex items-center gap-1 text-xs"
                 style={{ color: 'var(--color-text-muted)' }}>
                 {channel.lastTest?.success && <CheckCircle2 className="size-3 text-green-500" />}
-                {displayTest(channel.lastTest)} · {channel.events.length} event types
+                {channel.hasCredential ? displayTest(channel.lastTest) : 'Credential unavailable: edit to re-enter'} · {channel.events.length} event types
               </div>
             </div>
             <label className="flex items-center gap-2 text-xs">
               <Checkbox aria-label={'Enable ' + channel.name} checked={channel.enabled}
-                disabled={busy || draft?.id === channel.id} onCheckedChange={(value) => toggle(channel, value === true)} />
+                disabled={busy || draft?.id === channel.id || !channel.hasCredential} onCheckedChange={(value) => toggle(channel, value === true)} />
               Enabled
             </label>
             <Button type="button" size="sm" variant="outline" disabled={busy}
@@ -188,7 +188,7 @@ export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { a
             <Button type="button" size="sm" disabled={busy || !draft.name.trim() ||
               (draft.provider === 'telegram' && !draft.chatId?.trim()) ||
               (!draft.id && !draft.secret?.trim()) ||
-              (providerChanged && !draft.secret?.trim())} onClick={save}>
+              ((providerChanged || credentialMissing) && !draft.secret?.trim())} onClick={save}>
               Save channel
             </Button>
             <Button type="button" size="sm" variant="ghost" disabled={busy}

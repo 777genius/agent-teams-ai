@@ -115,6 +115,16 @@ describe('Notification Channels application', () => {
     expect((await service.list())[0].lastTest).toBeUndefined();
   });
 
+  it('marks missing credentials unavailable and never claims or attempts delivery', async () => {
+    const id = await add(true);
+    secrets.delete(records[0].credentialId);
+    expect((await service.list())[0].hasCredential).toBe(false);
+    const status = await service.test(id);
+    expect(status).toMatchObject({ success: false, code: 'credentials_missing' });
+    await service.dispatch(event);
+    expect(sent).not.toHaveBeenCalled();
+  });
+
   it('rejects provider change without new credential', async () => {
     const id = await add();
     await expect(service.save({

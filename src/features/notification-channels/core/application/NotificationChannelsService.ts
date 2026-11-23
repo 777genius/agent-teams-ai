@@ -86,7 +86,12 @@ export class NotificationChannelsService {
   }
 
   async list(): Promise<DeliveryChannelDto[]> {
-    return (await this.deps.repository.read()).map(toDto);
+    const channels = await this.deps.repository.read();
+    return Promise.all(channels.map(async (channel) => ({
+      ...toDto(channel),
+      // OS-keyring credentials may be unavailable after switching runtimes.
+      hasCredential: Boolean(await this.readSecret(channel.credentialId)),
+    })));
   }
 
   async save(raw: SaveDeliveryChannelRequest): Promise<DeliveryChannelDto> {
@@ -153,7 +158,7 @@ export class NotificationChannelsService {
       const current = await this.deps.repository.read();
       const channel = current.find((item) => item.id === id);
       if (!channel) throw new Error('Channel not found');
-      const secret = await this.deps.credentials.read(channel.credentialId);
+      const secret = await this.readSecret(channel.credentialId);
       const result = secret
         ? await this.safeSend(channel, secret, 'Agent Teams: Test notification. No agent content is included.')
         : { success: false, code: 'credentials_missing' as DeliveryFailureCode };
@@ -182,12 +187,22 @@ export class NotificationChannelsService {
       );
       // Bound simultaneous provider requests; no backlog or retry after uncertain outcomes.
       await Promise.allSettled(channels.map(async (channel) => {
-        const secret = await this.deps.credentials.read(channel.credentialId);
+        const secret = await this.readSecret(channel.credentialId);
         if (!secret) return;
         await this.safeSend(channel, secret, outbound.message);
       }));
     } finally {
       this.activeDispatches--;
+    }
+  }
+
+  private async readSecret(id: string): Promise<string | null> {
+    try {
+      return await this.deps.credentials.read(id);
+    } catch {
+      // Decryption can be unavailable in another host runtime; do not leak errors
+      // or advertise the credential as ready.
+      return null;
     }
   }
 

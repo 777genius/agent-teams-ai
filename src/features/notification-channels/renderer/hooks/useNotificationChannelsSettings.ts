@@ -118,6 +118,8 @@ export function useNotificationChannelsSettings() {
 
   const providerChanged = Boolean(draft?.id &&
     channels.find((item) => item.id === draft.id)?.provider !== draft.provider);
+  const credentialMissing = Boolean(draft?.id &&
+    channels.find((item) => item.id === draft.id)?.hasCredential === false);
 
   const updateDraft = (changes: Partial<SaveDeliveryChannelRequest>): void => {
     setDraft((prev) => prev ? { ...prev, ...changes } : prev);
@@ -138,6 +140,6 @@ export function useNotificationChannelsSettings() {
 
   return {
     channels, draft, loading, busy, deletePending, error, localSettingsUrl,
-    save, edit, toggle, remove, test, providerChanged, updateDraft, toggleEvent, start, cancel,
+    save, edit, toggle, remove, test, providerChanged, credentialMissing, updateDraft, toggleEvent, start, cancel,
   };
 }
