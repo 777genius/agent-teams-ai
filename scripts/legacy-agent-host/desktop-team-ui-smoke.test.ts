@@ -12,6 +12,7 @@ import { performance } from 'node:perf_hooks';
 import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
 import { attachRendererDiagnostics, prepareDesktopHeadlessViewport } from './desktop-team-ui-smoke.ts';
+import { observeDesktopModuleLoads } from './desktop-module-load-observation.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
@@ -4603,3 +4604,152 @@ test('standalone actual global metadata retains its default CDP override without
   assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 }); assert.deepEqual(f.evidence, {});
 });
 await import('./desktop-ui-controls-deadline.test.ts');
+
+function moduleActivityFixture() {
+  const listeners = new Map<string, (value: unknown) => void>();
+  let frame: unknown = 'TEST-frame', clock = 0;
+  const observer = observeDesktopModuleLoads({
+    on(method, listener) {
+      assert.equal(listeners.has(method), false, 'one existing subscription per method');
+      listeners.set(method, listener);
+    },
+  }, 'http://localhost:5173/', () => frame, () => ++clock);
+  const emit = (method: string, value: unknown) => listeners.get(method)!(value);
+  const start = (requestId: string, overrides: Record<string, unknown> = {}) =>
+    emit('Network.requestWillBeSent', { requestId, type: 'Script', frameId: frame,
+      request: { url: 'http://localhost:5173/component.tsx?private=query#secret' }, ...overrides });
+  const finish = (requestId: string) => emit('Network.loadingFinished', { requestId });
+  const fail = (requestId: string, errorText = 'net::ERR_INSUFFICIENT_RESOURCES', type = 'Script') =>
+    observer.loadingFailed({ requestId, errorText, type });
+  return { ...observer, listeners, emit, start, finish, fail, setFrame(value: unknown) { frame = value; } };
+}
+
+test('module request activity retains completions and peak after module history eviction', () => {
+  const f = moduleActivityFixture();
+  for (let index = 0; index < 300; index++) f.start(String(index));
+  assert.equal(f.evidence.loads.length, 256);
+  assert.equal(f.evidence.overflow, true);
+  const activity = f.evidence.activity;
+  assert.ok(activity, 'request pressure must survive the bounded module history');
+  assert.equal(activity.allRequests.pending, 300);
+  assert.equal(activity.allRequests.peakPending, 300);
+  for (let index = 0; index < 299; index++) f.finish(String(index));
+  assert.equal(activity.allRequests.pending, 1, 'evicted rows still retire their active request');
+  f.fail('299');
+  assert.deepEqual(activity.allRequests, {
+    started: 300, finished: 299, failed: 1, redirected: 0, pending: 0, peakPending: 300,
+  });
+  assert.deepEqual(activity.mainFrameSameOriginScripts, activity.allRequests);
+  const first = activity.firstResourceFailure;
+  assert.ok(first);
+  assert.equal(first.requestTracked, true);
+  assert.equal(first.mainFrameSameOriginScript, true);
+  assert.equal(first.allRequests.pending, 1, 'failure snapshot includes the failing observed request');
+  assert.equal(first.allRequests.failed, 0, 'snapshot precedes terminal accounting');
+  assert.equal(first.overflow, false, 'history eviction does not make active tracking incomplete');
+  const retained = JSON.stringify(first);
+  f.start('later'); f.fail('later');
+  assert.equal(JSON.stringify(first), retained, 'first failure is an immutable observation');
+  assert.equal(activity.firstResourceFailure, first);
+  assert.deepEqual([...f.listeners.keys()], [
+    'Network.requestWillBeSent', 'Network.responseReceived', 'Network.loadingFinished',
+  ], 'existing Network stream only; failures remain forwarded by the enclosing observer');
+  assert.equal(JSON.stringify(f.evidence).includes('private'), false);
+  assert.equal(JSON.stringify(f.evidence).includes('secret'), false);
+});
+
+test('module request activity counts all resources and redirects without duplicating active requests', () => {
+  const f = moduleActivityFixture();
+  f.start('script'); f.start('script');
+  f.start('style', { type: 'Stylesheet', frameId: 'TEST-child-frame',
+    request: { url: 'https://external.example/private.css?token=secret' } });
+  f.start('script', { type: 'Fetch', redirectResponse: { status: 302 },
+    request: { url: 'https://external.example/private?token=secret' } });
+  const activity = f.evidence.activity;
+  assert.equal(activity.duplicateStartEvents, 1);
+  assert.deepEqual(activity.allRequests, {
+    started: 3, finished: 0, failed: 0, redirected: 1, pending: 2, peakPending: 2,
+  });
+  assert.deepEqual(activity.mainFrameSameOriginScripts, {
+    started: 1, finished: 0, failed: 0, redirected: 1, pending: 0, peakPending: 1,
+  });
+  f.setFrame('TEST-next-frame');
+  f.finish('style'); f.fail('script', 'net::ERR_INSUFFICIENT_RESOURCES', 'Fetch');
+  assert.deepEqual(activity.allRequests, {
+    started: 3, finished: 1, failed: 1, redirected: 1, pending: 0, peakPending: 2,
+  });
+  assert.equal(activity.firstResourceFailure!.mainFrameSameOriginScript, false);
+  assert.equal(activity.firstResourceFailure!.requestType, 'Fetch');
+  assert.equal(activity.firstResourceFailure!.allRequests.pending, 1);
+  assert.equal(JSON.stringify(activity).includes('external'), false);
+  assert.equal(JSON.stringify(activity).includes('secret'), false);
+  assert.equal(JSON.stringify(activity).includes('TEST-child-frame'), false);
+});
+
+test('module request activity preserves the captured script membership across navigation', () => {
+  const f = moduleActivityFixture();
+  f.start('old-document');
+  f.setFrame(undefined);
+  f.start('during-navigation');
+  f.setFrame('TEST-next-frame');
+  f.start('new-document');
+  f.finish('old-document');
+  f.finish('during-navigation');
+  assert.equal(f.evidence.activity.mainFrameSameOriginScripts.pending, 1);
+  f.finish('new-document');
+  assert.deepEqual(f.evidence.activity.mainFrameSameOriginScripts, {
+    started: 2, finished: 2, failed: 0, redirected: 0, pending: 0, peakPending: 2,
+  });
+  assert.equal(f.evidence.activity.allRequests.started, 3);
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+});
+
+test('module request activity active tracking cap is explicit, preserves existing requests and never fabricates completion', () => {
+  const f = moduleActivityFixture();
+  const activity = f.evidence.activity;
+  assert.equal(activity.activeLimit, 8192);
+  for (let index = 0; index <= activity.activeLimit; index++)
+    f.start(String(index), { type: 'Fetch' });
+  assert.equal(activity.overflow, true);
+  assert.equal(activity.untrackedRequestEvents, 1);
+  assert.equal(activity.allRequests.started, 8192);
+  assert.equal(activity.allRequests.pending, 8192);
+  assert.equal(activity.allRequests.peakPending, 8192);
+  f.fail('8192');
+  const first = activity.firstResourceFailure!;
+  assert.equal(first.requestTracked, false);
+  assert.equal(first.mainFrameSameOriginScript, null);
+  assert.equal(first.overflow, true);
+  assert.equal(first.untrackedRequestEvents, 1);
+  assert.equal(first.allRequests.pending, 8192);
+  assert.equal(activity.allRequests.failed, 0, 'an omitted ID cannot retire another request');
+  assert.equal(activity.orphanTerminalEvents, 1);
+  for (let index = 0; index < 8192; index++) f.finish(String(index));
+  assert.equal(activity.allRequests.pending, 0);
+  assert.equal(activity.allRequests.finished, 8192);
+  assert.equal(first.allRequests.pending, 8192, 'subsequent cleanup cannot rewrite the failure');
+  assert.equal(activity.overflow, true, 'tracking incompleteness stays visible after cleanup');
+  assert.ok(JSON.stringify(f.evidence).length < 4096, 'active IDs never enter the receipt');
+});
+
+test('module request activity malformed and unobserved events cannot create negative counts or leak error payloads', () => {
+  const f = moduleActivityFixture();
+  for (const value of [null, [], {}, { requestId: '' }, { requestId: 'x'.repeat(129) },
+    { requestId: 'invalid-url', request: { url: 'invalid' } }])
+    assert.doesNotThrow(() => f.emit('Network.requestWillBeSent', value));
+  f.finish('unobserved');
+  assert.equal(f.evidence.activity.allRequests.started, 0);
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+  assert.equal(f.evidence.activity.orphanTerminalEvents, 1);
+  f.start('TEST-private-id');
+  f.fail('TEST-private-id', 'PRIVATE request payload');
+  assert.equal(f.evidence.activity.firstResourceFailure, null);
+  f.start('resource-refusal');
+  f.fail('resource-refusal', 'net::ERR_INSUFFICIENT_RESOURCES', 'PRIVATE unknown type');
+  assert.equal(f.evidence.activity.firstResourceFailure!.requestType, null);
+  f.finish('resource-refusal');
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+  assert.equal(f.evidence.activity.orphanTerminalEvents, 2);
+  assert.equal(JSON.stringify(f.evidence).includes('PRIVATE'), false);
+  assert.equal(JSON.stringify(f.evidence).includes('TEST-private-id'), false);
+});
