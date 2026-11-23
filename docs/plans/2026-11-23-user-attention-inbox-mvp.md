@@ -9,7 +9,7 @@ Companion, independent research: `docs/research/2026-11-23-notification-channels
 One reliable, reusable, live **Needs your attention** projection across all teams in the active workspace:
 
 - Task items where `needsClarification === 'user'` (display team, task subject/display ID, and **time since the user was asked**, when known).
-- Chat conversations with **unread messages actually addressed to the user**; display team, participant, existing avatar/preview/unread badges, latest relevant message time.
+- Chat conversations with **unread messages actually addressed to the user**; display team, participant, existing avatar/preview/unread badges, and relative age of the **latest unread addressed message** (e.g. “8 min ago”), not the latest unrelated chat activity.
 - A compact `AttentionInboxPanel` above `DashboardProviderSummary`, a dedicated `Attention` tab opened by a button **next to** the existing notification bell, and lightweight counts on the existing Running Teams cards.
 - Dashboard chat viewport shows approximately 3 chat rows, then **vertical scrolling**. Full tab has an unrestricted scrollable list.
 - Click a task -> its existing task-detail destination; click a conversation -> **the exact team and conversation scope**, not an unrelated member profile.
@@ -110,7 +110,7 @@ Before implementation choose a bounded source plan that **reuses** current canon
 
 1. Read candidate *user-addressed* message identities and previews from existing normalized feed/reader, per team; filter internal/control messages according to existing shared policy.
 2. Reconcile with the **same** read-key source used by Messenger, including direct vs group migration semantics; avoid marking as read merely by mounting Dashboard.
-3. Use pagination/indexed projections or bounded per-team aggregation so unread candidates older than the first page are not lost. Only return small DTOs to renderer.
+3. Use pagination/indexed projections or bounded per-team aggregation so unread candidates older than the first page are not lost. Only return small DTOs to renderer. Cross-device read synchronization is explicitly NOT part of this MVP; the UI must clearly reflect the current device's canonical read state.
 4. Define an explicit `complete` flag and per-team errors for failures/partial history. Do not render a confident "0" while relevant teams are still loading or truncated.
 5. When source performance cannot meet the budget without a new index/read-state authority, **stop and validate a focused spike** (see `4) before adding a second durable read store. No full history rescans on every UI event.
 
@@ -122,8 +122,8 @@ Choose stable attribution: count one message once in the global header while sti
 - Initial fetch, hydrate on app start; subscribe to **existing** `TeamChangeEvent` (`task`, `inbox`, `lead-message`, relevant `config`) through the shared API, including HTTP SSE.
 - Debounce/coalesce per affected team, do **not** refetch all teams on every high-frequency event. Handle immutable snapshot revision and context epoch; discard stale in-flight responses after root switch, delete, rename, or tab churn.
 - One bounded catch-up refresh on window focus/reconnect; **optional** low-frequency reconciliation while active (e.g. >=60 s), only if the existing watcher scope demonstrably misses changes for old/stopped teams. Reuse existing watcher/poll fallback; no independent filesystem watcher.
-- Read operations are side-effect free. Data errors show explicit degraded state with Retry, not "no attention needed".
-- Header summary can stay subscribed when full tab is closed; full rows load on demand only if the summary API needs separate pagination. Avoid expensive startup fanout.
+- Read operations are side-effect free. Data errors show explicit degraded state with Retry, not "no attention needed". New HTTP routes must use the current app's authentication/authorization and workspace scoping; do not accidentally expose conversation excerpts over unauthenticated LAN endpoints.
+- Header summary can stay subscribed when full tab is closed; full rows load on demand only if the summary API needs separate pagination. Avoid expensive startup fanout. Measure idle CPU/network and update latency on a fixture with many teams; require event-driven updates to be promptly visible and catch-up after missed events without claiming a fixed latency from an untested watcher.
 
 ### Navigation/DRY UI
 
