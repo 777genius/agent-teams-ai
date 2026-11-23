@@ -179,6 +179,23 @@ describe('external agent setup', () => {
     expect(host.textContent).toContain('connection changed or became unavailable');
   });
 
+  it('rejects a pending copy after the displayed app root changes', async () => {
+    let resolveLive!: (info: ConnectionInfoV1) => void;
+    const pending = new Promise<ConnectionInfoV1>((resolve) => {
+      resolveLive = resolve;
+    });
+    vi.mocked(api.getConnectionInfo).mockReturnValue(pending);
+    await render();
+    await click('Copy connection prompt');
+    const changed = snapshot();
+    changed.context.dataRootFingerprint = 'replacement-root';
+    state.info = changed;
+    await render();
+    await act(async () => resolveLive(snapshot()));
+    expect(writeText).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('connection changed or became unavailable');
+  });
+
   it('shows only the chosen setup method', async () => {
     await render();
     expect(host.textContent).toContain('Copy connection prompt');
