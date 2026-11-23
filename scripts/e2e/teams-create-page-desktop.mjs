@@ -1937,12 +1937,42 @@ async function main() {
       ),
       'Template confirmation focus escaped into the background form'
     );
-    await cdp.click(
+    const cancelTemplateButton =
       `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
-      ".find(button => button.textContent?.trim() === 'Cancel')"
-    );
-    await cdp.waitFor(`!Boolean(${templateConfirmationExpression})`,
-      'template replacement confirmation dismissed after Cancel');
+      ".find(button => button.textContent?.trim() === 'Cancel')";
+    const confirmationDismissed = `!Boolean(${templateConfirmationExpression})`;
+    // The Radix focus trap may still be settling after Tab. A dispatched CDP
+    // click is not proof of cancellation: check the native hit target and the
+    // real dialog state before accepting the result or attempting another click.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await cdp.waitFor(`(() => {
+        const button = ${cancelTemplateButton};
+        if (!button?.isConnected || button.disabled) return false;
+        button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+        const rect = button.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const hit = document.elementFromPoint(x, y);
+        return rect.width > 0 && rect.height > 0 &&
+          x >= 0 && x < innerWidth && y >= 0 && y < innerHeight &&
+          Boolean(hit && (hit === button || button.contains(hit)));
+      })()`, 'unobstructed template Cancel button', 15_000);
+      await cdp.click(cancelTemplateButton);
+      try {
+        await cdp.waitFor(confirmationDismissed,
+          'template replacement confirmation dismissed after Cancel', 3_000);
+        break;
+      } catch (error) {
+        if (attempt !== 2) continue;
+        const state = await cdp.evaluate(`(() => ({
+          confirmationPresent: Boolean(${templateConfirmationExpression}),
+          cancelPresent: Boolean(${cancelTemplateButton}),
+          focusedElement: document.activeElement?.outerHTML?.slice(0, 250) ?? null,
+        }))()`);
+        throw new Error(`Template Cancel did not dismiss confirmation: ${JSON.stringify(state)}`,
+          { cause: error });
+      }
+    }
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
