@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { useStore } from '@renderer/store';
+import { useAppTranslation } from '@features/localization/renderer';
 
 import { useAttentionInbox } from '../hooks/useAttentionInbox';
 import { requestAttentionChatNavigation } from '../hooks/conversationAttentionNavigation';
@@ -14,6 +15,7 @@ import type { ConversationScope } from '@features/team-direct-chats/renderer';
 export function AttentionInboxView({ variant = 'full' }: {
   variant?: 'compact' | 'full';
 }): React.JSX.Element {
+  const { t } = useAppTranslation('common');
   const { model, loading, error, refresh } = useAttentionInbox();
   const contextId = useStore((state) => state.activeContextId);
   const openTeamTab = useStore((state) => state.openTeamTab);
@@ -31,8 +33,8 @@ export function AttentionInboxView({ variant = 'full' }: {
     const pane = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
     const existing = pane?.tabs.find((tab) => tab.type === 'attention');
     if (existing) state.setActiveTab(existing.id);
-    else openTab({ type: 'attention', label: 'Attention' });
-  }, [openTab]);
+    else openTab({ type: 'attention', label: t('attention.tab') });
+  }, [openTab, t]);
   return (
     <div className={variant === 'compact' ? 'mb-6' : 'flex-1 overflow-auto bg-surface px-6 py-8'}>
       <div className={variant === 'compact' ? undefined : 'mx-auto max-w-5xl'}>
