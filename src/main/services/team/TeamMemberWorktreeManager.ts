@@ -157,9 +157,9 @@ export class TeamMemberWorktreeManager {
     const projectSlug = legacySlugify(path.basename(baseRepoPath));
     const teamSlug = slugify(request.teamName);
     const memberSlug = slugify(request.memberName);
-    // Extra path/ref segments make long-name IDs disjoint from every old short-name ID.
-    const teamPrefix = normalizedSlug(request.teamName).length > 48 ? ['_long-teams'] : [];
-    const memberPrefix = normalizedSlug(request.memberName).length > 48 ? ['_long-members'] : [];
+    // Reserved '@' cannot be produced by normalizedSlug for either short team or member names.
+    const teamPrefix = normalizedSlug(request.teamName).length > 48 ? ['@long-teams'] : [];
+    const memberPrefix = normalizedSlug(request.memberName).length > 48 ? ['@long-members'] : [];
     const branchName = [
       'agent-teams',
       ...teamPrefix,
@@ -273,7 +273,16 @@ export class TeamMemberWorktreeManager {
         }`
       );
     });
-    return (await realpathIfExists(root)) ?? root;
+    // The caller may be a saved member worktree after restart, rather than the
+    // original project checkout. Git lists the primary checkout first; use it
+    // to keep repository identity stable and avoid rejecting this linked worktree
+    // as its own base. Do not move, reset, or modify any checkout.
+    const listed = parseGitWorktreeList(await execGit(['worktree', 'list', '--porcelain'], root));
+    const primaryCheckout = listed[0]?.worktree;
+    if (!primaryCheckout) {
+      throw new Error(`OpenCode worktree isolation could not find the main checkout: ${baseCwd}`);
+    }
+    return (await realpathIfExists(primaryCheckout)) ?? path.resolve(primaryCheckout);
   }
 
   private async validateExistingWorktreeAndGetBranch(
