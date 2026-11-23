@@ -2,6 +2,151 @@
 
 Обновлено: **23 ноября 2026**. Единственный текущий рабочий план.
 
+## Контрольная точка 23 ноября 2026: WorkSync, актуальный main и конечные E2E fixtures
+
+Узкое исправление cold WorkSync опубликовано обычным коммитом
+[`e11db707`](https://github.com/777genius/agent-teams-ai/commit/e11db70761eef5f920c2dbaafd706fb216c78a39)
+в `review/provider-host-pr1220-recovery-20261123`, родитель — `e06c8023`.
+Оно восстанавливает пустую bound-primary после dirty fence, ставит fence до холодного
+импорта и проверяет участвующие active/archive источники до записи SQLite.
+Incarnation-владелец сохраняется атомарно вместе с импортом; неизвестный исход
+операции требует физического завершения, свежей integrity-проверки и строгого
+readback данных. Бизнес-действие не повторяется для восстановления. Миграция 8
+сохраняет точные prerequisite-миграции 6/7; настоящие SQLite fixtures v5/v7 проходят.
+На этом узком source подтверждены 182 различных локальных теста, scoped TS 7.0.2,
+lint и размеры. Это не новое полное E2E. Новый review thread остаётся открытым,
+пока исправление не доставлено в фактический #1220.
+
+Main `a89e81b8` с шаблонами и внешними агентами присоединён обычным merge
+[`600447ff`](https://github.com/777genius/agent-teams-ai/commit/600447fffc76f804c268ba40299ea4bdeb409b52).
+Далее опубликован merge
+[`9aa9bdc9`](https://github.com/777genius/agent-teams-ai/commit/9aa9bdc9f43d31782c141b93e86a940bc2f556fd)
+с родителями `600447ff` и `e11db707`, tree `18ab79d38327044fa2bbdb17cf2fb72b1dcfec5a`.
+Main immediate-транзакция миграций сохранена. Дополнительная проверка перед healer
+не даёт ему удалить строки чужого SQLite-владельца, когда текущая replica содержит
+чужие старые статусы. Два регрессионных сценария сначала воспроизвели удаление,
+затем прошли на исправлении. Для этого дерева подтверждены 191 различный конечный
+тест (171 интеграционный и 20 ConfigManager); они пересекаются с набором 182 выше
+и не суммируются. Scoped TS, lint 26 файлов (0 ошибок, 8 прежних hooks warnings)
+и caps 5370 файлов прошли. ConfigManager — 1384/1401 строк, CreateTeamDialog —
+3055/3059, WorkSync Store — 788/800; frozen baseline не повышен.
+
+Актуальный main `bb6b7682` присоединён обычным merge
+[`4530d9ab`](https://github.com/777genius/agent-teams-ai/commit/4530d9ab177060497203442c425a8328ea02a257)
+с родителями `9aa9bdc9` и `bb6b7682`;
+tree `5b8e7b7547b0d19a7d4a5adb2b939bac8ebbbdee`.
+Из двух входящих файлов один переносит announcements-content на `ubuntu-latest`,
+второй добавляет соответствующий policy test; прежние интеграционные тесты сохранены.
+Шесть новых regex исправлены эквивалентными квантификаторами для существующего lint.
+Все 25 policy tests и lint изменённого файла прошли. Main и review ref повторно
+прочитаны 13:57 UTC; все source changes M2 сохранены без изменения bytes.
+
+**Canonical workspace types на точном `4530d9ab`: PASS.** После восстановления
+окружения завершены все 12 исходных compiler invocations: root + 7 script configs,
+Host scripts/tests и MCP sources/tests. Использован TS 7.0.2 с единственным
+дополнительным `--singleThreaded`, без изменения include/options/declarations;
+первые восемь не повторялись при проверке последних четырёх. Pretypecheck builds
+прошли, source остался чистым; для первых восьми OOM counter не увеличился.
+Root восемь завершились
+13:44:50 UTC, оставшиеся четыре — 13:50:08 UTC. SHA256 receipts:
+`454f2813613ebc2f1cdf07c58d409cadf4223e894ce73d91b2bde6b1fb3cc8e2`
+(root eight), `91d027189cf7fa2093ca70fec1dbf86160ec768ddc36eea66c34a39736524743` (workspace tail).
+Исторический default-parallel exit 137 сохранён отдельно; этот PASS не меняет его
+исход. Полный workspace результат относится к `4530d9ab`.
+
+### Отдельное исправление finite metadata для E2E шаблонов
+
+Исправление опубликовано обычным child-коммитом
+[`8bf0bf41`](https://github.com/777genius/agent-teams-ai/commit/8bf0bf41db4aa184caffc6ae2d16b19e131da7b6)
+с родителем `4530d9ab` в `review/provider-host-main-integration-20261123`.
+Оба ревью проверили четыре файла, tree/parent и все 18 validation receipts;
+GitHub blobs/tree/commit/ref подтверждены обратным чтением.
+Изменены четыре пути, код приложения в src/packages не меняется. Существующий metadata helper
+получил opt-in TEST OpenCode с распознаваемой V1-версией и обоими бинарными aliases.
+Приватная managed Codex seed закрывает настоящий startup status path, который
+игнорирует один лишь `CODEX_CLI_PATH`. TEST peers отвечают только на `--version`,
+остальные команды отказываются с 77. Ledger отдельно допускает точный отказ
+Codex `app-server`, который запрашивает Create page для account status; это не
+успешный runtime. Приватные peers и seed проверяются по ownership/path/digest
+до старта и после завершения; production guard не изменён.
+
+Расширенный сценарий применяет custom/builtin/none templates через исходный UI,
+ждёт сохранения draft и проверяет сохранность выбора provider/model/cwd/history.
+Он создаёт native config-only team с исходным `per_project` и второй с явно
+выбранным `shared`, затем проверяет meta, saved request и cold restart.
+**Shared history здесь не означает Shared Host**: обе команды используют исходный
+native filesystem backend; настоящий Shared Host проверяется отдельным admitted
+management-сценарием. Optional settings раскрывается исходным UI toggle.
+На точных bytes прошли 7 различных целевых finite tests (6 существующих compatibility
+cases и новый discovery regression), lint 2 TS (0 ошибок/предупреждений), CJS syntax,
+полный неизменённый Desktop E2E TS config и отдельная scoped TS-проверка нового test.
+Все использовали TS 7.0.2; полный root/workspace PASS M3 не переносится на новый test.
+Source-size guard проверил 5366 файлов/141 frozen exception: единственный изменённый
+guard-classified production path — scripts/lib helper, 69/800 строк. Финальный manifest
+SHA256 `b2523e8ca779ce12afb17011962f009fac55e0e935746baeccd16277222a5c08`
+содержит 18 hashed receipts; tree `3b3902303829d5be7960b3bf9120d72eae19372a`.
+Локальный GUI не запускался: один owned Xorg prerequisite завершился до config/driver
+readiness, затем отдельное создание приватного AF_UNIX socket вернуло EPERM до bind.
+Приложение/provider не запускались, собственный Xorg завершён; policy/transport,
+headless allowlist и системные настройки не менялись. Этот environmental blocker
+не объявляется продуктовым FAIL или E2E PASS.
+
+### Исходный CI фактического #1220
+
+Фактический #1220 остаётся Draft на `e06c8023`, base `bb13cc19`, synthetic merge
+`fb3ca252`; tree merge совпадает с tree e06. Все 12 исходных и metadata workflow
+сохраняются без rerun/cancel/supersession. Snapshot 14:03:35 UTC:
+
+| Исходная проверка e06 | Состояние и границы |
+| --- | --- |
+| [Fast feedback](https://github.com/777genius/agent-teams-ai/actions/runs/45169325165/job/137694665506) | PASS: full workspace TS7, policy 128/128, caps, lint 0 ошибок/227 warnings. Full qualification job FAIL с точным `Draft feedback does not qualify for merge`; это ожидаемый Draft gate, не продуктовый regression и не разрешение на merge |
+| [Process fixtures](https://github.com/777genius/agent-teams-ai/actions/runs/45169325227) | 5/5 PASS, все platform tuples; Darwin controlled POSIX contract не выдаётся за native-provider qualification |
+| [Teams Creation](https://github.com/777genius/agent-teams-ai/actions/runs/45169325159) | 3/3 PASS; draft/config/copy/Launch-modal UI, без утверждения успешного runtime Launch |
+| [OpenCode V2 preflight](https://github.com/777genius/agent-teams-ai/actions/runs/45169325218) | 9/9 PASS; localhost scripted model, V1/V2 discovery и cleanup; vendor auth/Desktop/release не квалифицированы |
+| [Host acceptance](https://github.com/777genius/agent-teams-ai/actions/runs/45169325080) | 12/29 matrix PASS, 4 running, 13 queued. Все 4 frontend shards: 26 896 passed, 38 pending/skipped, 0 failed |
+| [Packaged Electron](https://github.com/777genius/agent-teams-ai/actions/runs/45169325243) | Windows x64 PASS; Windows ARM64 и Darwin ARM64 running, Linux и Darwin x64 queued. Это ещё не общий packaged PASS |
+
+Для ordinary import, Quit-pending-open, taskboard, finite Codex login, selection
+и Darwin OpenCode V2 attachments проверены по 2005 выбранных source hashes against
+Git e06, before/after, ZIP/screenshot hashes и исходные UI кадры. Обычный import
+не запускает Launch; Quit-pending-open намеренно сохраняет held-unknown/debtRetained.
+Taskboard доказывает offline canonical Host workflow без runtime sessions.
+Codex login использует finite protocol peers, без vendor auth completion/inference.
+Selection использует конечный TEST Codex, не vendor runtime. Darwin attachments:
+два исходных user inputs, точные prepared PNG bytes в SQLite, Stop/custody release,
+холодное чтение без replay/runtime allocation; setup через app IPC не доказывает
+обычный Launch UI. Teams receipts связаны ZIP digest + checkout + UI/cleanup;
+полного source inventory у них нет. Эти результаты не переносятся на e11/M2/M3/M4.
+Прежние failing V2 management, Darwin Review, Quit-active и Resume lanes пока
+в очереди; обычный Linux management PASS не заменяет отдельный V2 management.
+
+### Следующие разрешённые действия и граница native CLI
+
+После terminal всего исходного e06 cohort: свежий аудит refs/полного 41-path diff
+и workflow routing, обычная доставка e11 в #1220, его собственные original Draft
+проверки, затем безопасный Ready и полная квалификация. Новый cold-recovery thread
+разрешить только после фактической доставки. После квалификации — обычный
+исторически сохраняющий merge #1220 → Draft #1192 и его receiving CI, включая
+retained historical donor coexistence. Старый observer diagnostic не заменяет
+этот исходный donor E2E.
+
+**Полную интеграцию с main нельзя переносить в фактический #1192 даже пока он Draft
+в пределах текущего разрешения.** В ней новый
+`windows-teammate-console-native.yml` не имеет Draft guard и вызывает
+`scripts/e2e/windows-product-teammate-console.mjs`: настоящий
+`claude-multimodel.exe --version`, затем настоящие Anthropic lead/member.
+В отдельном e11 workflow отсутствует, поэтому его узкая доставка остаётся разрешённой.
+Ready #1192 дополнительно включает genuine Codex Runtime/Runtime Bootstrap;
+обновление #1186 включает более широкие native jobs. Guards/filters не изменяются
+для обхода ограничения. Четыре существующих #1186 review threads разрешать только
+после фактической доставки соответствующих commits.
+
+Порядок обычных слияний сохраняется: #1220 → #1192 → #1186 → #982.
+#982 остаётся открытым; main merge, release, default Host activation, Stage 2
+и вариант P09 B исключены. Настоящие Claude/Codex, включая `--version`, не разрешены.
+Опросы original CI — не чаще одного раза в 300 секунд. Полное E2E и готовность
+всей цепочки к merge пока не заявлены.
+
 ## Контрольная точка 23 ноября 2026, 13:58 Киев / 11:58 UTC
 
 [PR #1220](https://github.com/777genius/agent-teams-ai/pull/1220) обновлён обычным
