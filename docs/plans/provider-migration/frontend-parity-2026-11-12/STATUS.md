@@ -166,8 +166,40 @@ RED, candidate suite 202 PASS / один прежний Darwin installer SKIP; �
 cases входят в это число. Scoped strict TS7, fast lint без errors, source-size
 и syntax guards PASS, оба независимых ревью завершены. Отдельный observer variant
 меняет только два selector literals, сохраняет исходные bytes и прошёл 17 controls.
-Достаточность 2048 MiB для сборки и полного GUI сценария пока не установлена;
-следующая попытка требует нового опубликованного head и зафиксированного плана.
+Третья полная finite Import попытка выполнена на опубликованном
+`191aae52f11ecf3b92bc0a9afb9e15324225425f` с отдельным точным 2048 MiB profile.
+Исходный entry, runtime pins, 180s startup / 90s first-menu budgets, UI controls,
+provider isolation и cleanup не менялись. Main build завершился за 26.64s,
+CDP target появился за 33.158s; настоящее приложение и renderer запустились.
+Первое ожидание More actions завершилось `Target crashed` до исходного deadline:
+49 owner checks вернулись, из 49 начатых UI reads завершились 48. Node-side steps
+остались пустыми; порядок исходного producer и controls независимо подтверждает
+отсутствие scripted hover/press/fill/Create/Launch. Focus emulation и пассивные
+TEST DOM input listeners были подключены; finally запросил штатное закрытие окна. Это не отсутствие
+всех CDP действий и не завершённый E2E.
+
+В исходном PID namespace `pid:[4026532833]` observer зафиксировал renderer
+PID262/birth5992062: в sample72 он стал zombie с wait status9. В том же sample
+global `oom_kill` вырос 242 → 243; main log затем записал renderer killed9.
+Факт SIGKILL установлен, но отправитель и PID-specific kernel/cgroup причина
+не доказаны. В этой попытке нет явной V8 heap OOM. Peak combined owned RSS —
+3,857,696 KiB, Vite — 2,351,092 KiB, esbuild — 1,328,508 KiB; разные peaks
+не складываются. Минимальный global MemAvailable 1,491,532 KiB не является
+свободным cgroup budget. Recovery renderer появился после отказа; его screenshot
+и пустой inputEvents не используются как доказательство состояния до crash.
+
+Original cleanup сохранил DEBT esbuild PID137 после исчезновения captured leader;
+по потерянной authority сигналы не отправлялись. Последующие 11 passive samples
+за 10s в том же исходном namespace подтверждают отсутствие owned, unknown и
+unattributed процессов; это не меняет исходный cleanup verdict. Всего 87 samples;
+`summary.diagnosticProblems={}`. Один transient census disappearance PID1345
+сохранён; в финальных 11 samples `censusProblems=[]`. После terminal все 2006 выбранных source hashes,
+1280 input pins и observer hash совпали с prelaunch census. Девять original proof
+файлов и шесть observer файлов сохранены с повторной проверкой hashes. Integrity
+receipt SHA256 `0283a8876da7fbcb80ead04d8f9b95be2b48e64830c1f63c70e6f9a7db7fe8a7`;
+resource analysis SHA256 `11622878b9b6c87f4b9d17f13bc10c8f1ff28e4d1a1a44a21aee24a3217ed2af`.
+Результат — INCOMPLETE до первого бизнес-действия. Повтор с новыми resource knobs
+или другим launch path не выполнен; дальнейшую квалификацию даёт штатный CI.
 
 Исходный CI `bb13cc19`: все пять Packaged платформ прошли, aggregate ещё ожидается.
 Fast feedback PASS. Retained V1 / Host V2 job `137395023520` завершился ошибкой
