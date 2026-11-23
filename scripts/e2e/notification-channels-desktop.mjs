@@ -214,11 +214,14 @@ async function run() {
   const privateKeyName = JSON.parse(vaultOnDisk)[0]?.envVarName;
   assert(privateKeyName, 'Private credential reference missing');
   const genericKeys = await rendererCall('window.electronAPI.apiKeys.list()');
-  assert(!JSON.stringify(genericKeys).includes(privateKeyName),
+  assert.equal(genericKeys.success, true, 'Generic key listing failed');
+  assert(!JSON.stringify(genericKeys.data).includes(privateKeyName),
     'Private notification key leaked through generic key listing');
   const genericLookup = await rendererCall('window.electronAPI.apiKeys.lookup(' +
     JSON.stringify([privateKeyName]) + ')');
-  assert.equal(genericLookup.length, 0, 'Private key leaked through generic key lookup');
+  assert.equal(genericLookup.success, true, 'Generic credential lookup failed');
+  assert.equal(genericLookup.data.length, 0,
+    'Private notification key leaked through generic key lookup');
   assert.equal((await stat(metadataPath)).mode & 0o077, 0, 'Metadata file must be owner-only');
   evidence.checks.push('React form → IPC → encrypted credential + owner-only metadata');
 
