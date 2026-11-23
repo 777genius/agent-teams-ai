@@ -238,6 +238,32 @@ describe('TeamMemberWorktreeManager', () => {
     }
   );
 
+  it('starts new member branches at the selected linked project checkout commit', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const linkedProject = path.join(tempRoot, 'linked-project');
+    await execGit(['worktree', 'add', '-b', 'linked-project', linkedProject, 'HEAD'], repoPath);
+    await fs.writeFile(path.join(linkedProject, 'README.md'), 'linked project changes\n');
+    await execGit(['add', 'README.md'], linkedProject);
+    await execGit(
+      ['-c', 'user.email=test@example.com', '-c', 'user.name=Test', 'commit', '-m', 'linked update'],
+      linkedProject
+    );
+    const selectedHead = await execGit(['rev-parse', 'HEAD'], linkedProject);
+    const primaryHead = await execGit(['rev-parse', 'HEAD'], repoPath);
+    expect(selectedHead).not.toBe(primaryHead);
+
+    const resolution = await new TeamMemberWorktreeManager().ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: linkedProject,
+    });
+    expect(resolution.baseRepoPath).toBe(repoPath);
+    expect(resolution.worktreePath).toBe(expectedWorktreePath(repoPath));
+    await expect(execGit(['rev-parse', 'HEAD'], resolution.worktreePath)).resolves.toBe(selectedHead);
+    await expect(fs.readFile(path.join(resolution.worktreePath, 'README.md'), 'utf8')).resolves.toBe(
+      'linked project changes\n'
+    );
+    await expect(execGit(['rev-parse', 'HEAD'], repoPath)).resolves.toBe(primaryHead);
+  });
+
   it('creates a new worktree on an existing deterministic branch without resetting it', async () => {
     const repoPath = await createGitRepo(tempRoot);
     const branchName = `agent-teams/atlas-hq/bob-${shortHash(repoPath)}`;
