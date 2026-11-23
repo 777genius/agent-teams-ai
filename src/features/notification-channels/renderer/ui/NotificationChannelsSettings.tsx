@@ -134,6 +134,9 @@ export function NotificationChannelsSettings(): React.JSX.Element {
     });
   };
 
+  const providerChanged = Boolean(draft?.id &&
+    channels.find((item) => item.id === draft.id)?.provider !== draft.provider);
+
   const updateDraft = (changes: Partial<SaveDeliveryChannelRequest>): void => {
     setDraft((prev) => prev ? { ...prev, ...changes } : prev);
   };
@@ -274,7 +277,8 @@ export function NotificationChannelsSettings(): React.JSX.Element {
           <div className="flex gap-2">
             <Button type="button" size="sm" disabled={busy || !draft.name.trim() ||
               (draft.provider === 'telegram' && !draft.chatId?.trim()) ||
-              (!draft.id && !draft.secret?.trim())} onClick={save}>
+              (!draft.id && !draft.secret?.trim()) ||
+              (providerChanged && !draft.secret?.trim())} onClick={save}>
               Save channel
             </Button>
             <Button type="button" size="sm" variant="ghost" disabled={busy}
