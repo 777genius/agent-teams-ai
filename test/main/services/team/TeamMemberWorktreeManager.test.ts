@@ -318,13 +318,86 @@ describe('TeamMemberWorktreeManager', () => {
     const worktrees = [longMember, shortMember, longTeam, shortTeam];
     expect(new Set(worktrees.map((entry) => entry.worktreePath)).size).toBe(4);
     expect(new Set(worktrees.map((entry) => entry.branchName)).size).toBe(4);
-    expect(longMember.worktreePath).toContain('_long-members');
-    expect(longTeam.worktreePath).toContain('_long-teams');
+    expect(longMember.worktreePath).toContain('@long-members');
+    expect(longTeam.worktreePath).toContain('@long-teams');
     for (const entry of worktrees) {
       await expect(execGit(['branch', '--show-current'], entry.worktreePath)).resolves.toBe(
         entry.branchName
       );
     }
+  });
+
+  it('keeps the long-name namespace separate from short names matching old namespace directories', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const longName = 'a'.repeat(49);
+
+    // Creation order matters: the old namespace directory was mistaken for
+    // the short-name member's already existing checkout.
+    const longMember = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName: longName, baseCwd: repoPath,
+    });
+    const shortMember = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName: '_long-members', baseCwd: repoPath,
+    });
+    const longTeam = await manager.ensureMemberWorktree({
+      teamName: longName, memberName: 'Bob', baseCwd: repoPath,
+    });
+    const shortTeam = await manager.ensureMemberWorktree({
+      teamName: '_long-teams', memberName: 'Bob', baseCwd: repoPath,
+    });
+
+    expect(longMember.worktreePath).toContain('@long-members');
+    expect(longTeam.worktreePath).toContain('@long-teams');
+    expect(shortMember.worktreePath).toBe(expectedWorktreePath(repoPath, 'Atlas HQ', '_long-members'));
+    expect(shortTeam.worktreePath).toBe(expectedWorktreePath(repoPath, '_long-teams', 'Bob'));
+    const worktrees = [longMember, shortMember, longTeam, shortTeam];
+    expect(new Set(worktrees.map((entry) => entry.worktreePath)).size).toBe(4);
+    expect(new Set(worktrees.map((entry) => entry.branchName)).size).toBe(4);
+    for (const entry of worktrees) {
+      await expect(execGit(['branch', '--show-current'], entry.worktreePath)).resolves.toBe(entry.branchName);
+    }
+  });
+
+  it('preserves a saved long-name checkout created with the previous namespace', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const longName = 'a'.repeat(49);
+    const oldPath = path.join(
+      hoisted.appDataRoot, 'team-worktrees',
+      `${legacySlugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
+      '_long-teams', slugify(longName), '_long-members', slugify(longName)
+    );
+    const oldBranch = `agent-teams/_long-teams/${slugify(longName)}/_long-members/${slugify(longName)}-${shortHash(repoPath)}`;
+    await fs.mkdir(path.dirname(oldPath), { recursive: true });
+    await execGit(['worktree', 'add', '-b', oldBranch, oldPath, 'HEAD'], repoPath);
+    const resolution = await new TeamMemberWorktreeManager().ensureMemberWorktree({
+      teamName: longName, memberName: longName, baseCwd: repoPath, existingCwd: oldPath,
+    });
+    expect(resolution.worktreePath).toBe(oldPath);
+    expect(resolution.branchName).toBe(oldBranch);
+  });
+
+  it('restores a saved linked checkout when the only available base cwd is that checkout', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const initial = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: repoPath,
+    });
+    await execGit(['switch', '-c', 'resume-work'], initial.worktreePath);
+    await fs.writeFile(path.join(initial.worktreePath, 'notes.txt'), 'do not remove\n');
+    const restored = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ',
+      memberName: 'Bob',
+      baseCwd: initial.worktreePath,
+      existingCwd: initial.worktreePath,
+    });
+    expect(restored).toEqual({ ...initial, branchName: 'resume-work' });
+    await expect(fs.readFile(path.join(initial.worktreePath, 'notes.txt'), 'utf8')).resolves.toBe(
+      'do not remove\n'
+    );
+    await expect(execGit(['branch', '--show-current'], initial.worktreePath)).resolves.toBe(
+      'resume-work'
+    );
   });
 
   it('rejects main checkout when base cwd itself is another linked worktree', async () => {
