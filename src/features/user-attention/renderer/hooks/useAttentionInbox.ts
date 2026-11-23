@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import { useTeamMessageReadContextScope } from '@renderer/hooks/useTeamMessageReadContextScope';
 import { useStore } from '@renderer/store';
 import {
   captureContextScopedRequestEpoch,
   subscribeContextScopedRequestEpoch,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { getReadSetSnapshot, seedPersistedReadKeysOnce } from '@renderer/utils/teamMessageReadStorage';
+import {
+  getReadSetSnapshot,
+  getTeamMessageReadStorageKey,
+  seedPersistedReadKeysOnce,
+} from '@renderer/utils/teamMessageReadStorage';
 
 import { buildAttentionModel } from '../../core/domain/buildAttention';
 import {
@@ -20,6 +25,8 @@ import type { AttentionReads } from '../../core/domain/buildAttention';
 
 export function useAttentionInbox() {
   const contextId = useStore((state) => state.activeContextId);
+  const { scope: readScope, error: readScopeError, retry: retryReadScope } =
+    useTeamMessageReadContextScope(contextId);
   const contextEpoch = useSyncExternalStore(
     subscribeContextScopedRequestEpoch,
     captureContextScopedRequestEpoch,
@@ -37,7 +44,7 @@ export function useAttentionInbox() {
     // on local read keys. Reuse that same migration for teams opened only in
     // Attention; the compact candidate projection is NOT a full Messenger
     // history, so never finalize the shared migration marker here.
-    if (state.contextId !== contextId ||
+    if (!readScope || captureContextScopedRequestEpoch() !== contextEpoch || state.contextId !== contextId ||
         state.contextEpoch !== contextEpoch || !state.snapshot) return;
     for (const team of state.snapshot.teams) {
       if (team.error) continue;
@@ -45,25 +52,31 @@ export function useAttentionInbox() {
         .filter((message) => !message.groupChatId && message.read === true)
         .map(toMessageKey);
       if (alreadyRead.length > 0) {
-        seedPersistedReadKeysOnce(team.teamName, alreadyRead);
+        seedPersistedReadKeysOnce(getTeamMessageReadStorageKey(team.teamName, readScope), alreadyRead);
       }
     }
-  }, [contextId, contextEpoch, state.snapshot, state.contextId, state.contextEpoch]);
+  }, [contextId, contextEpoch, readScope, state.snapshot, state.contextId, state.contextEpoch]);
 
   const model = useMemo(() => {
-    if (state.contextId !== contextId || state.contextEpoch !== contextEpoch || !state.snapshot) return null;
+    if (!readScope || state.contextId !== contextId || state.contextEpoch !== contextEpoch || !state.snapshot) return null;
     const getReads = (teamName: string): AttentionReads => ({
-      // Keep the exact current Messenger read keys; group scope is root-aware.
-      direct: getReadSetSnapshot(teamName),
-      group: getReadSetSnapshot(JSON.stringify(['group', contextId, teamName])),
+      // Messenger and Attention must use the same effective workspace namespace.
+      direct: getReadSetSnapshot(getTeamMessageReadStorageKey(teamName, readScope)),
+      group: getReadSetSnapshot(getTeamMessageReadStorageKey(teamName, readScope, 'group')),
     });
     return buildAttentionModel(state.snapshot, getReads, toMessageKey);
-  }, [contextId, contextEpoch, state]);
+  }, [contextId, contextEpoch, readScope, state]);
+
+  const refresh = useCallback(() => {
+    retryReadScope();
+    refreshAttention();
+  }, [retryReadScope]);
 
   return {
     model,
-    loading: state.loading || state.contextId !== contextId || state.contextEpoch !== contextEpoch,
-    error: state.error,
-    refresh: refreshAttention,
+    loading: state.loading || (!readScope && !readScopeError) ||
+      state.contextId !== contextId || state.contextEpoch !== contextEpoch,
+    error: state.error ?? readScopeError,
+    refresh,
   };
 }

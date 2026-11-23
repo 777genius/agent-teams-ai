@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { useAttentionInbox } from '../../../../src/features/user-attention/renderer/hooks/useAttentionInbox';
-import { getReadSet } from '../../../../src/renderer/utils/teamMessageReadStorage';
+import { getReadSet, getTeamMessageReadStorageKey } from '../../../../src/renderer/utils/teamMessageReadStorage';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const snapshotState = vi.hoisted(() => ({
@@ -72,17 +72,20 @@ describe('Attention read-state migration parity with Messenger', () => {
   it('seeds existing direct read keys without finalizing or touching groups', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     localStorage.clear();
-    localStorage.setItem('team-messages-read-backfill:finalized', '1');
+    const legacy = getTeamMessageReadStorageKey('legacy', 'attention-legacy-fixture');
+    const finalized = getTeamMessageReadStorageKey('finalized', 'attention-legacy-fixture');
+    localStorage.setItem('team-messages-read-backfill:' + finalized, '1');
     const container = document.createElement('div');
     document.body.append(container);
     const root = createRoot(container);
     await act(async () => root.render(<Consumer />));
 
-    expect(getReadSet('legacy').has('legacy-read')).toBe(true);
+    expect(getReadSet(legacy).has('legacy-read')).toBe(true);
+    expect(getReadSet('legacy').has('legacy-read')).toBe(false);
     expect(getReadSet(JSON.stringify(['group', 'attention-legacy-fixture', 'legacy']))
       .has('group-read')).toBe(false);
-    expect(localStorage.getItem('team-messages-read-backfill:legacy')).toBeNull();
-    expect(getReadSet('finalized').has('fresh-after-finalization')).toBe(false);
+    expect(localStorage.getItem('team-messages-read-backfill:' + legacy)).toBeNull();
+    expect(getReadSet(finalized).has('fresh-after-finalization')).toBe(false);
 
     await act(async () => root.unmount());
   });

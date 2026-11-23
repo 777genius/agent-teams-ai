@@ -238,7 +238,9 @@ async function checkDesktop() {
 
   await cdp.evaluate(`(async () => {
     const reads = await import('/utils/teamMessageReadStorage.ts');
-    reads.markRead(${JSON.stringify(first)}, ${JSON.stringify('attention-dm-' + first)});
+    const root = await window.electronAPI.config.getClaudeRootInfo();
+    const scope = reads.getTeamMessageReadContextScope('local', root);
+    reads.markRead(reads.getTeamMessageReadStorageKey(${JSON.stringify(first)}, scope), ${JSON.stringify('attention-dm-' + first)});
   })()`);
   await until(async () => cdp.evaluate(`(() => {
     const panel = document.querySelector('[data-testid=user-attention-inbox]');

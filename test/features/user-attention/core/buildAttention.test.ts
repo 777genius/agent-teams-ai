@@ -91,6 +91,11 @@ describe('Attention Inbox pure domain', () => {
     expect(result.chats[0]?.scope).toEqual({ kind: 'group', groupChatId: 'design' });
   });
 
+  it('preserves the opaque Messenger read key before truncating the preview', () => {
+    const candidate = projectAttentionMessage(message(' opaque-id ', 'alice', 'user', 'Read me'));
+    expect(candidate?.messageId).toBe(' opaque-id ');
+  });
+
   it('keeps direct attachment-only messages without exposing attachment paths', () => {
     const candidate = projectAttentionMessage(message('file-only', 'alice', 'user', '', {
       attachments: [{ id: 'file1', filename: 'picture.png', mimeType: 'image/png', size: 42,

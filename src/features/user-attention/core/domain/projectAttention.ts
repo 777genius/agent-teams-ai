@@ -13,8 +13,11 @@ import type { AttentionTaskCandidate } from '../../contracts';
 import type { InboxMessage, TeamTask } from '@shared/types/team';
 
 function messageIdentity(message: InboxMessage): string {
-  return message.messageId?.trim() ||
-    `${message.timestamp}-${message.from}-${message.text.slice(0, 80)}`;
+  // Messenger treats a nonblank ID as opaque (including surrounding spaces).
+  const id = message.messageId;
+  return typeof id === 'string' && id.trim().length > 0
+    ? id
+    : `${message.timestamp}-${message.from}-${message.text.slice(0, 80)}`;
 }
 
 /** Project just the human-facing candidate, never internal agent traffic. */

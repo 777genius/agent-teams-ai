@@ -1,6 +1,31 @@
 const STORAGE_PREFIX = 'team-messages-read:';
 const BACKFILL_PREFIX = 'team-messages-read-backfill:';
 
+/** Keep the default local workspace's existing keys; never reuse them in other roots. */
+export function getTeamMessageReadContextScope(
+  contextId: string,
+  localRoot?: { defaultPath: string; resolvedPath: string }
+): string {
+  if (contextId !== 'local') return contextId;
+  if (!localRoot?.resolvedPath || !localRoot.defaultPath) {
+    throw new Error('Local message read root is unavailable');
+  }
+  return localRoot.resolvedPath === localRoot.defaultPath
+    ? contextId
+    : JSON.stringify(['local-root', localRoot.resolvedPath]);
+}
+
+export function getTeamMessageReadStorageKey(
+  teamName: string,
+  contextScope: string,
+  kind: 'direct' | 'group' = 'direct'
+): string {
+  // Existing unscoped data has no provenance. Do not copy it to a remote
+  // context or custom local root, even when teams and message IDs match.
+  if (kind === 'direct' && contextScope === 'local') return teamName;
+  return JSON.stringify([kind, contextScope, teamName]);
+}
+
 const listeners = new Set<() => void>();
 
 /** Cross-window read updates must notify Messenger and Attention consistently. */
