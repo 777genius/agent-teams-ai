@@ -287,6 +287,67 @@ describe('TeamMemberWorktreeManager', () => {
     }
   });
 
+  it('separates long generated names from otherwise identical short names', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const longName = 'a'.repeat(49);
+    const shortName = `${'a'.repeat(37)}-${shortHash(longName)}`;
+    expect(longName).not.toBe(shortName);
+    expect(slugify(longName)).toBe(slugify(shortName)); // Without a namespace, these collide.
+
+    const longMember = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ',
+      memberName: longName,
+      baseCwd: repoPath,
+    });
+    const shortMember = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ',
+      memberName: shortName,
+      baseCwd: repoPath,
+    });
+    const longTeam = await manager.ensureMemberWorktree({
+      teamName: longName,
+      memberName: 'Bob',
+      baseCwd: repoPath,
+    });
+    const shortTeam = await manager.ensureMemberWorktree({
+      teamName: shortName,
+      memberName: 'Bob',
+      baseCwd: repoPath,
+    });
+    const worktrees = [longMember, shortMember, longTeam, shortTeam];
+    expect(new Set(worktrees.map((entry) => entry.worktreePath)).size).toBe(4);
+    expect(new Set(worktrees.map((entry) => entry.branchName)).size).toBe(4);
+    expect(longMember.worktreePath).toContain('_long-members');
+    expect(longTeam.worktreePath).toContain('_long-teams');
+    for (const entry of worktrees) {
+      await expect(execGit(['branch', '--show-current'], entry.worktreePath)).resolves.toBe(
+        entry.branchName
+      );
+    }
+  });
+
+  it('rejects main checkout when base cwd itself is another linked worktree', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const linkedBase = path.join(tempRoot, 'linked-base');
+    const sibling = path.join(tempRoot, 'sibling-worktree');
+    await execGit(['worktree', 'add', '-b', 'linked-base', linkedBase, 'HEAD'], repoPath);
+    await execGit(['worktree', 'add', '-b', 'sibling', sibling, 'HEAD'], repoPath);
+    const manager = new TeamMemberWorktreeManager();
+    const input = { teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: linkedBase };
+    await expect(manager.ensureMemberWorktree({
+      ...input,
+      existingCwd: repoPath,
+    })).rejects.toThrow('not a separate checkout root');
+    const restored = await manager.ensureMemberWorktree({
+      ...input,
+      existingCwd: sibling,
+    });
+    expect(restored.worktreePath).toBe(sibling);
+    expect(restored.branchName).toBe('sibling');
+    expect(await execGit(['status', '--porcelain'], repoPath)).toBe('');
+  });
+
   it('coalesces concurrent creation attempts without creating duplicate checkouts', async () => {
     const repoPath = await createGitRepo(tempRoot);
     const manager = new TeamMemberWorktreeManager();
