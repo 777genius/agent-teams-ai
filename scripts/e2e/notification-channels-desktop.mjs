@@ -218,7 +218,8 @@ async function run() {
   assert(!JSON.stringify(audit).includes(TOKEN));
   evidence.checks.push('User Test → Thinwrap → guarded vendor fetch → observed success');
 
-  // Enable via actual Radix checkbox.
+  // Enable via actual Radix checkbox. The synthetic team event must not be
+  // source-suppressed: NotificationManager deliberately excludes hidden events.
   await click("document.querySelector('section[aria-label=\"Delivery channels\"] [aria-label=\"Enable TEST Telegram\"]')");
   await until(async () => {
     const list = await rendererCall('window.electronAPI.notificationChannels.list()');
@@ -233,7 +234,7 @@ async function run() {
     summary: 'private summary',
     teamEventType: 'user_inbox',
     dedupeKey: 'delivery-e2e-' + randomUUID(),
-    suppressToast: true,
+    suppressToast: false,
   };
   await rendererCall('window.electronAPI.teams.showMessageNotification(' +
     JSON.stringify(secretPayload) + ')');
