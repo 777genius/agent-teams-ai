@@ -72,7 +72,9 @@ async function click(expression) {
   await until(async () => await evaluate(
     '(() => { const element = ' + expression + '; return Boolean(element && !element.disabled); })()'
   ), 'enabled control: ' + expression);
-  await evaluate(expression + '.click()');
+  await evaluate('(() => { const element = ' + expression +
+    '; if (!element || element.disabled) throw new Error("Control unavailable before click");' +
+    'element.click(); return true; })()');
 }
 
 async function setInput(selector, value) {

@@ -159,6 +159,37 @@ describe('Thinwrap transport adapter', () => {
       .toEqual({ success: false, code: 'rate_limited' });
   });
 
+  it('preserves Google Chat HTTP acceptance when its response body cannot be parsed', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('not-json', { status: 200 })));
+    const secret = 'https://chat.googleapis.com/v1/spaces/AAA/messages?key=key123&token=token123';
+    expect(await new ThinwrapDeliverySender().send(
+      makeChannel('google-chat'), secret, 'Agent Teams: Task blocked.'
+    )).toEqual({ success: true });
+  });
+
+  it('never marks a pre-response Google Chat failure as accepted', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('Network down'); }));
+    const secret = 'https://chat.googleapis.com/v1/spaces/AAA/messages?key=key123&token=token123';
+    const result = await new ThinwrapDeliverySender().send(
+      makeChannel('google-chat'), secret, 'Agent Teams: Task blocked.'
+    );
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result)).not.toContain('token123');
+  });
+
+  it('rejects Google Chat non-2xx responses even if they carry a valid JSON body', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      new Response(JSON.stringify({ error: { code: 403, message: 'Not authorized' } }), {
+        status: 403, headers: { 'content-type': 'application/json' },
+      })
+    ));
+    const secret = 'https://chat.googleapis.com/v1/spaces/AAA/messages?key=key123&token=token123';
+    const result = await new ThinwrapDeliverySender().send(
+      makeChannel('google-chat'), secret, 'Agent Teams: Task blocked.'
+    );
+    expect(result.success).toBe(false);
+  });
+
   it('refuses local/webhook impostors without making a request', async () => {
     const network = vi.fn(async () => new Response('ok', { status: 200 }));
     vi.stubGlobal('fetch', network);

@@ -9,7 +9,11 @@ import type {
 } from '../../../core/application/NotificationChannelsService';
 
 /** No arbitrary URLs, local endpoints, redirects, or bearer-URL leakage. */
-function createGuardedFetch(provider: DeliveryProvider, secret: string): typeof fetch {
+function createGuardedFetch(
+  provider: DeliveryProvider,
+  secret: string,
+  onAccepted?: () => void
+): typeof fetch {
   return async (input, init) => {
     const requested = new URL(typeof input === 'string' || input instanceof URL
       ? String(input)
@@ -25,11 +29,15 @@ function createGuardedFetch(provider: DeliveryProvider, secret: string): typeof 
         [...requested.searchParams.keys()].some((key) => key !== 'wait' && key !== 'thread_id'))) {
       throw new Error('Untrusted notification endpoint');
     }
-    return fetch(input, {
+    const response = await fetch(input, {
       ...init,
       redirect: 'error',
       signal: AbortSignal.timeout(10_000),
     });
+    // Google Chat responds with HTTP acceptance before Thinwrap consumes JSON.
+    // A broken response stream must not be mistaken for a rejected send.
+    if (provider === 'google-chat' && response.ok) onAccepted?.();
+    return response;
   };
 }
 
@@ -56,7 +64,10 @@ export class ThinwrapDeliverySender implements DeliverySender {
   }> {
     try {
       validateProviderCredential(channel.provider, secret);
-      const secureFetch = createGuardedFetch(channel.provider, secret);
+      let acceptedByGoogleChat = false;
+      const secureFetch = createGuardedFetch(channel.provider, secret, () => {
+        acceptedByGoogleChat = true;
+      });
       let success: boolean;
       if (channel.provider === 'telegram') {
         success = (await new Chat('telegram', { botToken: secret, fetch: secureFetch })
@@ -78,6 +89,11 @@ export class ThinwrapDeliverySender implements DeliverySender {
       }
       return success ? { success: true } : { success: false, code: 'delivery_failed' };
     } catch (error) {
+      // The Google Chat adapter parses response.json() *after* a successful
+      // provider acceptance. Preserve that accepted state if body parsing fails.
+      if (channel.provider === 'google-chat' && acceptedByGoogleChat) {
+        return { success: true };
+      }
       // Do not return error.message/cause/raw: webhook URL itself is a secret.
       return { success: false, code: classifyFailure(error) };
     }

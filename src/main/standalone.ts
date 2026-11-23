@@ -24,7 +24,6 @@ import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 import { join } from 'node:path';
 import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
-import { ConfigManager } from './services/infrastructure/ConfigManager';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
@@ -124,11 +123,13 @@ async function start(): Promise<void> {
   }
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
-    import('./services/infrastructure/HttpServer'),
-    import('./services/infrastructure/NotificationManager'),
-    import('./services/infrastructure/ServiceContext'),
-  ]);
+  const [{ HttpServer }, { NotificationManager }, { ServiceContext }, { ConfigManager }] =
+    await Promise.all([
+      import('./services/infrastructure/HttpServer'),
+      import('./services/infrastructure/NotificationManager'),
+      import('./services/infrastructure/ServiceContext'),
+      import('./services/infrastructure/ConfigManager'),
+    ]);
 
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
