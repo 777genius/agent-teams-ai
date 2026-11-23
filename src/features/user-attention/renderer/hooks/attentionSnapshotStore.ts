@@ -39,6 +39,10 @@ function publish(changes: Partial<AttentionStoreState> = {}): void {
   for (const listener of listeners) listener();
 }
 
+function scheduleFlush(): void {
+  scheduleFlush();
+}
+
 function queue(teamName?: string): void {
   if (!teamName) queuedFull = true;
   else if (!queuedFull) queuedTeams.add(teamName);
@@ -92,7 +96,7 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
   } finally {
     if (!teamName && requestEpoch === epoch) {
       fullLoading = false;
-      if (queuedFull || queuedTeams.size > 0) queue();
+      if (queuedFull || queuedTeams.size > 0) scheduleFlush();
     }
   }
 }
@@ -118,7 +122,7 @@ async function flush(): Promise<void> {
   } finally {
     flushing = false;
     // Only one global drain; updates arriving during in-flight reads get a trailing pass.
-    if (queuedFull || queuedTeams.size > 0) queue();
+    if (queuedFull || queuedTeams.size > 0) scheduleFlush();
   }
 }
 
