@@ -131,7 +131,7 @@ describe('Notification Channels application', () => {
     sent.mockImplementation(() => pending);
     const running = Array.from({ length: 4 }, () => service.dispatch(event));
     await service.dispatch(event);
-    expect(sent).toHaveBeenCalledTimes(4);
+    await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(4));
     release({ success: true });
     await Promise.all(running);
     await service.dispatch(event);
