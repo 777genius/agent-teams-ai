@@ -332,7 +332,7 @@ Gate `N2` packaging (~150-250 E2E lines): actual Electron pack/dev renderer and 
 ## 12. Confirmed functional blocker in Notifly 0.7.2 — Telegram token format
 
 **Evidence (23 Nov 2026):** actual source and tests:
-- `src/builder/url-builder.ts` returns `tgram://\${fields['bot_token']}/\${fields['chat_id']}` without encoding.
+- `src/builder/url-builder.ts` returns `tgram://${fields['bot_token']}/${fields['chat_id']}` without encoding.
 - `src/url-parser.ts` passes this string to standard `new URL(urlString)`.
 - `src/services/telegram.ts` reads `url.hostname` as `botToken`.
 - `src/builder/url-builder.test.ts` expects `tgram://bot123:ABC/-1001234` but **does not parse it**.
