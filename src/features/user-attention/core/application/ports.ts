@@ -12,4 +12,5 @@ export interface AttentionSourcePort {
   listTeams(): Promise<readonly AttentionTeamSource[]>;
   listHumanTasks(teamName: string): Promise<readonly TeamTask[]>;
   listNormalizedMessages(teamName: string): Promise<readonly InboxMessage[]>;
+  listGroupNames?(teamName: string): Promise<Record<string, string>>;
 }
