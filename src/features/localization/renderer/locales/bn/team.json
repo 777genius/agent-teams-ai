@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} আরম্ভ করতে ব্যর্থ",
         "teammatesFailedToStart": "{{count}} দল আরম্ভ করতে ব্যর্থ",
-        "teammatesFailedRatio": "{{count}}/{{total}} দল আরম্ভ করতে ব্যর্থ"
+        "teammatesFailedRatio": "{{count}}/{{total}} দল আরম্ভ করতে ব্যর্থ",
+        "manualPermissionUnsupported": "এই চালু করার পদ্ধতিতে টুলের ম্যানুয়াল অনুমোদন সমর্থিত নয়। অনুমোদন সমর্থন করে এমন পদ্ধতি বেছে নিয়ে আবার চেষ্টা করুন।"
       },
       "skipped": {
         "memberSkipped": "{{name}} এই চালু করার জন্য আউট",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "“{{project}}” প্রকল্পে দলের চালু হওয়া সম্পূর্ণ হয়নি। আবার চালু করুন।",
+    "unknown": "“{{project}}” প্রকল্পের আগের রান বন্ধ হয়েছে বলে নিশ্চিত করা যায়নি। আবার চালু করার আগে তার অবস্থা দেখুন।",
+    "retryLaunch": "আবার চালু করুন",
+    "recoveryProject": "এই দল সম্পাদনা করার আগে “{{project}}” প্রকল্পের অসম্পূর্ণ চালু হওয়া পরীক্ষা করুন।",
+    "openProject": "প্রকল্প খুলুন"
   }
 }

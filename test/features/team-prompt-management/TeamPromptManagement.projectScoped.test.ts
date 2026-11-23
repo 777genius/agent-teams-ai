@@ -24,6 +24,7 @@ function management(options: {
   assertEditable?: () => Promise<void>;
   refreshCopies?: () => Promise<void>;
   read?: () => Promise<unknown>;
+  postWriteReadFailures?: number;
   runtimeState?: { isAlive: boolean; progress: { state: string } | null };
 }) {
   const order: string[] = [];
@@ -70,7 +71,11 @@ function management(options: {
     emit: vi.fn(),
   };
   const instance = new TeamPromptManagement(ports as never);
-  vi.spyOn(instance as never, 'read').mockImplementation((options.read ?? (async () => snapshot())) as never);
+  let remainingReadFailures = options.postWriteReadFailures ?? 0;
+  vi.spyOn(instance as never, 'read').mockImplementation((options.read ?? (async () => {
+    if (order.includes('write') && remainingReadFailures-- > 0) throw new TeamManagementError('TEAM_CONFIGURATION_CHANGED', 'Changed during verification');
+    return snapshot();
+  })) as never);
   const updateMeta = vi
     .spyOn((instance as unknown as { metaStore: { updateMeta: unknown } }).metaStore as never, 'updateMeta' as never)
     .mockImplementation((async (_name: string, update: (current: unknown) => Record<string, unknown>) => {
@@ -81,6 +86,19 @@ function management(options: {
 }
 
 describe('external (HTTP/MCP) edits of teams with separate history per project', () => {
+  it('recovers a transient read failure after persistence without losing the commit event', async () => {
+    const m = management({ classify: async () => 'logical', postWriteReadFailures: 1 });
+    await expect(m.management.update('builders', body)).resolves.toMatchObject({ changed: true });
+    expect(m.updateMeta).toHaveBeenCalledTimes(1);
+    expect(m.ports.emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports an uncertain outcome if post-write verification remains unavailable', async () => {
+    const m = management({ classify: async () => 'logical', postWriteReadFailures: 2 });
+    await expect(m.management.update('builders', body)).rejects.toMatchObject({ code: 'TEAM_MUTATION_UNCERTAIN', outcome: { state: 'uncertain' } });
+    expect(m.updateMeta).toHaveBeenCalledTimes(1);
+  });
+
   it('writes the definition of a per-project team only after the stopped gate, then refreshes the copies', async () => {
     const m = management({ classify: async () => 'logical' });
     const result = await m.management.update('builders', body);

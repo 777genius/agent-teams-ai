@@ -13,8 +13,9 @@
  */
 
 import { HttpAPIClient } from './httpClient';
+import { withTeamDefinitionEdits } from './teamDefinitionEdits';
 
-import type { ElectronAPI } from '@shared/types/api';
+import type { ElectronAPI, TeamsAPI } from '@shared/types/api';
 
 /**
  * Resolves the base URL for the HTTP API client.
@@ -60,6 +61,8 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
   get(_target, prop, receiver) {
     const impl = getImpl();
     const value = Reflect.get(impl, prop, receiver) as unknown;
+    if (prop === 'teams' && value && typeof value === 'object')
+      return withTeamDefinitionEdits(value as TeamsAPI);
     if (typeof value === 'function') {
       return (value as (...args: unknown[]) => unknown).bind(impl);
     }

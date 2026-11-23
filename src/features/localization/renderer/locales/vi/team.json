@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} không khởi động được",
         "teammatesFailedToStart": "{{count}} thành viên không khởi động được",
-        "teammatesFailedRatio": "{{count}}/{{total}} thành viên không khởi động được"
+        "teammatesFailedRatio": "{{count}}/{{total}} thành viên không khởi động được",
+        "manualPermissionUnsupported": "Cách khởi chạy này không hỗ trợ phê duyệt công cụ thủ công. Chọn cách có hỗ trợ phê duyệt rồi thử lại."
       },
       "skipped": {
         "memberSkipped": "{{name}} bị bỏ qua cho lần khởi chạy này",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Nhóm chưa khởi chạy xong trong dự án “{{project}}”. Hãy thử khởi chạy lại.",
+    "unknown": "Chưa xác nhận lần chạy trước trong dự án “{{project}}” đã dừng. Kiểm tra trạng thái trước khi khởi chạy lại.",
+    "retryLaunch": "Thử khởi chạy lại",
+    "recoveryProject": "Kiểm tra lần khởi chạy chưa hoàn tất trong dự án “{{project}}” trước khi chỉnh sửa nhóm.",
+    "openProject": "Mở dự án"
   }
 }

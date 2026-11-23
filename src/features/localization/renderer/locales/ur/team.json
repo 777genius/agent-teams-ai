@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} شروع میں ناکام ہوا",
         "teammatesFailedToStart": "{{count}} ٹیمیں شروع کرنے میں ناکام رہی",
-        "teammatesFailedRatio": "{{count}}/{{total}} ٹیمیں شروع کرنے میں ناکام رہی"
+        "teammatesFailedRatio": "{{count}}/{{total}} ساتھی شروع ہونے میں ناکام رہے",
+        "manualPermissionUnsupported": "آغاز کا یہ طریقہ ٹولز کی دستی منظوری کی حمایت نہیں کرتا۔ منظوری کی حمایت کرنے والا طریقہ منتخب کریں اور دوبارہ کوشش کریں۔"
       },
       "skipped": {
         "memberSkipped": "{{name}} اس لانچ کے لئے پلگ ان",
@@ -2359,7 +2360,7 @@
         "teamProvisionedLeadOnline": "ٹیم فراہم کی گئی آن لائن",
         "teamProvisionedAllJoined": "ٹیم فراہم کی گئی تمام {{count}} گروہیوں نے ساتھ لیا",
         "teamProvisionedStillJoining": "ٹیموں کی فراہم‌کردہ ٹیم ابھی بھی شامل ہو رہی ہے",
-        "launchFinishedWithErrors": "لانچ ختم ضلع - {{count}}/{{total}} ٹیمیں شروع کرنے میں ناکام رہی",
+        "launchFinishedWithErrors": "لانچ ختم ضلع - {{count}}/{{total}} ساتھی شروع ہونے میں ناکام رہے",
         "launchContinuedSkipped": "لانچ جاری - {{count}}/{{total}} ٹیموں کے کچھ حصے",
         "teamLaunchedLeadOnline": "ٹیم کا آغاز آن لائن",
         "teamLaunchedAllJoined": "ٹیم شروع کی گئی تمام {{count}} گروہیوں نے ساتھ لیا"
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "پروجیکٹ ”{{project}}“ میں ٹیم کا آغاز مکمل نہیں ہوا۔ دوبارہ شروع کریں۔",
+    "unknown": "پروجیکٹ ”{{project}}“ میں پچھلے رن کے رکنے کی تصدیق نہیں ہوئی۔ دوبارہ شروع کرنے سے پہلے اس کی حالت دیکھیں۔",
+    "retryLaunch": "دوبارہ شروع کریں",
+    "recoveryProject": "اس ٹیم میں ترمیم کرنے سے پہلے پروجیکٹ ”{{project}}“ میں نامکمل آغاز دیکھیں۔",
+    "openProject": "پروجیکٹ کھولیں"
   }
 }

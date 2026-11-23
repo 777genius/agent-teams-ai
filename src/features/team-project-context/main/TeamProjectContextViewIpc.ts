@@ -1,21 +1,60 @@
 import { validateTeamName } from '@main/ipc/guards';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
-import {
-  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
-  type TeamProjectContextView,
-} from '../contracts';
+import { TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, type TeamProjectContextView } from '../contracts';
 
 import { readTeamProjectContextMode } from './projectContextMode';
+import { isProjectCopyLaunching } from './projectCopyLaunches';
+import { isStoppedTeamRuntime } from './TeamProjectContextLaunchGate';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
-import type { IpcResult } from '@shared/types';
+import type { IpcResult, TeamRuntimeState } from '@shared/types';
 import type { IpcMain } from 'electron';
+
+interface ContextRuntimeReader {
+  getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
+  hasProvisioningRun(teamName: string): boolean;
+}
+
+async function pendingContext(
+  executionTeamName: string,
+  projectPath: string,
+  runtime?: ContextRuntimeReader
+): Promise<Extract<TeamProjectContextView, { state: 'pending' }>> {
+  const view = {
+    mode: 'per_project' as const,
+    state: 'pending' as const,
+    projectPath,
+    runId: null,
+  };
+  // Tracking proves work is ongoing; only a validated runtime snapshot identifies its run.
+  if (!runtime)
+    return { ...view, reason: isProjectCopyLaunching(executionTeamName) ? 'launching' : 'unknown' };
+  try {
+    const state = await runtime.getRuntimeState(executionTeamName);
+    if (
+      state.teamName !== executionTeamName ||
+      (state.progress &&
+        (state.progress.teamName !== executionTeamName ||
+          (state.runId !== null && state.progress.runId !== state.runId)))
+    )
+      return { ...view, reason: 'unknown' };
+    const runId = state.runId ?? state.progress?.runId ?? null;
+    if (isProjectCopyLaunching(executionTeamName)) return { ...view, runId, reason: 'launching' };
+    // A persisted failed bootstrap can retain its historical run ID after restart.
+    // Require proof that it stopped and that this app owns no ongoing launch/cleanup.
+    const stopped = !runtime.hasProvisioningRun(executionTeamName) && isStoppedTeamRuntime(state);
+    return { ...view, runId, reason: stopped ? 'incomplete' : 'unknown' };
+  } catch {
+    return { ...view, reason: isProjectCopyLaunching(executionTeamName) ? 'launching' : 'unknown' };
+  }
+}
 
 /** Read-only; no project filesystem or native team is created from navigation. */
 async function resolveContextView(
   teamName: unknown,
-  projectPath: unknown
+  projectPath: unknown,
+  runtime?: ContextRuntimeReader
 ): Promise<IpcResult<TeamProjectContextView>> {
   const checked = validateTeamName(teamName);
   if (!checked.valid) return { success: false, error: checked.error ?? 'Invalid team name' };
@@ -59,12 +98,25 @@ async function resolveContextView(
       };
     }
     if (typeof projectPath !== 'string' || !projectPath.trim()) {
-      return { success: true, data: { mode, state: 'needs_project' } };
+      const recovery = (await registry.list(checked.value!)).find(
+        (row) => row.state === 'reserved'
+      );
+      return {
+        success: true,
+        data: {
+          mode,
+          state: 'needs_project',
+          ...(recovery ? { recoveryProjectPath: recovery.projectPath } : {}),
+        },
+      };
     }
     const entry = await registry.inspect(checked.value!, projectPath);
     if (!entry) return { success: true, data: { mode, state: 'empty' } };
     if (entry.state === 'reserved') {
-      return { success: true, data: { mode, state: 'pending' } };
+      return {
+        success: true,
+        data: await pendingContext(entry.executionTeamName, entry.projectPath, runtime),
+      };
     }
     return {
       success: true,
@@ -81,9 +133,13 @@ async function resolveContextView(
   }
 }
 
-export function registerTeamProjectContextViewHandler(ipcMain: IpcMain): void {
+export function registerTeamProjectContextViewHandler(
+  ipcMain: IpcMain,
+  runtime?: ContextRuntimeReader
+): void {
   ipcMain.handle(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, (_event, teamName, projectPath) =>
-    resolveContextView(teamName, projectPath));
+    resolveContextView(teamName, projectPath, runtime)
+  );
 }
 
 export function unregisterTeamProjectContextViewHandler(ipcMain: IpcMain): void {

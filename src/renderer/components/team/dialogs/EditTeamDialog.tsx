@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import { isProjectContextRecoveryError } from '@renderer/components/team/definitionEdit/projectContextRecoveryError';
+import { ProjectContextRecoveryNotice } from '@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice';
 import { MemberDraftRow } from '@renderer/components/team/members/MemberDraftRow';
 import {
   buildMembersFromDrafts,
@@ -95,11 +97,13 @@ function deriveTeammateWorktreeDefault(members: readonly ResolvedTeamMember[]): 
 
 function useEditTeamErrorReset(
   setError: (value: string | null) => void,
-  setSaveOutcomeError: (value: string | null) => void
+  setSaveOutcomeError: (value: string | null) => void,
+  setProjectContextRefused: (value: boolean) => void
 ): () => void {
   return () => {
     setError(null);
     setSaveOutcomeError(null);
+    setProjectContextRefused(false);
   };
 }
 
@@ -186,6 +190,7 @@ export const EditTeamDialog = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveOutcomeError, setSaveOutcomeError] = useState<string | null>(null);
+  const [projectContextRefused, setProjectContextRefused] = useState(false);
   const wasOpenRef = useRef(false);
   const initializedTeamNameRef = useRef<string | null>(null);
   const baselineSourceSnapshotRef = useRef<string | null>(null);
@@ -196,7 +201,11 @@ export const EditTeamDialog = ({
     enabled: open && Boolean(projectPath?.trim()),
     projectPath,
   });
-  const clearTransientErrors = useEditTeamErrorReset(setError, setSaveOutcomeError);
+  const clearTransientErrors = useEditTeamErrorReset(
+    setError,
+    setSaveOutcomeError,
+    setProjectContextRefused
+  );
   const effectiveResolvedMemberColorMap = useMemo(
     () => resolvedMemberColorMap ?? buildMemberColorMap(currentMembers),
     [currentMembers, resolvedMemberColorMap]
@@ -229,6 +238,7 @@ export const EditTeamDialog = ({
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(currentMembers));
         setError(null);
         setSaveOutcomeError(null);
+        setProjectContextRefused(false);
         initializedTeamNameRef.current = teamName;
         baselineSourceSnapshotRef.current = buildEditTeamSourceSnapshot({
           name: currentName,
@@ -394,6 +404,7 @@ export const EditTeamDialog = ({
 
   const handleSave = (): void => {
     if (gatewayBindings.pending) return;
+    setProjectContextRefused(false);
     if (!name.trim()) {
       setError(t('editTeam.errors.teamNameEmpty'));
       return;
@@ -499,6 +510,7 @@ export const EditTeamDialog = ({
         await Promise.resolve(onSaved());
         onClose();
       } catch (e) {
+        setProjectContextRefused(isProjectContextRecoveryError(e));
         const message = e instanceof Error ? e.message : t('editTeam.errors.saveFailed');
         if (membersSaved) {
           setSaveOutcomeError(t('editTeam.errors.changesSavedRefreshFailed', { message }));
@@ -750,6 +762,9 @@ export const EditTeamDialog = ({
           )}
         </div>
 
+        {projectContextRefused && (
+          <ProjectContextRecoveryNotice teamName={teamName} onNavigate={onClose} />
+        )}
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
             {t('editTeam.actions.cancel')}

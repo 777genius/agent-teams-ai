@@ -9,7 +9,15 @@ export type { TeamProjectContextMode } from '@shared/types/team';
 export type TeamProjectContextView =
   | { mode: 'shared'; state: 'ready'; executionTeamName: string }
   | { mode: 'per_project'; state: 'redirect'; logicalTeamName: string; projectPath: string }
-  | { mode: 'per_project'; state: 'needs_project' | 'empty' | 'pending' }
+  | { mode: 'per_project'; state: 'needs_project'; recoveryProjectPath?: string }
+  | { mode: 'per_project'; state: 'empty' }
+  | {
+      mode: 'per_project';
+      state: 'pending';
+      reason: 'launching' | 'incomplete' | 'unknown';
+      projectPath: string;
+      runId: string | null;
+    }
   | {
       mode: 'per_project';
       state: 'ready';

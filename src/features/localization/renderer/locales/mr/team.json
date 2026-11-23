@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} सुरू होण्यात अयशस्वी",
         "teammatesFailedToStart": "{{count}} सहकारी सुरू होण्यात अयशस्वी",
-        "teammatesFailedRatio": "{{count}}/{{total}} सहकारी सुरू होण्यात अयशस्वी"
+        "teammatesFailedRatio": "{{count}}/{{total}} सहकारी सुरू होण्यात अयशस्वी",
+        "manualPermissionUnsupported": "या सुरू करण्याच्या पद्धतीत साधनांची मॅन्युअल मंजुरी समर्थित नाही. मंजुरीला समर्थन देणारी पद्धत निवडा आणि पुन्हा प्रयत्न करा."
       },
       "skipped": {
         "memberSkipped": "या लॉन्चसाठी {{name}} वगळला",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "“{{project}}” प्रकल्पात टीम सुरू करणे पूर्ण झाले नाही. पुन्हा सुरू करा.",
+    "unknown": "“{{project}}” प्रकल्पातील मागील रन थांबल्याची पुष्टी झालेली नाही. पुन्हा सुरू करण्यापूर्वी त्याची स्थिती तपासा.",
+    "retryLaunch": "पुन्हा सुरू करा",
+    "recoveryProject": "ही टीम संपादित करण्यापूर्वी “{{project}}” प्रकल्पातील अपूर्ण प्रारंभ तपासा.",
+    "openProject": "प्रकल्प उघडा"
   }
 }

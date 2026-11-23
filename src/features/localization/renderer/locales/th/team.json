@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} เริ่มไม่สำเร็จ",
         "teammatesFailedToStart": "เพื่อนร่วมทีม {{count}} คนเริ่มไม่สำเร็จ",
-        "teammatesFailedRatio": "เพื่อนร่วมทีม {{count}}/{{total}} คนเริ่มไม่สำเร็จ"
+        "teammatesFailedRatio": "เพื่อนร่วมทีม {{count}}/{{total}} คนเริ่มไม่สำเร็จ",
+        "manualPermissionUnsupported": "วิธีเริ่มนี้ไม่รองรับการอนุมัติเครื่องมือด้วยตนเอง เลือกวิธีที่รองรับการอนุมัติแล้วลองอีกครั้ง"
       },
       "skipped": {
         "memberSkipped": "{{name}} ถูกข้ามสำหรับการเริ่มนี้",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "การเริ่มทีมในโปรเจกต์ “{{project}}” ยังไม่เสร็จสิ้น โปรดลองเริ่มใหม่",
+    "unknown": "ยังยืนยันไม่ได้ว่าการทำงานก่อนหน้าในโปรเจกต์ “{{project}}” หยุดแล้ว ตรวจสอบสถานะก่อนเริ่มใหม่",
+    "retryLaunch": "ลองเริ่มใหม่",
+    "recoveryProject": "ตรวจสอบการเริ่มที่ยังไม่เสร็จในโปรเจกต์ “{{project}}” ก่อนแก้ไขทีมนี้",
+    "openProject": "เปิดโปรเจกต์"
   }
 }

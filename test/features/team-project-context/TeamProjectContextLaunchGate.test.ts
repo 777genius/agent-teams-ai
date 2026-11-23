@@ -104,6 +104,8 @@ describe('TeamProjectContextLaunchGate', () => {
       await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('launching');
       f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: false, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-first' }) });
       await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('launching');
+      f.states.set('ptc-first', { teamName: 'another-team', isAlive: true, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-first' }) });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('launching');
     });
 
     it('refuses multiple running projects or a logical runtime', async () => {

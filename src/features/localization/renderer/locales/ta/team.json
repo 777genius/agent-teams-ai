@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} தொடங்கத் தோல்வியடைந்தது",
         "teammatesFailedToStart": "{{count}} teammates தொடங்கத் தோல்வியடைந்தனர்",
-        "teammatesFailedRatio": "{{count}}/{{total}} teammates தொடங்கத் தோல்வியடைந்தனர்"
+        "teammatesFailedRatio": "{{count}}/{{total}} teammates தொடங்கத் தோல்வியடைந்தனர்",
+        "manualPermissionUnsupported": "இந்தத் தொடக்க முறை கருவிகளுக்கான கைமுறை ஒப்புதலை ஆதரிக்கவில்லை. ஒப்புதலை ஆதரிக்கும் முறையைத் தேர்ந்தெடுத்து மீண்டும் முயற்சிக்கவும்."
       },
       "skipped": {
         "memberSkipped": "{{name}} இந்த launch க்கு தவிர்க்கப்பட்டது",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "“{{project}}” திட்டத்தில் குழுவைத் தொடங்குவது நிறைவடையவில்லை. மீண்டும் தொடங்கவும்.",
+    "unknown": "“{{project}}” திட்டத்தின் முந்தைய இயக்கம் நிறுத்தப்பட்டது உறுதிப்படுத்தப்படவில்லை. மீண்டும் தொடங்கும் முன் அதன் நிலையைச் சரிபார்க்கவும்.",
+    "retryLaunch": "மீண்டும் தொடங்கவும்",
+    "recoveryProject": "இந்தக் குழுவைத் திருத்தும் முன் “{{project}}” திட்டத்தில் முடியாத தொடக்கத்தைச் சரிபார்க்கவும்.",
+    "openProject": "திட்டத்தைத் திற"
   }
 }
