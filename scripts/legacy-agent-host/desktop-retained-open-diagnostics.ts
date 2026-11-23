@@ -44,6 +44,97 @@ interface UnknownProjection {
   readonly reason: UnknownReason;
 }
 export type RetainedOpenDiagnosticProjection = ObservedProjection | UnknownProjection;
+
+/** Serialized into the existing failure-only CDP read; no store, getter, callback or IPC calls. */
+export function projectRetainedDonorLaunchAuthority(page: Pick<Element, 'querySelectorAll'>): Record<string, unknown> {
+  // Keep this function self-contained: its source runs in the already captured renderer.
+  const field = (value: unknown, key: string): unknown => {
+    if (!value || typeof value !== 'object') return undefined;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  };
+  const record = (value: unknown): boolean => !!value && typeof value === 'object' && !Array.isArray(value);
+  const choice = (value: unknown, allowed: readonly string[]): string | null =>
+    typeof value === 'string' && allowed.includes(value) ? value : null;
+  const bool = (value: unknown): boolean | null => typeof value === 'boolean' ? value : null;
+  const presence = (value: unknown): string => value === undefined ? 'missing' : value === null ? 'null' :
+    record(value) ? 'present' : 'invalid';
+  const timestamp = (value: unknown): string | null =>
+    typeof value === 'string' && value.length === 24 && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) &&
+    Number.isFinite(Date.parse(value)) ? value : null;
+  const length = (value: unknown, maximum: number): number | null => {
+    const count = Array.isArray(value) ? field(value, 'length') : undefined;
+    return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0 && count <= maximum ? count : null;
+  };
+  const unavailable = (reason: string) => ({ status: 'diagnostic-unknown', reason });
+  const id = 'create-team-launch-authority-blocker';
+  const providers = ['anthropic', 'codex', 'opencode'];
+  const catalogSources = ['claude-sdk', 'anthropic-models-api', 'anthropic-compatible-api', 'app-server', 'static-fallback'];
+  try {
+    const nodes = page.querySelectorAll('[id="create-team-launch-authority-blocker"]');
+    if (nodes.length !== 1) return unavailable(nodes.length ? 'ambiguous-blocker' : 'missing-blocker');
+    const node = nodes[0]!, keys = Object.getOwnPropertyNames(node);
+    if (keys.length > 128) return unavailable('fiber-limit');
+    const fiberKeys = keys.filter(key => key.startsWith('__reactFiber$'));
+    if (fiberKeys.length !== 1) return unavailable('missing-fiber');
+    const attached = field(node, fiberKeys[0]!);
+    let current: unknown[] | undefined;
+    for (const candidate of [attached, field(attached, 'alternate')]) {
+      if (!record(candidate) || field(candidate, 'stateNode') !== node) continue;
+      const path: unknown[] = [], seen = new Set<unknown>();
+      let cursor: unknown = candidate;
+      for (let depth = 0; record(cursor) && depth < 64 && !seen.has(cursor); depth++) {
+        seen.add(cursor); path.push(cursor);
+        const parent = field(cursor, 'return');
+        if (parent === null && field(cursor, 'tag') === 3 && field(field(cursor, 'stateNode'), 'current') === cursor) {
+          if (current) return unavailable('ambiguous-current-fiber');
+          current = path;
+          break;
+        }
+        cursor = parent;
+      }
+    }
+    if (!current) return unavailable('current-fiber-unavailable');
+    const matches = current.map(fiber => field(fiber, 'memoizedProps')).filter(props =>
+      field(props, 'id') === id && Object.getOwnPropertyDescriptor(props as object, 'blockers') !== undefined);
+    if (matches.length !== 1) return unavailable('blocker-props-unavailable');
+    const props = matches[0], blockers = field(props, 'blockers'), count = length(blockers, providers.length);
+    if (count === null || count === 0) return unavailable('invalid-blockers');
+    const projected: Record<string, unknown>[] = [], seenProviders = new Set<string>();
+    for (let index = 0; index < count; index++) {
+      const blocker = field(blockers, String(index)), providerId = choice(field(blocker, 'providerId'), providers);
+      if (!providerId || seenProviders.has(providerId)) return unavailable('invalid-provider');
+      seenProviders.add(providerId);
+      const provider = field(blocker, 'providerStatus');
+      if (record(provider) && field(provider, 'providerId') !== providerId) return unavailable('provider-mismatch');
+      const catalog = field(provider, 'modelCatalog'), diagnostics = field(catalog, 'diagnostics');
+      const runtimeCatalog = field(field(provider, 'runtimeCapabilities'), 'modelCatalog');
+      projected.push({ providerId, providerLoading: bool(field(field(props, 'providerLoading'), providerId)),
+        providerStatus: { presence: presence(provider), supported: bool(field(provider, 'supported')),
+          authenticated: bool(field(provider, 'authenticated')),
+          verificationState: choice(field(provider, 'verificationState'), ['verified', 'unknown', 'offline', 'error']),
+          statusCheckOutcome: choice(field(provider, 'statusCheckOutcome'), ['authoritative', 'pending', 'transient_error', 'model_only']),
+          statusCheckErrorCode: choice(field(provider, 'statusCheckErrorCode'), ['timeout', 'unavailable', 'runtime_missing', 'partial_response', 'project_missing']),
+          teamLaunchAuthorityRestriction: choice(field(provider, 'teamLaunchAuthorityRestriction'), ['catalog-refresh']),
+          modelVerificationState: choice(field(provider, 'modelVerificationState'), ['idle', 'verifying', 'verified']),
+          modelCatalogRefreshState: choice(field(provider, 'modelCatalogRefreshState'), ['idle', 'loading', 'ready', 'error']),
+          capabilities: { teamLaunch: bool(field(field(provider, 'capabilities'), 'teamLaunch')),
+            oneShot: bool(field(field(provider, 'capabilities'), 'oneShot')) },
+          runtimeModelCatalog: { dynamic: bool(field(runtimeCatalog, 'dynamic')),
+            source: choice(field(runtimeCatalog, 'source'), [...catalogSources, 'runtime']) },
+          modelCatalog: { presence: presence(catalog), schemaVersion: field(catalog, 'schemaVersion') === 1 ? 1 : null,
+            providerId: choice(field(catalog, 'providerId'), providers),
+            source: choice(field(catalog, 'source'), catalogSources),
+            status: choice(field(catalog, 'status'), ['ready', 'stale', 'degraded', 'unavailable']),
+            fetchedAt: timestamp(field(catalog, 'fetchedAt')), staleAt: timestamp(field(catalog, 'staleAt')),
+            modelCount: length(field(catalog, 'models'), 16384),
+            diagnostics: { configReadState: choice(field(diagnostics, 'configReadState'), ['ready', 'unsupported', 'failed', 'skipped']),
+              appServerState: choice(field(diagnostics, 'appServerState'), ['healthy', 'degraded', 'runtime-missing', 'incompatible']) } } } });
+    }
+    return { status: 'observed', source: 'rendered-blocker-props', blockers: projected };
+  } catch { return unavailable('unreadable-blocker'); }
+}
+
 interface ExpectedBinding { mainPid: number; operationHash: string }
 interface LogInput { main: string; rotated?: string }
 interface FileIdentity {

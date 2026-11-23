@@ -8,6 +8,7 @@ import { isLeadMember } from '../../src/shared/utils/leadDetection.ts';
 import { Cdp, waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { bounded } from './desktop-proof-bounds.ts';
+import { projectRetainedDonorLaunchAuthority } from './desktop-retained-open-diagnostics.ts';
 import type { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
 
 export function linuxProcessIdentity(pid: number) {
@@ -320,6 +321,7 @@ export async function captureRetainedDonorUiFailure(app: Pick<RetainedApp, 'asse
         solo:page.querySelector('#solo-team')?.getAttribute('aria-checked')??null,
         lead:text(page.querySelector('[data-role="lead-row"]'),500),
         formText:text(page,4000),footerText:text(footer,4000),
+        launchAuthority:(${projectRetainedDonorLaunchAuthority.toString()})(page),
         errors:[...page.querySelectorAll('[role="alert"],[aria-invalid="true"],[class*="text-red-"]')]
           .slice(0,8).map(node=>text(node,300)),
         buttons:[...footer?.querySelectorAll('button')??[]].slice(0,8).map(node=>({

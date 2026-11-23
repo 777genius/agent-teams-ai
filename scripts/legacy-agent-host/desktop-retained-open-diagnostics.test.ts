@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { link, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -12,11 +13,13 @@ import {
   LEGACY_STOPPED_OWNER_FACT_NAMES,
 } from '../../src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts';
 import {
+  projectRetainedDonorLaunchAuthority,
   projectRetainedOpenDiagnostics,
   readRetainedOpenDiagnostic,
   type RetainedOpenDiagnosticBinding,
   type RetainedOpenDiagnosticFiles,
 } from './desktop-retained-open-diagnostics.ts';
+import { bounded } from './desktop-proof-bounds.ts';
 import { retainedOpenCodeLaunchExpression, RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS } from './desktop-retained-opencode-launch.ts';
 
 const binding: RetainedOpenDiagnosticBinding = {
@@ -434,5 +437,200 @@ test('both actual retained callsites keep one original expression and clear bind
       assert.deepEqual(result.binding, rejected ? { ...binding, intentId } : undefined);
       assert.equal(result.error, rejected ? error : undefined);
     }
+  }
+});
+
+type Row = Record<string, unknown>;
+const donorBlockerId = 'create-team-launch-authority-blocker';
+function donorNotice() {
+  const provider: Row = { providerId: 'opencode', supported: true, authenticated: false,
+    verificationState: 'error', statusCheckOutcome: 'transient_error', statusCheckErrorCode: 'runtime_missing',
+    modelVerificationState: 'verified', modelCatalogRefreshState: 'error',
+    capabilities: { teamLaunch: false, oneShot: true },
+    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    modelCatalog: { schemaVersion: 1, providerId: 'opencode', source: 'app-server', status: 'degraded',
+      fetchedAt: '2026-11-23T02:17:03.299Z', staleAt: '2026-11-23T02:22:03.299Z',
+      models: [{ id: 'SECRET-model', launchModel: 'SECRET-route' }], defaultModelId: 'SECRET-model',
+      diagnostics: { configReadState: 'ready', appServerState: 'runtime-missing',
+        code: 'SECRET-diagnostic-code', message: 'SECRET-diagnostic-message' } },
+    authMethod: 'SECRET-auth', statusMessage: 'SECRET-status', detailMessage: 'SECRET-detail',
+    backend: { endpointLabel: 'SECRET-endpoint', projectId: 'SECRET-project' }, catalogScope: 'SECRET-scope' };
+  const blocker: Row = { providerId: 'opencode', providerStatus: provider, detail: 'SECRET-blocker-detail' };
+  const props: Row = { id: donorBlockerId, action: 'SECRET-action', blockers: [blocker],
+    onOpenProviderSettings() { throw new Error('callback must not execute'); } };
+  const root: Row = { tag: 3, return: null, stateNode: {} };
+  (root.stateNode as Row).current = root;
+  const notice: Row = { memoizedProps: props, return: root };
+  const node: Row = {};
+  const host: Row = { stateNode: node, memoizedProps: { id: donorBlockerId }, return: notice, alternate: null };
+  node.__reactFiber$TEST = host;
+  const nodes: unknown[] = [node];
+  const page = { querySelectorAll(selector: string) {
+    assert.equal(selector, '[id="' + donorBlockerId + '"]'); return nodes;
+  } } as unknown as Pick<Element, 'querySelectorAll'>;
+  return { provider, blocker, props, root, notice, node, host, nodes, page };
+}
+// Exercise the serialized renderer function, not a separate test-side projection.
+const browserProjection = new Function('return (' + projectRetainedDonorLaunchAuthority.toString() + ')')() as
+  typeof projectRetainedDonorLaunchAuthority;
+const firstProvider = (result: Row): Row => ((result.blockers as Row[])[0]!.providerStatus as Row);
+
+test('donor-shaped rendered notice projects only closed status and catalog facts without private text', () => {
+  const fixture = donorNotice(), result = browserProjection(fixture.page), provider = firstProvider(result);
+  assert.equal(result.status, 'observed'); assert.equal(result.source, 'rendered-blocker-props');
+  assert.equal((result.blockers as Row[])[0]!.providerLoading, null, 'missing prop never reads the store fallback');
+  assert.equal(provider.supported, true); assert.equal(provider.authenticated, false);
+  assert.equal(provider.statusCheckOutcome, 'transient_error'); assert.equal(provider.statusCheckErrorCode, 'runtime_missing');
+  assert.equal(provider.modelVerificationState, 'verified'); assert.equal(provider.modelCatalogRefreshState, 'error');
+  assert.deepEqual(provider.capabilities, { teamLaunch: false, oneShot: true });
+  assert.deepEqual(provider.runtimeModelCatalog, { dynamic: true, source: 'app-server' });
+  assert.deepEqual(provider.modelCatalog, { presence: 'present', schemaVersion: 1, providerId: 'opencode',
+    source: 'app-server', status: 'degraded', fetchedAt: '2026-11-23T02:17:03.299Z', staleAt: '2026-11-23T02:22:03.299Z',
+    modelCount: 1, diagnostics: { configReadState: 'ready', appServerState: 'runtime-missing' } });
+  assert.equal(JSON.stringify(result).includes('SECRET'), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) < 2048);
+});
+
+test('donor projection selects the committed alternate and refuses ambiguous or unmounted fibers', () => {
+  const old = donorNotice(), current = donorNotice();
+  current.host.stateNode = old.node;
+  old.host.alternate = current.host;
+  old.root.stateNode = current.root.stateNode;
+  current.provider.statusCheckErrorCode = 'partial_response';
+  assert.equal(firstProvider(browserProjection(old.page)).statusCheckErrorCode, 'partial_response');
+  old.root.stateNode = { current: old.root };
+  assert.deepEqual(browserProjection(old.page), { status: 'diagnostic-unknown', reason: 'ambiguous-current-fiber' });
+  old.host.alternate = null; old.root.stateNode = {};
+  assert.deepEqual(browserProjection(old.page), { status: 'diagnostic-unknown', reason: 'current-fiber-unavailable' });
+});
+
+test('donor projection never invokes getters and treats absent or malformed authority as unknown', () => {
+  const fixture = donorNotice(); let reads = 0;
+  const getter = { get() { reads++; throw new Error('SECRET-getter'); }, configurable: true };
+  for (const name of ['supported', 'capabilities', 'detailMessage', 'authMethod'])
+    Object.defineProperty(fixture.provider, name, getter);
+  Object.defineProperty(fixture.blocker, 'detail', getter);
+  fixture.props.providerLoading = { opencode: true };
+  fixture.provider.statusCheckOutcome = 'SECRET-invalid-outcome';
+  fixture.provider.statusCheckErrorCode = 'SECRET-invalid-code';
+  (fixture.provider.modelCatalog as Row).fetchedAt = 'SECRET'.repeat(10000);
+  (fixture.provider.modelCatalog as Row).models = new Array(16385);
+  const result = browserProjection(fixture.page), projected = firstProvider(result);
+  assert.equal(reads, 0); assert.equal(projected.supported, null);
+  assert.deepEqual(projected.capabilities, { teamLaunch: null, oneShot: null });
+  assert.equal(projected.statusCheckOutcome, null); assert.equal(projected.statusCheckErrorCode, null);
+  assert.equal((projected.modelCatalog as Row).fetchedAt, null);
+  assert.equal((projected.modelCatalog as Row).modelCount, null);
+  assert.equal((result.blockers as Row[])[0]!.providerLoading, true);
+  assert.equal(JSON.stringify(result).includes('SECRET'), false);
+  Object.defineProperty(fixture.props, 'blockers', getter);
+  assert.deepEqual(browserProjection(fixture.page), { status: 'diagnostic-unknown', reason: 'invalid-blockers' });
+  assert.equal(reads, 0);
+  for (const missing of [undefined, null, 'SECRET-status']) {
+    const absent = donorNotice(); absent.blocker.providerStatus = missing;
+    const status = firstProvider(browserProjection(absent.page));
+    assert.equal(status.presence, missing === undefined ? 'missing' : missing === null ? 'null' : 'invalid');
+    assert.equal(status.authenticated, null); assert.equal(JSON.stringify(status).includes('SECRET'), false);
+  }
+});
+
+test('donor projection is bounded and refuses missing duplicate foreign or cyclic evidence', () => {
+  for (const mutate of [
+    (f: ReturnType<typeof donorNotice>) => { f.nodes.length = 0; },
+    (f: ReturnType<typeof donorNotice>) => { f.nodes.push(f.node); },
+    (f: ReturnType<typeof donorNotice>) => { delete f.node.__reactFiber$TEST; },
+    (f: ReturnType<typeof donorNotice>) => { f.props.id = 'unrelated-notice'; },
+    (f: ReturnType<typeof donorNotice>) => { f.props.blockers = [f.blocker, f.blocker]; },
+    (f: ReturnType<typeof donorNotice>) => { f.props.blockers = new Array(4); },
+    (f: ReturnType<typeof donorNotice>) => { f.provider.providerId = 'codex'; },
+    (f: ReturnType<typeof donorNotice>) => { f.blocker.providerId = 'SECRET-provider'; },
+    (f: ReturnType<typeof donorNotice>) => { f.notice.return = f.host; },
+    (f: ReturnType<typeof donorNotice>) => {
+      let parent: unknown = f.root;
+      for (let depth = 0; depth < 64; depth++) parent = { return: parent };
+      f.notice.return = parent;
+    },
+    (f: ReturnType<typeof donorNotice>) => {
+      for (let index = 0; index < 128; index++) f.node['extra' + index] = null;
+    },
+  ]) {
+    const fixture = donorNotice(); mutate(fixture);
+    const result = browserProjection(fixture.page);
+    assert.equal(result.status, 'diagnostic-unknown'); assert.equal(result.blockers, undefined);
+    assert.equal(JSON.stringify(result).includes('SECRET'), false);
+  }
+});
+
+const donorAppSource = readFileSync(new URL('./desktop-retained-opencode-app.ts', import.meta.url), 'utf8');
+const captureStart = donorAppSource.indexOf('export async function captureRetainedDonorUiFailure(');
+const captureEnd = donorAppSource.indexOf('\n/** The same native reader', captureStart);
+assert.ok(captureStart > 0 && captureEnd > captureStart);
+const captureSource = stripTypeScriptTypes(donorAppSource.slice(captureStart, captureEnd).replace(/^export /u, ''));
+function actualDonorCapture(fixture = donorNotice()) {
+  const events: string[] = [], budgets: [number, string][] = [], writes: unknown[][] = [];
+  const page = { querySelector: () => null, querySelectorAll: (selector: string) =>
+    selector === '[id="' + donorBlockerId + '"]' ? fixture.nodes : [] };
+  const document = { readyState: 'complete', querySelectorAll(selector: string) {
+    assert.equal(selector, '[data-testid="create-team-page"]'); return [page];
+  } };
+  const app = { original: { pid: 321, birth: '123' }, electron: { pid: 322, birth: '124' },
+    assertCurrent() { events.push('owner'); },
+    cdp: { async evaluate(expression: string) {
+      events.push('evaluate');
+      return new Function('document', 'HTMLElement', 'HTMLInputElement', 'return ' + expression)(document, class {}, class {});
+    }, async send(method: string, params: unknown) {
+      events.push('screenshot'); assert.equal(method, 'Page.captureScreenshot');
+      assert.deepEqual(params, { format: 'png', fromSurface: true });
+      return { data: Buffer.from('TEST-png').toString('base64') };
+    } }, async cleanup() { events.push('cleanup'); return true; } };
+  const ports = { assert, Buffer, join, createHash, projectRetainedDonorLaunchAuthority,
+    async bounded<T>(promise: Promise<T>, ms: number, label: string) {
+      budgets.push([ms, label]); return bounded(promise, ms, label);
+    }, async writeFile(...args: unknown[]) { events.push('write'); writes.push(args); } };
+  const bindCapture = new Function(...Object.keys(ports), captureSource + ';return captureRetainedDonorUiFailure;');
+  const capture = bindCapture(...Object.values(ports)) as (app: unknown, root: string, epoch: Row) => Promise<Row>;
+  return { app, capture, events, budgets, writes };
+}
+
+test('actual donor capture adds rendered props inside the one original bounded evaluation', async () => {
+  const fixture = actualDonorCapture();
+  const result = await fixture.capture(fixture.app, '/TEST-root', { kind: 'donor', sourceCommit: '4a0e06277fe216d9f82dbbede362668fe46622ee' });
+  const form = result.form as Row;
+  assert.equal(result.status, 'INCOMPLETE'); assert.equal(result.atomicWithFailure, false);
+  assert.equal(result.observation, 'after-original-failure-before-cleanup');
+  assert.equal(result.original, fixture.app.original); assert.equal(result.electron, fixture.app.electron);
+  assert.equal(firstProvider(form.launchAuthority as Row).statusCheckErrorCode, 'runtime_missing');
+  assert.deepEqual(fixture.budgets, [[4000, 'read retained donor failure form'], [5000, 'retained donor failure screenshot']]);
+  assert.deepEqual(fixture.events, ['owner', 'evaluate', 'owner', 'owner', 'screenshot', 'owner', 'write']);
+  assert.equal(fixture.writes.length, 1);
+  assert.deepEqual(fixture.writes[0], ['/TEST-root/donor-history-failure.png', Buffer.from('TEST-png'), { mode: 0o600, flag: 'wx' }]);
+  assert.equal(JSON.stringify(result).includes('SECRET'), false);
+});
+
+const donorFailureStart = donorAppSource.indexOf('catch (error) {\n    failure = error;',
+  donorAppSource.indexOf('export async function exerciseRetainedDonorHistory('));
+const donorFailureEnd = donorAppSource.lastIndexOf('\n}');
+assert.ok(donorFailureStart > 0 && donorFailureEnd > donorFailureStart);
+const donorFailureBody = donorAppSource.slice(donorFailureStart, donorFailureEnd);
+test('actual donor failure captures once before cleanup and preserves the same failure even if capture throws', async () => {
+  for (const diagnosticThrows of [false, true]) {
+    const fixture = actualDonorCapture(), original = new Error('TEST-original-Create-blocked');
+    const proof: Row = {}, input = { cleanupErrors: [] as unknown[], baseline: [] };
+    const ports = { assert, app: fixture.app, root: '/TEST-root', proof, input, epochs: [{ kind: 'donor' }],
+      processes: [], inferenceAtDonorQuit: undefined,
+      async attempt() { fixture.events.push('attempt'); throw original; },
+      async captureRetainedDonorUiFailure(...args: Parameters<typeof fixture.capture>) {
+        fixture.events.push('capture'); if (diagnosticThrows) throw new Error('TEST-capture');
+        return fixture.capture(...args);
+      }, originalLinuxProcessPresent() { throw new Error('unexpected process observation'); },
+      async testNamespaceLinuxProcesses() { fixture.events.push('namespace'); return []; } };
+    const run = new Function(...Object.keys(ports),
+      'return (async()=>{let failure;try{await attempt();}' + donorFailureBody + '})()');
+    await assert.rejects(run(...Object.values(ports)), error => error === original);
+    assert.deepEqual(fixture.events.slice(0, 2), ['attempt', 'capture']);
+    assert.deepEqual(fixture.events.slice(-2), ['cleanup', 'namespace']);
+    assert.equal(fixture.events.filter(value => value === 'capture').length, 1);
+    assert.equal(fixture.events.filter(value => value === 'evaluate').length, diagnosticThrows ? 0 : 1);
+    assert.deepEqual(input.cleanupErrors, []); assert.equal(proof.inferenceAtDonorQuit, null);
   }
 });

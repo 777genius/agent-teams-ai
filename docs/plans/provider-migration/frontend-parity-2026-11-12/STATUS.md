@@ -148,9 +148,18 @@ deep model preparation, с сообщением runtime readiness. Исходн�
 отправлен; его 30s deadline не продлевался. Предшествующие V1/V2 business steps,
 scoped Stops и cold reads прошли, donor и общий cleanup подтверждены. Последующие
 три assertions не получили требуемых donor/source-selection receipts. Точная
-причина readiness из сохранённого общего UI сообщения не установлена; готовится
-узкая failure-only диагностика уже показанного blocker state без новых provider
-вызовов, изменений donor source или ослабления admission.
+причина readiness из сохранённого общего UI сообщения не установлена. Добавлена
+узкая failure-only диагностика уже показанного blocker state: одна существующая
+CDP evaluation с прежним 4s budget читает только bounded current React props,
+закрытые status enums/booleans и catalog timestamps/count. Callback, getter,
+store и provider вызовы отсутствуют; свободный текст, auth details и model IDs
+исключены. Недоступные, ambiguous, stale или malformed props дают unknown;
+наблюдение после failure не считается атомарным доказательством причины.
+Исходная ошибка и cleanup сохраняются, click/deadline/donor source не меняются.
+Шесть новых actual serialized/capture/catch regression cases и прежние проверки:
+37/37 PASS, strict scoped TS7 и fast lint без errors, source-size guard PASS;
+app остаётся 795 строк. Независимое R2 пройдено. Диагностика сама по себе
+не исправляет исходный readiness failure и не является новой E2E квалификацией.
 
 Последняя полная проверка canonical root TS7 7.0.2 на точном `15deedada` шла
 отдельно от Electron/сборок с Go memory budget, без изменения tsconfig/типов.
