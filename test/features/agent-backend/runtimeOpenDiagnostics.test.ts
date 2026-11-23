@@ -47,6 +47,65 @@ test('captures original hashes once and observes only the first failure at its o
   assert.ok(Buffer.byteLength(lines[0]!) < 8192);
 });
 
+test('factory failure retains the original closed readiness refusal through the existing decoder and Main sink', () => {
+  const observations = [
+    { phase: 'cutoff', reason: 'held', cutoff: 100, observedAt: 100 },
+    { phase: 'initial-authority', reason: 'threw', cutoff: null, observedAt: null },
+    { phase: 'reference', reason: 'threw', cutoff: 100, observedAt: 99 },
+  ];
+  const entries: { namespace: string; args: readonly unknown[] }[] = [];
+  const remove = addLogSink(entry => { entries.push(entry); });
+  try {
+    for (const readinessRefusal of observations) {
+      const lines: string[] = [], values: RuntimeOpenDiagnostic[] = [];
+      let clocks = 0;
+      const observe = createRuntimeOpenDiagnostic(selected(), line => { lines.push(line); }, () => { clocks++; return 150; });
+      observe('driver-open', new Error('TEST-original-private-error'), readinessRefusal);
+      observe('driver-open', { code: 'hold' }, observations[0]);
+      assert.equal(clocks, 1); assert.equal(lines.length, 1);
+      const decode = decodeTo(values);
+      for (const byte of Buffer.from(lines[0]!)) decode(Buffer.from([byte]));
+      assert.equal(values.length, 1);
+      assert.deepEqual(values[0]!.readinessRefusal, readinessRefusal);
+      assert.equal(values[0]!.category, 'unknown', 'the original Error classification is not replaced by the detail');
+      assert.ok(Object.isFrozen(values[0]!.readinessRefusal));
+      assert.equal(lines[0]!.includes('TEST-'), false);
+      createCapturedHostDiagnostics(() => 731)(Buffer.from(lines[0]!));
+      assert.deepEqual(entries.at(-1)!.args, ['Runtime open refusal', { ...values[0], hostPid: 731 }]);
+    }
+  } finally { remove(); }
+});
+
+test('invalid readiness detail cannot execute accessors, leak extra fields or replace a later failure', () => {
+  const safe = { phase: 'cutoff', reason: 'held', cutoff: 10, observedAt: 10 };
+  const secret = 'TEST-private-key-path-error';
+  let reads = 0;
+  const getter = Object.defineProperty({ ...safe }, 'phase', { get() { reads++; throw new Error(secret); } });
+  const proxy = new Proxy({ ...safe }, { ownKeys() { reads++; throw new Error(secret); } });
+  const inherited = Object.create(safe) as unknown;
+  const malformed = [null, [], {}, { ...safe, extra: secret }, { ...safe, phase: secret },
+    { ...safe, reason: secret }, { ...safe, cutoff: -1 }, { ...safe, cutoff: 0.5 },
+    { ...safe, cutoff: Number.NaN }, { ...safe, observedAt: Number.MAX_SAFE_INTEGER + 1 },
+    { ...safe, observedAt: null }, { ...safe, cutoff: null }, { ...safe, observedAt: '10' },
+    { ...safe, [Symbol(secret)]: true }, getter, proxy, inherited];
+  for (const readinessRefusal of malformed) {
+    const lines: string[] = [];
+    const observe = createRuntimeOpenDiagnostic(selected(), line => { lines.push(line); }, () => 20);
+    observe('driver-open', { code: 'forbidden' }, readinessRefusal);
+    observe('driver-open', { code: 'held' }, safe);
+    assert.equal(lines.length, 1);
+    const value = JSON.parse(lines[0]!.slice(prefix.length)) as Record<string, unknown>;
+    assert.equal(Object.hasOwn(value, 'readinessRefusal'), false);
+    assert.equal(value.category, 'forbidden'); assert.equal(lines[0]!.includes(secret), false);
+  }
+  assert.equal(reads, 0);
+  const lines: string[] = [];
+  createRuntimeOpenDiagnostic({ ...selected(), source: 'runtime' }, line => { lines.push(line); }, () => 20)(
+    'driver-open', { code: 'hold' }, safe);
+  assert.equal(Object.hasOwn(JSON.parse(lines[0]!.slice(prefix.length)), 'readinessRefusal'), false,
+    'an outer Runtime failure cannot relabel a factory preparation observation');
+});
+
 test('classifies only fixed own data properties without invoking error getters or inherited fields', () => {
   const secret = 'TEST-private-path-token-error', lines: string[] = [];
   let reads = 0;
@@ -227,6 +286,23 @@ test('decoder rejects raw fields, wrong-source phases and malformed hashes, cate
   assert.deepEqual(values, []);
   decode(Buffer.from(frame({ ...valid, source: 'runtime', phase: 'readiness' })));
   assert.equal(values.length, 1);
+});
+
+test('decoder accepts only the exact optional factory readiness shape and preserves following old frames', () => {
+  const values: RuntimeOpenDiagnostic[] = [], decode = decodeTo(values);
+  const readinessRefusal = { phase: 'cutoff', reason: 'held', cutoff: 100, observedAt: 101 };
+  const malformed = [null, [], {}, { ...readinessRefusal, extra: 'TEST-secret' },
+    { ...readinessRefusal, message: 'TEST-secret' }, { ...readinessRefusal, phase: 'TEST-secret' },
+    { ...readinessRefusal, reason: 'expired' }, { ...readinessRefusal, cutoff: -1 },
+    { ...readinessRefusal, observedAt: 0.5 }, { ...readinessRefusal, cutoff: null },
+    { ...readinessRefusal, observedAt: null }, { ...readinessRefusal, cutoff: undefined },
+    { ...readinessRefusal, observedAt: '101' }, { ...readinessRefusal, observedAt: Number.MAX_SAFE_INTEGER + 1 }];
+  for (const detail of malformed) decode(Buffer.from(frame({ ...valid, readinessRefusal: detail })));
+  decode(Buffer.from(frame({ ...valid, source: 'runtime', readinessRefusal })));
+  assert.deepEqual<RuntimeOpenDiagnostic[]>(values, []);
+  decode(Buffer.from(frame({ ...valid, readinessRefusal }) + frame()));
+  assert.deepEqual(values, [{ ...valid, readinessRefusal }, valid]);
+  assert.ok(Object.isFrozen(values[0]!.readinessRefusal));
 });
 
 test('the original shared 8192-byte frame limit and fatal UTF-8 recovery remain exact', () => {

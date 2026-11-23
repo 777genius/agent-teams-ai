@@ -21,6 +21,14 @@ const runtimeOpenPhases = {
 };
 const runtimeOpenCategories = new Set(['invalid', 'conflict', 'forbidden', 'held',
   'busy', 'aborted', 'deadline', 'unknown']);
+const readinessRefusalPhases = new Set(['initial-authority', 'read-consumer', 'identity', 'continuation',
+  'requirements', 'cutoff', 'reference', 'equality', 'final-authority']);
+export interface RuntimeReadinessRefusalDiagnostic {
+  readonly phase: string;
+  readonly reason: 'held' | 'threw';
+  readonly cutoff: number | null;
+  readonly observedAt: number | null;
+}
 export interface RuntimeOpenDiagnostic {
   readonly profileHash: string;
   readonly configurationHash: string;
@@ -28,6 +36,7 @@ export interface RuntimeOpenDiagnostic {
   readonly phase: string;
   readonly category: string;
   readonly observedAtMs: number;
+  readonly readinessRefusal?: RuntimeReadinessRefusalDiagnostic;
 }
 const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
 const catalogPrefix = 'legacy-agent-host: opencode-catalog ';
@@ -185,6 +194,17 @@ const exact = (value: unknown, keys: readonly string[]): value is Record<string,
 const safeId = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/.test(value);
 
+function readinessRefusal(value: unknown): RuntimeReadinessRefusalDiagnostic | undefined {
+  if (!exact(value, ['phase', 'reason', 'cutoff', 'observedAt']) ||
+      typeof value.phase !== 'string' || !readinessRefusalPhases.has(value.phase) ||
+      (value.reason !== 'held' && value.reason !== 'threw')) return;
+  const { cutoff, observedAt } = value;
+  const time = (item: unknown): item is number => typeof item === 'number' && Number.isSafeInteger(item) && item >= 0;
+  if (!(cutoff === null && observedAt === null || time(cutoff) && time(observedAt))) return;
+  return Object.freeze({ phase: value.phase, reason: value.reason,
+    cutoff: cutoff as number | null, observedAt: observedAt as number | null });
+}
+
 /** Private stderr is untrusted: discard everything except this bounded, fixed record shape. */
 export function decodeClaudeCloseDiagnostics(
   retain: (value: ClaudeCloseDiagnostic) => void | Promise<void>,
@@ -213,17 +233,22 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(runtimeOpenPrefix)) {
         if (!retainRuntimeOpen) return;
         const value: unknown = JSON.parse(text.slice(runtimeOpenPrefix.length));
-        if (!exact(value, ['profileHash', 'configurationHash', 'source', 'phase', 'category', 'observedAtMs']) ||
+        const withReadiness = !!value && typeof value === 'object' && Object.hasOwn(value, 'readinessRefusal');
+        if (!exact(value, ['profileHash', 'configurationHash', 'source', 'phase', 'category', 'observedAtMs',
+          ...(withReadiness ? ['readinessRefusal'] : [])]) ||
             !hash(value.profileHash) || !hash(value.configurationHash) ||
             !(value.source === 'factory' || value.source === 'runtime') ||
             typeof value.phase !== 'string' || !runtimeOpenPhases[value.source].has(value.phase) ||
             typeof value.category !== 'string' || !runtimeOpenCategories.has(value.category) ||
             typeof value.observedAtMs !== 'number' || !Number.isSafeInteger(value.observedAtMs) ||
             value.observedAtMs < 0) return;
+        const detail = withReadiness && value.source === 'factory' ? readinessRefusal(value.readinessRefusal) : undefined;
+        if (withReadiness && !detail) return;
         const diagnostic: RuntimeOpenDiagnostic = Object.freeze({
           profileHash: value.profileHash, configurationHash: value.configurationHash,
           source: value.source, phase: value.phase, category: value.category,
           observedAtMs: value.observedAtMs,
+          ...(detail ? { readinessRefusal: detail } : {}),
         });
         void Promise.resolve(retainRuntimeOpen(diagnostic)).catch(() => {
           /* Diagnostic loss cannot settle an original Runtime open or cleanup. */

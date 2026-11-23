@@ -2,6 +2,7 @@ import { channel } from 'node:diagnostics_channel';
 import { z } from 'zod';
 import { createModelReadinessTiming } from '../diagnostics/modelReadinessTiming.js';
 import type { ModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
+import type { RuntimeReadinessRefusal } from '../diagnostics/runtimeOpenDiagnostic.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
 import { teamModelProbeProfile, teamModelProbeEffort, teamModelProbeActionDigest } from './teamLaunchModelProbe.js';
@@ -350,6 +351,8 @@ export function inspectMemberModelReadiness(options: {
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
   withAccountRead?: <T>(read: () => T) => T;
   authorityTiming?: ModelReadinessAuthorityTiming;
+  /** Private observation of the original first refusal; never enables timing or rechecks authority. */
+  onFirstRefusal?(observation: RuntimeReadinessRefusal): unknown;
   hostIncarnation: string; phase?: 'preclaim' | 'allocation';
 }): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
@@ -361,11 +364,17 @@ export function inspectMemberModelReadiness(options: {
     phase: options.phase ?? 'preclaim' });
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
   let refusalObserved = false;
+  let onFirstRefusal: ((observation: RuntimeReadinessRefusal) => unknown) | undefined;
+  try {
+    const field = Object.getOwnPropertyDescriptor(options, 'onFirstRefusal');
+    const callback: unknown = field && 'value' in field ? field.value : undefined;
+    if (typeof callback === 'function') onFirstRefusal = observation => Reflect.apply(callback, options, [observation]);
+  } catch { /* A missing diagnostic callback cannot replace the original inspection. */ }
   const timings = createModelReadinessTiming(readinessRefusal);
   let authorityTiming: ModelReadinessAuthorityTiming | undefined;
   try { authorityTiming = options.authorityTiming; } catch { /* Optional observation cannot replace an authority check. */ }
   const current = () => {
-    let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
+    let phase: RuntimeReadinessRefusal['phase'] = 'initial-authority', reason: 'held' | 'threw' = 'threw';
     let cutoff: number | null = null, observedAt: number | null = null;
     let failed = false;
     const timing = timings.begin(!refusalObserved, authorityTiming);
@@ -412,6 +421,10 @@ export function inspectMemberModelReadiness(options: {
       timing.finish();
       if (failed && !refusalObserved) {
         refusalObserved = true;
+        try {
+          if (onFirstRefusal) void Promise.resolve(onFirstRefusal(Object.freeze({ phase, reason, cutoff, observedAt })))
+            .catch(() => { /* Preserve the original refusal if an observer rejects. */ });
+        } catch { /* Observation cannot replace the original refusal or the existing private channel. */ }
         try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({
           kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),
           groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),

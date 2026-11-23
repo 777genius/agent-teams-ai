@@ -2,6 +2,115 @@
 
 Обновлено: **23 ноября 2026**. Единственный текущий рабочий план.
 
+## Продолжение 23 ноября: исправления после original CI `6791c558`: узкое исправление и диагностика
+
+Original Darwin Review не разрешил Launch в прежнем 120s ожидании; persisted
+model-probe receipt остался held. Все 718 original owner/read pairs завершились,
+без late/context retry. Это отличается от отдельного Quit failure после принятого
+native Launch: точная первичная ветка `driver-open/unknown` не была сохранена.
+Диагностика cutoff согласуется с хронологией, но не восстанавливает отсутствующий
+первичный exception. Исходные failures сохраняются; новые TEST результаты не
+превращают их в E2E PASS.
+
+Отдельный Linux Management на том же source остановился на original first Add:
+исходный Host flight имел 60s cutoff, а подготовка credential catalog, directory
+и connect заняла 26.904s после graph/native/identity. Первый attestation request
+достиг исходного cutoff; новая Carol Runtime session не опубликована, model HTTP
+не вызывался. Original app group и finite initial peers после cleanup пусты;
+отдельное освобождение model-probe custody этим census не доказано. Прежний
+артефакт не разделяет эти интервалы на currentness work и HTTP, поэтому новые
+закрытые счётчики измеряют существующие вызовы без изменения порядка и бюджета.
+
+Измеренный повторный pure work уменьшен отдельным cache публикаций RuntimeSource.
+Ключ — полная неизменённая строка publication JSON; cache принадлежит одному index,
+содержит не более двух entries и суммарно не более 2 MiB UTF-8. Внутри остаются только
+parsed data и два детерминированных digest; каждый возвращаемый объект глубоко
+клонируется. Все свежие index/command reads, receipt/history/owner/seed comparisons
+и прежний порядок проверок сохраняются. Отказ при разборе или сопоставлении publication
+очищает cache; authority, readiness и filesystem outcomes не кэшируются. Независимый
+Main caller сохраняет прежний uncached путь.
+
+Baseline на исходном `fbab9428` воспроизводит четыре parse вместо одного; candidate
+проходит 13/13 существующего suite с шестью новыми группами, включая mutation/alias,
+malformed/foreign receipts, revocation, fresh owner, UTF-8 bound и eviction.
+Узкие strict TS7 и fast lint PASS. Единственная пара Linux TEST profiles с 96 calls:
+963.199 → 696.867 ms; sampled publication work 90.477 → 13.235 ms. Native allocations
+равны нулю, штатная очистка завершена, TEST root отсутствует. Один pair не является
+статистической оценкой ускорения: всю разницу wall time нельзя причинно приписать
+cache, а достаточность для Darwin E2E ещё не подтверждена.
+
+Два независимых diagnostic изменения сохраняют прежние calls, deadlines и cleanup.
+Credential currentness добавляет только три закрытых окна count/elapsed summary;
+baseline шесть ожидаемых RED, candidate 69/69 Vitest и 14/14 node:test PASS, узкие
+strict TS7 и fast lint PASS. Readiness diagnostic сохраняет первый существующий
+отказ в optional factory Runtime-open detail без нового authority read или решения;
+baseline два ожидаемых RED, candidate Host 25/25 и Main 18/18 PASS. Повторные два
+focused checks входят в эти 25 и отдельно к сумме не прибавляются. Диагностика нужна
+для будущего original failure и не объясняет прежний unknown задним числом.
+
+### Состав кандидатов и граница публикации
+
+Read-only R2 проверил объединение на `fbab9428`: 14 из 15 paths побайтно совпадают
+с тремя frozen manifests. Единственный общий Main decoder точно равен объединению
+непересекающихся readiness и credential hunks; дополнительных изменений нет.
+Совмещённый candidate на fbab9428 прошёл strict scoped TS7 для восьми Host roots
+и Main с двумя существующими decoder suites: 38/38 PASS. Fast lint, source-size
+(5178 production files / 141 frozen caps / 800) и provisioning guard PASS.
+Все 15 source hashes после проверки сохранены. Первый запуск pnpm остановился
+до compiler на прежней self-link .bin; после исправления TEST link официальный
+режим warn не запускал новую установку. Warning относится только к absolute
+patch paths разных checkouts: все 19 patch payloads и installed/workspace
+lockfiles побайтно совпадают. Это scoped validation, не fresh install или full CI.
+
+Точный перенос всех 15 source paths на main integration также проверен: strict
+scoped TS7 Host/Main, те же два decoder suites 38/38, fast lint и оба guards PASS.
+Main source-size census: 5359 production files / 141 frozen caps / 800.
+Эти 38 checks повторно квалифицируют перенос и не прибавляются к прежним 38 как
+новое независимое покрытие. Все 15 source files совпадают с проверенным candidate;
+main-проверки не выдали dependency warning. Full CI и новый GUI E2E ещё ожидаются.
+
+В recovery review-ветке опубликован обычный потомок
+e06c8023d2b95850146abb6b5753f05935736861 после fbab9428; его состав — только **cache 3 + credential 7 = 10 новых
+paths**, всего **24 paths относительно `bb13cc19`**. Здесь Main decoder должен быть
+ровно credential-only frozen version (`b9090dcf2744780b3f323cf7ea30983f9f96e457f0700f11939facf7b7ad0209`),
+а не объединённый decoder. Readiness scope меняет
+`createRuntimeMemberProviderFactory.ts`, что совпадает с path trigger
+`native-prompt-suggestions-host.yml`. Его actual Claude job не исключает Draft #1220;
+существующее исключение привязано только к точной same-repository паре веток #1192.
+Narrow follow-up уже включён в main review обычным merge
+acbf068128c7a86ec3468b9811ccd1d3bc289fdc, parents 8ea42bd7 и e06c8023.
+Readiness six-file delta добавляется только к main review и предназначен для
+проверенного допустимого Draft #1192 маршрута. Изменений workflow для обхода
+границы нет. Актуальные #1220/#1192 сохраняют прежние source commits, пока
+все их original runs не завершены; эти review публикации не являются merge PR
+или E2E qualification.
+
+### Подтверждённый static Import на `6791c558`
+
+Original artifact `14788796818` проходит независимую проверку: все 2005 source pins
+совпадают с точными Git blobs `6791c558078f602780903ef73f0d47676baeadf4`, до/после
+списки идентичны. Семь исходных legacy files совпадают с seed, sourceBefore/sourceAfter
+и сохранёнными bytes. Все восемь publication payloads и три attachment blobs
+проверены; image 71 bytes совпадает с тремя UI hashes, text 44 bytes — с owner read
+и сохранённым download, task blob 36 bytes — с import hash. Все 34 ZIP members
+совпадают с извлечёнными файлами; исходные артефакты не изменены. ZIP не содержит
+внутренние физические Host destinations под `.host-owner`: для них проверены
+retained publication bytes и recorded UI hashes; два переписанных Host task JSON
+присутствуют и совпадают побайтно.
+
+Этот PASS относится только к **`emulated-import-ui` / `legacy-format-test-archive`**:
+`noLaunchSubmit: true`, `runtimeSessions: []`, повторное открытие того же импорта.
+Original receipt фиксирует штатный Quit exit 0 и очистку TEST peers. Проверка
+сохранённой квитанции не является новым live process census. Полный подлинный
+**Create → Stop → Import**, genuine vendor qualification и итоговая готовность
+#982 этим статическим сценарием не подтверждены.
+
+Срез original CI #1220 на 04:26:41 UTC: Teams Desktop прошёл на всех трёх OS,
+V2 preflight — 9/9, Process acceptance — 5/5. В Host matrix 11 success,
+3 ранее разобранных failure, Cross-team выполняется, 14 jobs в очереди;
+полный Create → Stop → Import ещё ожидается. Готовность нового source и #982
+остаётся неподтверждённой.
+
 ## Текущее продолжение: интеграция стека и актуального frontend
 
 Цель пользователя: завершить разрешённые E2E и собрать
@@ -17,7 +126,7 @@ outer `as const` в workflow policy test уже присутствует в пр
 
 | Срез | Решение и проверка | Оценка |
 | --- | --- | --- |
-| Teams macOS | Существующее ожидание завершения organization Create требует закрытого editor и точной новой записи в `teamByName` перед Schedules. Исходные 45s, один click, final geometry, owner и wrong-row refusal сохраняются. Две существующие TEST files: +54/-1. Baseline 19 PASS/2 RED; candidate 36/36 PASS на pinned Node 24.21.0. Новый macOS E2E ещё необходим. | Сложность 2/10; надёжность 9/10; уверенность в причине 8/10. |
+| Teams macOS | Существующее ожидание завершения organization Create требует закрытого editor и точной новой записи в `teamByName` перед Schedules. Исходные 45s, один click, final geometry, owner и wrong-row refusal сохраняются. Две существующие TEST files: +54/-1. Baseline 19 PASS/2 RED; candidate 36/36 PASS на pinned Node 24.21.0. Original 6791c558 E2E прошёл на macOS, Linux и Windows; новый source требует собственных проверок. | Сложность 2/10; надёжность 9/10; уверенность в причине 8/10. |
 | История #1220 | PR обновлён до `6791c558078f602780903ef73f0d47676baeadf4`, parents `f18f1648` и `bb13cc19`; оба исходных commit сохранены. Три конфликта разрешены текущими развитыми версиями #1192. Добавлены только 14 ранее проверенных исправлений original E2E, без нового main. 399/399 focused tests, два source guards, fast lint и узкие TS7 PASS; собственные original CI начались, PR пока Draft и не merged. | Отдельный допустимый путь квалификации #1220. Deadline suite сохраняет 62/62 PASS; итоговый E2E verdict ещё не получен. |
 | Совместимость main | Обычное объединение истории, включая вклад #1185/keepinmind2054. 31 конфликт распределён между backend, frontend и tooling; сохраняются обе стороны функциональности, Host admission, source identity, schedules, ReviewFlow, project routing и cleanup. Legacy source caps берутся не выше более строгого родителя. | Сложность 8/10; надёжность и уверенность требуют итогового compiler/feature/E2E результата. Новая функциональность не проектируется. |
 | Darwin OpenCode V2 | Original Resume/Review не прошли immutable preflight. Saved model probe объединяет соседние синхронные Team-проверки в одну существующую fence, сохраняя все 6 state / 4 namespace reads, порядок и новый lock в следующем call. Host build, TS7 scoped и 37/37 TEST PASS; R1/R2 пройдены. Bounded Linux fixture: 811.57 → 753.01 ms для 96 calls; это не Darwin E2E proof. | Сложность 4/10; уверенность в сохранении semantics 9/10. Достаточность для original cutoff ещё не установлена. |

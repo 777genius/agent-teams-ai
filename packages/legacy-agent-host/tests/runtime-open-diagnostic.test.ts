@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { channel } from 'node:diagnostics_channel';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { Server } from 'node:http';
@@ -14,6 +15,8 @@ import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { createRuntimeMemberProviderFactory } from '../dist/composition/createRuntimeMemberProviderFactory.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { beginModelReadinessAuthorityTiming, beginModelReadinessNamespaceTiming, createModelReadinessTiming } from '../dist/diagnostics/modelReadinessTiming.js';
+import * as runtimeOpenDiagnostics from '../dist/diagnostics/runtimeOpenDiagnostic.js';
+import { ManagementCommandError } from '../dist/management/commandRecords.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
@@ -642,6 +645,151 @@ function capture(t: TestContext, event?: (record: Record<string, unknown>) => vo
   });
   return records;
 }
+
+/** Execute the complete original factory/inspection bodies with finite storage and endpoint ports. */
+function readinessFixture() {
+  const readinessSource = readFileSync(new URL('../src/composition/prepareTeamModelReadiness.ts', import.meta.url), 'utf8');
+  const factorySource = readFileSync(new URL('../src/composition/createRuntimeMemberProviderFactory.ts', import.meta.url), 'utf8');
+  const begin = 'export function inspectMemberModelReadiness(', end = '\n/** The existing Runtime checkpoint validator';
+  const factoryBegin = 'export function createRuntimeMemberProviderFactory(';
+  assert.equal(readinessSource.split(begin).length, 2); assert.equal(readinessSource.split(end).length, 2);
+  assert.equal(factorySource.split(factoryBegin).length, 2);
+  const program = readinessSource.slice(readinessSource.indexOf(begin), readinessSource.indexOf(end)) + '\n' +
+    factorySource.slice(factorySource.indexOf(factoryBegin));
+  let now = 99, denied = false, consumed = 0, reads = 0, references = 0;
+  const calls: string[] = [], originalAuthority = Error('TEST original authority failure');
+  const selectedProfile = { provider: 'opencode', memberId: 'alice-id', principalId: 'TEST-principal', cwd: '/TEST',
+    model: 'TEST-model' };
+  const team = { owner: { connect: () => ({}) }, definition: { members: [{ memberId: 'alice-id', name: 'alice', role: 'member' }] } };
+  const entry = { config, binding, profile: selectedProfile, baseProfile: selectedProfile, team,
+    delivery: { ...binding, teamName: 'TEST-team' } };
+  const originalReadiness = { consumer: { consumerId: 'TEST-consumer',
+    baseConfigurationDigest: runtimeDigest(selectedProfile), cutoff: 100 },
+    reference: { commandId: 'TEST-probe', context: 'TEST-context' } };
+  const launch = {
+    readModelReadiness() { reads++; return originalReadiness; },
+    consumeModelReadiness() { consumed++; },
+  };
+  const authority = {
+    assertCurrent() { calls.push('authority'); if (denied) throw originalAuthority; },
+    canAllocate() { calls.push('allocation'); return true; },
+    isCurrent: () => true,
+  };
+  const endpoint = { binding: entry.delivery, revoke() { calls.push('revoke'); },
+    async close() { calls.push('close'); } };
+  const compiled = runInNewContext(stripTypeScriptTypes(program.replaceAll('export function', 'function')) +
+    '\n({ inspect: inspectMemberModelReadiness, consume: consumeMemberModelReadiness, factory: createRuntimeMemberProviderFactory });', {
+    Date: { now: () => now }, structuredClone, runtimeDigest, ManagementCommandError, RuntimeOwnerError,
+    held: () => { throw new ManagementCommandError('held'); },
+    readinessRefusal: channel('agent-teams.legacy-host.first-refusal'),
+    createModelReadinessTiming, beginModelReadinessAuthorityTiming,
+    ...runtimeOpenDiagnostics,
+    readPreparedModelReference() { references++; return originalReadiness.reference; },
+    captureMemberProviderAuthority: () => authority,
+    readDefaultFreshAllocationContinuation: () => undefined,
+    assertRuntimeWorktree: async () => { calls.push('worktree'); },
+    startTeamMcpEndpoint: async () => endpoint,
+    createMemberProcessMcpPort: () => ({}), createMemberEvidenceCapture: () => ({}),
+    createClaudeSubagents: () => undefined,
+    createMemberAttachmentPort: () => ({ port: undefined, prepareInput: (value: unknown) => value }),
+    memberInitialInstructions: () => 'TEST instructions',
+  }) as {
+    inspect(options: Record<string, unknown>): { assertCurrent(): void };
+    consume(options: Record<string, unknown>): { assertCurrent(): void };
+    factory(options: Record<string, unknown>): ReturnType<typeof createRuntimeMemberProviderFactory>;
+  };
+  const inspection = { launch, entry, management: {}, hostIncarnation: 'TEST-host', assertCurrent: authority.assertCurrent };
+  const factory = (action: (context: MemberProviderContext) => Promise<Awaited<ReturnType<DriverFactory['open']>>>) =>
+    compiled.factory({ entries: new Map([['TEST-entry', entry]]), profileId: 'TEST-private-profile',
+      storageRoot: '/TEST/no-native-execution', principalId: 'TEST-principal', hostIncarnation: 'TEST-host',
+      isSealed: () => false, modelReadiness: {}, readinessLaunch: () => launch,
+      readRuntime: () => ({ record: { phase: 'opening' }, attached: false }),
+      captureInteractions: () => {}, createProvider: (context: MemberProviderContext) => ({ factory: {
+        open: () => action(context),
+      } }),
+    });
+  return { compiled, inspection, factory, endpoint, calls, originalAuthority,
+    expire: (at = 100) => { now = at; }, deny: () => { denied = true; },
+    counts: () => ({ consumed, reads, references }) };
+}
+
+test('actual readiness inspection captures only its first original refusal without enabling timing or replacing errors', async t => {
+  let clocks = 0;
+  t.mock.method(performance, 'now', () => { clocks++; return 0; });
+  assert.equal(channel('agent-teams.legacy-host.first-refusal').hasSubscribers, false);
+  for (const mode of ['absent', 'capture', 'throw', 'reject', 'getter'] as const) {
+    const f = readinessFixture(), observations: unknown[] = [];
+    let observerReads = 0;
+    const options: Record<string, unknown> = { ...f.inspection };
+    if (mode !== 'absent' && mode !== 'getter') options.onFirstRefusal = (value: unknown) => {
+      observations.push(value);
+      if (mode === 'throw') throw Error('TEST diagnostic failure');
+      if (mode === 'reject') return Promise.reject(Error('TEST diagnostic rejection'));
+      return undefined;
+    };
+    if (mode === 'getter') Object.defineProperty(options, 'onFirstRefusal', {
+      get() { observerReads++; throw Error('TEST observer getter'); },
+    });
+    const inspected = f.compiled.inspect(options);
+    assert.deepEqual<unknown[]>(observations, []); assert.equal(clocks, 0);
+    if (mode !== 'getter') options.onFirstRefusal = () => assert.fail('must retain original callback');
+    f.deny();
+    assert.throws(inspected.assertCurrent, error => error === f.originalAuthority);
+    assert.throws(inspected.assertCurrent, error => error === f.originalAuthority);
+    await new Promise<void>(resolve => setImmediate(resolve));
+    assert.equal(observerReads, 0);
+    assert.equal(observations.length, mode === 'absent' || mode === 'getter' ? 0 : 1);
+    if (observations.length) {
+      const observed = observations[0];
+      assert.ok(observed && typeof observed === 'object');
+      assert.deepEqual({ ...observed }, { phase: 'initial-authority', reason: 'threw', cutoff: null, observedAt: null });
+      assert.ok(Object.isFrozen(observations[0]));
+    }
+    assert.deepEqual(f.counts(), { consumed: 0, reads: 2, references: 1 });
+    assert.equal(f.calls.length, 4, 'one success and two failures retain exactly the original authority calls');
+    assert.equal(clocks, 0, 'the private observer does not subscribe to the timing channel');
+  }
+});
+
+test('original factory failure joins the consumed readiness cutoff or authority refusal before its existing cleanup', async t => {
+  for (const reason of ['cutoff', 'authority', 'transport'] as const) {
+    const f = readinessFixture(), original = Error('TEST original native open failure');
+    const records = capture(t, record => { f.calls.push('diagnostic:' + String(record.source)); });
+    const factory = f.factory(async context => {
+      if (reason === 'cutoff') f.expire();
+      if (reason === 'authority') f.deny();
+      if (reason !== 'transport') {
+        assert.equal(context.canAllocate(), false);
+        f.expire(105);
+        assert.equal(context.canAllocate(), false, 'a later failed check cannot replace the first observation');
+      }
+      throw original;
+    });
+    await assert.rejects(factory.open(config, () => { f.calls.push('original-allocation'); }), error => error === original);
+    assert.equal(records.length, 1);
+    assert.equal(records[0]!.phase, 'driver-open'); assert.equal(records[0]!.category, 'unknown');
+    const expected = reason === 'cutoff' ? { phase: 'cutoff', reason: 'held', cutoff: 100, observedAt: 100 }
+      : reason === 'authority' ? { phase: 'initial-authority', reason: 'threw', cutoff: null, observedAt: null } : undefined;
+    assert.deepEqual(records[0]!.readinessRefusal, expected);
+    assert.equal(f.counts().consumed, 1, 'the existing original preparation is consumed once');
+    assert.ok(f.calls.indexOf('diagnostic:factory') < f.calls.indexOf('revoke'));
+    assert.deepEqual(f.calls.slice(-2), ['revoke', 'close']);
+    assert.equal(JSON.stringify(records).includes('TEST-'), false);
+    t.mock.restoreAll();
+  }
+  const f = readinessFixture(), records = capture(t);
+  let captured: MemberProviderContext | undefined;
+  const successful = f.factory(async context => {
+    captured = context;
+    return { driver: session(), capabilities: ['tools'] };
+  });
+  await successful.open(config, () => {});
+  assert.deepEqual(records, []);
+  f.expire();
+  assert.equal(captured?.canAllocate(), false);
+  assert.deepEqual(records, [], 'a late failed check cannot manufacture an already completed factory refusal');
+});
+
 function session(beforeReadiness?: () => void): Session {
   let end!: () => void;
   const ended = new Promise<void>(resolve => { end = resolve; });

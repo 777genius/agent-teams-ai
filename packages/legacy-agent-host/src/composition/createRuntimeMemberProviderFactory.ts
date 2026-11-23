@@ -12,8 +12,8 @@ import { createOpenCodeMemberProvider } from '../adapters/providers/OpenCodeMemb
 import { createOpenCodeV2EmbeddedMemberProvider } from '../adapters/providers/OpenCodeV2EmbeddedMemberProvider.js';
 import { startTeamMcpEndpoint } from '../mcp/endpoint.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
-import { createRuntimeOpenDiagnostic } from '../diagnostics/runtimeOpenDiagnostic.js';
-import type { RuntimeOpenPhase } from '../diagnostics/runtimeOpenDiagnostic.js';
+import { createRuntimeOpenDiagnostic, projectRuntimeReadinessRefusal } from '../diagnostics/runtimeOpenDiagnostic.js';
+import type { RuntimeOpenPhase, RuntimeReadinessRefusal } from '../diagnostics/runtimeOpenDiagnostic.js';
 import { beginModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
 import type { ModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
 import { runtimeDigest } from '../runtime/identity.js';
@@ -106,6 +106,12 @@ export function createRuntimeMemberProviderFactory(options: {
         profileId: options.profileId, configuration: request, source: 'factory',
       });
       let openPhase: RuntimeOpenPhase = 'selection';
+      let readinessRefusal: RuntimeReadinessRefusal | undefined, readinessRefusalObserved = false;
+      const onFirstRefusal = (value: unknown) => {
+        if (readinessRefusalObserved) return;
+        readinessRefusalObserved = true;
+        readinessRefusal = projectRuntimeReadinessRefusal(value);
+      };
       try {
         const config = {
           tenantId: request.tenantId,
@@ -187,7 +193,7 @@ export function createRuntimeMemberProviderFactory(options: {
           };
           // Generic allocation may read a separate Launch store; only the nominal default guard joins Team.
           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming });
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming, onFirstRefusal });
         })();
         const setupCurrent = () => {
           try {
@@ -387,13 +393,13 @@ export function createRuntimeMemberProviderFactory(options: {
             },
           };
         } catch (error) {
-          observeOpen(openPhase, error);
+          observeOpen(openPhase, error, readinessRefusal);
           endpoint.revoke();
           await endpoint.close();
           throw error;
         }
       } catch (error) {
-        observeOpen(openPhase, error);
+        observeOpen(openPhase, error, readinessRefusal);
         throw error;
       }
     },
