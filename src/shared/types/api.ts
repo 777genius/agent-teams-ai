@@ -141,6 +141,7 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type { CustomTeamTemplatesApi } from '@features/custom-team-templates/contracts';
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
@@ -160,6 +161,7 @@ import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
+import type { TeamProjectContextViewApi } from '@features/team-project-context/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type {
   TeamReadLegacyApi,
@@ -462,7 +464,7 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
+export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, TeamProjectContextViewApi {
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamAggregateReadResult<TeamSummary>>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -895,6 +897,7 @@ export interface ElectronAPI
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
   teamGroupChats: TeamGroupChatsAPI;
+  customTeamTemplates: CustomTeamTemplatesApi;
   reviewFlow: ReviewFlowElectronApi;
   announcements: AnnouncementsApi;
   gatewayProvider: GatewayProviderApi;

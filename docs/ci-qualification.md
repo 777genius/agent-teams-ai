@@ -36,8 +36,9 @@ Keep an in-progress PR as a **Draft**. Main CI already runs fast feedback
 is ready to run full or scope-selected qualification.
 
 CodeQL, Codex runtime installation, public runtime bootstrap, OpenCode desktop
-and packaged E2E, and Anthropic-compatible packaged E2E defer automatic PR jobs
-while the PR is draft. `ready_for_review` runs them for the current diff when
+and packaged E2E, Anthropic-compatible packaged E2E and the three-OS Teams
+creation page Electron E2E defer automatic PR jobs while the PR is draft.
+`ready_for_review` runs them for the current diff when
 their path filters match. Converting back to draft cancels superseded PR runs.
 Announcement validation continues on drafts because it validates publishable
 content. All these workflows follow [run supersession](#run-supersession):

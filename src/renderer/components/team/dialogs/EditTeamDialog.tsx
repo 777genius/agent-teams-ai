@@ -38,6 +38,7 @@ import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
 import { createEditTeamHostSubmission } from './editTeamHostSubmission';
+import { EditTeamLeadPromptField } from './EditTeamLeadPromptField';
 import {
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
@@ -65,6 +66,11 @@ interface EditTeamDialogProps {
   currentName: string;
   currentDescription: string;
   currentColor: string;
+  /**
+   * Saved lead instructions. Only a team whose definition holds them (a team
+   * with separate history per project) passes it; without it the field is hidden.
+   */
+  currentLeadPrompt?: string;
   currentMembers: ResolvedTeamMember[];
   leadMember?: ResolvedTeamMember | null;
   resolvedMemberColorMap?: ReadonlyMap<string, string>;
@@ -154,6 +160,7 @@ export const EditTeamDialog = ({
   currentName,
   currentDescription,
   currentColor,
+  currentLeadPrompt,
   currentMembers,
   leadMember = null,
   resolvedMemberColorMap,
@@ -169,6 +176,7 @@ export const EditTeamDialog = ({
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription);
   const [color, setColor] = useState(currentColor);
+  const [leadPrompt, setLeadPrompt] = useState(currentLeadPrompt ?? '');
   const [members, setMembers] = useState(() => membersToDrafts(currentMembers));
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(() =>
     deriveTeammateWorktreeDefault(currentMembers)
@@ -242,6 +250,7 @@ export const EditTeamDialog = ({
         setName(currentName);
         setDescription(currentDescription);
         setColor(currentColor);
+        setLeadPrompt(currentLeadPrompt ?? '');
         setMembers(membersToDrafts(currentMembers));
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(currentMembers));
         setError(null);
@@ -273,8 +282,18 @@ export const EditTeamDialog = ({
       pendingCommittedSourceSnapshotRef.current = null;
     }
     wasOpenRef.current = open;
-  }, [open, teamName, currentName, currentDescription, currentColor, currentMembers]);
+  }, [
+    open,
+    teamName,
+    currentName,
+    currentDescription,
+    currentColor,
+    currentLeadPrompt,
+    currentMembers,
+  ]);
 
+  const leadPromptChanged =
+    currentLeadPrompt !== undefined && leadPrompt.trim() !== currentLeadPrompt.trim();
   const builtMembers = useMemo(() => buildMembersFromDrafts(members), [members]);
   const invalidMemberNamesError = useMemo(
     () =>
@@ -478,6 +497,8 @@ export const EditTeamDialog = ({
           name: name.trim(),
           description: description.trim(),
           color,
+          // Only a changed prompt is written, so a prompt edited elsewhere is never overwritten.
+          ...(leadPromptChanged ? { prompt: leadPrompt.trim() } : {}),
         });
         configSaved = true;
         if (hasMemberRosterChanges) {
@@ -565,10 +586,7 @@ export const EditTeamDialog = ({
 
         <div className="space-y-3">
           <div>
-            <label
-              htmlFor="edit-team-name"
-              className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
-            >
+            <label htmlFor="edit-team-name" className="mb-1 block text-xs font-medium text-text">
               {t('editTeam.fields.name')}
             </label>
             <input
@@ -589,7 +607,7 @@ export const EditTeamDialog = ({
           <div>
             <label
               htmlFor="edit-team-description"
-              className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              className="mb-1 block text-xs font-medium text-text"
             >
               {t('editTeam.fields.description')}
             </label>
@@ -605,6 +623,15 @@ export const EditTeamDialog = ({
               placeholder={t('editTeam.placeholders.description')}
             />
           </div>
+          {currentLeadPrompt !== undefined ? (
+            <EditTeamLeadPromptField
+              value={leadPrompt}
+              onValueChange={(value) => {
+                clearTransientErrors();
+                setLeadPrompt(value);
+              }}
+            />
+          ) : null}
           <div>
             <MembersEditorSection
               members={members}
@@ -648,7 +675,7 @@ export const EditTeamDialog = ({
                       lockedModelAction={{
                         label: t('editTeam.teamLead.changeRuntime'),
                         description: t('editTeam.teamLead.changeRuntimeDescription'),
-                        onClick: onChangeLeadRuntime,
+                        onClick: () => onChangeLeadRuntime(),
                         disabled: isTeamProvisioning,
                       }}
                     />
@@ -701,7 +728,7 @@ export const EditTeamDialog = ({
           ) : null}
           <div>
             {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Color picker is a group of buttons, not a single input */}
-            <label className="label-optional mb-1 block text-xs font-medium">
+            <label className="mb-1 block text-xs font-medium text-text">
               {t('editTeam.fields.colorOptional')}
             </label>
             <div className="flex flex-wrap gap-2">

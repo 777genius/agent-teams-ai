@@ -1,6 +1,122 @@
 # Завершение Host / frontend parity
 
-Обновлено: **22 ноября 2026**. Единственный текущий рабочий план.
+Обновлено: **23 ноября 2026**. Единственный текущий рабочий план.
+
+## Текущее продолжение: интеграция стека и актуального frontend
+
+Цель пользователя: завершить разрешённые E2E и собрать
+**#1220 → #1192 → #1186 → #982**. Итоговый #982 остаётся открытым;
+его merge в main, release, default activation и Stage 2 не входят в поручение.
+Исходная вершина #1192 — `bb13cc192844a56ffa0354569480834d6637e8f6`.
+Для совместимости интегрирован main `45315e8977e052a3e2e1bb0ba6c0cc88f09bd2ba`;
+перед публикацией branch ref продвинулся одним commit #1274 до
+`0ba84972896aa90331d955befb730b7b1cb65154`. Его единственное исправление
+outer `as const` в workflow policy test уже присутствует в проверенном результате.
+Последний main сохраняется вторым merge-родителем:
+старый `base.sha` в ответе #982 не является текущей вершиной main.
+
+| Срез | Решение и проверка | Оценка |
+| --- | --- | --- |
+| Teams macOS | Существующее ожидание завершения organization Create требует закрытого editor и точной новой записи в `teamByName` перед Schedules. Исходные 45s, один click, final geometry, owner и wrong-row refusal сохраняются. Две существующие TEST files: +54/-1. Baseline 19 PASS/2 RED; candidate 36/36 PASS на pinned Node 24.21.0. Новый macOS E2E ещё необходим. | Сложность 2/10; надёжность 9/10; уверенность в причине 8/10. |
+| История #1220 | При разрешённом merge оба исходных commit должны сохраниться merge-родителем; #1220 пока не merged. Три изменения уже развиты в #1192: exact-member reveal, post-await cutoff и regression suite. Конфликты нельзя разрешать возвратом старых файлов. Текущая deadline suite: 62/62 PASS на pinned Node 24.21.0. | Три конфликтующих файла; сложность 3/10; уверенность 9/10 после source review. |
+| Совместимость main | Обычное объединение истории, включая вклад #1185/keepinmind2054. 31 конфликт распределён между backend, frontend и tooling; сохраняются обе стороны функциональности, Host admission, source identity, schedules, ReviewFlow, project routing и cleanup. Legacy source caps берутся не выше более строгого родителя. | Сложность 8/10; надёжность и уверенность требуют итогового compiler/feature/E2E результата. Новая функциональность не проектируется. |
+| Darwin OpenCode V2 | Original Resume/Review не прошли immutable preflight. Saved model probe объединяет соседние синхронные Team-проверки в одну существующую fence, сохраняя все 6 state / 4 namespace reads, порядок и новый lock в следующем call. Host build, TS7 scoped и 37/37 TEST PASS; R1/R2 пройдены. Bounded Linux fixture: 811.57 → 753.01 ms для 96 calls; это не Darwin E2E proof. | Сложность 4/10; уверенность в сохранении semantics 9/10. Достаточность для original cutoff ещё не установлена. |
+| Linux OpenCode V2 live Add | Original job 137334455234 / artifact 14777978491: Add остаётся held, model outcome unobserved. Native probe начинает работу с 56.4s из исходного 90s; первый submit приходит только на 50.88s. Bounded private decode reuse использует exact bytes после каждого fresh store read, новые opaque tokens и прежнюю single-entry memo. Все raw validators и consumers проверены на отсутствие mutation/escape; публичные проекции клонируются. Host build/test TS7, 14/14 decode checks и R1/R2 PASS. | Source delta 6 строк плюс regression tests. Один matched Linux profile: 96 guard calls 1150.845 → 880.094 ms; parsing hotspot исчез, но I/O variance исключает обещание стабильных 23.5% или E2E PASS. |
+| Native import Stop | Original job 137334455290 / artifact 14778019318: original Stop отказывает в work-sync-inventory. Ordinary SQLite publication теряла уже записанный envelope incarnation; подлинная empty/caught_up history также была вне прежнего inactive-only census. Сохраняется фактическая bound identity при dirty/clean publication, принимается только точный no-work subset. Original Stop, drain, deadline, missing/foreign identity и live-work refusals сохранены. Actual Stop → export → validate → import сохраняет journal только как archive и не переносит root WorkSync replica/secret. | Восемь файлов; два этапа review. На исходной ветке 265 distinct TEST PASS, narrow TS7 PASS. Совмещённые main storage suites прошли, затем исправлен отдельный drift default project mode; новый GUI E2E ещё необходим. |
+
+Новый main по умолчанию создаёт native команды с `projectContextMode: per_project`.
+Host Stage 1 пока хранит одну общую историю: этот PR не преобразует project
+histories в shared и не расширяет Host storage schema. Legacy import принимает
+только прежнее отсутствие поля или точное `shared`; actual default/explicit
+per_project, неизвестные значения и скрытый project-contexts index остаются HOLD.
+Actual save-only и classifier suites: 37/37 и 26/26 PASS. Common original Create
+E2E явно выбирает Shared across projects через captured Radix popup и проверяет
+исходный control; оба current native producers дополнительно проверяют metadata.
+Finite/deadline script suites: 84/84 PASS, четыре script roots со strict TS7 и
+fast lint семи изменённых файлов PASS. Исторический pinned donor не меняется.
+Host Create принимает явный shared или прежнее отсутствие поля, проверяет режим
+до port effects и исключает его только из canonical Host savedSettings. Исходная
+подпись draft/preparation сохраняет режим; смена поля не позволяет повторно
+использовать подтверждение. Copy сохраняет исходный режим внутри прежнего
+one-shot seed, без изменения default нового native Create. Подготовка/сохранение/
+создание показывают только конечный известный отказ с инструкцией выбора режима;
+произвольные errors остаются закрыты прежними generic messages. Canonical Host
+DTO, Edit и Relaunch не расширены. Real registry/prepare/shell suites 36/36 и
+полные IPC/Copy suites 314/314: всего 350 distinct PASS; fast lint без ошибок,
+восемь прежних Create hook warnings совпадают с preimage. Узкие pure Copy и IPC
+проекции извлечены в подходящие модули, source caps снижены до фактических
+5327/1487/3059 lines для teams/TeamList/Create без formatting-only компенсации.
+
+Два независимых этапа ревью: исходные failures и план узкого исправления;
+затем точный совмещённый diff, source guards и профильные проверки. E2E должен
+квалифицировать итоговый source; исторические зелёные jobs не переносятся на
+него автоматически. Текущие original runs не перезапускаются и не отменяются.
+Все queued/running/skipped остаются неполученной квалификацией.
+
+Совмещённый frontend сохраняет main project routing/custom templates и Host
+source identity, cancellation, receipts и единственный submit. Исправлена потеря
+`ownerResourceRef` при ReviewFlow folding. Проверены 160 LaunchDialog cases,
+2 новых actual-dialog races, 123 профильные frontend cases, 16 ReviewFlow cases,
+111 packaging/preload/edit cases, 168 backend/schedule cases, 52 WorkSync cases
+и все 285 teamSlice cases, включая confirmed/unconfirmed Host dispatch. Группы частично
+перекрываются; их нельзя суммировать как независимое общее число. Production
+source-size и provisioning-architecture guards PASS. Canonical root TS7, включая
+отдельную single-threaded попытку, завершён средой с exit137, без TS diagnostics;
+это не PASS. Итоговый полный type-aware ESLint source gate также завершён
+средой с exit137 без diagnostics; не повторяется и не выдаётся за PASS. Все 11 отдельных canonical scopes — updater, release, Sentry,
+Desktop E2E, Host scripts/tests и MCP source/tests — PASS на TS7. Source caps
+дополнительно снижены до текущего размера изменённых файлов. Итоговый guard
+после staging: 5357 production files, 141 frozen exceptions, max800 — PASS;
+provisioning architecture и staged diff check также PASS.
+Большой supplemental fast-lint batch был SIGKILL без diagnostics; последовательные
+малые группы завершились для всех 122 файлов. Все 78 изменённых/custom файлов
+под src/ не имеют fast-lint errors. Вне штатной src/ области два import-order
+слияния исправлены; шесть `no-explicit-any` в SchedulerService.test.ts идентичны
+обоим исходным родителям и остаются baseline. Три CommonJS файла не проверяются
+чужим root fast environment: controller имеет собственные Node/Vitest globals,
+его штатный suite прошёл 24/24 files и 502/502 tests; afterPack уже прошёл свой
+применимый regression suite. Конфигурации lint и required gates не ослаблялись.
+Новый main WorkSync interrupted-cleanup test подключается к тому же
+`internalStorageInterruption`, который уже используется в обеих production
+compositions; held-until-physical-settled assertions сохранены и прошли повторную
+проверку. Независимый semantic merge review обнаружил ещё два native project API
+входа без Host boundary: ProjectScopedTeamDetailView и GlobalTask Open Team.
+Исправлены точные Host routes с сохранением native alias/history и stale-context
+refusals. Новые actual-render/click/late-reply tests: 40/40 PASS; root независимо
+принял оба узких routing diff. Локальный GUI E2E не заявляется: Xvfb и зависимости
+подготовлены в user space, но пустой display probe подтверждённо отказал на
+создании AF_UNIX socket (EPERM) в managed runtime. Политика и listeners не менялись.
+
+Причина стоимости live V2 guard дополнительно измерена настоящей composition с
+captured configuration source: один credential current даёт 6 contexts / 66
+original live guards, beforeRequest — 12 / 132. Source-derived readPassword
+добавляет ещё 6 / 66, без сокращения этих чтений. Первый authless temporary fixture
+не соответствовал CI inline-key пути и не используется как proof этого счёта.
+
+Старые четыре unresolved threads #1186 сопоставлены с #1192: Windows registered
+capture, failed-preparation drain и Stop accounting уже исправлены; P09 следует
+принятому контракту A. Они закрываются только после попадания исправлений в #1186.
+Действующее ограничение genuine Claude/Codex, включая version, сохраняется.
+Проверка фактических workflow нового main выявила дополнительную границу уже
+на synchronize Draft #1192: windows-teammate-console-native.yml не имеет Draft
+условия, а Windows product fixture сохраняет PATH. При startup renderer вызывает
+fetchCodexRuntimeStatus → CodexRuntimeInstallerService.getStatus → getPathStatus;
+при наличии Codex в PATH выполняется настоящий `--version`. Отсутствие vendor
+на runner не доказано. Прямой version вызов claude-multimodel.exe в том же fixture
+принадлежит project-owned orchestrator и не выдаётся за genuine Anthropic CLI.
+Workflow, provider discovery, guards и runner environment ради обхода запрета
+не меняются. Ready #1192 и update уже Ready #1186 также запускают запрещённые
+пока genuine checks.
+
+Кандидат собран для отдельной ветки
+`review/provider-host-main-integration-20261123` с родителями bb13cc19 и 0ba84972.
+Такая branch-only публикация без нового PR и изменения существующих head/base
+не совпадает ни с одним из 14 push triggers в 47 проверенных workflow. Она
+сохраняет reviewable code и original CI, но не квалифицирует #1192 или #982.
+Обновление стека, Ready-переходы и вызванные ими CI исполнения ждут отдельного
+разрешения пользователя на genuine Claude/Codex в изолированных CI fixtures. Разрешённые TEST peers и pinned OpenCode с TEST-local model
+проверяются в изолированных проектах. Этот раздел — план работы, не PASS или
+утверждение о выполненном merge.
 
 ## Original E2E на `06842c53`, 22 ноября
 

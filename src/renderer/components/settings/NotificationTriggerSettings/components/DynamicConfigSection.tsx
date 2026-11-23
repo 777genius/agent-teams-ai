@@ -77,7 +77,7 @@ export const DynamicConfigSection = ({
         <div className="space-y-3">
           {/* Content Type */}
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
-            <label htmlFor="new-trigger-content-type" className="text-sm text-text-secondary">
+            <label htmlFor="new-trigger-content-type" className="text-sm text-text">
               {t('notificationTriggers.fields.contentType')}
             </label>
             <select
@@ -98,7 +98,7 @@ export const DynamicConfigSection = ({
           {/* Match Field */}
           {availableMatchFields.length > 0 && (
             <div className="flex items-center justify-between border-b border-border-subtle py-2">
-              <label htmlFor="new-trigger-match-field" className="text-sm text-text-secondary">
+              <label htmlFor="new-trigger-match-field" className="text-sm text-text">
                 {t('notificationTriggers.fields.matchField')}
               </label>
               <select
@@ -120,7 +120,7 @@ export const DynamicConfigSection = ({
           {/* Match Pattern */}
           <div className="border-b border-border-subtle py-2">
             <div className="mb-2 flex items-center justify-between">
-              <label htmlFor="new-trigger-match-pattern" className="text-sm text-text-secondary">
+              <label htmlFor="new-trigger-match-pattern" className="text-sm text-text">
                 {t('notificationTriggers.fields.matchPattern')}
               </label>
             </div>
@@ -150,7 +150,7 @@ export const DynamicConfigSection = ({
       {mode === 'token_threshold' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
-            <label htmlFor="new-trigger-token-type" className="text-sm text-text-secondary">
+            <label htmlFor="new-trigger-token-type" className="text-sm text-text">
               {t('notificationTriggers.fields.tokenType')}
             </label>
             <select
@@ -172,7 +172,7 @@ export const DynamicConfigSection = ({
             </select>
           </div>
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
-            <label htmlFor="new-trigger-threshold" className="text-sm text-text-secondary">
+            <label htmlFor="new-trigger-threshold" className="text-sm text-text">
               {t('notificationTriggers.fields.threshold')}
             </label>
             <div className="flex items-center gap-2">

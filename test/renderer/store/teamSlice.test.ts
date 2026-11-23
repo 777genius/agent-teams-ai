@@ -71,6 +71,7 @@ const hoisted = vi.hoisted(() => ({
   getMemberActivityMeta: vi.fn(),
   createTeam: vi.fn(),
   launchTeam: vi.fn(),
+  getProjectContextView: vi.fn(),
   getProvisioningStatus: vi.fn(),
   getMemberSpawnStatuses: vi.fn(),
   getTeamAgentRuntime: vi.fn(),
@@ -121,6 +122,7 @@ vi.mock('@renderer/api', () => ({
       getMemberActivityMeta: hoisted.getMemberActivityMeta,
       createTeam: hoisted.createTeam,
       launchTeam: hoisted.launchTeam,
+      getProjectContextView: hoisted.getProjectContextView,
       getProvisioningStatus: hoisted.getProvisioningStatus,
       getMemberSpawnStatuses: hoisted.getMemberSpawnStatuses,
       getTeamAgentRuntime: hoisted.getTeamAgentRuntime,
@@ -252,7 +254,10 @@ type TeamSliceHarnessState = TeamSlice &
     | 'setActiveTab'
     | 'updateTabLabel'
     | 'warmTaskChangeSummaries'
-  >;
+  > & Partial<Pick<AppState,
+    'projects' | 'repositoryGroups' | 'selectedRepositoryId' | 'selectedWorktreeId' |
+    'fetchSessionsInitial' | 'activeProjectId'
+  >>;
 
 type TestTabInput = Omit<AppState['paneLayout']['panes'][number]['tabs'][number], 'createdAt'> & {
   createdAt?: number;
@@ -513,6 +518,53 @@ function createRuntimeSnapshot(
 }
 
 describe('teamSlice actions', () => {
+  it('reuses the existing team tab instead of opening a second one', () => {
+    const store = createSliceStore();
+    const existing = createTestTab({ id: 'team-tab', type: 'team', teamName: 'builders', label: 'Builders' });
+    store.setState({
+      getAllPaneTabs: vi.fn(() => [existing]),
+      teamByName: {
+        builders: {
+          teamName: 'builders', displayName: 'Builders', description: '',
+          memberCount: 0, taskCount: 0, lastActivity: null, projectContextMode: 'per_project',
+        },
+      } as AppState['teamByName'],
+    });
+    store.getState().openTeamTab('builders', '/TEST/current-project');
+    expect(store.getState().setActiveTab).toHaveBeenCalledWith('team-tab');
+    expect(store.getState().openTab).not.toHaveBeenCalled();
+  });
+
+  it('selects a grouped worktree before opening the logical project team tab', () => {
+    const store = createSliceStore();
+    const fetchSessionsInitial = vi.fn().mockResolvedValue(undefined);
+    store.setState({
+      projects: [],
+      repositoryGroups: [{
+        id: 'repo-b', identity: null, name: 'B', mostRecentSession: 0, totalSessions: 0,
+        worktrees: [{
+          id: 'worktree-b', path: '/TEST/project-b', name: 'project-b',
+          isMainWorktree: false, source: 'git', sessions: [], totalSessions: 0, createdAt: 1,
+        }],
+      }] as AppState['repositoryGroups'],
+      selectedProjectId: 'unrelated-project',
+      selectedWorktreeId: null,
+      selectedRepositoryId: null,
+      fetchSessionsInitial,
+    });
+    store.getState().openTeamTab('builders', '/TEST/project-b');
+    expect(store.getState()).toMatchObject({
+      selectedRepositoryId: 'repo-b',
+      selectedWorktreeId: 'worktree-b',
+      selectedProjectId: 'worktree-b',
+      activeProjectId: 'worktree-b',
+    });
+    expect(fetchSessionsInitial).toHaveBeenCalledWith('worktree-b');
+    expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'team', teamName: 'builders',
+    }));
+  });
+
   it('addresses group tasks to the existing team tab and consumes only the newest intent', () => {
     const store = createSliceStore();
     const existing = createTestTab({
@@ -592,6 +644,9 @@ describe('teamSlice actions', () => {
     hoisted.getDeletedTasks.mockResolvedValue([]);
     hoisted.createTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.launchTeam.mockResolvedValue({ runId: 'run-1' });
+    hoisted.getProjectContextView.mockImplementation(async (teamName: string) => ({
+      mode: 'shared', state: 'ready', executionTeamName: teamName,
+    }));
     hoisted.invalidateTaskChangeSummaries.mockResolvedValue(undefined);
     hoisted.getProvisioningStatus.mockResolvedValue({
       runId: 'run-1',
@@ -7910,6 +7965,92 @@ describe('teamSlice actions', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it.each(['confirmed', 'unconfirmed'] as const)(
+      'dispatches a captured Host launch without resolving a native project alias (%s)',
+      async (outcome) => {
+        const store = createSliceStore();
+        const request = { teamName: 'host-team:TEST-captured-dispatch', cwd: '/TEST/project' };
+        hoisted.getProjectContextView.mockRejectedValue(new Error('native context must not own Host'));
+        const dispatch = vi.fn(async () => ({
+          runId: 'TEST-host-run',
+          ...(outcome === 'unconfirmed' ? { launchStatus: 'unconfirmed' as const } : {}),
+        }));
+        if (outcome === 'unconfirmed') {
+          await expect(store.getState().launchTeam(request, dispatch)).rejects.toThrow('Launch was not confirmed');
+          expect(store.getState().currentProvisioningRunIdByTeam[request.teamName]).toBeUndefined();
+          expect(store.getState().provisioningRuns['TEST-host-run']).toBeUndefined();
+        } else {
+          await store.getState().launchTeam(request, dispatch);
+        }
+        expect(dispatch).toHaveBeenCalledExactlyOnceWith(request);
+        expect(hoisted.getProjectContextView).not.toHaveBeenCalled();
+        expect(hoisted.launchTeam).not.toHaveBeenCalled();
+      }
+    );
+
+    it('resets the verified physical runtime policy before relaunch even with an older sync in flight', async () => {
+      const store = createSliceStore();
+      const oldSettings = {
+        autoAllowAll: true,
+        autoAllowFileEdits: false,
+        autoAllowSafeBash: false,
+        timeoutAction: 'wait' as const,
+        timeoutSeconds: 30,
+      };
+      store.setState({
+        selectedTeamName: 'ptc-project-a',
+        toolApprovalSettings: oldSettings,
+        toolApprovalSettingsByTeam: { 'ptc-project-a': oldSettings },
+      });
+      window.localStorage.setItem(
+        'team:toolApprovalSettings:ptc-project-a',
+        JSON.stringify(oldSettings)
+      );
+      hoisted.getProjectContextView.mockResolvedValue({
+        mode: 'per_project', state: 'ready',
+        executionTeamName: 'ptc-project-a',
+        workContextId: 'work-a', projectPath: '/tmp/project-a',
+      });
+      const priorWrite = createDeferredPromise<void>();
+      hoisted.updateToolApprovalSettings
+        .mockImplementationOnce(() => priorWrite.promise)
+        .mockResolvedValueOnce(undefined);
+
+      // The user previously enabled auto-allow in the physical approval sheet.
+      await store.getState().updateToolApprovalSettings(
+        { autoAllowAll: true }, 'ptc-project-a'
+      );
+      const launching = store.getState().launchTeam({
+        teamName: 'builders',
+        cwd: '/tmp/project-a',
+        skipPermissions: false,
+      });
+      await vi.waitFor(() =>
+        expect(hoisted.getProjectContextView).toHaveBeenCalledWith(
+          'builders', '/tmp/project-a'
+        )
+      );
+      expect(hoisted.launchTeam).not.toHaveBeenCalled();
+      priorWrite.resolve();
+      await launching;
+
+      const expected = { ...oldSettings, autoAllowAll: false };
+      expect(hoisted.updateToolApprovalSettings).toHaveBeenLastCalledWith(
+        'ptc-project-a', expected
+      );
+      expect(store.getState().toolApprovalSettingsByTeam['ptc-project-a']).toEqual(expected);
+      expect(store.getState().toolApprovalSettings).toEqual(expected);
+      expect(JSON.parse(
+        window.localStorage.getItem('team:toolApprovalSettings:ptc-project-a') ?? '{}'
+      )).toEqual(expected);
+      expect(hoisted.launchTeam).toHaveBeenCalledWith({
+        teamName: 'builders', cwd: '/tmp/project-a', skipPermissions: false,
+      });
+
+      await store.getState().selectTeam('ptc-project-a');
+      expect(store.getState().toolApprovalSettings.autoAllowAll).toBe(false);
     });
 
     it('stages launch settings for the target team without replacing another selected team projection', async () => {

@@ -1,3 +1,5 @@
+import { parseReviewFlowSettings, type ReviewFlowSettings } from '@features/review-flow';
+import { parsePersistedTeamProjectContextMode } from '@features/team-project-context/core';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -10,7 +12,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import { hasCompleteKnownMetadata } from './TeamMetadataReadFidelity';
 import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
-import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '@shared/types';
+import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProjectContextMode, TeamProviderId } from '@shared/types';
 
 /**
  * Persisted team-level metadata saved by the UI before CLI provisioning.
@@ -20,6 +22,8 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
  */
 export interface TeamMetaFile {
   version: 1;
+  /** Missing in persisted legacy teams means shared; explicit invalid values are corruption. */
+  projectContextMode?: TeamProjectContextMode;
   runtimeSelectionVersion?: 1;
   deletedAt?: string;
   displayName?: string;
@@ -38,7 +42,64 @@ export interface TeamMetaFile {
   extraCliArgs?: string;
   limitContext?: boolean;
   launchIdentity?: ProviderModelLaunchIdentity;
+  /**
+   * The review flow of a team with separate history per project, copied to the board of each of
+   * its projects. Missing: the team never saved one (each project keeps its own); `null`: the team
+   * follows the default. Writers that do not state it keep the saved value, also an unreadable one.
+   */
+  reviewFlowSettings?: ReviewFlowSettings | null | UnreadableReviewFlowSettings;
   createdAt: number;
+}
+
+/**
+ * A saved review flow that is not a complete unit. It is never read as "not saved" (that would let a
+ * project fall back to the built-in flow) and never dropped by a writer: it is written back as it
+ * was until a save of the review flow replaces it.
+ */
+export interface UnreadableReviewFlowSettings {
+  readonly unreadable: unknown;
+}
+
+export function isUnreadableReviewFlowSettings(
+  value: TeamMetaFile['reviewFlowSettings']
+): value is UnreadableReviewFlowSettings {
+  return typeof value === 'object' && value !== null && Object.hasOwn(value, 'unreadable');
+}
+
+/** Fields a writer keeps from the saved file unless it states them (a missing key is not a reset). */
+function keepUnstatedFields(
+  data: Omit<TeamMetaFile, 'version'>,
+  current: TeamMetaFile | null
+): Pick<TeamMetaFile, 'projectContextMode' | 'reviewFlowSettings'> {
+  return {
+    projectContextMode: data.projectContextMode ?? current?.projectContextMode,
+    reviewFlowSettings: Object.hasOwn(data, 'reviewFlowSettings')
+      ? data.reviewFlowSettings
+      : current?.reviewFlowSettings,
+  };
+}
+
+function readReviewFlowSettings(value: unknown): NonNullable<TeamMetaFile['reviewFlowSettings']> | null {
+  if (value === null) return null;
+  const parsed = parseReviewFlowSettings(value);
+  return parsed.ok ? parsed.settings : { unreadable: value };
+}
+
+/** Strict reads preserve an unreadable review flow verbatim; check every other field. */
+function hasCompleteMetadata(raw: unknown, meta: TeamMetaFile): boolean {
+  if (!isUnreadableReviewFlowSettings(meta.reviewFlowSettings)) {
+    return hasCompleteKnownMetadata(raw, meta);
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+  const { reviewFlowSettings: _rawReviewFlow, ...otherRaw } = raw as Record<string, unknown>;
+  const { reviewFlowSettings: _normalizedReviewFlow, ...otherMeta } = meta;
+  return hasCompleteKnownMetadata(otherRaw, otherMeta);
+}
+
+/** What is written: a valid unit normalized, an unreadable value exactly as it was read. */
+function writtenReviewFlowSettings(value: TeamMetaFile['reviewFlowSettings']): unknown {
+  if (value === undefined) return undefined;
+  return isUnreadableReviewFlowSettings(value) ? value.unreadable : readReviewFlowSettings(value);
 }
 
 const metaMutationLocks = new Map<string, Promise<void>>();
@@ -147,7 +208,37 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
   };
 }
 
+/**
+ * getMeta() deliberately reports null for missing *and* unreadable metadata.
+ * Before replacing it, distinguish these cases to prevent silent loss of
+ * projectContextMode (and other saved fields) on a transient read failure.
+ */
+async function assertExistingMetadataWasReadable(metaPath: string, current: TeamMetaFile | null): Promise<void> {
+  if (current !== null) return;
+  try {
+    await fs.promises.lstat(metaPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  throw new Error('Existing team metadata is unreadable; refusing to overwrite it');
+}
+
 export class TeamMetaStore {
+  /** Fail closed when a persisted metadata file exists but cannot be parsed. */
+  async metadataFileExists(
+    teamName: string,
+    teamsBasePath = getTeamsBasePath()
+  ): Promise<boolean> {
+    try {
+      await fs.promises.lstat(this.getMetaPath(teamName, teamsBasePath));
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+  }
+
   private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
     return path.join(teamsBasePath, teamName, 'team.meta.json');
   }
@@ -206,6 +297,9 @@ export class TeamMetaStore {
     try {
       const normalized: TeamMetaFile = {
         version: 1,
+        ...(Object.hasOwn(file, 'projectContextMode')
+          ? { projectContextMode: parsePersistedTeamProjectContextMode(file.projectContextMode, true) }
+          : {}),
         deletedAt: typeof file.deletedAt === 'string' ? file.deletedAt : undefined,
         runtimeSelectionVersion: normalizeRuntimeSelectionVersion(file.runtimeSelectionVersion),
         displayName:
@@ -232,9 +326,12 @@ export class TeamMetaStore {
           typeof file.extraCliArgs === 'string' ? file.extraCliArgs.trim() || undefined : undefined,
         limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
         launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
+        ...(Object.hasOwn(file, 'reviewFlowSettings')
+          ? { reviewFlowSettings: readReviewFlowSettings(file.reviewFlowSettings) }
+          : {}),
         createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
       };
-      return options?.requireCompleteFields && !hasCompleteKnownMetadata(file, normalized)
+      return options?.requireCompleteFields && !hasCompleteMetadata(file, normalized)
         ? null
         : normalized;
     } catch (error) {
@@ -251,11 +348,13 @@ export class TeamMetaStore {
     const metaPath = this.getMetaPath(teamName, teamsBasePath);
     await withMetaMutationLock(metaPath, async () => {
       const current = await this.getMeta(teamName, teamsBasePath);
+      await assertExistingMetadataWasReadable(metaPath, current);
       await this.writeMetaUnlocked(metaPath, {
         ...data,
         runtimeSelectionVersion:
           normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion) ??
           current?.runtimeSelectionVersion,
+        ...keepUnstatedFields(data, current),
       });
     });
   }
@@ -268,8 +367,10 @@ export class TeamMetaStore {
   ): Promise<void> {
     const metaPath = this.getMetaPath(teamName);
     await withMetaMutationLock(metaPath, async () => {
-      const data = await update(await this.getMeta(teamName));
-      await this.writeMetaUnlocked(metaPath, data);
+      const current = await this.getMeta(teamName);
+      await assertExistingMetadataWasReadable(metaPath, current);
+      const data = await update(current);
+      await this.writeMetaUnlocked(metaPath, { ...data, ...keepUnstatedFields(data, current) });
     });
   }
 
@@ -283,6 +384,7 @@ export class TeamMetaStore {
   serializeMeta(data: Omit<TeamMetaFile, 'version'>): string {
     return serializeTeamMetadata({
       version: 1,
+      projectContextMode: data.projectContextMode,
       deletedAt: data.deletedAt,
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
       displayName: data.displayName?.trim() || undefined,
@@ -304,6 +406,10 @@ export class TeamMetaStore {
       extraCliArgs: data.extraCliArgs?.trim() || undefined,
       limitContext: data.limitContext,
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
+      // An unreadable setting goes back to disk exactly as it was read.
+      reviewFlowSettings: writtenReviewFlowSettings(
+        data.reviewFlowSettings
+      ) as TeamMetaFile['reviewFlowSettings'],
       createdAt: data.createdAt,
     } satisfies TeamMetaFile);
   }

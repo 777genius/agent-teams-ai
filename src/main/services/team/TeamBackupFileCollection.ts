@@ -12,6 +12,8 @@ export const TEAM_ROOT_FILES = [
   // Only teams carrying this profile's marker are backed up; a restored team keeps it.
   TEAM_PROFILE_OWNER_MARKER_FILE,
   'team.meta.json',
+  // App-owned logical team -> project-context mapping; required for restore.
+  'project-contexts.json',
   'launch-state.json',
   'launch-summary.json',
   TEAM_LAUNCH_STOPPED_MARKER_FILE,

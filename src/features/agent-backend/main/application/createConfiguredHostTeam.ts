@@ -1,6 +1,10 @@
 import { createTeamRegistryPayloadSchema } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 
-import { hostTeamSelectionKey } from '../../contracts';
+import {
+  HOST_TEAM_HISTORY_MODE_MESSAGE,
+  hostTeamSelectionKey,
+  TeamCreationRefusal,
+} from '../../contracts';
 
 import { assertBackendRequestGuard, BackendRoutingError } from './backendBinding';
 
@@ -17,8 +21,14 @@ export function captureConfiguredHostTeamDraft(
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new BackendRoutingError('invalid-binding');
   const raw = value as Record<string, unknown>;
+  if (Object.hasOwn(raw, 'projectContextMode') && raw.projectContextMode !== 'shared') {
+    const error = new TeamCreationRefusal('invalid', 'not-dispatched');
+    error.message = HOST_TEAM_HISTORY_MODE_MESSAGE;
+    throw error;
+  }
   const allowed = new Set([
     'teamName',
+    'projectContextMode',
     'runtimeSelectionVersion',
     'members',
     'cwd',
@@ -40,7 +50,8 @@ export function captureConfiguredHostTeamDraft(
   ]);
   if (Object.keys(raw).some((key) => !allowed.has(key)) || !Array.isArray(raw.members))
     throw new BackendRoutingError('invalid-binding');
-  const { teamName, members, ...savedSettings } = raw;
+  // Host has one shared history; retain the original mode only in the caller's draft/signature.
+  const { teamName, members, projectContextMode: _historyMode, ...savedSettings } = raw;
   return createTeamRegistryPayloadSchema.parse(
     JSON.parse(
       JSON.stringify({

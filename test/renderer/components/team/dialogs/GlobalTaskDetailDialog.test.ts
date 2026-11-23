@@ -114,10 +114,14 @@ describe('shouldKeepGlobalTaskDialogLoading', () => {
 
 const captured = vi.hoisted(() => ({
   state: {} as Record<string, unknown>,
-  taskDetail: vi.fn((_props: Record<string, unknown>) => null),
+  taskDetail: vi.fn((_props: Record<string, unknown>): React.ReactElement | null => null),
   surfaceInterest: vi.fn(),
   ensureTaskDetail: vi.fn(),
+  getProjectContextView: vi.fn(),
   originCurrent: true,
+}));
+vi.mock('@renderer/api', () => ({
+  api: { teams: { getProjectContextView: captured.getProjectContextView } },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -154,38 +158,140 @@ const archiveOwner = importedOwner + ':source-archive:legacy-archive%3A' + 'a'.r
 const gapOwner = importedOwner + ':source-gap:legacy-gap%3A' + 'b'.repeat(64);
 
 describe('GlobalTaskDetailDialog unavailable captured source', () => {
+  let container: HTMLDivElement;
   let root: ReturnType<typeof createRoot>;
   const render = async () => {
     await act(async () => root.render(React.createElement(GlobalTaskDetailDialog)));
+  };
+  const renderOpenTeam = async (teamName: string): Promise<HTMLButtonElement> => {
+    const target = { contextId: 'TEST-local', teamName, taskId: 'TEST-external-task' };
+    captured.state.globalTaskDetail = target;
+    captured.state.taskDetailById = {
+      [taskDetailKey(target)]: makeTaskDetail({
+        identity: target,
+        phase: 'unavailable',
+        loading: false,
+      }),
+    };
+    await render();
+    const button = container.querySelector('button');
+    expect(button).not.toBeNull();
+    return button!;
   };
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.clearAllMocks();
     captured.originCurrent = true;
+    captured.taskDetail.mockImplementation((props) => props.headerExtra as React.ReactElement);
+    captured.getProjectContextView.mockReset();
+    captured.getProjectContextView.mockRejectedValue(new Error('Native project lookup unavailable'));
     const localTask = {
       id: 'TEST-external-task',
       subject: 'Same-id local Task',
       status: 'pending',
     };
+    const localTeam = {
+      teamName: importedOwner,
+      config: {},
+      tasks: [localTask],
+      kanbanState: { tasks: {} },
+    };
     captured.state = {
       activeContextId: 'TEST-local',
       globalTaskDetail: null,
       taskDetailById: {},
-      selectedTeamData: { teamName: importedOwner, tasks: [localTask] },
-      teamDataCacheByName: { [importedOwner]: { teamName: importedOwner, tasks: [localTask] } },
+      selectedTeamData: localTeam,
+      teamDataCacheByName: { [importedOwner]: localTeam },
       globalTasks: [{ ...localTask, teamName: importedOwner }],
+      repositoryGroups: [],
+      projects: [],
       closeGlobalTaskDetail: vi.fn(),
       setTaskDetailSurfaceInterest: captured.surfaceInterest,
       ensureTaskDetail: captured.ensureTaskDetail,
       openTeamTab: vi.fn(),
       openTaskDetailReview: vi.fn(),
     };
-    root = createRoot(document.createElement('div'));
+    container = document.createElement('div');
+    root = createRoot(container);
   });
   afterEach(async () => {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();
   });
+
+  it.each([importedOwner, archiveOwner, gapOwner])(
+    'opens the exact captured Host team without a native project lookup (%s)',
+    async (teamName) => {
+      const button = await renderOpenTeam(teamName);
+      await act(async () => button.click());
+      expect(captured.getProjectContextView).not.toHaveBeenCalled();
+      expect(captured.state.closeGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith();
+      expect(captured.state.openTeamTab).toHaveBeenCalledExactlyOnceWith(teamName);
+    }
+  );
+
+  it.each(['context', 'team', 'task'] as const)(
+    'does not navigate a captured Host key after its %s changes',
+    async (changed) => {
+      const button = await renderOpenTeam(archiveOwner);
+      if (changed === 'context') captured.state.activeContextId = 'TEST-other-context';
+      else captured.state.globalTaskDetail = {
+        contextId: 'TEST-local',
+        teamName: changed === 'team' ? gapOwner : archiveOwner,
+        taskId: changed === 'task' ? 'TEST-other-task' : 'TEST-external-task',
+      };
+      await act(async () => button.click());
+      expect(captured.getProjectContextView).not.toHaveBeenCalled();
+      expect(captured.state.closeGlobalTaskDetail).not.toHaveBeenCalled();
+      expect(captured.state.openTeamTab).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([true, false])(
+    'preserves native verified history routing when its project is listed: %s',
+    async (projectListed) => {
+      captured.state.projects = projectListed
+        ? [{ id: 'TEST-project', path: '/TEST/project', name: 'Test project' }]
+        : [];
+      captured.getProjectContextView.mockResolvedValue({
+        mode: 'per_project', state: 'redirect',
+        logicalTeamName: 'TEST-logical', projectPath: '/TEST/project',
+      });
+      const button = await renderOpenTeam('TEST-physical');
+      await act(async () => button.click());
+      expect(captured.getProjectContextView).toHaveBeenCalledExactlyOnceWith('TEST-physical');
+      expect(captured.state.closeGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith();
+      expect(captured.state.openTeamTab).toHaveBeenCalledExactlyOnceWith(
+        projectListed ? 'TEST-logical' : 'TEST-physical',
+        projectListed ? '/TEST/project' : undefined
+      );
+    }
+  );
+
+  it.each(['context', 'team', 'task'] as const)(
+    'ignores native project lookup settlement after its %s changes',
+    async (changed) => {
+      let finishLookup!: (value: unknown) => void;
+      captured.getProjectContextView.mockReturnValue(new Promise((resolve) => {
+        finishLookup = resolve;
+      }));
+      const button = await renderOpenTeam('TEST-physical');
+      await act(async () => button.click());
+      if (changed === 'context') captured.state.activeContextId = 'TEST-other-context';
+      else captured.state.globalTaskDetail = {
+        contextId: 'TEST-local',
+        teamName: changed === 'team' ? 'TEST-other-team' : 'TEST-physical',
+        taskId: changed === 'task' ? 'TEST-other-task' : 'TEST-external-task',
+      };
+      await act(async () => finishLookup({
+        mode: 'per_project', state: 'redirect',
+        logicalTeamName: 'TEST-logical', projectPath: '/TEST/project',
+      }));
+      expect(captured.getProjectContextView).toHaveBeenCalledExactlyOnceWith('TEST-physical');
+      expect(captured.state.closeGlobalTaskDetail).not.toHaveBeenCalled();
+      expect(captured.state.openTeamTab).not.toHaveBeenCalled();
+    }
+  );
 
   it.each([archiveOwner, gapOwner])(
     'settles unavailable at the original owner without a same-id local fallback or automatic retry (%s)',

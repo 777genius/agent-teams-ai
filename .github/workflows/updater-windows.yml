@@ -40,7 +40,8 @@ concurrency:
 jobs:
   tooling-quality:
     if: github.event_name == 'pull_request'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
+    # Contract-only PR check: leave native/updater runners for physical E2E.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:

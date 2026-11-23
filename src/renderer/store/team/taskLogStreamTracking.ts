@@ -1,6 +1,6 @@
 import { api } from '@renderer/api';
 
-import { getVisibleTeamNamesInAnyPane } from './teamViewVisibility';
+import { getVisibleTeamNamesInAnyPane, subscribeVisiblePhysicalTeamChanges } from './teamViewVisibility';
 
 import type { AppState } from '../types';
 
@@ -69,9 +69,11 @@ export function startTaskLogStreamTracking(
     }
     sync();
   });
+  const unsubscribePhysicalTeams = subscribeVisiblePhysicalTeamChanges(sync);
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', sync);
 
   return () => {
+    unsubscribePhysicalTeams();
     unsubscribe();
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', sync);
     if (trackedContextId !== store.getState().activeContextId) return;

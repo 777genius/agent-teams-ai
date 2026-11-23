@@ -104,6 +104,8 @@ export interface ScheduleRun {
   linkedTaskId?: string;
   /** Carries an original unknown create receipt through bounded run-history retention. */
   pendingTaskCommandId?: string;
+  /** Per-project teams: the project copy whose board holds the linked task. */
+  executionTeamName?: string;
   /** First ~500 chars of stdout for quick UI display */
   summary?: string;
 }

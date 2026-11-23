@@ -3,7 +3,12 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 
+import agentTeamsControllerModule from 'agent-teams-controller';
+
 import { AGENT_TEAMS_REGISTERED_TOOL_NAMES, registerTools } from '../src/tools';
+
+const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES } =
+  agentTeamsControllerModule;
 
 type RegisteredTool = {
   description?: string;
@@ -388,10 +393,15 @@ describe('agent-teams-mcp tools', () => {
   it('accepts an omitted team_create roster while rejecting malformed provided rosters', () => {
     const parameters = getTool('team_create').parameters;
 
-    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(true);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: 'builder' }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: null }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: [{}] }).success).toBe(false);
+    const team = { teamName: 'alpha', projectContextMode: 'shared' };
+    expect(parameters?.safeParse(team).success).toBe(true);
+    expect(parameters?.safeParse({ ...team, members: 'builder' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, members: null }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, members: [{}] }).success).toBe(false);
+    // The history mode is required: no silent default until board tools support both modes.
+    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, projectContextMode: 'per_project' }).success).toBe(true);
+    expect(parameters?.safeParse({ ...team, projectContextMode: 'project' }).success).toBe(false);
   });
 
   it('launches and stops teams through the runtime MCP tools', async () => {
@@ -497,6 +507,212 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('lets team_stop reach the desktop API for a per-project team that has no config.json', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamDir = path.join(claudeDir, 'teams', 'builders');
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'team.meta.json'),
+      JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'per_project' })
+    );
+    const calls: Array<{ method?: string; url?: string }> = [];
+    const server = await startControlServer(async ({ method, url }) => {
+      calls.push({ method, url });
+      if (method === 'POST' && url === '/api/teams/builders/stop') {
+        return { body: { teamName: 'builders', isAlive: false, runId: null, progress: null, contexts: [] } };
+      }
+      if (method === 'GET' && url === '/api/teams/builders/runtime') {
+        return { body: { teamName: 'builders', isAlive: false, runId: null, progress: null, contexts: [] } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      const stopped = parseJsonToolResult(
+        await getTool('team_stop').execute({
+          claudeDir,
+          teamName: 'builders',
+          controlUrl: server.baseUrl,
+        })
+      );
+      expect(stopped.isAlive).toBe(false);
+      expect(calls[0]).toEqual({ method: 'POST', url: '/api/teams/builders/stop' });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('still refuses team_stop for a team that is neither configured, a draft nor per-project', async () => {
+    const claudeDir = makeClaudeDir();
+    const sharedDir = path.join(claudeDir, 'teams', 'shared-meta-only');
+    fs.mkdirSync(sharedDir, { recursive: true });
+    // A meta file of the shared mode (or one without a mode) is not a definition that can run.
+    fs.writeFileSync(
+      path.join(sharedDir, 'team.meta.json'),
+      JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'shared' })
+    );
+
+    await expect(
+      getTool('team_stop').execute({ claudeDir, teamName: 'typo-team' })
+    ).rejects.toThrow('Unknown team "typo-team"');
+    await expect(
+      getTool('team_stop').execute({ claudeDir, teamName: 'shared-meta-only' })
+    ).rejects.toThrow('Unknown team "shared-meta-only"');
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'typo-team'))).toBe(false);
+  });
+
+  describe('board tools and a team that keeps a separate history per project', () => {
+    const boardTools = new Set(AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES);
+    const shapeOf = (name: string) =>
+      (getTool(name).parameters as unknown as { shape?: Record<string, unknown> }).shape;
+    const writePerProjectTeam = (claudeDir: string, teamName: string) => {
+      const teamDir = path.join(claudeDir, 'teams', teamName);
+      fs.mkdirSync(teamDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(teamDir, 'team.meta.json'),
+        JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'per_project' })
+      );
+    };
+
+    it('makes every catalog group say whether its tools work on a board', () => {
+      // A new group must decide: a missing flag would silently leave its tools without projectPath.
+      for (const group of AGENT_TEAMS_MCP_TOOL_GROUPS) {
+        expect(typeof group.projectBoard, group.id).toBe('boolean');
+      }
+    });
+
+    // MCP clients only see the text of a tool error: a refusal of the app leads it with its code,
+    // also when it comes from the tool itself (cross-team routing), not only from the board lookup.
+    it('shows a refusal of the app to the client with its code first', async () => {
+      const claudeDir = makeClaudeDir();
+      writeTeamConfig(claudeDir, 'sender-team', { members: [{ name: 'lead', role: 'team-lead' }] });
+      const server = await startControlServer(({ url }) =>
+        String(url).startsWith('/api/teams/sender-team/cross-team/recipient')
+          ? {
+              statusCode: 409,
+              body: { code: 'NO_PROJECT_HISTORY', error: 'Team "builders" has no history here yet.' },
+            }
+          : { statusCode: 500, body: { error: `Unexpected ${String(url)}` } }
+      );
+      fs.writeFileSync(
+        path.join(claudeDir, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: server.baseUrl })
+      );
+      try {
+        const refused = getTool('cross_team_send').execute({
+          claudeDir,
+          teamName: 'sender-team',
+          toTeam: 'builders',
+          text: 'Must not be delivered',
+        });
+        await expect(refused).rejects.toMatchObject({
+          name: 'UserError',
+          code: 'NO_PROJECT_HISTORY',
+          message: '[NO_PROJECT_HISTORY] Team "builders" has no history here yet.',
+        });
+      } finally {
+        await server.close();
+      }
+    });
+
+    it('takes projectPath on the board tools of the catalog and on no other tool', () => {
+      // The team as a whole, launch and stop, and the runtime bridge (called by a physical name).
+      for (const name of ['team_get', 'team_launch', 'team_stop', 'runtime_heartbeat']) {
+        expect(boardTools.has(name), name).toBe(false);
+      }
+      for (const name of AGENT_TEAMS_REGISTERED_TOOL_NAMES) {
+        expect(shapeOf(name)?.projectPath === undefined, name).toBe(!boardTools.has(name));
+      }
+    });
+
+    // Legacy calls unchanged: a configured team (or a project copy named exactly) without a
+    // projectPath is used as is and the app is never asked. With one, the app checks it.
+    it('asks the app about a configured team only when a projectPath is given', async () => {
+      const claudeDir = makeClaudeDir();
+      writeTeamConfig(claudeDir, 'shared-team', {
+        members: [
+          { name: 'lead', role: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+        ],
+      });
+      const projectPath = path.join(claudeDir, 'another-project');
+      const boardLookups: string[] = [];
+      const server = await startControlServer(({ url }) => {
+        if (!String(url).includes('/board-target')) {
+          return { statusCode: 500, body: { error: `Unexpected ${String(url)}` } };
+        }
+        boardLookups.push(String(url));
+        return { body: { teamName: 'shared-team' } };
+      });
+      fs.writeFileSync(
+        path.join(claudeDir, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: server.baseUrl })
+      );
+      try {
+        const created = parseJsonToolResult(
+          await getTool('task_create').execute({
+            claudeDir,
+            teamName: 'shared-team',
+            subject: 'Shared board task',
+            createdBy: 'user',
+          })
+        );
+        expect(
+          fs.existsSync(path.join(claudeDir, 'tasks', 'shared-team', `${created.id}.json`))
+        ).toBe(true);
+        expect(boardLookups).toEqual([]);
+        const listed = parseJsonToolResult(
+          await getTool('task_list').execute({ claudeDir, teamName: 'shared-team', projectPath })
+        );
+        expect(JSON.stringify(listed)).toContain('Shared board task');
+        expect(boardLookups).toEqual([
+          `/api/teams/shared-team/board-target?projectPath=${encodeURIComponent(projectPath)}`,
+        ]);
+        await getTool('task_list').execute({
+          claudeDir, teamName: 'shared-team', projectPath: `${projectPath} `,
+        });
+        expect(boardLookups.at(-1)).toBe(
+          `/api/teams/shared-team/board-target?projectPath=${encodeURIComponent(`${projectPath} `)}`
+        );
+      } finally {
+        await server.close();
+      }
+    });
+
+    it('refuses a per-project team when the app cannot be reached and writes nothing', async () => {
+      // No app runs here: no published address and no address in the environment.
+      vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
+      const claudeDir = makeClaudeDir();
+      writePerProjectTeam(claudeDir, 'builders');
+
+      try {
+        await expect(
+          getTool('task_create').execute({
+            claudeDir,
+            teamName: 'builders',
+            projectPath: path.join(claudeDir, 'project-a'),
+            subject: 'Must not be written',
+            createdBy: 'user',
+          })
+        ).rejects.toThrow(/separate history per project.*could not be reached/s);
+        await expect(
+          getTool('message_send').execute({
+            claudeDir,
+            teamName: 'builders',
+            to: 'alice',
+            from: 'lead',
+            text: 'Must not be written',
+          })
+        ).rejects.toThrow(/could not be reached/);
+        expect(fs.existsSync(path.join(claudeDir, 'tasks', 'builders'))).toBe(false);
+        expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'inboxes'))).toBe(false);
+        expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'config.json'))).toBe(false);
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+  });
+
   it('lists, gets, and creates teams through the local control API', async () => {
     const claudeDir = makeClaudeDir();
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
@@ -588,6 +804,7 @@ describe('agent-teams-mcp tools', () => {
             },
           ],
           cwd: '/tmp/project',
+          projectContextMode: 'per_project',
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
@@ -632,6 +849,7 @@ describe('agent-teams-mcp tools', () => {
               },
             ],
             cwd: '/tmp/project',
+            projectContextMode: 'per_project',
             providerId: 'codex',
             model: 'gpt-5.2',
             effort: 'high',
@@ -2428,6 +2646,34 @@ describe('agent-teams-mcp tools', () => {
         process.env.AGENT_TEAMS_MCP_CLAUDE_DIR = previousForcedDir;
       }
     }
+  });
+
+  it('cross_team_send reports the team that received the message', async () => {
+    // Routing asks the app; none runs here, so the exact name is kept.
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
+    const claudeDir = makeClaudeDir();
+    for (const teamName of ['sender-team', 'receiver-team']) {
+      writeTeamConfig(claudeDir, teamName, { members: [{ name: 'lead', role: 'team-lead' }] });
+    }
+    let result: unknown;
+    try {
+      result = parseJsonToolResult(
+        await getTool('cross_team_send').execute({
+          claudeDir,
+          teamName: 'sender-team',
+          toTeam: 'receiver-team',
+          text: 'Hello receiver',
+        })
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(result).toMatchObject({ deliveredToInbox: true, toTeam: 'receiver-team' });
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'receiver-team', 'inboxes', 'lead.json'), 'utf8')
+      )
+    ).toHaveLength(1);
   });
 
   it('rejects non-configured teams before MCP side-effect writes', async () => {

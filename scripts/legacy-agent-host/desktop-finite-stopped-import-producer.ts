@@ -221,6 +221,7 @@ export async function produceDesktopFiniteStoppedTeam(options: {
     const absentRoots = [join(fixture.root, 'userData/data/attachments', FINITE_SOURCE_TEAM), join(fixture.root, 'userData/data/task-attachments', FINITE_SOURCE_TEAM)];
     for (const path of absentRoots) await assert.rejects(lstat(path), { code: 'ENOENT' });
     const meta = await json(join(team, 'team.meta.json'));
+    assert.equal(meta.projectContextMode, 'shared');
     const savedSettings = Object.fromEntries(['cwd', 'providerId', 'model', 'effort', 'fastMode', 'prompt', 'skipPermissions', 'syncModelsWithLead', 'limitContext'].filter(key => meta[key] !== undefined).map(key => [key, meta[key]]));
     assert.equal(savedSettings.prompt, FINITE_SOURCE_PROMPT); assert.equal(savedSettings.model, 'claude-sonnet-4-6');
     seed = { sourceKind: 'actual-current-finite-solo', teamName: FINITE_SOURCE_TEAM, sourceTask: task, savedSettings,

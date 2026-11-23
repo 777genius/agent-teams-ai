@@ -43,6 +43,24 @@ export interface EditableMemberSettings {
   mcpPolicy: MemberSettingsMcpPolicy | null;
 }
 
+/**
+ * The saved settings of one member as the settings mutation compares them
+ * (its fingerprint is taken from these fields). Read for a team whose members
+ * have no runtime snapshot, such as the definition of a per-project team.
+ */
+export interface MemberSettingsTarget {
+  name: string;
+  agentType: string | null;
+  agentId: string | null;
+  joinedAt: number | string | null;
+  settings: EditableMemberSettings;
+}
+
+export interface GetMemberSettingsTargetRequest {
+  teamName: string;
+  memberName: string;
+}
+
 export type UpdateMemberSettingsEffect =
   | 'no_changes'
   | 'persisted_only'
@@ -53,12 +71,19 @@ export type UpdateMemberSettingsEffect =
   | 'team_relaunch_required'
   | 'recovery_required';
 
+export interface MemberSettingsRelaunchGuard {
+  expectedTeamSettingsFingerprint: string;
+  baseline: { memberName: string; expectedFingerprint: string }[];
+}
+
 interface UpdateMemberSettingsRequestBase {
   commandId: string;
   idempotencyKey: string;
   teamName: string;
   memberName: string;
   expectedFingerprint: string;
+  /** Compare the complete logical-team baseline when committing a confirmed relaunch. */
+  relaunchGuard?: MemberSettingsRelaunchGuard;
 }
 
 export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
@@ -69,6 +94,22 @@ export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
         leadRuntime: Pick<EditableMemberSettings, 'model' | 'effort'>;
       }
   );
+
+/**
+ * Why the main process refused a member settings change before anything was
+ * written. A stable code, so the app can explain it in the user's language.
+ * - `project_copy`: the team is the project copy of another team;
+ * - `project_running`, `project_launching`, `project_unreconciled`: a team
+ *   a project runtime is incompatible with the requested edit, still starting
+ *   or stopping, or its state requires reconciliation;
+ * - `team_metadata_unreadable`: the team's saved settings cannot be read.
+ */
+export type MemberSettingsRefusalReason =
+  | 'project_copy'
+  | 'project_running'
+  | 'project_launching'
+  | 'project_unreconciled'
+  | 'team_metadata_unreadable';
 
 export type UpdateMemberSettingsResult =
   | {
@@ -96,5 +137,13 @@ export type UpdateMemberSettingsResult =
       outcome: 'busy';
       teamName: string;
       memberName: string;
+      replayed: boolean;
+    }
+  | {
+      outcome: 'refused';
+      reason: MemberSettingsRefusalReason;
+      memberName: string;
+      /** English diagnostics for logs; the app shows the localized text of `reason`. */
+      message: string;
       replayed: boolean;
     };

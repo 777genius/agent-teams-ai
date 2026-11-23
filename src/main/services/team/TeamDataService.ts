@@ -93,6 +93,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
+import type { TeamConfigurationUpdate } from './TeamConfigurationMutations';
 import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
@@ -1126,7 +1127,7 @@ export class TeamDataService {
     const selection = resolveTeamRuntimeSelection(meta);
     const resolvedProviderId = selection.status === 'selected' ? selection.providerId : undefined;
     return {
-      teamName,
+      teamName, projectContextMode: meta.projectContextMode,
       displayName: meta.displayName,
       description: meta.description,
       color: meta.color,
@@ -1330,7 +1331,7 @@ export class TeamDataService {
 
   async updateConfig(
     teamName: string,
-    updates: { name?: string; description?: string; color?: string }
+    updates: TeamConfigurationUpdate
   ): Promise<TeamConfig | null> {
     return this.runConfigurationOperation(teamName, () =>
       updateTeamConfiguration(teamName, updates, {
@@ -3476,12 +3477,54 @@ export class TeamDataService {
     });
   }
 
-  createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
+  private getControllerTaskWorkflowColumn(
+    taskBoard: AgentTeamsController['taskBoard'],
+    taskId: string
+  ): 'review' | 'approved' | undefined | null {
+    if (!taskBoard.getTask || !taskBoard.getKanbanState) {
+      return null;
+    }
+
+    const task = taskBoard.getTask(taskId) as TeamTask | null | undefined;
+    if (!task || typeof task.status !== 'string') {
+      return null;
+    }
+
+    const kanbanState = taskBoard.getKanbanState() as KanbanState | null | undefined;
+    const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
+    const kanbanWorkflowColumn = kanbanColumn
+      ? getTeamTaskWorkflowColumn({
+          status: task.status,
+          reviewState: 'none',
+          kanbanColumn,
+        })
+      : undefined;
+    if (kanbanWorkflowColumn) {
+      return kanbanWorkflowColumn;
+    }
+
+    const reviewState = getReviewStateFromTask({
+      historyEvents: task.historyEvents,
+      reviewState: task.reviewState,
+      status: task.status,
+      ...(kanbanColumn ? { kanbanColumn } : {}),
+    });
+    return getTeamTaskWorkflowColumn({
+      status: task.status,
+      reviewState,
+      ...(kanbanColumn ? { kanbanColumn } : {}),
+    });
+  }
+
+  createTeamConfig(
+    request: TeamCreateConfigRequest,
+    options?: { claimOwnerOnCreate?: boolean }
+  ): Promise<void> {
     return this.runConfigurationOperation(request.teamName, () =>
       createDraftTeamConfig(request, {
         teamMetaStore: this.teamMetaStore,
         membersMetaStore: this.membersMetaStore,
-      })
+      }, options)
     );
   }
 

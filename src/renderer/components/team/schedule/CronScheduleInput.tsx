@@ -257,7 +257,7 @@ export const CronScheduleInput = ({
       {/* Warm-up applies only to legacy one-shot schedules. */}
       {showWarmUp ? (
         <div className="space-y-1.5">
-          <Label className="label-optional">{t('schedule.cron.warmUpTime')}</Label>
+          <Label>{t('schedule.cron.warmUpTime')}</Label>
           <Select
             value={String(warmUpMinutes)}
             onValueChange={(val) => onWarmUpMinutesChange(Number(val))}

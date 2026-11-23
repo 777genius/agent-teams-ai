@@ -10,17 +10,19 @@ import { useStore } from '@renderer/store';
 import { showStoppedTeamLaunchHold, stoppedTeamLaunchSelection } from './stoppedTeamLaunch';
 import { useRetainedLaunchOwner } from './useRetainedLaunchOwner';
 
+import type { ChangeRuntimeLaunchState } from '../definitionEdit/changeRuntimeLaunch';
 import type { TeamLaunchDialogMode } from './LaunchTeamDialog.types';
-import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import type { ResolvedTeamMember } from '@shared/types';
-interface State {
+interface State extends Omit<Partial<ChangeRuntimeLaunchState>, 'open' | 'mode'> {
   open: boolean;
   mode: TeamLaunchDialogMode;
-  memberSettingsDraft?: MemberSettingsRelaunchDraft;
-  baselineMembers?: ResolvedTeamMember[];
   retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
 }
-export function useStoppedTeamLaunchDialog(teamName: string) {
+export function useStoppedTeamLaunchDialog(
+  teamName: string,
+  logicalTeamName?: string,
+  retainedHistory = false
+) {
   const [launchDialogState, setLaunchDialogState] = useState<State>({
     open: false,
     mode: 'launch',
@@ -30,13 +32,24 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
     members: ResolvedTeamMember[];
     cwd?: string;
   }>();
-  const owner = useRetainedLaunchOwner(teamName);
+  const owner = useRetainedLaunchOwner(JSON.stringify([teamName, logicalTeamName, retainedHistory]));
   const openLaunchDialog = useCallback(
     (
       mode: TeamLaunchDialogMode,
-      settings?: Pick<State, 'memberSettingsDraft' | 'baselineMembers'>
+      settings?: Omit<State, 'open' | 'mode' | 'retainedLegacyLaunch'>
     ) => {
+      if (retainedHistory && logicalTeamName) {
+        useStore.getState().openTeamTab(logicalTeamName);
+        return;
+      }
       const intent = owner.begin();
+      if (logicalTeamName) {
+        // Definition-owned project rosters retain their native physical runtime.
+        owner.adopt(undefined);
+        setLaunchTarget(undefined);
+        setLaunchDialogState({ ...settings, open: true, mode: 'relaunch' });
+        return;
+      }
       let choice: RetainedLegacyLaunchChoice | undefined;
       void (async () => {
         try {
@@ -82,7 +95,7 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
               cwd: data.config.projectPath,
             });
             void useStore.getState().fetchTeams();
-            setLaunchDialogState({ open: true, mode: 'launch', ...settings });
+            setLaunchDialogState({ ...settings, open: true, mode: 'launch' });
           } else {
             owner.adopt(choice);
             setLaunchTarget(
@@ -100,9 +113,9 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
                 : undefined
             );
             setLaunchDialogState({
+              ...settings,
               open: true,
               mode: choice ? 'launch' : mode,
-              ...settings,
               retainedLegacyLaunch: choice,
             });
           }
@@ -112,7 +125,7 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
         }
       })();
     },
-    [owner, teamName]
+    [owner, teamName, logicalTeamName, retainedHistory]
   );
   const closeLaunchDialog = useCallback(() => {
     owner.close();

@@ -278,7 +278,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
 
           {/* Command preview */}
           <div className="space-y-1">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-text">
               {t('advancedCli.commandPreview')}
             </span>
             <div className="overflow-x-auto rounded border border-border bg-surface-sidebar px-2.5 py-1.5">
@@ -294,7 +294,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
 
           {/* Custom arguments */}
           <div className="space-y-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-text">
               {t('advancedCli.customArguments')}
             </span>
             <div className="flex items-center gap-2">

@@ -71,7 +71,11 @@ describe('InternalStorageWorkerCore', () => {
     seed.handle('ping', {});
     seed.close();
     const raw = new Database(dbPath);
-    raw.exec("ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json; PRAGMA user_version = 4;");
+    raw.exec(
+      'ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json; ' +
+        'ALTER TABLE custom_team_templates DROP COLUMN revision; ' +
+        'PRAGMA user_version = 4;'
+    );
     raw.prepare('INSERT INTO member_work_sync_report_intents (team_name,id,member_key,member_name,status,reason,recorded_at,request_json) VALUES (?,?,?,?,?,?,?,?)').run('sandbox','legacy','alice','alice','pending','fallback','2026-09-10T00:00:00Z','{}');
     raw.close();
     const upgraded = track(makeCore(dbPath));
@@ -263,6 +267,55 @@ describe('InternalStorageWorkerCore', () => {
 
     const siblings = await fs.readdir(path.dirname(dbPath));
     expect(siblings.some((name) => name.includes('.corrupt-'))).toBe(true);
+  });
+
+
+  it('does not treat a recovered database as an empty template library, even after restart', async () => {
+    const dbPath = await makeTmpDbPath();
+    const original = track(makeCore(dbPath));
+    expect(
+      original.handle('customTemplate.create', {
+        template: {
+          templateId: 'template-1',
+          name: 'Saved before corruption',
+          schemaVersion: 1,
+          teamPrompt: 'Review the change',
+          members: [{ name: 'reviewer', role: 'Reviewer', workflow: 'Inspect' }],
+        },
+        contentHash: 'hash-1',
+      })
+    ).toMatchObject({ status: 'created' });
+    original.close();
+
+    // The original file cannot be trusted after corruption. Keep its backup,
+    // while preventing the new, empty SQLite database from accepting templates.
+    await fs.writeFile(dbPath, 'not a SQLite database', 'utf8');
+    const recovered = track(makeCore(dbPath));
+    expect((recovered.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('recovered');
+    expect(() => recovered.handle('customTemplate.list', {})).toThrow(/Custom templates unavailable/);
+    expect(() => recovered.handle('customTemplate.create', {})).toThrow(/Custom templates unavailable/);
+
+    // Existing journal recovery is intentionally unaffected.
+    recovered.handle('stallJournal.replace', { teamName: 'demo', entries: [makeRecord()] });
+    expect(recovered.handle('stallJournal.load', { teamName: 'demo' })).toHaveLength(1);
+    const marker = dbPath + '.custom-template-recovery-pending';
+    expect(await fs.readFile(marker, 'utf8')).toContain('Restore or explicitly reconcile');
+    recovered.close();
+
+    const restarted = track(makeCore(dbPath));
+    expect((restarted.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('ok');
+    expect(() => restarted.handle('customTemplate.list', {})).toThrow(/Custom templates unavailable/);
+    expect(restarted.handle('stallJournal.load', { teamName: 'demo' })).toHaveLength(1);
+
+    // An operator may explicitly acknowledge data loss or restore a verified
+    // backup while the app is stopped. Only that offline step removes the marker.
+    restarted.close();
+    await fs.unlink(marker);
+    const acknowledged = track(makeCore(dbPath));
+    expect(acknowledged.handle('customTemplate.list', {})).toEqual({
+      templates: [],
+      unreadableRecords: [],
+    });
   });
 
   it('records store imports idempotently (upsert by store + team)', async () => {

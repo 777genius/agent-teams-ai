@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import {
   hostTeamSelectionKey,
+  isHostTeamHistoryModeRefusal,
   parseHostTeamSelectionKey,
   TeamCreationRefusal,
 } from '@features/agent-backend/contracts';
@@ -319,11 +320,12 @@ export async function prepareDesktopCreatedTeam(
       context.draft,
       scope.guard
     );
-  } catch {
+  } catch (error) {
     return {
       ready: false,
-      message:
-        'Captured Host creation check unavailable. Refresh the unchanged form; no legacy checks were run.',
+      message: isHostTeamHistoryModeRefusal(error)
+        ? error.message
+        : 'Captured Host creation check unavailable. Refresh the unchanged form; no legacy checks were run.',
     };
   }
 }
@@ -348,6 +350,7 @@ export async function createDesktopCapturedTeam(
       request,
     });
   } catch (error) {
+    if (!submitted && isHostTeamHistoryModeRefusal(error)) throw error;
     if (!submitted) throw new TeamCreationRefusal('unavailable', 'not-dispatched');
     throw error;
   }

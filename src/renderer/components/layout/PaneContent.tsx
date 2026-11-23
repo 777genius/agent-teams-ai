@@ -50,8 +50,8 @@ const SchedulesView = lazy(() =>
   }))
 );
 const TeamDetailView = lazy(() =>
-  import('../team/TeamDetailView').then((module) => ({
-    default: module.TeamDetailView,
+  import('../team/ProjectScopedTeamDetailView').then((module) => ({
+    default: module.ProjectScopedTeamDetailView,
   }))
 );
 const TeamListView = lazy(() =>

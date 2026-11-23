@@ -63,6 +63,8 @@ export function useLaunchDialogRosterSubmission(
     replaceMembers: TeamsAPI['replaceMembers'],
     onMembersSaved?: () => void
   ): Promise<void> {
+    if (props.rosterReadOnly && (retained || isHostTeamSelectionKey(request.teamName)))
+      throw new Error('Project team roster is managed by its definition. Reopen project launch.');
     const intent = submitted.current
       ? submitted.current.intent
       : buildMemberSettingsRelaunchIntent(
@@ -153,8 +155,10 @@ export function useLaunchDialogRosterSubmission(
       else await props.onRelaunch(request, members, intent);
     } else {
       await props.validateMemberSettings?.();
-      await replaceMembers(teamName, { members, memberSettingsRelaunch: intent, ...metadata });
-      onMembersSaved?.();
+      if (!props.rosterReadOnly) {
+        await replaceMembers(teamName, { members, memberSettingsRelaunch: intent, ...metadata });
+        onMembersSaved?.();
+      }
       await props.onLaunch(launchRequest);
     }
   }

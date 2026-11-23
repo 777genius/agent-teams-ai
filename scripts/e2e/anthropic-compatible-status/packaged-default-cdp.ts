@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 
+import { clickNativeControl } from './native-click.ts';
+
 type Reply = { result?: { value?: unknown }; exceptionDetails?: unknown };
 type Pending = {
   resolve: (value: Reply) => void;
@@ -77,21 +79,7 @@ export class PackagedDefaultCdp {
     throw new Error(`Timed out: ${label}`);
   }
   async clickElement(expression: string) {
-    const point = await this.wait<{ x: number; y: number }>(
-      `(() => {
-      const e = (${expression}); if (!e || e.disabled) return null;
-      e.scrollIntoView({block:'center'}); const r = e.getBoundingClientRect();
-      return r.width && r.height ? {x:r.left+r.width/2,y:r.top+r.height/2} : null;
-    })()`,
-      'clickable control'
-    );
-    for (const type of ['mousePressed', 'mouseReleased'])
-      await this.send('Input.dispatchMouseEvent', {
-        type,
-        button: 'left',
-        clickCount: 1,
-        ...point,
-      });
+    await clickNativeControl(this, expression, `clickable control: ${expression}`);
   }
   click(selector: string) {
     return this.clickElement(`document.querySelector(${JSON.stringify(selector)})`);

@@ -21,10 +21,12 @@ import {
   type TeamGroupChatsFeature,
 } from '@features/team-group-chats/main';
 import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
+import { startCustomTeamTemplatesFeature } from './startCustomTeamTemplatesFeature';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
 } from './startExternalAgentConnection';
+import { projectTeamLaunchFactory } from './teamProjectContextLaunchPort';
 import {
   assertStartupActive,
   createStartupStage,
@@ -182,7 +184,6 @@ import {
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
-import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
@@ -216,6 +217,7 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import { composeTeamMemberSettings } from './composeTeamMemberSettings';
 import { registerWindowZoomHandler } from '@features/appearance/main';
 import {
   bindMemberWorkSyncProvisioningRuntime,
@@ -254,6 +256,7 @@ import { getDevRendererLocation, resolveRendererIndexPath } from './utils/render
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
+import { createProjectScheduleTargets } from './ipc/teams/projectScheduleTargets';
 import { setTmuxMainWindow } from './ipc/tmux';
 import { configureWindowLifecycleActions } from './ipc/window';
 import {
@@ -454,7 +457,6 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   const args = value.split(/\s+/).filter(Boolean);
   return args.length > 0 ? args : undefined;
 }
-
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -498,7 +500,6 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
-
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined,
   gatewayRuntime?: ReturnType<typeof createGatewayLaunchRuntime>
@@ -519,7 +520,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
-
   reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = await createAttachmentBridgeEnvironment(binaryPath);
   let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
@@ -590,7 +590,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
       return;
     }
-
     await applyMcpLaunchSpecEnv(targetEnv, options);
     if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
@@ -637,7 +636,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     );
   }
   await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
-
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
 
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
@@ -973,6 +971,7 @@ let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let teamGroupChatsFeature: TeamGroupChatsFeature;
+let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature>;
 let teamImportFeature: TeamImportFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
@@ -983,6 +982,7 @@ let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: ReturnType<typeof createDefaultTeamProvisioningService>;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
+let crossTeamHttpApi: CrossTeamService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
 let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
@@ -1853,6 +1853,7 @@ async function initializeServices(): Promise<void> {
   if (process.env.AGENT_TEAMS_PACKAGED_SMOKE?.trim() === '1') {
     void internalStorageFeature.probeBackend();
   }
+  customTeamTemplatesFeature = startCustomTeamTemplatesFeature(internalStorageFeature);
   teamDataService = new TeamDataService();
   void teamDataService
     .listTeams()
@@ -1867,8 +1868,7 @@ async function initializeServices(): Promise<void> {
     applicationCommandRunner = applicationCommandLedgerFeature.runner;
     teamDataService.setTaskBoardCommandFacade(
       new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
-        isDurableStorageAvailable: () =>
-          applicationCommandLedgerBackend.selector.select(true, false),
+        isDurableStorageAvailable: applicationCommandLedgerBackend.isDurable,
         hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
       })
     );
@@ -1919,11 +1919,11 @@ async function initializeServices(): Promise<void> {
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
-  const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
-    commandRunner: applicationCommandRunner,
-    memberLifecycle: teamIpcHandlerApis.memberLifecycle,
-    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
-    getWorkerCache: getTeamDataWorkerClient,
+  const teamMemberSettingsFeature = composeTeamMemberSettings({
+    commandLedger: { runner: applicationCommandRunner, backend: applicationCommandLedgerBackend },
+    apis: teamIpcHandlerApis,
+    data: teamDataService,
+    leadRuntime: teamProvisioningService,
   });
   const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
@@ -2070,6 +2070,7 @@ async function initializeServices(): Promise<void> {
     bindTeamCrossTeamMessagingApi(teamProvisioningService)
   );
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
+  crossTeamHttpApi = crossTeamService;
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
@@ -2124,6 +2125,7 @@ async function initializeServices(): Promise<void> {
     teamIpcHandlerApis,
     teamDataService,
     teamProvisioningService,
+    createProjectScheduleTargets(teamIpcHandlerApis, teamDataService, teamProvisioningService),
     desktopHostSchedules
   );
   // Extension Store services
@@ -2907,7 +2909,7 @@ async function startHttpServer(
 
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
-    if (!teamHttpHandlerApis) {
+    if (!teamHttpHandlerApis || !crossTeamHttpApi) {
       throw new Error('Team HTTP APIs are not initialized');
     }
     const port = await httpServer.start(
@@ -2920,6 +2922,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         teamGroupChatsFeature,
+        customTeamTemplatesFeature,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
@@ -2929,6 +2932,8 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
+        projectTeamLaunch: projectTeamLaunchFactory(teamDataService, teamProvisioningService),
+        crossTeam: crossTeamHttpApi,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
@@ -3125,6 +3130,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      customTeamTemplatesFeature?.dispose();
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       projectFolderFeature.removeProjectFolderIpc(ipcMain);
       removeTeamImportIpc(ipcMain);

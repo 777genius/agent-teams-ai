@@ -51,6 +51,7 @@ async function savedDraft(
       teamName,
       ...(runtimeSelectionVersion === undefined ? {} : { runtimeSelectionVersion }),
       cwd: root,
+      projectContextMode: 'shared',
       providerId: launchIdentity?.providerId ?? 'codex',
       model: 'TEST-model',
       members: [{ name: 'worker', role: 'developer' }],

@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { KanbanTaskCard } from '@renderer/components/team/kanban/KanbanTaskCard';
 import { Badge } from '@renderer/components/ui/badge';
@@ -5,10 +7,15 @@ import { Button } from '@renderer/components/ui/button';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { Activity, ChevronDown, ChevronRight, ExternalLink, Network, Users, X } from 'lucide-react';
 
+import {
+  collectExecutionTeamNames,
+  matchesTaskSummary,
+  taskOwnerTeam,
+} from '../hooks/organizationInspectorTaskScope';
 import { useOrganizationInspectorTasks } from '../hooks/useOrganizationInspectorTasks';
 import { getNodeDisplayLabel } from '../view-models/organizationMapViewModel';
 
-import type { OrganizationAgentTaskDto, OrganizationNodeDto } from '../../contracts';
+import type { OrganizationNodeDto } from '../../contracts';
 import type { KanbanColumnId, TeamTaskWithKanban } from '@shared/types';
 
 interface OrgInspectorProps {
@@ -49,10 +56,6 @@ function resolveKanbanColumn(task: TeamTaskWithKanban): KanbanColumnId {
   return 'todo';
 }
 
-function matchesTaskSummary(task: TeamTaskWithKanban, summary: OrganizationAgentTaskDto): boolean {
-  return task.id === summary.id || task.displayId === summary.id;
-}
-
 export const OrgInspector = ({
   node,
   childCount,
@@ -65,7 +68,11 @@ export const OrgInspector = ({
 }: OrgInspectorProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const teamName = node?.team?.teamName ?? '';
-  const inspectorTasks = useOrganizationInspectorTasks(teamName);
+  const executionTeamNames = useMemo(
+    () => collectExecutionTeamNames(node?.team?.agents ?? []),
+    [node?.team?.agents]
+  );
+  const inspectorTasks = useOrganizationInspectorTasks(teamName, executionTeamNames);
 
   if (!node) {
     return null;
@@ -244,25 +251,18 @@ export const OrgInspector = ({
                 const fullTask = inspectorTasks.tasks.find((candidate) =>
                   matchesTaskSummary(candidate, task)
                 );
+                const owner = fullTask ? taskOwnerTeam(fullTask, team.teamName) : team.teamName;
                 return fullTask ? (
                   <KanbanTaskCard
-                    key={`${agent.id}:${task.id}`}
+                    key={`${agent.id}:${task.executionTeamName ?? ''}:${task.id}`}
                     task={fullTask}
                     contextId={inspectorTasks.contextId}
-                    teamName={team.teamName}
+                    teamName={owner}
                     columnId={resolveKanbanColumn(fullTask)}
                     kanbanTaskState={inspectorTasks.kanbanTaskStateById?.[fullTask.id]}
                     hasReviewers={false}
-                    taskMap={inspectorTasks.taskMap}
                     memberColorMap={inspectorTasks.memberColorMap}
-                    onTaskClick={inspectorTasks.openTaskDetail}
-                    onStartTask={inspectorTasks.onStartTask}
-                    onCompleteTask={inspectorTasks.onCompleteTask}
-                    onCancelTask={inspectorTasks.onCancelTask}
-                    onApprove={inspectorTasks.onApproveTask}
-                    onRequestReview={inspectorTasks.onRequestReview}
-                    onRequestChanges={inspectorTasks.onRequestChanges}
-                    onMoveBackToDone={inspectorTasks.onMoveBackToDone}
+                    {...inspectorTasks.cardBindingsFor(owner)}
                   />
                 ) : (
                   <button

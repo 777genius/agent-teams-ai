@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  HOST_TEAM_HISTORY_MODE_MESSAGE,
   hostTeamSelectionKey,
   TeamCreationRefusal,
 } from '../../../src/features/agent-backend/contracts';
@@ -16,6 +17,7 @@ import {
   createConfiguredHostTeam,
   DesktopBackendFeature,
 } from '../../../src/features/agent-backend/main';
+import { captureConfiguredHostTeamDraft } from '../../../src/features/agent-backend/main/application/createConfiguredHostTeam';
 
 import type {
   DesktopBackendDescriptor,
@@ -120,13 +122,35 @@ async function fixture() {
 }
 
 describe('existing Create-config to actual Host registry', () => {
-  it.each([undefined, 1] as const)(
-    'saves one captured product intent with runtime version %s, exposes only its canonical binding and reconstructs it cold',
-    async (runtimeSelectionVersion) => {
+  it('accepts explicit shared history without changing the original draft or Host saved settings', () => {
+    const draft = {
+      teamName: 'test-shared',
+      projectContextMode: 'shared',
+      cwd: '/TEST/workspace',
+      members: [{ name: 'reviewer', role: 'Reviewer' }],
+    };
+    const before = structuredClone(draft);
+    const payload = captureConfiguredHostTeamDraft('local', draft);
+    const { projectContextMode: _mode, ...legacy } = draft;
+    expect(payload).toEqual(captureConfiguredHostTeamDraft('local', legacy));
+    expect(payload.savedSettings).not.toHaveProperty('projectContextMode');
+    expect(draft).toEqual(before);
+  });
+
+  it.each([
+    [undefined, undefined],
+    [1, undefined],
+    [undefined, 'shared'],
+    [1, 'shared'],
+  ] as const)(
+    'saves one captured product intent with runtime version %s and history %s, exposes only its canonical binding and reconstructs it cold',
+    async (runtimeSelectionVersion, projectContextMode) => {
       const f = await fixture(),
         first = f.feature();
       // Match CreateTeamDialog: this key is present even for an unversioned draft.
       f.request.runtimeSelectionVersion = runtimeSelectionVersion;
+      if (projectContextMode !== undefined) f.request.projectContextMode = projectContextMode;
+      const originalDraft = structuredClone(f.request);
       const originalRequest = CapturedHostClient.prototype.request;
       let lost = false;
       const observed: string[] = [];
@@ -182,6 +206,8 @@ describe('existing Create-config to actual Host registry', () => {
           ],
         },
       });
+      expect(roster).not.toHaveProperty('value.savedSettings.projectContextMode');
+      expect(f.request).toEqual(originalDraft);
       expect(
         await createConfiguredHostTeam({
           feature: first,
@@ -321,4 +347,31 @@ describe('existing Create-config to actual Host registry', () => {
       ).rejects.toThrow();
     expect(createConfiguredTeam).not.toHaveBeenCalled();
   });
+
+  it.each(['per_project', 'unknown', 'Shared', 'shared ', null, undefined, false, 1, {}])(
+    'refuses unsupported history %s before any save effect with a finite correction',
+    async (projectContextMode) => {
+      const createConfiguredTeam = vi.fn();
+      await expect(
+        createConfiguredHostTeam({
+          feature: { createConfiguredTeam },
+          contextId: 'local',
+          request: {
+            command: { commandId: 'TEST-history', idempotencyKey: 'TEST-history' },
+            teamName: 'test-history',
+            cwd: '/TEST/workspace',
+            members: [],
+            projectContextMode,
+          },
+          guard: { isCurrent: () => true },
+        })
+      ).rejects.toMatchObject({
+        name: 'TeamCreationRefusal',
+        code: 'invalid',
+        outcome: 'not-dispatched',
+        message: HOST_TEAM_HISTORY_MODE_MESSAGE,
+      });
+      expect(createConfiguredTeam).not.toHaveBeenCalled();
+    }
+  );
 });

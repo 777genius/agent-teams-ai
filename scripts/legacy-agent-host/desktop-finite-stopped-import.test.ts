@@ -13,6 +13,74 @@ const prompt = 'TEST_CURRENT_LEGACY_SOLO_ONE';
 const deferredPrompt = 'You are "team-lead", the team lead.\nYour team is "test-stopped-legacy".\nUser instructions:\n' + prompt;
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 
+for (const mode of ['shared', 'foreign-popup-only', 'wrong-readback', 'missing-control'] as const) {
+  test('original shared history selection preserves its popup owner and one input: ' + mode,
+    { timeout: 5000 }, async t => {
+      const { Window } = await import('happy-dom');
+      const { createDesktopUiControls } = await import('./desktop-ui-controls.ts');
+      const { selectOriginalSharedTeamHistory } = await import('./desktop-create-config-ui-smoke.ts');
+      const window = new Window();
+      t.after(() => window.happyDOM.abort());
+      const document = window.document;
+      document.body.innerHTML = `<div data-testid="create-team-page">
+        <button id="team-project-context-mode" aria-expanded="false" aria-controls="TEST-history">
+          Separate tasks and chats for each project (default)
+        </button>
+      </div>`;
+      const control = document.getElementById('team-project-context-mode')!;
+      if (mode === 'missing-control') control.remove();
+      const presses: string[] = [], releases: string[] = [];
+      let owners = 0;
+      const rectangle = (y: number) => new window.DOMRect(10, y, 300, 40);
+      window.HTMLElement.prototype.getBoundingClientRect = function () {
+        return this === document.documentElement ? new window.DOMRect(0, 0, 800, 600) :
+          rectangle(this === control ? 20 : this.id === 'TEST-shared' ? 100 : 200);
+      };
+      const hit = (_x: number, y: number) => y < 80 ? control :
+        document.getElementById(y < 180 ? 'TEST-shared' : 'TEST-other');
+      document.elementFromPoint = hit;
+      t.mock.timers.enable({ apis: ['Date'], now: 0 });
+      t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+        t.mock.timers.setTime(Date.now() + delay); done();
+        return {} as ReturnType<typeof setTimeout>;
+      });
+      const ui = createDesktopUiControls({
+        async evaluate(expression) {
+          return runInNewContext(expression, { document, innerWidth: 800, innerHeight: 600,
+            getComputedStyle: window.getComputedStyle.bind(window) });
+        },
+        async send(method, params) {
+          if (method !== 'Input.dispatchMouseEvent') return {};
+          const target = hit(Number(params?.x), Number(params?.y));
+          assert.ok(target);
+          if (params?.type === 'mousePressed') presses.push(target.id);
+          if (params?.type !== 'mouseReleased') return {};
+          releases.push(target.id);
+          if (target === control) {
+            control.setAttribute('aria-expanded', 'true');
+            document.body.insertAdjacentHTML('beforeend', `
+              <div id="TEST-history" role="listbox"><div id="TEST-shared" role="option">Shared across projects</div></div>
+              <div id="TEST-other-history" role="listbox"><div id="TEST-other" role="option">Shared across projects</div></div>`);
+            if (mode === 'foreign-popup-only') document.getElementById('TEST-history')!.remove();
+          } else {
+            assert.equal(target.id, 'TEST-shared', 'the other popup cannot receive this selection');
+            control.setAttribute('aria-expanded', 'false');
+            if (mode !== 'wrong-readback') control.textContent = 'Shared across projects';
+          }
+          return {};
+        },
+      }, { assertOwnedRenderer() { owners++; }, step() {} });
+      if (mode === 'shared') await selectOriginalSharedTeamHistory(ui);
+      else await assert.rejects(selectOriginalSharedTeamHistory(ui), /UI read timed out/);
+      const expected = mode === 'missing-control' ? [] : mode === 'foreign-popup-only' ?
+        ['team-project-context-mode'] : ['team-project-context-mode', 'TEST-shared'];
+      assert.deepEqual(presses, expected);
+      assert.deepEqual(releases, expected, 'a refused readback never repeats the original choice');
+      assert.ok(owners > 0);
+      assert.ok(Date.now() <= 30_400, 'each original control retains the existing read budget');
+    });
+}
+
 test('finite import factory keeps only the explicit fresh-launch template and refuses unrelated Runtime seeds',
   { skip: process.platform === 'win32', timeout: 20_000 }, async t => {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-import-preparation-')));

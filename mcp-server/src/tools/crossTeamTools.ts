@@ -20,7 +20,9 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'cross_team_send',
     description:
-      'Send a message to another team. The message is delivered to the target team lead inbox.',
+      'Send a message to another team. The message is delivered to the target team lead inbox. ' +
+      'A team that keeps a separate history per project receives it in the project your team works in; ' +
+      'the result names the team that received it (toTeam).',
     parameters: z.object({
       ...toolContextSchema,
       toTeam: z.string().min(1),
@@ -45,19 +47,17 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
       chainDepth,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      return await Promise.resolve(
-        jsonTextContent(
-          getController(teamName, claudeDir).crossTeam.sendCrossTeamMessage({
-            toTeam,
-            text,
-            ...(fromMember ? { fromMember } : {}),
-            ...(summary ? { summary } : {}),
-            ...(conversationId ? { conversationId } : {}),
-            ...(replyToConversationId ? { replyToConversationId } : {}),
-            ...(taskRefs?.length ? { taskRefs } : {}),
-            ...(chainDepth !== undefined ? { chainDepth } : {}),
-          })
-        )
+      return jsonTextContent(
+        await getController(teamName, claudeDir).crossTeam.sendCrossTeamMessage({
+          toTeam,
+          text,
+          ...(fromMember ? { fromMember } : {}),
+          ...(summary ? { summary } : {}),
+          ...(conversationId ? { conversationId } : {}),
+          ...(replyToConversationId ? { replyToConversationId } : {}),
+          ...(taskRefs?.length ? { taskRefs } : {}),
+          ...(chainDepth !== undefined ? { chainDepth } : {}),
+        })
       );
     },
   });
@@ -71,12 +71,10 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir, excludeTeam }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      return await Promise.resolve(
-        jsonTextContent(
-          getController(teamName, claudeDir).crossTeam.listCrossTeamTargets({
-            ...(excludeTeam ? { excludeTeam } : {}),
-          })
-        )
+      return jsonTextContent(
+        await getController(teamName, claudeDir).crossTeam.listCrossTeamTargets({
+          ...(excludeTeam ? { excludeTeam } : {}),
+        })
       );
     },
   });

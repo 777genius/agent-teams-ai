@@ -18,6 +18,19 @@ export class TeamCreationRefusal extends Error {
   }
 }
 
+export const HOST_TEAM_HISTORY_MODE_MESSAGE =
+  'Host teams currently support shared history only. Under Team history in Optional launch settings or Optional settings, choose Shared across projects.';
+
+/** Only this finite, pre-dispatch correction is safe to expose through existing Create errors. */
+export function isHostTeamHistoryModeRefusal(error: unknown): error is TeamCreationRefusal {
+  return (
+    error instanceof TeamCreationRefusal &&
+    error.code === 'invalid' &&
+    error.outcome === 'not-dispatched' &&
+    error.message === HOST_TEAM_HISTORY_MODE_MESSAGE
+  );
+}
+
 export function parseTeamCreationFailure(value: unknown): TeamCreationFailure | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const row = value as Record<string, unknown>;

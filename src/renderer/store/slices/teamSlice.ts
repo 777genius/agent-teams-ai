@@ -1,3 +1,4 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import {
   hostProvisioningMemberSnapshot,
   isHostReadUnavailable,
@@ -39,7 +40,6 @@ import {
 } from '@renderer/utils/taskChangeRequest';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayoutMode';
-import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { isTeamReadUnavailable, normalizeTeamAggregateRead } from '@shared/utils/normalizeTeamAggregateRead';
@@ -201,11 +201,13 @@ import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
+import { buildTeamSummaryIndexes } from '../team/teamSummaryIndexes';
 import {
   collectTaskChangeInvalidationState,
   preserveKnownTaskChangePresence,
 } from '../team/teamTaskChangePresenceProjection';
 import {
+  getLaunchToolApprovalSettings,
   loadAllToolApprovalSettingsByTeam,
   loadLegacyToolApprovalSettings,
   loadToolApprovalSettingsForTeam,
@@ -213,6 +215,7 @@ import {
   saveToolApprovalSettingsForTeam,
 } from '../team/teamToolApprovalSettings';
 import {
+  persistAndAwaitToolApprovalSettingsSync,
   persistAndScheduleToolApprovalSettingsSync,
   resetToolApprovalSettingsSync,
   scheduleToolApprovalSettingsSync,
@@ -680,28 +683,6 @@ function isTeamRequestScopeCurrent(
     isContextRequestScopeCurrent(get, scope) &&
     isTeamLocalStateEpochCurrent(teamName, scope.teamStateEpoch)
   );
-}
-
-function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
-  teamByName: Record<string, TeamSummary>;
-  teamBySessionId: Record<string, TeamSummary>;
-} {
-  const teamByName: Record<string, TeamSummary> = {};
-  const teamBySessionId: Record<string, TeamSummary> = {};
-  for (const team of teams) {
-    teamByName[team.teamName] = team;
-    if (team.leadSessionId) {
-      teamBySessionId[team.leadSessionId] = team;
-    }
-    if (Array.isArray(team.sessionHistory)) {
-      for (const sid of team.sessionHistory) {
-        if (typeof sid === 'string' && sid) {
-          teamBySessionId[sid] = team;
-        }
-      }
-    }
-  }
-  return { teamByName, teamBySessionId };
 }
 
 function removeProvisioningSnapshotsForTeams(
@@ -1480,7 +1461,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
   openTeamsTab: (projectPath?: string) => void;
-  openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
+  openTeamTab: (teamName: string, projectPath?: string) => void;
   clearKanbanFilter: () => void;
   ensureTeamGraphSlotAssignments: (
     teamName: string,
@@ -2259,39 +2240,51 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
   },
 
-  openTeamTab: (teamName: string, projectPath?: string, _taskId?: string) => {
+  openTeamTab: (teamName: string, projectPath?: string) => {
     if (!teamName.trim()) {
       return;
     }
-
     // If projectPath is provided, immediately select the matching project in the sidebar.
     // This avoids a race condition where config.json hasn't been updated with projectPath yet.
     if (projectPath) {
       const stateForProject = get();
       const normalizedPath = normalizePath(projectPath);
-      const matchingProject = stateForProject.projects.find(
+      const matchingProject = (stateForProject.projects ?? []).find(
         (p) => normalizePath(p.path) === normalizedPath
       );
       if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
         stateForProject.selectProject(matchingProject.id);
+      } else if (!matchingProject) {
+        // Grouped worktrees are stored separately from the flat projects list.
+        // The path must select the matching worktree before opening a logical tab.
+        for (const group of stateForProject.repositoryGroups ?? []) {
+          const worktree = group.worktrees.find(
+            (candidate) => normalizePath(candidate.path) === normalizedPath
+          );
+          if (!worktree) continue;
+          if (stateForProject.selectedRepositoryId !== group.id ||
+              stateForProject.selectedWorktreeId !== worktree.id ||
+              stateForProject.selectedProjectId !== worktree.id) {
+            set(getWorktreeNavigationState(group.id, worktree.id));
+            void get().fetchSessionsInitial(worktree.id);
+          }
+          break;
+        }
       }
     }
-
     const state = get();
     // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-
     const allTabs = state.getAllPaneTabs();
-    const existing = allTabs.find((tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName);
+    const existing = allTabs.find(
+      (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName
+    );
     if (existing) {
       state.setActiveTab(existing.id);
-      // Sync label in case display name changed
-      if (existing.label !== displayName) {
-        state.updateTabLabel(existing.id, displayName);
-      }
+      if (existing.label !== displayName) state.updateTabLabel(existing.id, displayName);
     } else {
       state.openTab({
         type: 'team',
@@ -4272,10 +4265,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       },
     }));
     // Initialize per-team tool approval settings based on skipPermissions flag
-    const initialSettings: ToolApprovalSettings =
-      request.skipPermissions === false
-        ? DEFAULT_TOOL_APPROVAL_SETTINGS
-        : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+    const initialSettings = getLaunchToolApprovalSettings(request.skipPermissions);
     saveToolApprovalSettingsForTeam(request.teamName, initialSettings);
     set((state) => projectToolApprovalSettings(state, request.teamName, initialSettings));
     let responseRunId: string | null = null;
@@ -4477,17 +4467,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: optimisticLaunchParams,
       },
     }));
-    // Initialize per-team tool approval settings based on skipPermissions flag
-    {
-      const launchSettings: ToolApprovalSettings =
-        request.skipPermissions === false
-          ? DEFAULT_TOOL_APPROVAL_SETTINGS
-          : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
-      saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
-      set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
-    }
+    // Initialize per-team tool approval settings based on skipPermissions flag.
+    const launchSettings = getLaunchToolApprovalSettings(request.skipPermissions);
+    saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
+    set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
     let responseRunId: string | null = null;
     try {
+      // The runtime is addressed by a verified physical alias, even when UI
+      // launch/progress uses the logical team. Reset its persisted policy before
+      // native launch; otherwise an old "allow all" selection survives relaunch.
+      if (!isHostTeamSelectionKey(request.teamName)) {
+        const context = await api.teams.getProjectContextView(request.teamName, request.cwd);
+        if (context.mode === 'per_project' && context.state === 'ready') {
+          set((state) =>
+            projectToolApprovalSettings(state, context.executionTeamName, launchSettings)
+          );
+          await persistAndAwaitToolApprovalSettingsSync(context.executionTeamName, launchSettings);
+        }
+      }
       const response = await unwrapIpc('team:launch', () => dispatch(request));
       if (response.launchStatus === 'unconfirmed')
         throw new Error(

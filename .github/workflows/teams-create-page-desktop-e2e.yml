@@ -2,7 +2,7 @@ name: Teams creation page Electron E2E
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
@@ -21,6 +21,8 @@ on:
       - 'scripts/e2e/teams-create-page-schedule-observation.mjs'
       - 'scripts/e2e/teams-create-page-schedule-observation.test.mjs'
       - 'src/renderer/components/team/**'
+      # Task-board presentation has its own Linux/native Kanban E2E.
+      - '!src/renderer/components/team/kanban/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
       - 'src/features/gateway-provider/renderer/**'
@@ -46,11 +48,14 @@ on:
       - 'scripts/e2e/teams-create-page-schedule-observation.mjs'
       - 'scripts/e2e/teams-create-page-schedule-observation.test.mjs'
       - 'src/renderer/components/team/**'
+      # Task-board presentation has its own Linux/native Kanban E2E.
+      - '!src/renderer/components/team/kanban/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
       - 'src/features/gateway-provider/renderer/**'
       - 'src/renderer/hooks/useCreateTeamDraft.ts'
       - 'src/renderer/services/createTeamDraftStorage.ts'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -62,14 +67,15 @@ concurrency:
 jobs:
   creation-page:
     name: Creation page (${{ matrix.os }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    env:
-      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+    # Desktop E2E launches real Electron; native modules must use Electron's ABI.
+    # The node-ci install profile skips @electron/rebuild and leaves SQLite unavailable.
     steps:
       - name: Enable Windows long paths
         if: runner.os == 'Windows'

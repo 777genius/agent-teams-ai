@@ -218,8 +218,9 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerCrossTeamApi {
-    sendCrossTeamMessage(flags: Record<string, unknown>): unknown;
-    listCrossTeamTargets(flags?: Record<string, unknown>): unknown;
+    /** Routes `toTeam` through the app, then writes the message; the result names `toTeam`. */
+    sendCrossTeamMessage(flags: Record<string, unknown>): Promise<Record<string, unknown>>;
+    listCrossTeamTargets(flags?: Record<string, unknown>): Promise<unknown>;
     getCrossTeamOutbox(): unknown;
   }
 
@@ -244,6 +245,12 @@ declare module 'agent-teams-controller' {
     runtimeHeartbeat(flags: Record<string, unknown>): Promise<unknown>;
   }
 
+  /** What the app decides about a team name; `null` when the app cannot be reached. */
+  export interface ControllerAppRoutingApi {
+    /** The team holding this team's board in a project, as the app answers. */
+    getBoardTarget(projectPath?: string): Promise<Record<string, unknown> | null>;
+  }
+
   export interface AgentBlocksApi {
     AGENT_BLOCK_TAG: string;
     AGENT_BLOCK_OPEN: string;
@@ -263,6 +270,7 @@ declare module 'agent-teams-controller' {
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
+    appRouting: ControllerAppRoutingApi;
     groupChats: {
       createGroupChat(flags: {
         from: string;
@@ -343,6 +351,8 @@ declare module 'agent-teams-controller' {
   export interface AgentTeamsMcpToolGroup {
     id: AgentTeamsMcpToolGroupId;
     teammateOperational: boolean;
+    /** Its tools work on the board of one team and take the project of a per-project team. */
+    projectBoard: boolean;
     toolNames: readonly string[];
   }
 
@@ -365,6 +375,7 @@ declare module 'agent-teams-controller' {
   export const AGENT_TEAMS_RUNTIME_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_MCP_TOOL_GROUPS: readonly AgentTeamsMcpToolGroup[];
   export const AGENT_TEAMS_REGISTERED_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_BOOTSTRAP_TOOL_NAMES: readonly string[];

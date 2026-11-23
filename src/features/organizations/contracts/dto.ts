@@ -39,6 +39,8 @@ export interface OrganizationAgentTaskDto {
   status: 'pending' | 'in_progress' | 'completed' | 'deleted';
   updatedAt?: string;
   kanbanColumn?: string;
+  /** Set when the task lives in a project copy of the team shown by the node. */
+  executionTeamName?: string;
 }
 
 export interface OrganizationAgentSummaryDto {

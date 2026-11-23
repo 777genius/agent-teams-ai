@@ -9,6 +9,10 @@ const labelVariants = cva(
   'text-sm font-medium leading-none text-[var(--color-text)] peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
 );
 
+/**
+ * Field heading. Uses the primary text color in both themes; do not mute it to
+ * mark a field as optional (say so in the text). See docs/development/ui-form-conventions.md.
+ */
 const Label = React.forwardRef<
   React.ComponentRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & VariantProps<typeof labelVariants>

@@ -22,7 +22,7 @@ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesyste
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
 import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
-import { readSavedTeamModelConfiguration } from '../dist/composition/savedTeamModelProbe.js';
+import { captureSavedTeamModelProbe, readSavedTeamModelConfiguration } from '../dist/composition/savedTeamModelProbe.js';
 import { executeTeamModelProbe, teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { captureRuntimeSource, compileRuntimeCapture } from '../dist/composition/runtimeCaptureSource.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
@@ -418,6 +418,122 @@ test('saved source shares only adjacent Team reads while retaining every origina
       assert.equal(measure(actual).error, undefined);
     }
     assert.deepEqual(files(f.root), before, 'read and refusal tests leave original durable bytes unchanged');
+  } finally {
+    observing = false; writeFileSync(statePath, originalState);
+    for (const mock of mocks) mock.mock.restore();
+    syncBuiltinESMExports();
+  }
+});
+
+test('saved probe currentness joins only adjacent Team authority reads and reobserves every refusal', async t => {
+  const f = initialSeedFixture(t), principal = f.profile.principalId;
+  await f.sources!.publish('TEST-current-fence-source');
+  const directory = join(f.root, 'teams/test-imported'), ownerDirectory = join(directory, '.host-owner');
+  const lock = join(ownerDirectory, 'authority.lock'), statePath = join(ownerDirectory, 'state.json');
+  const originalState = readFileSync(statePath), before = files(f.root);
+  const order = ['NS1', 'NS2', 'stateA', 'current', 'NS3', 'NS4', 'stateB', 'NS5', 'NS6', 'stateC', 'stateD'];
+  let observing = false, namespaces = 0, states = 0, publications = 0, ownerCurrent = true;
+  let trace: string[] = [], tokens: string[] = [], outsideCalls: string[] = [];
+  let failAt: string | undefined, afterA: (() => void) | undefined;
+  const fault = new Error('TEST original currentness failure');
+  const point = (name: string) => { trace.push(name); if (failAt === name) throw fault; };
+  const outside = (name: string) => {
+    assert.equal(fs.existsSync(lock), false, name + ' must remain outside Team authority');
+    outsideCalls.push(name); if (failAt === name) throw fault;
+  };
+  const options = { profile: f.profile, team: f.team, sources: f.sources!.index,
+    assertCurrent: () => { if (observing) point('current'); if (!ownerCurrent) throw fault; },
+    assertRuntimeHistory: () => { outside('history'); observing = false; } };
+  const captures = (['start', 'read'] as const).map(action =>
+    ({ action, captured: captureSavedTeamModelProbe({ ...options, input: f.selection(), action }) }));
+  const link = fs.linkSync, directories = fs.readdirSync, read = TeamOwnerStore.prototype.read;
+  const roster = TeamRosterTransitions.prototype.read, sources = f.sources!.index;
+  const currentSource = sources.currentForRecipe, resolveRecipe = sources.resolveRecipe;
+  const mocks = [
+    t.mock.method(fs, 'linkSync', (...args: Parameters<typeof fs.linkSync>) => {
+      const result = link(...args); if (observing && args[1] === lock) publications++; return result;
+    }),
+    t.mock.method(fs, 'readdirSync', (...args: Parameters<typeof fs.readdirSync>) => {
+      if (observing && args[0] === directory) point('NS' + ++namespaces);
+      return directories(...args);
+    }),
+    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore,
+      name: string, decode?: (text: string) => T): T | undefined {
+      const selected = observing && this.directory === ownerDirectory && name === 'state.json';
+      if (selected) {
+        point('state' + String.fromCharCode(65 + states++));
+        const [pid, , token] = readFileSync(lock, 'utf8').split('\n');
+        assert.equal(pid, String(process.pid)); assert.match(token!, /^[a-f0-9-]{36}$/); tokens.push(token!);
+      }
+      const row = (read<T>).call(this, name, decode);
+      if (selected && states === 1) afterA?.();
+      return row;
+    }),
+    t.mock.method(TeamRosterTransitions.prototype, 'read', function(this: TeamRosterTransitions, actor: string) {
+      outside('roster'); return roster.call(this, actor);
+    }),
+    t.mock.method(sources, 'currentForRecipe', (...args: Parameters<typeof currentSource>) => {
+      outside('source'); return currentSource.apply(sources, args);
+    }),
+    t.mock.method(sources, 'resolveRecipe', (...args: Parameters<typeof resolveRecipe>) => {
+      outside('recipe'); return resolveRecipe.apply(sources, args);
+    }),
+  ];
+  syncBuiltinESMExports();
+  const measure = (action: () => unknown, failure?: string, mutate?: () => void) => {
+    trace = []; tokens = []; outsideCalls = []; namespaces = states = publications = 0;
+    failAt = failure; afterA = mutate; observing = true;
+    try { return { value: action(), trace, tokens, outsideCalls, publications }; }
+    catch { return { value: false, trace, tokens, outsideCalls, publications }; }
+    finally { observing = false; failAt = undefined; afterA = undefined; ownerCurrent = true;
+      assert.equal(fs.existsSync(lock), false, 'every synchronous exit releases its Team lock'); }
+  };
+  try {
+    for (const { action, captured } of captures) {
+      const original = () => {
+        f.owner.withLaunchAuthority(principal, action === 'start' ? 'control' : 'read', () => undefined);
+        readSavedTeamModelConfiguration(options); return true;
+      };
+      const actual = captured.isCurrent, old = measure(original), joined = measure(actual);
+      assert.equal(old.value, true); assert.equal(joined.value, true);
+      assert.deepEqual(old.trace, order); assert.deepEqual(joined.trace, order);
+      assert.equal(old.publications, 2); assert.equal(joined.publications, 1);
+      assert.notEqual(old.tokens[0], old.tokens[1]);
+      assert.equal(new Set(joined.tokens).size, 1); assert.equal(joined.tokens.length, 4);
+      for (const boundary of ['history', 'roster', 'source', 'recipe']) assert.ok(joined.outsideCalls.includes(boundary));
+      const later = measure(actual); assert.equal(later.value, true);
+      assert.notEqual(later.tokens[0], joined.tokens[0], 'consecutive current calls never share an authority observation');
+      for (const [index, boundary] of order.entries()) for (const inspect of [original, actual]) {
+        const refused = measure(inspect, boundary);
+        assert.equal(refused.value, false); assert.deepEqual(refused.trace, order.slice(0, index + 1));
+        assert.equal(measure(actual).value, true, 'refusal retains no lock, guard value or nesting depth');
+      }
+      for (const kind of ['revoke', 'replace-revoked', 'missing', 'malformed', 'owner'] as const)
+        for (const inspect of [original, actual]) {
+          const refused = measure(inspect, undefined, () => {
+            if (kind === 'owner') ownerCurrent = false;
+            else if (kind === 'missing') fs.unlinkSync(statePath);
+            else if (kind === 'malformed') writeFileSync(statePath, '{');
+            else {
+              const state = JSON.parse(originalState.toString());
+              state.grants.find((grant: { principalId: string }) => grant.principalId === principal).revoked = true;
+              if (kind === 'replace-revoked') {
+                const replacement = join(ownerDirectory, 'TEST-replacement-state');
+                writeFileSync(replacement, JSON.stringify(state)); renameSync(replacement, statePath);
+              } else writeFileSync(statePath, JSON.stringify(state));
+            }
+          });
+          assert.equal(refused.value, false);
+          assert.deepEqual(refused.trace, order.slice(0, kind === 'owner' ? 4 : 7),
+            'the original second authority read observes changed bytes and replacement files');
+          writeFileSync(statePath, originalState); assert.equal(measure(actual).value, true);
+        }
+      for (const boundary of ['history', 'roster', 'source', 'recipe']) {
+        assert.equal(measure(actual, boundary).value, false);
+        assert.equal(measure(actual).value, true);
+      }
+    }
+    assert.deepEqual(files(f.root), before, 'currentness checks leave original durable bytes unchanged');
   } finally {
     observing = false; writeFileSync(statePath, originalState);
     for (const mock of mocks) mock.mock.restore();

@@ -335,11 +335,7 @@ export const ConnectionSection = (): React.JSX.Element => {
           <div className="grid grid-cols-2 gap-3">
             {/* Host input with combobox */}
             <div className="relative">
-              <label
-                htmlFor="ssh-host"
-                className="mb-1 block text-xs"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              <label htmlFor="ssh-host" className="mb-1 block text-xs text-text">
                 {t('connection.form.host')}
               </label>
               <input
@@ -395,11 +391,7 @@ export const ConnectionSection = (): React.JSX.Element => {
               )}
             </div>
             <div>
-              <label
-                htmlFor="ssh-port"
-                className="mb-1 block text-xs"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              <label htmlFor="ssh-port" className="mb-1 block text-xs text-text">
                 {t('connection.form.port')}
               </label>
               <input
@@ -415,11 +407,7 @@ export const ConnectionSection = (): React.JSX.Element => {
           </div>
 
           <div>
-            <label
-              htmlFor="ssh-username"
-              className="mb-1 block text-xs"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
+            <label htmlFor="ssh-username" className="mb-1 block text-xs text-text">
               {t('connection.form.username')}
             </label>
             <input
@@ -437,7 +425,7 @@ export const ConnectionSection = (): React.JSX.Element => {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            <label className="mb-1 block text-xs text-text">
               {t('connection.form.authentication')}
             </label>
             <SettingsSelect
@@ -450,11 +438,7 @@ export const ConnectionSection = (): React.JSX.Element => {
 
           {authMethod === 'privateKey' && (
             <div>
-              <label
-                htmlFor="ssh-private-key-path"
-                className="mb-1 block text-xs"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              <label htmlFor="ssh-private-key-path" className="mb-1 block text-xs text-text">
                 {t('connection.form.privateKeyPath')}
               </label>
               <input
@@ -471,11 +455,7 @@ export const ConnectionSection = (): React.JSX.Element => {
 
           {authMethod === 'password' && (
             <div>
-              <label
-                htmlFor="ssh-password"
-                className="mb-1 block text-xs"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              <label htmlFor="ssh-password" className="mb-1 block text-xs text-text">
                 {t('connection.form.password')}
               </label>
               <input

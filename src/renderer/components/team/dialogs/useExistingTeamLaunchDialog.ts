@@ -17,6 +17,9 @@ export function useExistingTeamLaunchDialog(fetchTeams: () => Promise<void>) {
   const [launchDialogTeamName, setTeam] = useState('');
   const [launchDialogMembers, setMembers] = useState<ResolvedTeamMember[]>([]);
   const [launchDialogDefaultPath, setPath] = useState<string | undefined>();
+  const [launchDialogProjectPermissionTeamName, setPermissionTeam] = useState<
+    string | null | undefined
+  >();
   const [retainedLegacyLaunch, setChoice] = useState<RetainedLegacyLaunchChoice>();
   const setLaunchDialogOpen = useCallback(
     (open: boolean) => {
@@ -52,6 +55,7 @@ export function useExistingTeamLaunchDialog(fetchTeams: () => Promise<void>) {
       setTeam(target.teamName);
       setMembers(target.members);
       setPath(target.projectPath);
+      setPermissionTeam(target.projectPermissionTeamName);
       setChoice(choice);
       setOpen(true);
     },
@@ -64,6 +68,7 @@ export function useExistingTeamLaunchDialog(fetchTeams: () => Promise<void>) {
     launchDialogTeamName,
     launchDialogMembers,
     launchDialogDefaultPath,
+    launchDialogProjectPermissionTeamName,
     retainedLegacyLaunch,
     handleLaunchTeam,
   };

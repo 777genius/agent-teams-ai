@@ -478,6 +478,11 @@ async function execCliUnclassified(
   return { stdout: String(shellResult.stdout), stderr: String(shellResult.stderr) };
 }
 
+/** Native wrapper handle: never replace the executable with cmd.exe. */
+export function spawnCliDirectExecutable(exe: string, args: string[], opts: SpawnOptions = {}) {
+  return trackCliProcess(spawn(exe, args, { ...withCliProcessDefaults(opts), shell: false }));
+}
+
 /**
  * Spawn a child process.  If the initial `spawn()` call throws
  * synchronously with EINVAL on Windows, retry using a shell-based

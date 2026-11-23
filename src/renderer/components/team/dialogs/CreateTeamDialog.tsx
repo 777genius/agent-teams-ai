@@ -36,7 +36,6 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -44,13 +43,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
-import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -100,6 +92,8 @@ import { bindTeamProvisioningContext } from '@shared/utils/teamProvisioningConte
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { resolveCopiedTeamModelSync } from '../teamCopyData';
+
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
@@ -109,18 +103,21 @@ import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
+import { CreateTeamPromptField } from './CreateTeamPromptField';
 import {
   sanitizeTeamName,
   validateRequest,
   validateTeamNameInline,
 } from './createTeamSubmissionValidation';
 import { CreateTeamSurface } from './CreateTeamSurface';
+import { CreateTeamTemplateSelectionField } from './CreateTeamTemplateSelectionField';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -132,6 +129,7 @@ import {
 } from './dialogIdleScheduling';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
+import { LaunchAfterCreateControl } from './LaunchAfterCreateControl';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogMemberModelIssues,
@@ -186,6 +184,8 @@ import { readLaunchPrepareModelIssues } from './readLaunchPrepareModelIssues';
 import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
 import { CreateTeamProviderStatusStrip } from './RetryOpenCodeStatus';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
+import { TeamColorPicker } from './TeamColorPicker';
+import { TeamHistoryModeField } from './TeamHistoryModeField';
 import {
   analyzeTeammateRuntimeCompatibility,
   useTmuxRuntimeReadiness,
@@ -196,6 +196,7 @@ import { useCreateConfigSubmission } from './useCreateConfigSubmission';
 import { useCreatedTeamLaunchReadiness } from './useCreatedTeamLaunchReadiness';
 import { useCreateTeamLaunchModel } from './useCreateTeamLaunchModel';
 import { useCreateTeamSubmission } from './useCreateTeamSubmission';
+import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useDialogMemberModelScope } from './useDialogMemberModelScope';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
@@ -222,25 +223,12 @@ import type {
   TeamFastMode,
   TeamProviderId,
 } from '@shared/types';
-
 export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
-
-const TEAM_COLOR_NAMES = [
-  'blue',
-  'green',
-  'red',
-  'yellow',
-  'purple',
-  'cyan',
-  'orange',
-  'pink',
-] as const;
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
-
 export const CreateTeamDialog = ({
   open,
   presentation = 'dialog',
@@ -325,6 +313,8 @@ export const CreateTeamDialog = ({
     setRuntimeSelection,
     teamName,
     setTeamName,
+    projectContextMode,
+    setProjectContextMode,
     members,
     setMembers,
     syncModelsWithLead,
@@ -365,6 +355,8 @@ export const CreateTeamDialog = ({
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
+  const templateSelection = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
+  const templateSelectionReady = templateSelection.templateSelectionDraft.isLoaded;
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -474,7 +466,6 @@ export const CreateTeamDialog = ({
           setOrganizationStructureLoading(false);
         }
       });
-
     return () => {
       cancelled = true;
     };
@@ -559,6 +550,7 @@ export const CreateTeamDialog = ({
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
+    templateSelection.clearTemplateSelection();
     resetUIState();
     if (presentation === 'page') await resetCreateTeamDraft();
   };
@@ -881,7 +873,6 @@ export const CreateTeamDialog = ({
       prepareWarningsByProviderIdRef.current.clear();
     }
   }, [open]);
-
   useEffect(() => {
     const generation = ++prepareUnmountGenerationRef.current;
     const idleHandles = prepareIdleHandlesRef.current;
@@ -905,7 +896,6 @@ export const CreateTeamDialog = ({
       });
     };
   }, []);
-
   const selectedEffortForCurrentSelection = useMemo(
     () =>
       getAvailableTeamEffortValue({
@@ -1061,16 +1051,7 @@ export const CreateTeamDialog = ({
         setCopySeedReady(true);
         return;
       }
-      const nextSyncModelsWithLead =
-        initialData.syncModelsWithLead ??
-        !initialData.members.some(
-          (member) =>
-            member.providerId ||
-            member.providerBackendId ||
-            member.model ||
-            member.effort ||
-            member.fastMode
-        );
+      const nextSyncModelsWithLead = resolveCopiedTeamModelSync(initialData);
       const copiedProviderId =
         initialData.providerId == null
           ? selectedProviderId
@@ -1085,6 +1066,7 @@ export const CreateTeamDialog = ({
       if (initialData.runtimeSelectionVersion === 1 && !initialData.providerId)
         setLaunchTeam(false);
       setTeamName(initialData.teamName);
+      setProjectContextMode(initialData.projectContextMode ?? 'shared');
       descriptionDraft.setValue(initialData.description ?? '');
       promptDraft.setValue(initialData.prompt ?? '');
       setTeamColor(initialData.color ?? '');
@@ -1447,6 +1429,7 @@ export const CreateTeamDialog = ({
     () => ({
       runtimeSelectionVersion,
       teamName: sanitizedTeamName,
+      projectContextMode,
       description: description.trim() || undefined,
       color: teamColor || undefined,
       members: soloTeam
@@ -1480,6 +1463,7 @@ export const CreateTeamDialog = ({
       runtimeSelectionVersion,
       runtimeSelectionUnresolved,
       sanitizedTeamName,
+      projectContextMode,
       description,
       teamColor,
       soloTeam,
@@ -1935,37 +1919,39 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     skipPermissions,
   ]);
-  const launchOptionalSummary = useMemo(() => {
-    const summary: string[] = [];
-    if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
-    if (skipPermissions) summary.push(t('create.optional.summary.autoApproveTools'));
-    if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
-      if (selectedFastMode === 'on') summary.push(t('create.optional.summary.fastMode'));
-      else if (selectedFastMode === 'off') summary.push(t('create.optional.summary.fastDisabled'));
-      else if (selectedProviderId === 'anthropic' && anthropicProviderFastModeDefault) {
-        summary.push(t('create.optional.summary.fastDefault'));
-      }
-    }
-    if (effectiveAnthropicRuntimeLimitContext) {
-      summary.push(t('create.optional.summary.anthropicLimitedContext'));
-    }
-    if (worktreeEnabled && worktreeName.trim()) {
-      summary.push(t('create.optional.summary.worktree', { name: worktreeName.trim() }));
-    }
-    if (customArgs.trim()) summary.push(t('create.optional.summary.customCliArgs'));
-    return summary;
-  }, [
-    anthropicProviderFastModeDefault,
-    customArgs,
-    effectiveAnthropicRuntimeLimitContext,
-    prompt,
-    selectedFastMode,
-    selectedProviderId,
-    skipPermissions,
-    t,
-    worktreeEnabled,
-    worktreeName,
-  ]);
+  const launchOptionalSummary = useMemo(
+    () =>
+      buildLaunchOptionalSummary(
+        {
+          launchTeam,
+          projectContextMode,
+          prompt,
+          skipPermissions,
+          selectedProviderId,
+          selectedFastMode,
+          anthropicProviderFastModeDefault,
+          limitAnthropicContext: effectiveAnthropicRuntimeLimitContext,
+          worktreeEnabled,
+          worktreeName,
+          customArgs,
+        },
+        t
+      ),
+    [
+      anthropicProviderFastModeDefault,
+      customArgs,
+      effectiveAnthropicRuntimeLimitContext,
+      launchTeam,
+      projectContextMode,
+      prompt,
+      selectedFastMode,
+      selectedProviderId,
+      skipPermissions,
+      t,
+      worktreeEnabled,
+      worktreeName,
+    ]
+  );
   const teamDetailsSummary = useMemo(() => {
     const summary: string[] = [];
     if (description.trim()) summary.push(t('create.optional.summary.description'));
@@ -2173,6 +2159,7 @@ export const CreateTeamDialog = ({
             createConfig({
               runtimeSelectionVersion: request.runtimeSelectionVersion,
               teamName: request.teamName,
+              projectContextMode: request.projectContextMode,
               displayName: request.displayName,
               description: request.description,
               color: request.color,
@@ -2600,7 +2587,8 @@ export const CreateTeamDialog = ({
               defaultDescription={buildDefaultTeamDescription()}
               hasPromptChips={promptChipDraft.chips.length > 0}
               clearPromptChips={promptChipDraft.clearChipDraft}
-              disabled={isSubmitting || !open || !active}
+              onTemplateApplied={templateSelection.applyBuiltinTemplate}
+              disabled={isSubmitting || !open || !active || !templateSelectionReady}
             />
           }
         >
@@ -2686,6 +2674,16 @@ export const CreateTeamDialog = ({
               ) : null}
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
+              <CreateTeamTemplateSelectionField
+                disabled={isSubmitting}
+                open={open}
+                isCopy={Boolean(initialData)}
+                form={createTeamDraft}
+                templateSelection={templateSelection}
+                descriptionDraft={descriptionDraft}
+                promptDraft={promptDraft}
+                promptChipDraft={promptChipDraft}
+              />
               <TeamRosterEditorSection
                 runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                 members={members}
@@ -2753,37 +2751,26 @@ export const CreateTeamDialog = ({
                   : 'var(--color-surface-overlay)',
               }}
             >
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="launch-team"
-                  className="mt-1 shrink-0"
-                  checked={launchTeam}
-                  onCheckedChange={(checked) => setLaunchTeam(checked === true)}
-                />
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
-                    {t('create.launchAfterCreate.label')}
-                  </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={t('create.launchAfterCreate.description')}
-                          className="rounded text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
-                        >
-                          <Info className="size-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-72">
-                        {t('create.launchAfterCreate.description')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+              <LaunchAfterCreateControl
+                launchTeam={launchTeam}
+                onLaunchTeamChange={setLaunchTeam}
+              />
+              {!launchTeam && templateSelection.appliedTemplateSource !== 'none' ? (
+                <div className="mt-4">
+                  <CreateTeamPromptField
+                    promptDraft={promptDraft}
+                    chipDraft={promptChipDraft}
+                    soloTeam={soloTeam}
+                    mentionSuggestions={mentionSuggestions}
+                    teamSuggestions={teamMentionSuggestions}
+                    taskSuggestions={taskSuggestions}
+                    projectPath={effectiveCwd || null}
+                    onSuggestionsNeeded={enableWorkflowMentionSuggestions}
+                  />
                 </div>
-              </div>
-              {launchTeam ? (
-                <div className="mt-4 space-y-4">
+              ) : null}
+              <div className="mt-4 space-y-4">
+                {launchTeam ? (
                   <ProjectPathSelector
                     cwdMode={cwdMode}
                     onCwdModeChange={setCwdMode}
@@ -2799,105 +2786,103 @@ export const CreateTeamDialog = ({
                     fieldError={fieldErrors.cwd}
                     customFolder={customProjectFolder}
                   />
-                  <OptionalSettingsSection
-                    title={t('create.optional.launchSettingsTitle')}
-                    description={t('create.optional.launchSettingsDescription')}
-                    summary={launchOptionalSummary}
-                    onOpenChange={(isOpen) => {
-                      if (isOpen) {
-                        enableWorkflowMentionSuggestions();
-                      }
-                    }}
-                  >
-                    <div className="space-y-4">
-                      {selectedProviderId === 'anthropic' ? (
-                        <div className="space-y-2">
-                          <AnthropicFastModeSelector
-                            value={selectedFastMode}
-                            onValueChange={setSelectedFastMode}
-                            providerFastModeDefault={anthropicProviderFastModeDefault}
-                            model={selectedModel}
-                            projectPath={effectiveCwd}
-                            limitContext={effectiveAnthropicRuntimeLimitContext}
-                            id="create-fast-mode"
-                          />
-                          {anthropicRuntimeNotice ? (
-                            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                              <p>{anthropicRuntimeNotice}</p>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {selectedProviderId === 'codex' ? (
-                        <div className="space-y-2">
-                          <CodexFastModeSelector
-                            value={selectedFastMode}
-                            onValueChange={setSelectedFastMode}
-                            model={selectedModel}
-                            providerBackendId={
-                              resolveUiOwnedProviderBackendId(
-                                'codex',
-                                runtimeProviderStatusById.get('codex')
-                              ) ?? undefined
-                            }
-                            id="create-fast-mode"
-                          />
-                          {anthropicRuntimeNotice ? (
-                            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                              <p>{anthropicRuntimeNotice}</p>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="team-prompt" className="label-optional">
-                          {t('create.fields.prompt')}
-                        </Label>
-                        <MentionableTextarea
-                          id="team-prompt"
-                          className="text-xs"
-                          minRows={3}
-                          maxRows={12}
-                          value={prompt}
-                          onValueChange={promptDraft.setValue}
-                          suggestions={soloTeam ? [] : mentionSuggestions}
+                ) : null}
+                <OptionalSettingsSection
+                  title={
+                    launchTeam
+                      ? t('create.optional.launchSettingsTitle')
+                      : t('create.optional.settingsTitle')
+                  }
+                  description={
+                    launchTeam
+                      ? t('create.optional.launchSettingsDescription')
+                      : t('create.optional.historyOnlyDescription')
+                  }
+                  summary={launchOptionalSummary}
+                  onOpenChange={(isOpen) => {
+                    if (isOpen && launchTeam) {
+                      enableWorkflowMentionSuggestions();
+                    }
+                  }}
+                >
+                  <div className="space-y-4">
+                    <TeamHistoryModeField
+                      value={projectContextMode}
+                      onValueChange={setProjectContextMode}
+                    />
+                    {launchTeam ? (
+                      <>
+                        {selectedProviderId === 'anthropic' ? (
+                          <div className="space-y-2">
+                            <AnthropicFastModeSelector
+                              value={selectedFastMode}
+                              onValueChange={setSelectedFastMode}
+                              providerFastModeDefault={anthropicProviderFastModeDefault}
+                              model={selectedModel}
+                              projectPath={effectiveCwd}
+                              limitContext={effectiveAnthropicRuntimeLimitContext}
+                              id="create-fast-mode"
+                            />
+                            {anthropicRuntimeNotice ? (
+                              <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                                <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                                <p>{anthropicRuntimeNotice}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {selectedProviderId === 'codex' ? (
+                          <div className="space-y-2">
+                            <CodexFastModeSelector
+                              value={selectedFastMode}
+                              onValueChange={setSelectedFastMode}
+                              model={selectedModel}
+                              providerBackendId={
+                                resolveUiOwnedProviderBackendId(
+                                  'codex',
+                                  runtimeProviderStatusById.get('codex')
+                                ) ?? undefined
+                              }
+                              id="create-fast-mode"
+                            />
+                            {anthropicRuntimeNotice ? (
+                              <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                                <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                                <p>{anthropicRuntimeNotice}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <CreateTeamPromptField
+                          promptDraft={promptDraft}
+                          chipDraft={promptChipDraft}
+                          soloTeam={soloTeam}
+                          mentionSuggestions={mentionSuggestions}
                           teamSuggestions={teamMentionSuggestions}
                           taskSuggestions={taskSuggestions}
                           projectPath={effectiveCwd || null}
-                          chips={promptChipDraft.chips}
-                          onChipRemove={promptChipDraft.removeChip}
-                          onFileChipInsert={promptChipDraft.addChip}
-                          placeholder={t('create.placeholders.prompt')}
-                          footerRight={
-                            promptDraft.isSaved ? (
-                              <span className="text-[10px] text-[var(--color-text-muted)]">
-                                {t('create.saved')}
-                              </span>
-                            ) : null
-                          }
+                          onSuggestionsNeeded={enableWorkflowMentionSuggestions}
                         />
-                      </div>
-                      <SkipPermissionsCheckbox
-                        id="create-skip-permissions"
-                        checked={skipPermissions}
-                        onCheckedChange={setSkipPermissions}
-                      />
-                      <AdvancedCliSection
-                        teamName={advancedKey}
-                        internalArgs={internalArgs}
-                        worktreeEnabled={worktreeEnabled}
-                        onWorktreeEnabledChange={setWorktreeEnabled}
-                        worktreeName={worktreeName}
-                        onWorktreeNameChange={setWorktreeName}
-                        customArgs={customArgs}
-                        onCustomArgsChange={setCustomArgs}
-                      />
-                    </div>
-                  </OptionalSettingsSection>
-                </div>
-              ) : null}
+                        <SkipPermissionsCheckbox
+                          id="create-skip-permissions"
+                          checked={skipPermissions}
+                          onCheckedChange={setSkipPermissions}
+                        />
+                        <AdvancedCliSection
+                          teamName={advancedKey}
+                          internalArgs={internalArgs}
+                          worktreeEnabled={worktreeEnabled}
+                          onWorktreeEnabledChange={setWorktreeEnabled}
+                          worktreeName={worktreeName}
+                          onWorktreeNameChange={setWorktreeName}
+                          customArgs={customArgs}
+                          onCustomArgsChange={setCustomArgs}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </OptionalSettingsSection>
+              </div>
             </div>
             <div className="md:col-span-2">
               <OptionalSettingsSection
@@ -3027,7 +3012,7 @@ export const CreateTeamDialog = ({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="team-description" className="label-optional">
+                    <Label htmlFor="team-description">
                       {t('create.fields.description')}
                     </Label>
                     <AutoResizeTextarea
@@ -3045,36 +3030,12 @@ export const CreateTeamDialog = ({
                       </span>
                     ) : null}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="label-optional">{t('create.fields.color')}</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {TEAM_COLOR_NAMES.map((colorName) => {
-                        const colorSet = getTeamColorSet(colorName);
-                        const isSelected = teamColor === colorName;
-                        return (
-                          <button
-                            key={colorName}
-                            type="button"
-                            className={cn(
-                              'flex size-7 items-center justify-center rounded-full border-2 transition-all',
-                              isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
-                            )}
-                            style={{
-                              backgroundColor: getThemedBadge(colorSet, isLight),
-                              borderColor: isSelected ? colorSet.border : 'transparent',
-                            }}
-                            title={colorName}
-                            onClick={() => setTeamColor(isSelected ? '' : colorName)}
-                          >
-                            <span
-                              className="size-3.5 rounded-full"
-                              style={{ backgroundColor: colorSet.border }}
-                            />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <TeamColorPicker
+                    color={teamColor}
+                    onChange={setTeamColor}
+                    isLight={isLight}
+                    label={t('create.fields.color')}
+                  />
                 </div>
               </OptionalSettingsSection>
             </div>

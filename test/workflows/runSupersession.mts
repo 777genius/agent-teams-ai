@@ -32,6 +32,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'anthropic-env-portability',
     'codeql',
     'codex-runtime-smoke',
+    'custom-team-templates-desktop-e2e',
     'dependency-review',
     'electron-dev-profile-cross-platform',
     'host-process-acceptance',
@@ -41,6 +42,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'opencode-v2-cold-dashboard-e2e',
     'opencode-v2-stage1-preflight',
     'provider-real-runtime-e2e',
+    'project-scoped-team-history-desktop-e2e',
     'prepare-updater-native-inputs',
     'runtime-bootstrap-smoke',
     'sentry-owned-process-native',
@@ -50,6 +52,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'updater-windows',
     'updater-windows-ota',
     'windows-backfill-diagnostic',
+    'windows-teammate-console-native',
   ],
   // One closed migration exception, with the exact v2 group and canonical cancellation.
   isolatedV2: ['host-emulated-acceptance'],

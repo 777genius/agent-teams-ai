@@ -17,9 +17,14 @@ import {
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 
+import {
+  resolveTeamLaunchDefaultProjectPath,
+  resolveTeamListProjectPermissionAlias,
+} from '../teamProjectSelection';
+
 import type { TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
-import type { ResolvedTeamMember, TeamMemberSnapshot } from '@shared/types';
+import type { ResolvedTeamMember, TeamCreateRequest, TeamMemberSnapshot } from '@shared/types';
 import type { TeamsAPI } from '@shared/types/api';
 
 type OriginalTeamData = Awaited<ReturnType<TeamsAPI['getData']>>;
@@ -39,6 +44,29 @@ export function resolveLaunchDialogMembers(
     messageCount: 0,
     lastActiveAt: null,
   }));
+}
+
+function resolveSavedLaunchDialogMembers(
+  members: TeamCreateRequest['members']
+): ResolvedTeamMember[] {
+  return members.map((member) => ({
+    ...member,
+    joinedAt: 0,
+    currentTaskId: null,
+    taskCount: 0,
+    messageCount: 0,
+    lastActiveAt: null,
+    status: 'idle',
+  }));
+}
+
+interface ExistingTeamLaunchDialogTarget {
+  teamName: string;
+  mode: TeamLaunchDialogMode;
+  members: ResolvedTeamMember[];
+  projectPath: string;
+  retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
+  projectPermissionTeamName?: string | null;
 }
 
 export class StoppedTeamLaunchHold extends Error {}
@@ -168,8 +196,25 @@ export async function loadExistingTeamLaunchDialog(
   projectPath: string,
   mode: TeamLaunchDialogMode,
   signal?: AbortSignal
-) {
+): Promise<ExistingTeamLaunchDialogTarget | null> {
   try {
+    const projectContextMode = useStore.getState().teamByName?.[teamName]?.projectContextMode;
+    const perProject = projectContextMode === 'per_project';
+    let projectPermissionTeamName: string | null | undefined;
+    if (perProject) {
+      try {
+        const context = await api.teams.getProjectContextView(teamName, projectPath);
+        projectPermissionTeamName = resolveTeamListProjectPermissionAlias(
+          teamName,
+          projectPath,
+          context
+        );
+      } catch {
+        // An unverified project runtime must require an explicit permission choice.
+        projectPermissionTeamName = null;
+      }
+    }
+    if (signal?.aborted) return null;
     let retainedLegacyLaunch: RetainedLegacyLaunchChoice | undefined;
     const retain = (choice: RetainedLegacyLaunchChoice) => {
       retainedLegacyLaunch = choice;
@@ -178,30 +223,42 @@ export async function loadExistingTeamLaunchDialog(
     try {
       data = await api.teams.getData(teamName, { includeMemberBranches: false });
     } catch (error) {
-      if (!(error instanceof Error && error.message.includes('TEAM_DRAFT'))) throw error;
-      const target = await stoppedTeamLaunchSelection(teamName, false, retain, signal, { mode });
+      if (!perProject && !(error instanceof Error && error.message.includes('TEAM_DRAFT')))
+        throw error;
+      const target = perProject
+        ? teamName
+        : await stoppedTeamLaunchSelection(teamName, false, retain, signal, { mode });
       if (target !== teamName) return await loadImportedDialog(target, projectPath);
+      const saved = await api.teams.getSavedRequest(teamName).catch(() => null);
       return {
         teamName,
         mode,
-        members: [] as ResolvedTeamMember[],
+        members: resolveSavedLaunchDialogMembers(saved?.members ?? []),
         projectPath,
         retainedLegacyLaunch,
+        projectPermissionTeamName,
       };
     }
-    const target = await stoppedTeamLaunchSelection(teamName, data.isAlive, retain, signal, {
-      mode,
-      onOriginalData: (original) => {
-        data = original;
-      },
-    });
+    const target = perProject
+      ? teamName
+      : await stoppedTeamLaunchSelection(teamName, data.isAlive, retain, signal, {
+          mode,
+          onOriginalData: (original) => {
+            data = original;
+          },
+        });
     if (target !== teamName) return await loadImportedDialog(target, projectPath);
     return {
       teamName,
       mode: retainedLegacyLaunch ? ('launch' as const) : mode,
       retainedLegacyLaunch,
       members: resolveLaunchDialogMembers(data.members ?? []),
-      projectPath: data.config.projectPath ?? projectPath,
+      projectPath: resolveTeamLaunchDefaultProjectPath(
+        projectContextMode,
+        projectPath,
+        data.config.projectPath
+      ),
+      projectPermissionTeamName,
     };
   } catch (error) {
     if (!signal?.aborted) showStoppedTeamLaunchHold(error);

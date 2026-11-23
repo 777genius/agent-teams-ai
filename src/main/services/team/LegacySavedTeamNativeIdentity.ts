@@ -207,6 +207,7 @@ export function isLegacySavedTeamProductRecords(
       !Object.entries(meta).every(([key, item]) => {
         if (key === 'version') return item === 1;
         if (key === 'runtimeSelectionVersion') return item === 1;
+        if (key === 'projectContextMode') return item === 'shared';
         if (key === 'createdAt') return timestamp(item);
         if (key === 'launchIdentity') return productLaunchIdentity(item);
         if (metaText.has(key)) return text(item);

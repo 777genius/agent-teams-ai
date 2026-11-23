@@ -3,14 +3,55 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import type { TeamCopyData } from './dialogs/CreateTeamDialog.types';
 import type {
   EffortLevel,
+  TeamCreateRequest,
   TeamFastMode,
   TeamMemberMcpPolicy,
   TeamProviderBackendId,
   TeamProviderId,
   TeamProvisioningMemberInput,
 } from '@shared/types';
+
+/** Copy preserves the saved history mode; an older absent mode is shared history. */
+export function buildSavedTeamCopyData(
+  teamName: string,
+  saved: TeamCreateRequest,
+  legacyDescription?: string
+): TeamCopyData {
+  return {
+    teamName,
+    projectContextMode: saved.projectContextMode ?? 'shared',
+    runtimeSelectionVersion: saved.runtimeSelectionVersion,
+    description: saved.description ?? legacyDescription,
+    color: saved.color,
+    cwd: saved.cwd,
+    prompt: saved.prompt,
+    providerId: saved.providerId,
+    model: saved.model,
+    effort: saved.effort,
+    fastMode: saved.fastMode,
+    syncModelsWithLead: saved.syncModelsWithLead,
+    limitContext: saved.limitContext,
+    skipPermissions: saved.skipPermissions,
+    members: buildCopiedTeamMembers(saved.members),
+  };
+}
+
+export function resolveCopiedTeamModelSync(seed: TeamCopyData): boolean {
+  return (
+    seed.syncModelsWithLead ??
+    !seed.members.some(
+      (member) =>
+        member.providerId ||
+        member.providerBackendId ||
+        member.model ||
+        member.effort ||
+        member.fastMode
+    )
+  );
+}
 
 interface CopyableTeamMember {
   name?: string;

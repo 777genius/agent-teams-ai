@@ -22,6 +22,12 @@ export interface TeamIdentity {
   ownerResourceRef?: string;
 }
 
+/** A row of the folded team list, as far as the review flow needs it. */
+export interface BoardCatalogTeam extends TeamIdentity {
+  projectContextMode?: 'shared' | 'per_project';
+  projectHistoryContexts?: readonly { executionTeamName: string }[];
+}
+
 /** Marker next to a team in the scope picker: its own settings, or saved settings that need repair. */
 export type ScopeBadge = 'custom' | 'repair' | null;
 
@@ -56,6 +62,36 @@ export function scopeToValue(scope: ReviewFlowScope): string {
 
 export function scopeFromValue(value: string): ReviewFlowScope {
   return value === DEFAULT_SCOPE_VALUE ? { kind: 'default' } : { kind: 'team', teamName: value };
+}
+
+/**
+ * The teams a review flow can be set for. A team with separate history per
+ * project has one setting for the team (see `foldProjectTeamBoards`), so it is
+ * listed once and its project copies are not (`projectCopies`, from the main
+ * process, also covers a copy whose first launch never finished, which the team
+ * list still shows as a row of its own). An ordinary team is its own board;
+ * copies it retained from an earlier period keep boards of their own and are
+ * named after the team and the project.
+ */
+export function reviewFlowBoardsOf(
+  teams: readonly BoardCatalogTeam[],
+  copyLabel: (executionTeamName: string) => string | null,
+  projectCopies: ReadonlySet<string>
+): TeamIdentity[] {
+  return teams.flatMap((team): TeamIdentity[] => {
+    if (projectCopies.has(team.teamName)) return [];
+    const own = {
+      teamName: team.teamName,
+      displayName: team.displayName,
+      ...(team.ownerResourceRef !== undefined ? { ownerResourceRef: team.ownerResourceRef } : {}),
+    };
+    if (team.projectContextMode === 'per_project') return [own];
+    const copies = (team.projectHistoryContexts ?? []).map((context) => ({
+      teamName: context.executionTeamName,
+      displayName: copyLabel(context.executionTeamName) ?? context.executionTeamName,
+    }));
+    return [own, ...copies];
+  });
 }
 
 function teamLabel(team: TeamIdentity): string {

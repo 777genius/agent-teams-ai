@@ -164,6 +164,12 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     mutation: () => Promise<void>
   ): Promise<boolean> {
     const teamKey = teamName.trim().toLowerCase();
+    // Reentrant like runLiveRosterMutation: a write already inside this team's
+    // roster lock (a per-project definition edit) runs in it instead of being busy.
+    if (this.isLiveRosterMutationLockHeld(teamKey)) {
+      await mutation();
+      return true;
+    }
     if (this.teamOpLocks.has(teamKey)) return false;
 
     // executeLiveRosterMutation registers the team lock synchronously before its

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { taskDetailKey, useTaskDetailSession } from '@features/team-task-detail/renderer';
+import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import {
   selectResolvedMembersForTeamName,
@@ -10,6 +12,8 @@ import {
 import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+
+import { resolveVerifiedProjectTaskNavigation } from '../teamProjectSelection';
 
 import {
   hasSelectedTargetTeamData,
@@ -106,9 +110,39 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   const activeMembers = useMemo(() => targetMembers.filter((m) => !m.removedAt), [targetMembers]);
 
   const handleOpenTeam = useCallback((): void => {
-    if (!identity || identity.contextId !== useStore.getState().activeContextId) return;
-    closeGlobalTaskDetail();
-    openTeamTab(identity.teamName, undefined, identity.taskId);
+    if (!identity) return;
+    const origin = useStore.getState();
+    if (
+      origin.activeContextId !== identity.contextId ||
+      origin.globalTaskDetail?.teamName !== identity.teamName ||
+      origin.globalTaskDetail?.taskId !== identity.taskId
+    ) return;
+    if (isHostTeamSelectionKey(identity.teamName)) {
+      closeGlobalTaskDetail();
+      openTeamTab(identity.teamName);
+      return;
+    }
+    void (async () => {
+      const destination = await api.teams.getProjectContextView(identity.teamName).catch(() => null);
+      const current = useStore.getState();
+      if (
+        current.activeContextId !== identity.contextId ||
+        current.globalTaskDetail?.teamName !== identity.teamName ||
+        current.globalTaskDetail?.taskId !== identity.taskId
+      ) return;
+      if (!destination) return;
+      closeGlobalTaskDetail();
+      if (destination.state === 'redirect') {
+        // The backend verified the physical alias. If its project disappeared
+        // from discovery, keep that exact history rather than the sidebar's project.
+        const target = resolveVerifiedProjectTaskNavigation(
+          identity.teamName, destination, current.repositoryGroups, current.projects
+        );
+        openTeamTab(target.teamName, target.projectPath);
+      } else {
+        openTeamTab(identity.teamName);
+      }
+    })();
   }, [closeGlobalTaskDetail, identity, openTeamTab]);
 
   const handleOpenTaskTab = useCallback((): void => {

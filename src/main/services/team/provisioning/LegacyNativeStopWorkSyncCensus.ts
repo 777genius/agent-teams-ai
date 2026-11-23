@@ -78,9 +78,12 @@ function status(value: unknown, target: LegacyNativeTarget, incarnation: string)
     ['providerId', 'reportToken', 'reportTokenExpiresAt', 'shadow']
   );
   identity(row, target);
-  // This initial supported subset is inactive product history. Reports, runtime
-  // admissions and recovery/receipt fields require separate terminal proofs.
-  if (row.state !== 'inactive' || (row.providerId !== undefined && row.providerId !== 'anthropic'))
+  // Empty caught-up history can remain after a drained Stop without another reconcile.
+  // Reports, runtime admissions and recovery/receipt fields still need separate terminal proofs.
+  if (
+    (row.state !== 'inactive' && row.state !== 'caught_up') ||
+    (row.providerId !== undefined && row.providerId !== 'anthropic')
+  )
     refuse();
   const revision = closed(row.statusRevision, ['incarnation', 'lineageId', 'sequence', 'nonce']);
   if (revision.incarnation !== incarnation) refuse();
@@ -92,6 +95,13 @@ function status(value: unknown, target: LegacyNativeTarget, incarnation: string)
   identity(agenda, target);
   strings(row.diagnostics);
   strings(agenda.diagnostics);
+  if (
+    row.state === 'caught_up' &&
+    (array(agenda.items).length !== 0 ||
+      row.shadow === undefined ||
+      !array(row.diagnostics).includes('agenda_empty'))
+  )
+    refuse();
   for (const raw of array(agenda.items)) {
     const item = closed(
       raw,
@@ -146,7 +156,7 @@ function status(value: unknown, target: LegacyNativeTarget, incarnation: string)
   });
 }
 
-function metric(value: unknown, target: LegacyNativeTarget): void {
+function metric(value: unknown, target: LegacyNativeTarget, emptyOnly: boolean): void {
   const row = closed(
     value,
     [
@@ -166,7 +176,8 @@ function metric(value: unknown, target: LegacyNativeTarget): void {
     !id(row.id) ||
     !text(row.kind) ||
     !['status_evaluated', 'fingerprint_changed'].includes(row.kind) ||
-    row.state !== 'inactive' ||
+    (row.state !== 'inactive' && !(row.state === 'caught_up' && row.actionableCount === 0)) ||
+    (emptyOnly && row.actionableCount !== 0) ||
     !id(row.agendaFingerprint) ||
     !timestamp(row.recordedAt) ||
     !count(row.actionableCount)
@@ -177,7 +188,7 @@ function metric(value: unknown, target: LegacyNativeTarget): void {
   if (row.triggerReasons !== undefined) strings(row.triggerReasons);
 }
 
-function replica(value: unknown, target: LegacyNativeTarget, incarnation: string): void {
+function replica(value: unknown, target: LegacyNativeTarget, incarnation: string): boolean {
   const envelope = closed(value, [
     'schemaVersion',
     'state',
@@ -202,13 +213,15 @@ function replica(value: unknown, target: LegacyNativeTarget, incarnation: string
   const statuses = array(snapshot.statuses);
   if (statuses.length !== 1) refuse();
   status(statuses[0], target, incarnation);
+  const emptyOnly = record(statuses[0]).state === 'caught_up';
   const seen = new Set<string>();
   for (const raw of array(snapshot.metricEvents)) {
-    metric(raw, target);
+    metric(raw, target, emptyOnly);
     const key = record(raw).id as string;
     if (seen.has(key)) refuse();
     seen.add(key);
   }
+  return emptyOnly;
 }
 
 /** The unprepared SQLite read path may publish this product-only empty snapshot. */
@@ -227,8 +240,9 @@ const auditSources = new Map([
   ['reconcile_started', 'reconciler'],
   ['agenda_loaded', 'reconciler'],
   ['team_inactive', 'reconciler'],
+  ['decision_made', 'reconciler'],
 ]);
-function audit(raw: string, target: LegacyNativeTarget): void {
+function audit(raw: string, target: LegacyNativeTarget, emptyOnly: boolean): void {
   if (raw && !raw.endsWith('\n')) refuse();
   const lines = raw ? raw.slice(0, -1).split('\n') : [];
   if (lines.length > MAX_ENTRIES) refuse();
@@ -255,9 +269,34 @@ function audit(raw: string, target: LegacyNativeTarget): void {
       auditSources.get(row.event) !== row.source
     )
       refuse();
-    optional(row, 'state', (value) => value === 'inactive');
+    if (row.event === 'decision_made') {
+      closed(
+        row,
+        [
+          'schemaVersion',
+          'timestamp',
+          'teamName',
+          'memberName',
+          'event',
+          'source',
+          'state',
+          'agendaFingerprint',
+          'actionableCount',
+          'diagnostics',
+        ],
+        ['providerId', 'taskRefs']
+      );
+      if (
+        row.state !== 'caught_up' ||
+        row.actionableCount !== 0 ||
+        !id(row.agendaFingerprint) ||
+        !array(row.diagnostics).includes('agenda_empty') ||
+        (row.taskRefs !== undefined && array(row.taskRefs).length !== 0)
+      )
+        refuse();
+    } else optional(row, 'state', (value) => value === 'inactive');
     optional(row, 'providerId', (value) => value === 'anthropic');
-    optional(row, 'actionableCount', count);
+    optional(row, 'actionableCount', (value) => count(value) && (!emptyOnly || value === 0));
     for (const key of ['agendaFingerprint', 'reason'])
       optional(row, key, (value) => id(value) && value.length <= 243);
     for (const key of ['triggerReasons', 'diagnostics'])
@@ -422,8 +461,12 @@ export function readLegacyNativeWorkSyncCensus(
   const secret = parseMemberWorkSyncTokenSecret(secretRaw);
   if (!tokenSecretMatchesIdentity(secret, { teamName: target.teamName, incarnation: marker.value }))
     refuse();
-  replica(parse(read(`${ROOT}/sqlite-fallback-replica.json`)), target, marker.value);
-  audit(read(`${journalDir}/journal.jsonl`), target);
+  const emptyOnly = replica(
+    parse(read(`${ROOT}/sqlite-fallback-replica.json`)),
+    target,
+    marker.value
+  );
+  audit(read(`${journalDir}/journal.jsonl`), target, emptyOnly);
   close();
   // Mutable product data are revalidated above, never mistaken for native identity.
   // Presence and original directories/secret remain part of the native census cut.

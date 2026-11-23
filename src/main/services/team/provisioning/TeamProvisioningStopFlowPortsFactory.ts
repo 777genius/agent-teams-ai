@@ -14,6 +14,7 @@ import {
   type TeamProvisioningStopRun,
   type TeamProvisioningStopTeamPorts,
 } from './TeamProvisioningStopFlow';
+import { stopOriginalWindowsDirectMembers as stopWindowsMembersDefault } from './TeamProvisioningWindowsMemberStopAdapter';
 
 import type { LegacyNativeStopPublication } from './LegacyNativeStopPublication';
 
@@ -60,6 +61,7 @@ export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioni
   hasSecondaryRuntimeRuns: TeamProvisioningStopTeamPorts<TRun>['hasSecondaryRuntimeRuns'];
   killTeamProcess: TeamProvisioningStopTeamPorts<TRun>['killTeamProcess'];
   killTeamProcessAndWait: TeamProvisioningStopTeamPorts<TRun>['killTeamProcessAndWait'];
+  stopOriginalWindowsDirectMembers: TeamProvisioningStopTeamPorts<TRun>['stopOriginalWindowsDirectMembers'];
   updateProgress: TeamProvisioningStopTeamPorts<TRun>['updateProgress'];
   cleanupRun: TeamProvisioningStopTeamPorts<TRun>['cleanupRun'];
   emitTeamChange: OpenCodeRuntimeStopFlowPorts['emitTeamChange'];
@@ -125,6 +127,7 @@ export interface TeamProvisioningStopFlowServiceHostOptions<TRun extends TeamPro
   clearOpenCodeRuntimeLaneStorage: TeamProvisioningStopFlowFactoryDeps<TRun>['clearOpenCodeRuntimeLaneStorage'];
   killTeamProcess: TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcess'];
   killTeamProcessAndWait?: TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcessAndWait'];
+  stopOriginalWindowsDirectMembers?: TeamProvisioningStopFlowFactoryDeps<TRun>['stopOriginalWindowsDirectMembers'];
   updateProgress: TeamProvisioningStopFlowFactoryDeps<TRun>['updateProgress'];
   logger: TeamProvisioningStopFlowFactoryDeps<TRun>['logger'];
   nowIso: TeamProvisioningStopFlowFactoryDeps<TRun>['nowIso'];
@@ -174,6 +177,7 @@ export function createTeamProvisioningStopFlowDepsFromService<TRun extends TeamP
     killTeamProcessAndWait:
       options.killTeamProcessAndWait ??
       (killTeamProcessAndWaitDefault as TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcessAndWait']),
+    stopOriginalWindowsDirectMembers: options.stopOriginalWindowsDirectMembers ?? stopWindowsMembersDefault,
     updateProgress: (run, state, message) => options.updateProgress(run, state, message),
     cleanupRun: (run) => service.cleanupRun(run),
     emitTeamChange: (event) => service.teamChangeEmitter?.(event),
@@ -268,6 +272,7 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
     deleteAliveRunId: (teamName) => deps.deleteAliveRunId(teamName),
     killTeamProcess: (child) => deps.killTeamProcess(child),
     killTeamProcessAndWait: (child) => deps.killTeamProcessAndWait(child),
+    stopOriginalWindowsDirectMembers: (processes) => deps.stopOriginalWindowsDirectMembers(processes),
     updateProgress: (run, state, message) => deps.updateProgress(run, state, message),
     cleanupRun: (run) => deps.cleanupRun(run),
     logger: deps.logger,

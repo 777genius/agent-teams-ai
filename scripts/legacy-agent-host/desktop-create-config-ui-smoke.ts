@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
-import { createDesktopUiControls } from "./desktop-ui-controls.ts";
+import { createDesktopUiControls, desktopJsLiteral } from "./desktop-ui-controls.ts";
 import { fileDigest } from "./desktop-backend-fixture.ts";
 import { runDesktopRosterLifecycleUiSmoke } from "./desktop-roster-lifecycle-ui-smoke.ts";
 import { hostTeamSelectionKey } from "../../src/features/agent-backend/contracts/teamSelection.ts";
@@ -190,7 +190,35 @@ export async function runDesktopCreateConfigUiSmoke(
 // The empty Team list also has a Create CTA; retain the original header control.
 export const desktopCreateTeamHeaderButtonSelector = 'div.mb-4 > div > div > button.gap-2';
 
-/** Shared original form navigation, with all edits issued through CDP Input. */
+/** Caller opens Optional settings first; one original selection keeps this source physical/shared. */
+export async function selectOriginalSharedTeamHistory(
+  ui: ReturnType<typeof createDesktopUiControls>,
+): Promise<void> {
+  const trigger = '[data-testid="create-team-page"] #team-project-context-mode';
+  const shared = 'Shared across projects';
+  await ui.scrollTo(trigger, 'original Team history control');
+  await ui.click(trigger, 'open original Team history');
+  const listboxId = await ui.waitRead(`(() => {
+    const triggers=document.querySelectorAll(${desktopJsLiteral(trigger)});
+    if(triggers.length!==1)return null;
+    const control=triggers[0],id=control.getAttribute('aria-controls');
+    if(control.getAttribute('aria-expanded')!=='true'||!id)return null;
+    const boxes=[...document.querySelectorAll('[role="listbox"]')].filter(box=>box.id===id);
+    return boxes.length===1?id:null;
+  })()`, 'original Team history popup');
+  assert.equal(typeof listboxId, 'string');
+  const owner = `[aria-controls=${desktopJsLiteral(listboxId)}][aria-expanded="true"]`;
+  const option = `body:has(${trigger}${owner}) [id=${desktopJsLiteral(listboxId)}][role="listbox"] [role="option"]`;
+  await ui.scrollTo(option, 'original shared history option', shared);
+  await ui.click(option, 'select original shared history once', shared);
+  await ui.waitRead(`(() => {
+    const controls=document.querySelectorAll(${desktopJsLiteral(trigger)});
+    return controls.length===1&&controls[0].getAttribute('aria-expanded')==='false'&&
+      controls[0].textContent.trim()===${desktopJsLiteral(shared)};
+  })()`, 'original shared history retained');
+}
+
+/** Original form for physical/shared Host and legacy-import fixtures; all edits use CDP Input. */
 export async function openOriginalCreateForm(
   cdp: UiCdpPort,
   ui: ReturnType<typeof createDesktopUiControls>,
@@ -260,4 +288,17 @@ export async function openOriginalCreateForm(
     `document.querySelector('[data-testid="create-team-page"] input[placeholder="/absolute/path/to/project"]')?.value===${JSON.stringify(workspace)}`,
     "sandbox custom path retained",
   );
+  const optional = record(await ui.waitRead(`(() => {
+    const rows=[...document.querySelectorAll('[data-testid="create-team-page"] button[aria-controls]')]
+      .filter(control=>control.textContent.includes('Optional launch settings'));
+    return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null;
+  })()`, 'original Create optional settings'));
+  assert.equal(typeof optional.id, 'string');
+  assert.ok(optional.id);
+  if (optional.expanded !== 'true') {
+    const control = `[data-testid="create-team-page"] button[aria-controls=${desktopJsLiteral(optional.id)}]`;
+    await ui.scrollTo(control, 'original Create optional settings control');
+    await ui.click(control, 'open original Create optional settings');
+  }
+  await selectOriginalSharedTeamHistory(ui);
 }

@@ -174,6 +174,7 @@ function fixture() {
       events.push('pause-original');
     }),
     stopPersistentTeamMembers: vi.fn(),
+    stopOriginalWindowsDirectMembers: vi.fn(async () => undefined),
     openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
     getTrackedRunId: (name) => tracked.get(name) ?? null,
     getAliveRunId: (name) => tracked.get(name) ?? null,
@@ -327,6 +328,8 @@ describe.skipIf(process.platform === 'win32')(
         );
         await f.stop();
         expect(f.ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+        expect(f.ports.stopOriginalWindowsDirectMembers).toHaveBeenCalledOnce();
+        expect(f.ports.stopOriginalWindowsDirectMembers).toHaveBeenCalledWith(undefined);
         expect(f.events).toContain('drain-unlocked');
         expect(f.readProof()?.target.runId).toBe(f.run.runId);
         expect(await readTeamLaunchFreshness(f.teamName)).toMatchObject({

@@ -2,6 +2,7 @@
  * Browser-mode ElectronAPI using HTTP requests and server-sent events.
  */
 import { createAgentBackendHttpClient } from '@features/agent-backend/renderer';
+import { createHttpCustomTeamTemplatesApi, type CustomTeamTemplatesApi } from '@features/custom-team-templates';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -31,6 +32,7 @@ import {
 } from '@features/organizations/contracts';
 import { createReviewFlowHttpApi } from '@features/review-flow/renderer/http';
 import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
+import { DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API } from '@features/team-provisioning/contracts';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
@@ -162,7 +164,6 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
   if (request?.teamIds !== undefined) {
@@ -182,7 +183,6 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   const suffix = query.toString();
   return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
-
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -225,11 +225,12 @@ function createBrowserRuntimeProviderError<T extends RuntimeProviderModelTestRun
     },
   };
 }
-
 function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
-
+function teamProvisioningUnavailable(): never {
+  throw new Error('Team provisioning is not available in browser mode');
+}
 export class HttpAPIClient implements ElectronAPI {
   agentBackend = createAgentBackendHttpClient(
     (route, request) => this.post(route, request),
@@ -243,6 +244,9 @@ export class HttpAPIClient implements ElectronAPI {
 
   reviewFlow = createReviewFlowHttpApi();
 
+  get customTeamTemplates(): CustomTeamTemplatesApi {
+    return createHttpCustomTeamTemplatesApi(this.baseUrl);
+  }
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -272,7 +276,6 @@ export class HttpAPIClient implements ElectronAPI {
     dismiss: async () => ({ saved: false }),
     onStateChanged: () => () => {},
   };
-
   private unavailableAnnouncements(): AnnouncementsSnapshot {
     return {
       status: 'unavailable',
@@ -283,7 +286,6 @@ export class HttpAPIClient implements ElectronAPI {
       autoShowEnabled: false,
     };
   }
-
   private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
@@ -1048,8 +1050,10 @@ export class HttpAPIClient implements ElectronAPI {
     getStatus: (): Promise<HttpServerStatus> =>
       Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) }),
   };
-
   teams: TeamsAPI = {
+    getProjectContextView: async () => {
+      throw new Error('Project-scoped local team history is only available in Electron mode');
+    },
     list: async (): Promise<TeamSummary[]> => {
       console.warn('[HttpAPIClient] teams API is not available in browser mode');
       return [];
@@ -1104,9 +1108,7 @@ export class HttpAPIClient implements ElectronAPI {
       _selectedModels?: string[],
       _limitContext?: boolean,
       _modelVerificationMode?: TeamProvisioningModelVerificationMode
-    ): Promise<TeamProvisioningPrepareResult> => {
-      throw new Error('Team provisioning is not available in browser mode');
-    },
+    ): Promise<TeamProvisioningPrepareResult> => teamProvisioningUnavailable(),
     getWorktreeGitStatus: async (projectPath: string): Promise<TeamWorktreeGitStatus> => {
       return {
         projectPath,
@@ -1123,24 +1125,18 @@ export class HttpAPIClient implements ElectronAPI {
     createInitialGitCommit: async (_projectPath: string): Promise<TeamWorktreeGitStatus> => {
       throw new Error('Initial Git commit is not available in browser mode');
     },
-    createTeam: async (_request: TeamCreateRequest): Promise<TeamCreateResponse> => {
-      throw new Error('Team provisioning is not available in browser mode');
-    },
+    createTeam: async (_request: TeamCreateRequest): Promise<TeamCreateResponse> => teamProvisioningUnavailable(),
     launchTeam: async (_request: TeamLaunchRequest): Promise<TeamLaunchResponse> => {
       throw new Error('Team launch is not available in browser mode');
     },
-    getProvisioningStatus: async (_runId: string): Promise<TeamProvisioningProgress> => {
-      throw new Error('Team provisioning is not available in browser mode');
-    },
+    getProvisioningStatus: async (_runId: string): Promise<TeamProvisioningProgress> => teamProvisioningUnavailable(),
     getLaunchFailureDiagnostics: async (
       _teamName: string,
       _runId?: string
     ): Promise<TeamLaunchFailureDiagnosticsBundle> => {
       throw new Error('Launch failure diagnostics are not available in browser mode');
     },
-    cancelProvisioning: async (_runId: string): Promise<void> => {
-      throw new Error('Team provisioning is not available in browser mode');
-    },
+    cancelProvisioning: async (_runId: string): Promise<void> => teamProvisioningUnavailable(),
     sendMessage: async (
       _teamName: string,
       _request: SendMessageRequest
@@ -1322,8 +1318,7 @@ export class HttpAPIClient implements ElectronAPI {
     updateMemberRole: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
-    updateMemberSettings: async () =>
-      Promise.reject(new Error('Team member settings updates require the desktop app')),
+    ...DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API,
     getProjectBranch: async (_projectPath: string): Promise<string | null> => null,
     setProjectBranchTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.

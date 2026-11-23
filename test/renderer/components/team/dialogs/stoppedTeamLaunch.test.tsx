@@ -14,6 +14,9 @@ import {
 } from '../../../../../src/renderer/store/utils/contextScopedRequestEpoch';
 const f = vi.hoisted(() => ({
   getData: vi.fn(),
+  getSavedRequest: vi.fn(),
+  getProjectContextView: vi.fn(),
+  openTeamTab: vi.fn(),
   getConnections: vi.fn(),
   stoppedImport: vi.fn(),
   confirm: vi.fn(),
@@ -24,11 +27,16 @@ const f = vi.hoisted(() => ({
   } | null,
   selectedTeamName: 'TEST-legacy',
   selectedTeamError: null as string | null,
+  teamByName: {} as Record<string, { projectContextMode: 'per_project' }>,
 }));
 vi.mock('@renderer/api', () => ({
   api: {
     agentBackend: { getConnections: f.getConnections, stoppedImport: f.stoppedImport },
-    teams: { getData: f.getData },
+    teams: {
+      getData: f.getData,
+      getSavedRequest: f.getSavedRequest,
+      getProjectContextView: f.getProjectContextView,
+    },
   },
 }));
 vi.mock('@renderer/components/common/ConfirmDialog', () => ({ confirm: f.confirm }));
@@ -39,6 +47,8 @@ vi.mock('@renderer/store', () => ({
       selectedTeamName: f.selectedTeamName,
       selectedTeamError: f.selectedTeamError,
       fetchTeams: f.fetchTeams,
+      teamByName: f.teamByName,
+      openTeamTab: f.openTeamTab,
     }),
   },
 }));
@@ -49,6 +59,11 @@ beforeEach(() => {
   f.selected = { teamName: 'TEST-legacy', isAlive: false };
   f.selectedTeamName = 'TEST-legacy';
   f.selectedTeamError = null;
+  f.teamByName = {};
+  f.getSavedRequest.mockResolvedValue(null);
+  f.getProjectContextView.mockResolvedValue({
+    mode: 'per_project', state: 'ready', executionTeamName: 'TEST-physical', projectPath: '/TEST/selected',
+  });
   f.getConnections.mockResolvedValue({ state: 'ready', bindings: [] });
   f.stoppedImport.mockResolvedValue({ ok: true, selection: 'host-team:TEST-import' });
   f.getData.mockImplementation(async (teamName: string) => ({
@@ -59,6 +74,62 @@ beforeEach(() => {
   }));
 });
 describe('existing stopped Team Launch dialog handoff', () => {
+  it('recovers a project definition roster and verified physical permissions without importing it', async () => {
+    f.teamByName['TEST-definition'] = { projectContextMode: 'per_project' };
+    f.getData.mockRejectedValue(new Error('TEAM_DRAFT'));
+    f.getSavedRequest.mockResolvedValue({
+      teamName: 'TEST-definition', cwd: '/TEST/old-shared',
+      members: [{ name: 'authored-member', role: 'engineer' }],
+    });
+    expect(await loadExistingTeamLaunchDialog('TEST-definition', '/TEST/selected', 'relaunch'))
+      .toMatchObject({
+        teamName: 'TEST-definition', mode: 'relaunch', projectPath: '/TEST/selected',
+        projectPermissionTeamName: 'TEST-physical',
+        members: [{ name: 'authored-member', role: 'engineer', status: 'idle' }],
+      });
+    expect(f.getProjectContextView).toHaveBeenCalledExactlyOnceWith('TEST-definition', '/TEST/selected');
+    expect(f.getSavedRequest).toHaveBeenCalledExactlyOnceWith('TEST-definition');
+    expect(f.stoppedImport).not.toHaveBeenCalled();
+    expect(f.getConnections).not.toHaveBeenCalled();
+  });
+  it('keeps selected project routing and manual approval for an unverified physical alias', async () => {
+    f.teamByName['TEST-definition'] = { projectContextMode: 'per_project' };
+    f.getProjectContextView.mockResolvedValue({
+      mode: 'per_project', state: 'ready', executionTeamName: 'TEST-other-project', projectPath: '/TEST/other',
+    });
+    expect(await loadExistingTeamLaunchDialog('TEST-definition', '/TEST/selected', 'relaunch'))
+      .toMatchObject({
+        teamName: 'TEST-definition', projectPath: '/TEST/selected', projectPermissionTeamName: null,
+      });
+    expect(f.stoppedImport).not.toHaveBeenCalled();
+  });
+  it('retains project member-settings command state and redirects historical detail launches', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let hook: ReturnType<typeof useStoppedTeamLaunchDialog> | undefined;
+    function Probe({ historical = false }) {
+      hook = useStoppedTeamLaunchDialog('TEST-physical', 'TEST-definition', historical);
+      return null;
+    }
+    const root = createRoot(document.createElement('div'));
+    try {
+      act(() => root.render(<Probe />));
+      await act(async () => hook!.openLaunchDialog('launch', {
+        baselineMembers: [], memberSettingsCommandId: 'TEST-definition-command',
+      }));
+      expect(hook!.launchDialogState).toMatchObject({
+        open: true, mode: 'relaunch', memberSettingsCommandId: 'TEST-definition-command',
+      });
+      act(() => hook!.closeLaunchDialog());
+      act(() => root.render(<Probe historical />));
+      await act(async () => hook!.openLaunchDialog('relaunch'));
+      expect(hook!.launchDialogState.open).toBe(false);
+      expect(f.openTeamTab).toHaveBeenCalledExactlyOnceWith('TEST-definition');
+      expect(f.stoppedImport).not.toHaveBeenCalled();
+      expect(f.getConnections).not.toHaveBeenCalled();
+    } finally {
+      act(() => root.unmount());
+    }
+  });
   it('actual metadata-only draft imports before list fallback and keeps source HOLD visible', async () => {
     const importedData = {
       teamName: 'host-team:TEST-import',

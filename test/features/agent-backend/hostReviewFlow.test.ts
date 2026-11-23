@@ -14,7 +14,7 @@ const key = hostTeamSelectionKey('TEST-original');
 
 function fixture() {
   const legacy: ReviewFlowElectronApi = {
-    getOverview: vi.fn(async () => ({ defaults: human, overrides: { legacy: human }, unreadableTeams: [] })),
+    getOverview: vi.fn(async () => ({ defaults: human, overrides: { legacy: human }, unreadableTeams: [], projectTeams: {} })),
     setDefaults: vi.fn(async settings => settings),
     setTeamOverride: vi.fn(async (_teamName, settings) => settings),
   };
@@ -48,6 +48,24 @@ it('keeps app defaults with their owner and writes Host overrides only through t
   expect(f.legacy.setTeamOverride).not.toHaveBeenCalled();
   await f.api.setTeamOverride('legacy', null);
   expect(f.legacy.setTeamOverride).toHaveBeenCalledWith('legacy', null);
+});
+
+it('preserves definition project mappings alongside captured Host unavailable policies', async () => {
+  const f = fixture();
+  const projectTeams = {
+    builders: {
+      saved: true, settings: human,
+      projects: [{ executionTeamName: 'TEST-project-copy', projectPath: '/TEST/project' }],
+    },
+  };
+  vi.mocked(f.legacy.getOverview).mockResolvedValue({
+    defaults: human, overrides: { 'TEST-project-copy': human }, unreadableTeams: [], projectTeams,
+  });
+  vi.mocked(f.backend.invoke).mockResolvedValue({ ok: false, code: 'busy', outcome: 'not-dispatched' });
+  const overview = await f.api.getOverview();
+  expect(overview.projectTeams).toEqual(projectTeams);
+  expect(overview.overrides['TEST-project-copy']).toEqual(human);
+  expect(overview.unavailable).toContainEqual(expect.objectContaining({ teamName: key, code: 'busy' }));
 });
 
 it('keeps an unavailable Host policy distinct from inheritance and preserves partial owner failures', async () => {
