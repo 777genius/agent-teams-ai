@@ -112,7 +112,12 @@ function onTeamChange(_event: unknown, event: TeamChangeEvent): void {
 
 function connect(): void {
   if (stopEvents) return;
-  stopEvents = api.teams.onTeamChange?.(onTeamChange) ?? (() => undefined);
+  try {
+    stopEvents = api.teams?.onTeamChange?.(onTeamChange) ?? (() => undefined);
+  } catch {
+    // A temporarily unavailable transport must not crash the entire app shell.
+    stopEvents = () => undefined;
+  }
   stopReadState = subscribeTeamMessageReadStore(() => publish());
   window.addEventListener('focus', onFocus);
   if (currentContextId) queue();
