@@ -694,6 +694,7 @@ function createTask(paths, input = {}) {
       input.needsClarification === 'lead' || input.needsClarification === 'user'
         ? input.needsClarification
         : undefined,
+    clarificationRequestedAt: input.needsClarification === 'user' ? createdAt : undefined,
     reviewState: normalizeTaskReviewState(input.reviewState),
     deletedAt:
       status === 'deleted' && typeof input.deletedAt === 'string' ? input.deletedAt : undefined,
@@ -988,12 +989,18 @@ function addTaskComment(paths, taskRef, text, options = {}) {
 
 function setNeedsClarification(paths, taskRef, value) {
   return updateTask(paths, taskRef, (task) => {
+    const wasAwaitingUser = task.needsClarification === 'user';
     if (value === null || value === 'clear') {
       delete task.needsClarification;
     } else if (value === 'lead' || value === 'user') {
       task.needsClarification = value;
     } else {
       throw new Error(`Invalid clarification value: ${String(value)}`);
+    }
+    if (value === 'user' && !wasAwaitingUser) {
+      task.clarificationRequestedAt = nowIso();
+    } else if (value !== 'user') {
+      delete task.clarificationRequestedAt;
     }
     return task;
   });
