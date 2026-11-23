@@ -22,6 +22,7 @@ describe('Notification Channels domain', () => {
   it('rejects unsupported event types and arbitrary providers', () => {
     expect(() => normalizeChannelInput({ ...base, events: ['text'] })).toThrow();
     expect(() => normalizeChannelInput({ ...base, provider: 'webhook' })).toThrow();
+    expect(() => normalizeChannelInput({ ...base, provider: { toString: () => 'telegram' } })).toThrow();
     expect(isDeliveryEvent('user_inbox')).toBe(true);
     expect(isDeliveryEvent('tool_result')).toBe(false);
   });

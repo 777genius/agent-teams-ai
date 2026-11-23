@@ -64,9 +64,11 @@ export class ThinwrapDeliverySender implements DeliverySender {
       } else if (channel.provider === 'ms-teams') {
         success = (await new Chat('ms-teams', { webhookUrl: secret, fetch: secureFetch })
           .send({ body: message })).success;
-      } else {
+      } else if (channel.provider === 'google-chat') {
         success = (await new Chat('google-chat', { webhookUrl: secret, fetch: secureFetch })
           .send({ body: message })).success;
+      } else {
+        throw new Error('Unsupported delivery provider');
       }
       return success ? { success: true } : { success: false, code: 'delivery_failed' };
     } catch (error) {

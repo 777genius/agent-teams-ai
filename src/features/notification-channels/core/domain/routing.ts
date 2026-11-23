@@ -17,7 +17,8 @@ export function normalizeChannelInput(value: unknown): SaveDeliveryChannelReques
   if (!value || typeof value !== 'object') throw new Error('Invalid channel data');
   const input = value as Partial<SaveDeliveryChannelRequest>;
   const provider = input.provider;
-  if (!['telegram', 'discord', 'slack', 'ms-teams', 'google-chat'].includes(String(provider))) {
+  if (typeof provider !== 'string' ||
+    !['telegram', 'discord', 'slack', 'ms-teams', 'google-chat'].includes(provider)) {
     throw new Error('Unsupported delivery provider');
   }
   const name = typeof input.name === 'string' ? input.name.trim() : '';
@@ -93,6 +94,8 @@ export function validateProviderCredential(provider: DeliveryProvider, credentia
         throw new Error('Invalid Google Chat webhook URL');
       }
       break;
+    default:
+      throw new Error('Unsupported delivery provider');
   }
 }
 

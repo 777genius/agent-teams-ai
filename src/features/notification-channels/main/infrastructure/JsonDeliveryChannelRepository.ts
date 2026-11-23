@@ -32,7 +32,8 @@ export class JsonDeliveryChannelRepository implements DeliveryChannelsRepository
       return typeof channel.id !== 'string' ||
         typeof channel.credentialId !== 'string' ||
         typeof channel.name !== 'string' ||
-        !['telegram', 'discord', 'slack', 'ms-teams', 'google-chat'].includes(String(channel.provider)) ||
+        typeof channel.provider !== 'string' ||
+        !['telegram', 'discord', 'slack', 'ms-teams', 'google-chat'].includes(channel.provider) ||
         typeof channel.enabled !== 'boolean' ||
         !Array.isArray(channel.events) ||
         channel.events.some((event) => !isDeliveryEvent(event)) ||
