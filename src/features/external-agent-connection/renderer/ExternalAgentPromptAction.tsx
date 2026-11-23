@@ -69,7 +69,11 @@ export function ExternalAgentPromptAction({
             runApi={api.directRun}
             connection={info}
             isLight={isLight}
-            onRetry={info.mcp.status !== 'ready' ? () => void retry() : undefined}
+            onRetry={
+              info.mcp.status !== 'ready' && info.errorCode !== 'MCP_HTTP_DISABLED'
+                ? () => void retry()
+                : undefined
+            }
             retrying={retrying}
             onSettings={() => {
               setOpen(false);

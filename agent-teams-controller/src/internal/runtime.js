@@ -334,6 +334,42 @@ async function getConnectionInfo(context) {
   return requestJsonWithFallback(resolveControlBaseUrls(context), '/api/app/connection');
 }
 
+async function showConnectionConfirmation(context, flags = {}) {
+  desktopBinding.assertConnectionExpectation(flags);
+  if (
+    typeof flags.agentName !== 'string' ||
+    !flags.agentName.trim() ||
+    flags.agentName.length > 80 ||
+    /[\u0000-\u001f\u007f]/.test(flags.agentName)
+  ) {
+    throw new Error('Invalid agent name');
+  }
+  if (flags.cdpVerified !== undefined && typeof flags.cdpVerified !== 'boolean') {
+    throw new Error('Invalid CDP verification flag');
+  }
+  return requestJsonWithFallback(
+    resolveControlBaseUrls(context),
+    '/api/app/connection/confirmation',
+    {
+      method: 'POST',
+      body: {
+        agentName: flags.agentName.trim(),
+        expectedContext: flags.expectedContext,
+        ...(flags.cdpVerified !== undefined ? { cdpVerified: flags.cdpVerified } : {}),
+      },
+      // An absent route or an unestablished connection cannot have accepted the POST.
+      // Do not retry timeouts, ambiguous transport failures, or server refusals.
+      fallbackOnTimeout: false,
+      shouldFallback: (error) =>
+        (error.retryableKind === 'status' && error.statusCode === 404) ||
+        (error.retryableKind === 'network' &&
+          ['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH'].includes(
+            error.cause?.cause?.code
+          )),
+    }
+  );
+}
+
 async function getTeam(context, flags = {}) {
   const baseUrls = resolveControlBaseUrls(context, flags);
   return requestJsonWithFallback(
@@ -528,6 +564,7 @@ module.exports = {
   getMemberRosterContext,
   listTeams,
   getConnectionInfo,
+  showConnectionConfirmation,
   getTeam,
   createTeam,
   updateTeam,

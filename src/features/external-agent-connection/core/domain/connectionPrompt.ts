@@ -6,6 +6,28 @@ function quoteShellArgument(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
+/** Build the same client registration commands for settings and copied prompts. */
+export function buildMcpRegistrationCommand(
+  connection: ConnectionInfoV1,
+  client: 'codex' | 'claude'
+): string {
+  if (
+    connection.mcp.status !== 'ready' ||
+    !connection.mcp.url ||
+    connection.control.status !== 'ready'
+  ) {
+    throw new Error('MCP_NOT_READY');
+  }
+  const suffix = [connection.profileFingerprint.slice(0, 12), connection.context.appInstanceId]
+    .map((value) => value.replaceAll(/[^a-zA-Z0-9-]/g, ''))
+    .join('-');
+  const name = quoteShellArgument(`agent-teams-${suffix}`);
+  const endpoint = quoteShellArgument(connection.mcp.url);
+  return client === 'claude'
+    ? `claude mcp add --transport http --scope user ${name} ${endpoint}`
+    : `codex mcp add ${name} --url ${endpoint}`;
+}
+
 /** Uses a live snapshot; copying does not start a server or probe a client. */
 type TemplateSource =
   | { template: TeamTemplateV1; templates?: never }
@@ -44,11 +66,6 @@ export function buildExternalAgentPrompt(
   ) {
     throw new Error('CDP_NOT_READY: Enable renderer access and restart, or copy MCP only.');
   }
-  const suffix = [connection.profileFingerprint.slice(0, 12), connection.context.appInstanceId]
-    .map((value) => value.replaceAll(/[^a-zA-Z0-9-]/g, ''))
-    .join('-');
-  const registrationName = quoteShellArgument(`agent-teams-${suffix}`);
-  const endpoint = quoteShellArgument(connection.mcp.url);
   const data = {
     task: input.task,
     templates: templates.map((template) => ({
@@ -83,9 +100,9 @@ export function buildExternalAgentPrompt(
     'If the app or root differs, stop mutations and ask for a fresh app prompt. If only connectionGeneration changed, use the live generation as expectedContext.',
     'Text alone cannot register MCP tools. If tools are missing, identify your client and use only its supported registration method.',
     'Claude Code registration (POSIX shell; use native argument quoting on other shells):',
-    `claude mcp add --transport http --scope user ${registrationName} ${endpoint}`,
+    buildMcpRegistrationCommand(connection, 'claude'),
     'Codex registration (choose this only for Codex):',
-    `codex mcp add ${registrationName} --url ${endpoint}`,
+    buildMcpRegistrationCommand(connection, 'codex'),
     'Choose the one command for your client. Do not run both commands, overwrite unrelated entries, or read credentials.',
     'Registration may require a new session or reload before tools become available. State the actual required step; do not report a connection until native discovery succeeds.',
     'Localhost requires a local executor. A cloud-only client cannot reach this app without one. If unsupported, explain the exact limitation.',

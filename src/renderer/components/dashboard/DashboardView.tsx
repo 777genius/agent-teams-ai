@@ -8,10 +8,11 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { RecentProjectsSection } from '@features/recent-projects/renderer';
 import { RunningTeamsSection } from '@features/running-teams/renderer';
+import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Search, Users } from 'lucide-react';
+import { Cable, Search, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DashboardProviderSummary } from './DashboardProviderSummary';
@@ -110,6 +111,8 @@ interface DashboardViewProps {
 
 export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
+  const { t: settingsT } = useAppTranslation('settings');
+  const openSettingsTab = useStore((state) => state.openSettingsTab);
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);
 
@@ -124,7 +127,23 @@ export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JS
         <WebPreviewBanner />
         <WindowsAdministratorBanner />
         <DashboardUpdateBanner />
-        <DashboardProviderSummary isActive={isActive} />
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+          {isElectronMode() && (
+            <button
+              type="button"
+              onClick={() => openSettingsTab('externalAgentConnection')}
+              aria-label={settingsT('general.externalAgentConnection.connectButton')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-[var(--color-surface-raised)] px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500"
+              data-testid="dashboard-connect-ai-agent"
+            >
+              <Cable className="size-4" aria-hidden="true" />
+              <span className="whitespace-nowrap">
+                {settingsT('general.externalAgentConnection.connectButton')}
+              </span>
+            </button>
+          )}
+          <DashboardProviderSummary isActive={isActive} />
+        </div>
         <TmuxStatusBanner />
 
         <div className="mb-12 flex flex-col items-stretch justify-center gap-2 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-0">

@@ -273,7 +273,9 @@ export const ExternalAgentPromptDialog = ({
         </div>
         {!ready && (
           <p className="text-xs text-[var(--warning-text)]" role="status">
-            {currentConnection.reason ?? t('externalPrompt.connectionRequired')}
+            {currentConnection.errorCode === 'MCP_HTTP_DISABLED'
+              ? settingsT('general.externalAgentConnection.disabledExplanation')
+              : (currentConnection.reason ?? t('externalPrompt.connectionRequired'))}
           </p>
         )}
         {onRetry && (
