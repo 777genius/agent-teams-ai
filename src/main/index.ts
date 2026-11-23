@@ -2333,6 +2333,9 @@ async function initializeServices(): Promise<void> {
   userAttentionFeature = createUserAttentionFeature({
     getContextId: () => contextRegistry.getActive().id,
     getTeamDataService: () => teamDataService,
+    listGroupNames: async (teamName) => Object.fromEntries(
+      (await teamGroupChatsFeature.list({ teamName })).map(({ id, name }) => [id, name])
+    ),
   });
   recentProjectsFeature = createRecentProjectsFeature({
     getActiveContext: () => contextRegistry.getActive(),
