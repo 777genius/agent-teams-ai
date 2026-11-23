@@ -42,6 +42,8 @@ export function useAttentionConversationNavigation(
     };
     subscribers.add(onIntent);
     if (latest) onIntent(latest);
-    return () => subscribers.delete(onIntent);
+    return () => {
+      subscribers.delete(onIntent);
+    };
   }, [contextId, teamName, open]);
 }
