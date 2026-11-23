@@ -266,6 +266,19 @@ async function run() {
   assert(!JSON.stringify(audit).includes('private'));
   evidence.checks.push('Real team notification → sanitized outbound event, no private content');
 
+  // Source-hidden notifications remain in local history but never leave the app.
+  await rendererCall('window.electronAPI.teams.showMessageNotification(' +
+    JSON.stringify({ ...secretPayload, dedupeKey: 'delivery-hidden-' + randomUUID(),
+      suppressToast: true }) + ')');
+  await safeDelay(600);
+  assert.equal((await readAudit()).length, 2, 'Source-suppressed event leaked externally');
+  // The same committed event must never be delivered twice.
+  await rendererCall('window.electronAPI.teams.showMessageNotification(' +
+    JSON.stringify(secretPayload) + ')');
+  await safeDelay(600);
+  assert.equal((await readAudit()).length, 2, 'Duplicate event delivered twice');
+  evidence.checks.push('Source suppression and persisted event dedupe prevent external delivery');
+
   await click("document.querySelector('section[aria-label=\"Delivery channels\"] [aria-label=\"Enable TEST Telegram\"]')");
   await until(async () => {
     const list = await rendererCall('window.electronAPI.notificationChannels.list()');
