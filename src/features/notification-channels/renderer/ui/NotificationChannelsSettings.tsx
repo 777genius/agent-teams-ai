@@ -44,11 +44,16 @@ export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { a
         style={{ borderColor: 'var(--color-border)' }}>
         <h3 className="text-sm font-semibold">Delivery Channels</h3>
         <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Secure channel settings require a page served from the same local address as the app API.
-          Open the local app to manage destinations.
+          Secure delivery-channel editing requires the app UI and API on the same loopback origin.
+          This page uses a different origin, so credential editing is unavailable here.
+        </p>
+        <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          Open Agent Teams desktop → Settings → Notifications to manage channels.
+          For standalone browser mode, build the renderer and serve it from the same local HTTP origin
+          as the API. An API-only server cannot display the settings page.
         </p>
         <a className="mt-2 inline-block text-xs underline" href={localSettingsUrl}>
-          Open local app
+          Open local app (requires renderer files)
         </a>
       </section>
     );

@@ -8,5 +8,6 @@ export function resolveLocalSettingsUrl(
   const port = new URLSearchParams(pageSearch).get('port');
   if (!port || !/^[1-9][0-9]{0,4}$/.test(port) || Number(port) > 65535) return null;
   const target = new URL(`http://127.0.0.1:${Number(port)}/`);
-  return pageOrigin === target.origin ? null : target.href;
+  const localOrigin = `http://localhost:${Number(port)}`;
+  return pageOrigin === target.origin || pageOrigin === localOrigin ? null : target.href;
 }
