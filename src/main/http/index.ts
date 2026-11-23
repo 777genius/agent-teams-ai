@@ -21,6 +21,7 @@ import {
   type TeamGroupChatsFeature,
 } from '@features/team-group-chats/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
+import { registerUserAttentionHttp, type UserAttentionFeatureFacade } from '@features/user-attention/main';
 import {
   registerWorkspaceTrustHttp,
   type WorkspaceTrustStatusFeatureFacade,
@@ -71,6 +72,7 @@ export interface HttpServices {
   chunkBuilder: ChunkBuilder;
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
+  userAttentionFeature?: UserAttentionFeatureFacade;
   teamGroupChatsFeature?: TeamGroupChatsFeature;
   customTeamTemplatesFeature?: CustomTeamTemplatesFeature;
   organizationsFeature?: OrganizationsFeatureFacade;
@@ -124,6 +126,9 @@ export function registerHttpRoutes(
   registerUpdaterRoutes(app, services);
   if (services.recentProjectsFeature) {
     registerRecentProjectsHttp(app, services.recentProjectsFeature);
+  }
+  if (services.userAttentionFeature) {
+    registerUserAttentionHttp(app, services.userAttentionFeature);
   }
   if (services.organizationsFeature) {
     registerOrganizationsHttp(app, services.organizationsFeature);
