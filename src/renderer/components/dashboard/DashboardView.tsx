@@ -8,6 +8,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { RecentProjectsSection } from '@features/recent-projects/renderer';
 import { RunningTeamsSection } from '@features/running-teams/renderer';
+import { AttentionInboxView } from '@features/user-attention/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
@@ -127,6 +128,7 @@ export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JS
         <WebPreviewBanner />
         <WindowsAdministratorBanner />
         <DashboardUpdateBanner />
+        <AttentionInboxView variant="compact" />
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-stretch">
           {isElectronMode() && (
             <button
