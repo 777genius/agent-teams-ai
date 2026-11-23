@@ -123,19 +123,28 @@ describe('managed worktree resume through runtime workspace preflight', () => {
     const coordinator = new TeamProvisioningPrepareCoordinator(
       createDefaultTeamProvisioningPrepareCoordinatorPorts({
         ensureMemberWorktree: (input) => manager.ensureMemberWorktree(input),
-        execCli: async () => { throw new Error('Provider execution is forbidden'); },
-        resolveClaudeBinaryPath: async () => { throw new Error('Provider discovery is forbidden'); },
+        execCli: async () => {
+          throw new Error('Provider execution is forbidden');
+        },
+        resolveClaudeBinaryPath: async () => {
+          throw new Error('Provider discovery is forbidden');
+        },
       })
     );
-    const resolve = (cwd?: string) => coordinator.resolveOpenCodeMemberWorkspacesForRuntime({
-      teamName: 'preflight-test',
-      baseCwd: repoPath,
-      leadProviderId: 'codex',
-      members: [{ name: 'bob', providerId: 'opencode', isolation: 'worktree', ...(cwd ? { cwd } : {}) }],
-    });
+    const resolve = (cwd?: string) =>
+      coordinator.resolveOpenCodeMemberWorkspacesForRuntime({
+        teamName: 'preflight-test',
+        baseCwd: repoPath,
+        leadProviderId: 'codex',
+        members: [
+          { name: 'bob', providerId: 'opencode', isolation: 'worktree', ...(cwd ? { cwd } : {}) },
+        ],
+      });
     // An existing directory is not proof of an isolated checkout.
     await expect(resolve(repoPath)).rejects.toThrow('not a separate checkout root');
-    expect((await git(repoPath, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(1);
+    expect((await git(repoPath, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(
+      1
+    );
 
     const first = (await resolve())[0]!.cwd!;
     await git(first, 'switch', '-c', 'recovery-branch');
@@ -144,6 +153,8 @@ describe('managed worktree resume through runtime workspace preflight', () => {
     expect(restored.cwd).toBe(first);
     expect(await git(first, 'branch', '--show-current')).toBe('recovery-branch');
     expect(await fs.readFile(path.join(first, 'resume.txt'), 'utf8')).toBe('keep\n');
-    expect((await git(repoPath, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(2);
+    expect((await git(repoPath, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(
+      2
+    );
   });
 });
