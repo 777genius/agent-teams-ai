@@ -1461,13 +1461,10 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
         { providerId: 'opencode' as const, runId: 'adapter-run-1', cwd: memberCwd },
       ],
     ]);
-    const resolveWorkspaces = vi.fn(async (input: {
-      teamName: string;
-      baseCwd: string;
-      leadProviderId?: 'opencode';
-      members: TeamCreateRequest['members'];
-    }) => input.members);
-    const adapterLaunches: Array<{ request: TeamCreateRequest }> = [];
+    const resolveWorkspaces = vi.fn(async (
+      input: Parameters<TeamProvisioningMemberLifecycleHost['resolveOpenCodeMemberWorkspacesForRuntime']>[0]
+    ) => input.members);
+    const adapterLaunchCwds: string[] = [];
     const host = createHost(run, {
       runtimeAdapterRunByTeam,
       getAliveRunId: () => null,
@@ -1483,7 +1480,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       },
       resolveOpenCodeMemberWorkspacesForRuntime: resolveWorkspaces,
       async runOpenCodeTeamRuntimeAdapterLaunch(input) {
-        adapterLaunches.push({ request: input.request });
+        adapterLaunchCwds.push(input.request.cwd);
         return { runId: 'new-run' };
       },
     });
@@ -1501,8 +1498,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
         members: [expect.objectContaining({ name: 'Worker', cwd: memberCwd, isolation: 'worktree' })],
       })
     );
-    expect(adapterLaunches).toHaveLength(1);
-    expect(adapterLaunches[0]?.request.cwd).toBe(memberCwd);
+    expect(adapterLaunchCwds).toEqual([memberCwd]);
   });
 
   it('does not confirm or notify a retry whose run is replaced while reading its outcome', async () => {
