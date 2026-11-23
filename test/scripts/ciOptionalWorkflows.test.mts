@@ -295,3 +295,28 @@ test('updater E2E launch environments disable MCP HTTP for current and legacy bu
     );
   }
 });
+
+
+test('announcements content check uses hosted runner and retains immutable publication proof', () => {
+  const source = workflow('announcements-content');
+  const block = source.split('\njobs:')[1];
+  assert.ok(block, 'Announcement job graph missing');
+  assert.match(block, /^  content-check:$/m);
+  assert.match(block, /^    name: announcements-content-check$/m);
+  assert.match(block, /^    runs-on: ubuntu-latest$/m);
+  assert.doesNotMatch(block, /vars\.CI_LINUX_RUNNER/);
+  assert.match(block, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
+  for (const command of [
+    'node scripts/announcements/generate.mjs --check --base "$base"',
+    'node --test test/features/announcements/publishing/*.test.mjs',
+    'node scripts/announcements/generate.mjs',
+  ]) {
+    assert.ok(block.includes(command), 'Required publication proof missing: ' + command);
+  }
+  const header = source.split('\njobs:')[0];
+  assert.match(header, /\n  pull_request:\n/);
+  assert.match(header, /\n  push:\n    branches: \[main\]/);
+  assert.match(header, /\n  workflow_dispatch:\n/);
+  assert.ok(header.includes(canonicalConcurrency),
+    'Announcements must retain exact PR and push supersession policy');
+});
