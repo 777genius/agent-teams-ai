@@ -7,3 +7,5 @@ export {
 } from './core/domain/conversationScope';
 
 export { isUserAttentionMessage, isUserUnreadMessage, isAttentionUnread } from './core/domain/isUserUnreadMessage';
+
+export type { ConversationScope } from './core/domain/conversationScope';
