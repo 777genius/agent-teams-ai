@@ -258,7 +258,8 @@ export class TeamMemberWorktreeManager {
     baseRepoPath: string,
     memberName: string
   ): Promise<string> {
-    const [baseCommonRaw, targetCommonRaw, targetBranchRaw, targetRootRaw, listedRaw] = await Promise.all([
+    const [baseCommonRaw, targetCommonRaw, targetBranchRaw, targetRootRaw, listedRaw] =
+      await Promise.all([
       execGit(['rev-parse', '--git-common-dir'], baseRepoPath),
       execGit(['rev-parse', '--git-common-dir'], worktreePath),
       execGit(['branch', '--show-current'], worktreePath),
