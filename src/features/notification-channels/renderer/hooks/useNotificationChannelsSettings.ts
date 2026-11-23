@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
-import { resolveLocalSettingsUrl } from '../utils/localSettingsOrigin';
+import { isLocalSettingsOrigin, resolveLocalSettingsUrl } from '../utils/localSettingsOrigin';
 
 import type { DeliveryChannelDto, DeliveryEvent, SaveDeliveryChannelRequest } from '../../contracts';
 
@@ -24,6 +24,10 @@ export function useNotificationChannelsSettings() {
     if (typeof window === 'undefined') return null;
     return resolveLocalSettingsUrl(window.location.origin, window.location.search, isElectronMode());
   });
+  const [remoteSettingsUnavailable] = useState(() =>
+    typeof window !== 'undefined' &&
+    !isLocalSettingsOrigin(window.location.origin, isElectronMode())
+  );
   const [channels, setChannels] = useState<DeliveryChannelDto[]>([]);
   const [draft, setDraft] = useState<SaveDeliveryChannelRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,7 @@ export function useNotificationChannelsSettings() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (localSettingsUrl) {
+    if (localSettingsUrl || remoteSettingsUnavailable) {
       setLoading(false);
       return;
     }
@@ -42,7 +46,7 @@ export function useNotificationChannelsSettings() {
       .catch(() => { if (active) setError('Could not load notification destinations.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [localSettingsUrl]);
+  }, [localSettingsUrl, remoteSettingsUnavailable]);
 
   const refresh = async (): Promise<void> => {
     setChannels(await api.notificationChannels.list());
@@ -140,7 +144,7 @@ export function useNotificationChannelsSettings() {
   const cancel = (): void => setDraft(null);
 
   return {
-    channels, draft, loading, busy, deletePending, error, localSettingsUrl,
+    channels, draft, loading, busy, deletePending, error, localSettingsUrl, remoteSettingsUnavailable,
     save, edit, toggle, remove, test, providerChanged, credentialMissing, updateDraft, toggleEvent, start, cancel,
   };
 }

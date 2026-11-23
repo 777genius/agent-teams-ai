@@ -27,3 +27,9 @@ an app settings page; a local API root URL is not proof that the renderer exists
 Webhook URLs are credentials and are never returned by the list endpoint.
 
 Notification credentials live in the isolated `notification-channel-credentials/api-keys.json` file. The generic API-keys IPC/API only uses its separate default vault and cannot list, lookup, update or delete these credentials. No credential migration from the pre-merge research prototype is attempted.
+
+Remote browser pages (for example `http://192.168.1.50:3456`) cannot use
+notification-channel configuration even when they serve the rest of the UI.
+The panel shows the local-only limitation without querying or mutating
+credential metadata. Configure channels through desktop Settings or through
+a renderer served on the same loopback host and port as the API.

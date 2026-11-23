@@ -11,3 +11,15 @@ export function resolveLocalSettingsUrl(
   const localOrigin = `http://localhost:${Number(port)}`;
   return pageOrigin === target.origin || pageOrigin === localOrigin ? null : target.href;
 }
+
+/** Match the server's local-only HTTP administration policy before loading settings. */
+export function isLocalSettingsOrigin(pageOrigin: string, electronMode: boolean): boolean {
+  if (electronMode) return true;
+  try {
+    const page = new URL(pageOrigin);
+    return page.protocol === 'http:' &&
+      (page.hostname === 'localhost' || page.hostname === '127.0.0.1');
+  } catch {
+    return false;
+  }
+}

@@ -35,26 +35,28 @@ function displayTest(status?: ChannelTestStatus): string {
 
 export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { autoDeliveryPaused?: boolean }): React.JSX.Element {
   const {
-    channels, draft, loading, busy, deletePending, error, localSettingsUrl,
+    channels, draft, loading, busy, deletePending, error, localSettingsUrl, remoteSettingsUnavailable,
     save, edit, toggle, remove, test, providerChanged, credentialMissing, updateDraft, toggleEvent, start, cancel,
   } = useNotificationChannelsSettings();
-  if (localSettingsUrl) {
+  if (localSettingsUrl || remoteSettingsUnavailable) {
     return (
       <section aria-label="Delivery channels" className="my-5 rounded-lg border p-4"
         style={{ borderColor: 'var(--color-border)' }}>
         <h3 className="text-sm font-semibold">Delivery Channels</h3>
         <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
           Secure delivery-channel editing requires the app UI and API on the same loopback origin.
-          This page uses a different origin, so credential editing is unavailable here.
+          This page cannot administer notification credentials from its current origin.
         </p>
         <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
           Open Agent Teams desktop → Settings → Notifications to manage channels.
           For standalone browser mode, build the renderer and serve it from the same local HTTP origin
           as the API. An API-only server cannot display the settings page.
         </p>
-        <a className="mt-2 inline-block text-xs underline" href={localSettingsUrl}>
-          Open local app (requires renderer files)
-        </a>
+        {localSettingsUrl && !remoteSettingsUnavailable && (
+          <a className="mt-2 inline-block text-xs underline" href={localSettingsUrl}>
+            Open local app (requires renderer files)
+          </a>
+        )}
       </section>
     );
   }
