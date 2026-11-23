@@ -11,9 +11,19 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { AlertTriangle, Copy, Download, Pencil, RefreshCw, Trash2, Upload } from 'lucide-react';
+import {
+  AlertTriangle,
+  Copy,
+  Download,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
+import { useTemplateFileOperations } from '../hooks/useTemplateFileOperations';
 import { useTemplateManagement } from '../hooks/useTemplateManagement';
 
 import { BuiltInTemplateCatalogue } from './BuiltInTemplateCatalogue';
@@ -47,21 +57,26 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { state, reload } = useCustomTemplateLibrary(open);
+  const { desktopFile } = useTemplateFileOperations();
   const management = useTemplateManagement({ onSuccess: reload });
   const [tab, setTab] = useState<TemplateLibraryTab>('my-templates');
 
   const [editingTemplate, setEditingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
+  const [creating, setCreating] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [duplicatingTemplate, setDuplicatingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [exportingTemplate, setExportingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [copyBuiltinOpen, setCopyBuiltinOpen] = useState(false);
   const [copyBuiltinId, setCopyBuiltinId] = useState<BuiltinTeamTemplateId | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportAllBusy, setExportAllBusy] = useState(false);
+  const [exportAllMessage, setExportAllMessage] = useState('');
 
   const failed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
 
   const handleEditSaved = (_updated: CustomTeamTemplateV1): void => {
     setEditingTemplate(null);
+    setCreating(false);
     void reload();
   };
 
@@ -128,6 +143,26 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                       type="button"
                       variant="outline"
                       size="sm"
+                      data-testid="create-template-button"
+                      disabled={management.busy}
+                      onClick={() => {
+                        setCreating(true);
+                        setEditingTemplate({
+                          templateId: 'new-template-draft',
+                          schemaVersion: 1,
+                          name: '',
+                          teamPrompt: '',
+                          members: [],
+                        });
+                      }}
+                    >
+                      <Plus className="size-3.5" />
+                      {t('customTemplates.bulk.create')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       data-testid="import-template-button"
                       disabled={management.busy || importOpen}
                       onClick={() => setImportOpen(true)}
@@ -135,7 +170,40 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                       <Upload className="mr-1.5 size-3.5" />
                       {t('customTemplates.import.action')}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="export-all-templates"
+                      disabled={exportAllBusy || state.status !== 'ready' || !desktopFile}
+                      onClick={() => {
+                        setExportAllBusy(true);
+                        setExportAllMessage('');
+                        void desktopFile
+                          ?.exportAllToFile()
+                          .then((result) => {
+                            if (result.status === 'exported')
+                              setExportAllMessage(t('customTemplates.bulk.exported'));
+                            else if (result.status === 'bundleTooLarge')
+                              setExportAllMessage(t('customTemplates.bulk.tooLarge'));
+                            else if (result.status !== 'cancelled')
+                              setExportAllMessage(t('customTemplates.bulk.exportFailed'));
+                          })
+                          .catch(() => setExportAllMessage(t('customTemplates.bulk.exportFailed')))
+                          .finally(() => setExportAllBusy(false));
+                      }}
+                    >
+                      <Download className="size-3.5" />
+                      {exportAllBusy
+                        ? t('customTemplates.bulk.exporting')
+                        : t('customTemplates.bulk.exportAll')}
+                    </Button>
                   </div>
+                  {exportAllMessage && (
+                    <p role="status" className="text-sm">
+                      {exportAllMessage}
+                    </p>
+                  )}
                   {(state.status === 'ready' || state.status === 'partial') && (
                     <ul className="mt-3 space-y-2" data-testid="custom-template-library">
                       {state.templates.map((template) => {
@@ -305,7 +373,11 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
         <EditCustomTemplateDialog
           open={editingTemplate !== null}
           template={editingTemplate}
-          onClose={() => setEditingTemplate(null)}
+          creating={creating}
+          onClose={() => {
+            setEditingTemplate(null);
+            setCreating(false);
+          }}
           onSaved={handleEditSaved}
         />
         <DuplicateCustomTemplateDialog
@@ -329,6 +401,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
         />
         <ImportCustomTeamTemplateDialog
           open={importOpen}
+          startImmediately
           onClose={() => {
             setImportOpen(false);
             void reload();

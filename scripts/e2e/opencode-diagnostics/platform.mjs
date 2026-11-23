@@ -224,7 +224,7 @@ export function isolatedEnvironment(data, inherited = process.env) {
     CLAUDE_CLI_PATH: data.orchestrator,
     CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: data.opencode,
     OPENCODE_BIN_PATH: data.opencode,
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
     NODE_BINARY: data.node,
     XDG_CONFIG_HOME: path.join(data.home, '.config'),
     XDG_DATA_HOME: path.join(data.home, '.local/share'),

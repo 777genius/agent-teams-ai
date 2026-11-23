@@ -12,7 +12,6 @@ interface TemplateApplication {
   setMembers(members: MemberDraft[]): void;
   setLaunchTeam(value: boolean): void;
   setSoloTeam(value: boolean): void;
-  setRuntimeSelection(value: 1): void;
   setSyncModelsWithLead(value: boolean, options: { persistStoredPreference: boolean }): void;
 }
 
@@ -31,13 +30,11 @@ export function applyTemplateToCreateTeam(
     setMembers,
     setLaunchTeam,
     setSoloTeam,
-    setRuntimeSelection,
     setSyncModelsWithLead,
   } = options;
   templateSelection.setAppliedTemplateSource(source);
   templateSelection.templateSelectionDraft.setValue(JSON.stringify({ source, value: value ?? '' }));
   if (source !== 'none') {
-    setRuntimeSelection(1);
     setLaunchTeam(false);
     setSoloTeam(false);
     setSyncModelsWithLead(true, { persistStoredPreference: false });

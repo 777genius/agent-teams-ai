@@ -190,7 +190,7 @@ async function startApp(port, fixture) {
       AGENT_TEAMS_ELECTRON_USER_DATA_DIR: fixture.userDataRoot,
       // Changes does not exercise the OpenCode MCP transport. Avoid coupling this
       // renderer E2E to a second background service and its independent startup timeout.
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       // Keep the local MCP Node probe deterministic. The E2E never launches agents.
       NODE_BINARY: process.execPath,
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:

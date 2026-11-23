@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -39,6 +39,7 @@ type ImportOutcomeResult =
 interface ImportCustomTeamTemplateDialogProps {
   open: boolean;
   onClose: () => void;
+  startImmediately?: boolean;
 }
 
 type ImportStage = 'idle' | 'importing' | 'conflict' | 'done';
@@ -83,6 +84,7 @@ const NO_ISSUES: readonly CustomTeamTemplateValidationIssue[] = [];
 function describeImportOutcome(result: ImportOutcomeResult): ImportOutcomeView {
   switch (result.status) {
     case 'imported':
+    case 'bundleImported':
       return { stage: 'done', errorState: null, issues: NO_ISSUES };
     case 'nameConflict':
       return { stage: 'conflict', errorState: null, issues: NO_ISSUES };
@@ -136,6 +138,7 @@ function describeImportOutcome(result: ImportOutcomeResult): ImportOutcomeView {
 export const ImportCustomTeamTemplateDialog = ({
   open,
   onClose,
+  startImmediately = false,
 }: ImportCustomTeamTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -156,6 +159,12 @@ export const ImportCustomTeamTemplateDialog = ({
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoStarted = useRef(false);
+  const [bundleResult, setBundleResult] = useState<{
+    imported: number;
+    skipped: number;
+    stopped: boolean;
+  } | null>(null);
 
   const isBusy = importStage === 'importing' || renameBusy;
   // A dispatched import whose outcome is unknown may already have committed, so
@@ -171,6 +180,7 @@ export const ImportCustomTeamTemplateDialog = ({
 
   const handleClose = useCallback(() => {
     setImportStage('idle');
+    setBundleResult(null);
     setErrorState(null);
     setIssues([]);
     setConflictPortable(null);
@@ -224,6 +234,7 @@ export const ImportCustomTeamTemplateDialog = ({
     setImportStage(view.stage);
     setErrorState(view.errorState);
     setIssues(view.issues);
+    if (result.status === 'bundleImported') setBundleResult(result);
     if (result.status === 'nameConflict') {
       // The reviewed portable content is retained so a rename retry never has to
       // re-read or re-parse the untrusted file. Stale rename validation issues
@@ -271,13 +282,29 @@ export const ImportCustomTeamTemplateDialog = ({
     setIssues([]);
 
     try {
-      handleImportResult(await desktopFile.importFromFile());
+      const result = await desktopFile.importFromFile();
+      if (result.status === 'cancelled') {
+        handleClose();
+        return;
+      }
+      handleImportResult(result);
     } catch {
       // This IPC call also writes the template. A rejected reply cannot prove
       // the write did not commit; picker/read failures already have typed results.
       handleImportResult({ status: 'unresolvedWriteOutcome', templateId: '' });
     }
-  }, [desktopFile, handleImportResult, errorState]);
+  }, [desktopFile, handleImportResult, handleClose, errorState]);
+
+  useEffect(() => {
+    if (!open) {
+      autoStarted.current = false;
+      return;
+    }
+    if (startImmediately && !autoStarted.current && platform === 'electron' && desktopFile) {
+      autoStarted.current = true;
+      void handleDesktopImport();
+    }
+  }, [open, platform, desktopFile, handleDesktopImport, startImmediately]);
 
   const handleRenameConfirm = useCallback(async () => {
     if (!conflictPortable || !conflictExistingId) return;
@@ -356,8 +383,16 @@ export const ImportCustomTeamTemplateDialog = ({
             >
               <Download className="mt-0.5 size-4 shrink-0" />
               <div>
-                <p className="font-medium">{t('customTemplates.import.success')}</p>
-                <p>{t('customTemplates.import.successBody')}</p>
+                <p className="font-medium">
+                  {bundleResult
+                    ? t('customTemplates.bulk.importDone')
+                    : t('customTemplates.import.success')}
+                </p>
+                <p>
+                  {bundleResult
+                    ? `${t('customTemplates.bulk.importSummary', bundleResult)} ${bundleResult.stopped ? t('customTemplates.bulk.importStopped') : ''}`
+                    : t('customTemplates.import.successBody')}
+                </p>
               </div>
             </div>
           ) : null}
