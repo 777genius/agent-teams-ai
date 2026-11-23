@@ -62,9 +62,9 @@ export class ThinwrapDeliverySender implements DeliverySender {
     success: boolean;
     code?: DeliveryFailureCode;
   }> {
+    let acceptedByGoogleChat = false;
     try {
       validateProviderCredential(channel.provider, secret);
-      let acceptedByGoogleChat = false;
       const secureFetch = createGuardedFetch(channel.provider, secret, () => {
         acceptedByGoogleChat = true;
       });
