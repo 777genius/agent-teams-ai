@@ -568,6 +568,11 @@ export class TeamTaskReader {
           )
             ? (parsed.needsClarification as 'lead' | 'user')
             : undefined,
+          clarificationRequestedAt:
+            typeof parsed.clarificationRequestedAt === 'string' &&
+            Number.isFinite(Date.parse(parsed.clarificationRequestedAt))
+              ? parsed.clarificationRequestedAt
+              : undefined,
           deletedAt: undefined, // deleted tasks are filtered out below
           attachments: Array.isArray(parsed.attachments)
             ? (parsed.attachments as unknown[])
