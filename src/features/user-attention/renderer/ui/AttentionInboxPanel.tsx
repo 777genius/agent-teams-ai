@@ -26,6 +26,7 @@ export function AttentionInboxPanel({
 }: AttentionInboxPanelProps): React.JSX.Element {
   const { t, resolvedLanguage } = useAppTranslation('common');
   const [now, setNow] = useState(() => Date.now());
+  const [taskLimit, setTaskLimit] = useState(50);
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(interval);
@@ -37,6 +38,7 @@ export function AttentionInboxPanel({
     [chats]
   );
   const tasks = model?.tasks ?? [];
+  const shownTasks = variant === 'compact' ? tasks.slice(0, 4) : tasks.slice(0, taskLimit);
   const empty = !loading && !error && model?.complete &&
     tasks.length === 0 && chats.length === 0;
 
@@ -88,7 +90,7 @@ export function AttentionInboxPanel({
             {t('attention.tasks')} · {tasks.length}
           </h3>
           <div className="flex flex-col gap-1">
-            {tasks.map((task) => (
+            {shownTasks.map((task) => (
               <button type="button" key={`${task.teamName}:${task.taskId}`}
                 onClick={() => onOpenTask(task)}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-surface-overlay"
@@ -103,6 +105,19 @@ export function AttentionInboxPanel({
               </button>
             ))}
           </div>
+          {tasks.length > shownTasks.length && (
+            variant === 'compact' ? (
+              <button type="button" onClick={onOpenFull}
+                className="mt-2 text-xs text-text-secondary hover:text-text">
+                +{tasks.length - shownTasks.length} {t('attention.viewAll')}
+              </button>
+            ) : (
+              <button type="button" onClick={() => setTaskLimit((limit) => limit + 50)}
+                className="mt-2 text-xs text-text-secondary hover:text-text">
+                {t('attention.viewAll')} (+{Math.min(50, tasks.length - shownTasks.length)})
+              </button>
+            )
+          )}
         </div>
       )}
 
