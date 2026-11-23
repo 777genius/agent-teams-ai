@@ -202,7 +202,11 @@ async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
       if (options.fallbackOnTimeout === false && error?.retryableKind === 'timeout') {
         throw error;
       }
-      if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
+      if (
+        !isRetryableControlError(error) ||
+        (options.shouldFallback && !options.shouldFallback(error)) ||
+        index === baseUrls.length - 1
+      ) {
         if (options.preferStatusError && statusError &&
             (error?.retryableKind === 'network' || error?.retryableKind === 'timeout')) {
           throw statusError;
