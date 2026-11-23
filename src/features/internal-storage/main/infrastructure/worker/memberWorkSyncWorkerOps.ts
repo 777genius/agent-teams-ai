@@ -1,13 +1,15 @@
 import { and, asc, eq, gt, gte, inArray, isNull } from 'drizzle-orm';
 
-import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '../../../contracts/memberWorkSyncTeamIdentity';
-
 import {
   memberWorkSyncMetricEvents,
   memberWorkSyncOutbox,
   memberWorkSyncReportIntents,
   memberWorkSyncStatus,
 } from './internalStorageSchema';
+import {
+  importMemberWorkSyncTeam,
+  readMemberWorkSyncPrimaryIncarnation,
+} from './memberWorkSyncImportWorkerOps';
 import {
   mutateMemberWorkSyncReportJournal,
   readMemberWorkSyncReportJournal,
@@ -23,6 +25,7 @@ import type {
   MemberWorkSyncOutboxEnsureRecordInput,
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncPrimaryImport,
   MemberWorkSyncReportIntentRecord,
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
@@ -34,7 +37,6 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 // Mirrors MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS in JsonMemberWorkSyncStore.
 const CLAIM_STALE_MS = 5 * 60 * 1000;
-const INSERT_CHUNK_SIZE = 200;
 
 function isOutboxTerminal(status: string): boolean {
   return status === 'delivered' || status === 'superseded' || status === 'failed_terminal';
@@ -79,17 +81,6 @@ function canClaim(item: MemberWorkSyncOutboxItemRecord, nowIso: string): boolean
     return false;
   }
   return isNextAttemptDue(item.nextAttemptAt, nowIso);
-}
-
-// Load-bearing guard, not just batching: drizzle's .values([]) throws, and an
-// empty set is a legitimate state (fresh team import). Iterating chunks means
-// zero .values() calls for empty input — do not inline bulk inserts without it.
-function chunked<T>(values: T[]): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < values.length; start += INSERT_CHUNK_SIZE) {
-    chunks.push(values.slice(start, start + INSERT_CHUNK_SIZE));
-  }
-  return chunks;
 }
 
 /** Routes 'mws.*' worker requests to the ops instance. */
@@ -179,9 +170,15 @@ export function handleMemberWorkSyncOp(
       );
     case 'mws.snapshot.list':
       return ops.listTeamSnapshot((p as { teamName: string }).teamName);
+    case 'mws.primaryIncarnation.read':
+      return ops.readPrimaryIncarnation((p as { teamName: string }).teamName);
     case 'mws.importTeam': {
-      const typed = p as { teamName: string; snapshot: MemberWorkSyncTeamSnapshotRecords };
-      ops.importTeam(typed.teamName, typed.snapshot);
+      const typed = p as {
+        teamName: string;
+        snapshot: MemberWorkSyncTeamSnapshotRecords;
+        binding?: MemberWorkSyncPrimaryImport;
+      };
+      ops.importTeam(typed.teamName, typed.snapshot, typed.binding);
       return null;
     }
     default:
@@ -677,46 +674,16 @@ export class MemberWorkSyncWorkerOps {
     return readMemberWorkSyncTeamSnapshot(this.getOrm(), teamName);
   }
 
-  /** One-transaction import: folds every case alias into the routing argument. */
-  importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): void {
-    const orm = this.getOrm();
-    const normalizedSnapshot = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, snapshot);
-    orm.transaction(() => {
-      const aliases = new Set<string>([teamName]);
-      const current = this.listTeamSnapshot(teamName);
-      for (const record of [
-        ...current.statuses,
-        ...current.reportIntents,
-        ...current.outboxItems,
-        ...current.metricEvents,
-      ]) {
-        aliases.add(record.teamName);
-      }
-      for (const alias of aliases) {
-        orm.delete(memberWorkSyncStatus).where(eq(memberWorkSyncStatus.teamName, alias)).run();
-        orm
-          .delete(memberWorkSyncReportIntents)
-          .where(eq(memberWorkSyncReportIntents.teamName, alias))
-          .run();
-        orm.delete(memberWorkSyncOutbox).where(eq(memberWorkSyncOutbox.teamName, alias)).run();
-        orm
-          .delete(memberWorkSyncMetricEvents)
-          .where(eq(memberWorkSyncMetricEvents.teamName, alias))
-          .run();
-      }
-      for (const rows of chunked(normalizedSnapshot.statuses)) {
-        orm.insert(memberWorkSyncStatus).values(rows).run();
-      }
-      for (const rows of chunked(normalizedSnapshot.reportIntents)) {
-        orm.insert(memberWorkSyncReportIntents).values(rows).run();
-      }
-      for (const rows of chunked(normalizedSnapshot.outboxItems)) {
-        orm.insert(memberWorkSyncOutbox).values(rows).run();
-      }
-      for (const rows of chunked(normalizedSnapshot.metricEvents)) {
-        orm.insert(memberWorkSyncMetricEvents).values(rows).run();
-      }
-    });
+  readPrimaryIncarnation(teamName: string): string | null {
+    return readMemberWorkSyncPrimaryIncarnation(this.getOrm(), teamName);
+  }
+
+  importTeam(
+    teamName: string,
+    snapshot: MemberWorkSyncTeamSnapshotRecords,
+    binding?: MemberWorkSyncPrimaryImport
+  ): void {
+    importMemberWorkSyncTeam(this.getOrm(), teamName, snapshot, binding);
   }
 
   private readReportRow(teamName: string, id: string): MemberWorkSyncReportIntentRecord | null {
