@@ -2,6 +2,14 @@ const STORAGE_PREFIX = 'team-messages-read:';
 const BACKFILL_PREFIX = 'team-messages-read-backfill:';
 
 const listeners = new Set<() => void>();
+
+/** Cross-window read updates must notify Messenger and Attention consistently. */
+function onReadStorageEvent(event: StorageEvent): void {
+  if (event.key === null || event.key.startsWith(STORAGE_PREFIX) ||
+      event.key.startsWith(BACKFILL_PREFIX)) {
+    notifyReadStore();
+  }
+}
 let snapshotVersion = 0;
 const snapshotCache = new Map<string, { version: number; set: Set<string> }>();
 
@@ -14,9 +22,15 @@ function notifyReadStore(): void {
 }
 
 export function subscribeTeamMessageReadStore(listener: () => void): () => void {
+  if (listeners.size === 0 && typeof window !== 'undefined') {
+    window.addEventListener('storage', onReadStorageEvent);
+  }
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0 && typeof window !== 'undefined') {
+      window.removeEventListener('storage', onReadStorageEvent);
+    }
   };
 }
 
