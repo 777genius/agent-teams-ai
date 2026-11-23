@@ -1,3 +1,4 @@
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -179,6 +180,37 @@ describe('Attention Inbox pure domain', () => {
     }), (m) => m.messageId ?? '');
     expect(afterRead.chatCount).toBe(2);
     expect(afterRead.unreadMessageCount).toBe(3);
+  });
+
+  it('opens standard-group mentions in the team feed but keeps their group read identity', () => {
+    const standard = message('all-mention', 'alice', 'user', '@user choose', {
+      groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID, groupMessageId: 'all-mention',
+    });
+    const custom = message('custom-mention', 'alice', 'user', '@user another choice', {
+      groupChatId: 'custom', groupMessageId: 'custom-mention',
+    });
+    const former = message('former-dm', 'former', 'user', 'Unanswered question');
+    const snapshot: AttentionSnapshot = {
+      contextId: 'local', complete: true,
+      teams: [{
+        teamName: 'one', teamDisplayName: 'One', directParticipants: ['alice'], tasks: [],
+        messages: [standard, custom, former],
+      }],
+    };
+    const build = (direct: string[], group: string[]) => buildAttentionModel(snapshot, () => ({
+      direct: new Set(direct), group: new Set(group),
+    }), (m) => m.messageId ?? '');
+
+    const before = build([], []);
+    expect(before.chatCount).toBe(2);
+    expect(before.unreadMessageCount).toBe(3);
+    expect(before.chats.find((chat) => chat.scope.kind === 'team-feed')?.unreadCount).toBe(2);
+    expect(before.chats.find((chat) => chat.scope.kind === 'group')?.scope)
+      .toEqual({ kind: 'group', groupChatId: 'custom' });
+    expect(build(['all-mention'], []).unreadMessageCount).toBe(3);
+    expect(build([], ['all-mention']).unreadMessageCount).toBe(2);
+    expect(build(['former-dm'], ['all-mention']).chats.map((chat) => chat.scope))
+      .toEqual([{ kind: 'group', groupChatId: 'custom' }]);
   });
 
   it('combines verified execution-alias counts under the logical team', () => {

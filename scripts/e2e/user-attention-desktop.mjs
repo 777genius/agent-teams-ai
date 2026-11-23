@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { DEFAULT_TEAM_GROUP_CHAT_ID, DEFAULT_TEAM_GROUP_CHAT_NAME } from '../../src/features/team-group-chats/contracts/defaultTeamGroup.ts';
 import { CdpClient } from './comment-notification/cdp.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -120,6 +121,16 @@ async function setup() {
       read: true, messageId: 'attention-read-filler-' + index,
     })) : [])]);
     await json(path.join(teamDir, 'inboxes', 'team-lead.json'), []);
+    if (team === second) {
+      await json(path.join(teamDir, 'group-chats.json'), {
+        version: 1,
+        groups: [{
+          id: DEFAULT_TEAM_GROUP_CHAT_ID, name: DEFAULT_TEAM_GROUP_CHAT_NAME,
+          createdAt: stamp, membership: { kind: 'auto', excludedMemberNames: [] },
+          archivedAt: null,
+        }],
+      });
+    }
   }
   const taskRoot = path.join(claude, 'tasks', first);
   await json(path.join(taskRoot, '1.json'), {
@@ -349,6 +360,62 @@ async function checkDesktop() {
   })()`), 'removed-member message opens the actual team-feed thread');
   await cdp.screenshot(path.join(artifactRoot, 'attention-removed-member.png'));
   evidence.checks.push('removed member unread message routes to an available team-feed');
+
+  // The reserved All agents conversation is represented by team-feed, not a
+  // custom group row. Persist one canonical incoming group message, without
+  // creating any provider delivery or launching an agent.
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
+  const groupMessageId = randomUUID();
+  const groupInbox = path.join(claude, 'teams', second, 'inboxes', 'user.json');
+  const groupRows = JSON.parse(await readFile(groupInbox, 'utf8'));
+  await json(groupInbox, [...groupRows, {
+    from: 'bob', to: 'user', text: '@user ATTENTION_E2E_STANDARD_GROUP',
+    timestamp: nowIso(), read: false, messageId: groupMessageId,
+    groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID, groupChatName: DEFAULT_TEAM_GROUP_CHAT_NAME,
+    groupMessageId, groupChatProtocolVersion: 1,
+    groupRecipientNames: [], groupRecipientRunKeys: {},
+  }]);
+  await until(async () => {
+    const snapshot = await getSnapshot();
+    return snapshot.teams.find((entry) => entry.teamName === second)?.messages.some(
+      (message) => message.messageId === groupMessageId &&
+        message.groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID);
+  }, 'standard group mention present in canonical attention source', 90_000);
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const row = Array.from(panel?.querySelectorAll('button') ?? [])
+      .find((button) => button.textContent.includes('ATTENTION_E2E_STANDARD_GROUP'));
+    if (!row) return false;
+    row.click();
+    return true;
+  })()`), 'open standard group mention through Attention', 90_000);
+  await until(async () => cdp.evaluate(`(async () => {
+    const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
+    const state = window.__agentTeamsDevStore.getState();
+    const active = state.getAllPaneTabs().find((tab) => tab.id === state.activeTabId);
+    const chat = ui.getTeamMessagesSidebarUiState(JSON.stringify([state.activeContextId, ${JSON.stringify(second)}]));
+    const customGroupComposer = [...document.querySelectorAll('[data-testid=group-chat-composer]')]
+      .some(node => node.getClientRects().length > 0);
+    return active?.type === 'team' && active.teamName === ${JSON.stringify(second)} &&
+      chat.conversationSurface === 'thread' && chat.conversationScope.kind === 'team-feed' &&
+      !chat.messagesCollapsed && !customGroupComposer &&
+      document.body.innerText.includes('ATTENTION_E2E_STANDARD_GROUP');
+  })()`), 'standard group uses Messenger team feed and normal composer');
+  await cdp.screenshot(path.join(artifactRoot, 'attention-standard-group.png'));
+  await until(async () => cdp.evaluate(`(async () => {
+    const reads = await import('/utils/teamMessageReadStorage.ts');
+    const root = await window.electronAPI.config.getClaudeRootInfo();
+    const scope = reads.getTeamMessageReadContextScope('local', root);
+    const group = reads.getReadSet(reads.getTeamMessageReadStorageKey(${JSON.stringify(second)}, scope, 'group'));
+    const direct = reads.getReadSet(reads.getTeamMessageReadStorageKey(${JSON.stringify(second)}, scope));
+    return group.has(${JSON.stringify(groupMessageId)}) && !direct.has(${JSON.stringify(groupMessageId)});
+  })()`), 'visible standard group mention uses shared group read storage');
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_STANDARD_GROUP") === false',
+    'standard group mention disappears after being read in Messenger');
+  evidence.checks.push('standard group mention opens team-feed and clears through shared group read state');
 }
 async function cleanup() {
   await cdp?.close().catch(() => {});

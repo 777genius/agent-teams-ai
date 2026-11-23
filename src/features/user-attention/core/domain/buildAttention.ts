@@ -6,6 +6,7 @@ import {
   isUserUnreadMessage,
   normalizeConversationParticipant,
 } from '@features/team-direct-chats';
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
 
 import type { ConversationScope } from '@features/team-direct-chats';
 import type { InboxMessage } from '@shared/types/team';
@@ -52,6 +53,11 @@ export function conversationForAttentionMessage(
   scope: ConversationScope;
   name: string;
 } {
+  // Messenger's reserved All agents group is presented as the team feed.
+  // Its messages still use the shared group read namespace below.
+  if (message.groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID) {
+    return { scope: { kind: 'team-feed' }, name: 'Team messages' };
+  }
   if (message.groupChatId) {
     return {
       scope: { kind: 'group', groupChatId: message.groupChatId },
