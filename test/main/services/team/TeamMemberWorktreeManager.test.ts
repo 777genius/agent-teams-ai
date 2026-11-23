@@ -361,6 +361,23 @@ describe('TeamMemberWorktreeManager', () => {
     await expect(manager.ensureMemberWorktree(request)).resolves.toEqual(results[0]);
   });
 
+  it('rejects conflicting concurrent paths rather than sharing a member checkout', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const request = { teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: repoPath };
+    const initial = manager.ensureMemberWorktree(request);
+    await expect(manager.ensureMemberWorktree({
+      ...request,
+      existingCwd: repoPath,
+    })).rejects.toThrow('Conflicting concurrent worktree paths');
+    const resolved = await initial;
+    expect(await execGit(['branch', '--show-current'], resolved.worktreePath)).toBe(
+      resolved.branchName
+    );
+    const listed = await execGit(['worktree', 'list', '--porcelain'], repoPath);
+    expect(listed.match(/^worktree /gm)).toHaveLength(2);
+  });
+
   it('rejects the shared checkout and nested directories passed as persisted member cwd', async () => {
     const repoPath = await createGitRepo(tempRoot);
     const nested = path.join(repoPath, 'nested');
