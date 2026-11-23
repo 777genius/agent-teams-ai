@@ -475,7 +475,7 @@ export class HttpAPIClient implements ElectronAPI {
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
 
   getUserAttentionSnapshot = (teamName?: string): Promise<import('@features/user-attention/contracts').AttentionSnapshot> =>
-    this.get('/api/user-attention' + (teamName ? '?teamName=' + encodeURIComponent(teamName) : ''));
+    this.get('/api/user-attention' + (teamName ? '?teamName=' + encodeURIComponent(teamName) : ''), false);
 
   workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
     getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),
