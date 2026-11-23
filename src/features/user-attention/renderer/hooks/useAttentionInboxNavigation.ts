@@ -1,0 +1,39 @@
+import { useCallback } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { useStore } from '@renderer/store';
+
+import { requestAttentionChatNavigation } from './conversationAttentionNavigation';
+
+import type { ConversationScope } from '@features/team-direct-chats/renderer';
+import type { AttentionTaskCandidate } from '../../contracts';
+import type { AttentionChat } from '../../core/domain/buildAttention';
+
+/** The only app-shell navigation adapter; attention UI stays presentation-only. */
+export function useAttentionInboxNavigation() {
+  const { t } = useAppTranslation('common');
+  const contextId = useStore((state) => state.activeContextId);
+  const openTeamTab = useStore((state) => state.openTeamTab);
+  const openGlobalTaskDetail = useStore((state) => state.openGlobalTaskDetail);
+  const openTab = useStore((state) => state.openTab);
+
+  const onOpenTask = useCallback((task: AttentionTaskCandidate) => {
+    if (task.logicalTeamName) openTeamTab(task.logicalTeamName, task.projectPath);
+    openGlobalTaskDetail(task.teamName, task.taskId);
+  }, [openGlobalTaskDetail, openTeamTab]);
+
+  const onOpenChat = useCallback((chat: AttentionChat, scope: ConversationScope) => {
+    requestAttentionChatNavigation({ contextId, teamName: chat.teamName, scope });
+    openTeamTab(chat.logicalTeamName || chat.teamName, chat.projectPath);
+  }, [contextId, openTeamTab]);
+
+  const onOpenFull = useCallback(() => {
+    const state = useStore.getState();
+    const pane = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
+    const existing = pane?.tabs.find((tab) => tab.type === 'attention');
+    if (existing) state.setActiveTab(existing.id);
+    else openTab({ type: 'attention', label: t('attention.tab') });
+  }, [openTab, t]);
+
+  return { onOpenTask, onOpenChat, onOpenFull };
+}
