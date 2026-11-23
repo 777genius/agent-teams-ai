@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
+
 import type { UseCreateTeamTemplateSelectionResult } from './useCreateTeamTemplateSelection';
 
 describe('applying a team template', () => {

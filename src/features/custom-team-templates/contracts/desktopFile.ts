@@ -101,7 +101,7 @@ export type ExportCustomTeamTemplateToFileResult =
  * The Electron preload bridge exposes this as
  * `window.electronAPI.customTeamTemplates.desktopFile`; the browser HTTP
  * adapter deliberately leaves it undefined instead of fabricating a file
- * dialog. Neither method accepts a filesystem path.
+ * dialog. No method accepts a filesystem path.
  */
 export interface CustomTeamTemplatesDesktopFileApi {
   importFromFile(): Promise<ImportCustomTeamTemplateFromFileResult>;

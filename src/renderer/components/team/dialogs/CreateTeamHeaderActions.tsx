@@ -4,13 +4,13 @@ import { useStore } from '@renderer/store';
 
 import type { ReactNode } from 'react';
 
-type Props = {
+interface Props {
   local: boolean;
   isLight: boolean;
   onManagementApplied?: () => void;
   disabled?: boolean;
   templatePicker: ReactNode;
-};
+}
 
 export const CreateTeamHeaderActions = ({
   local,
