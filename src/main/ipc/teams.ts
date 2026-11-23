@@ -10,7 +10,7 @@ import {
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
-import { createReviewFlowFeature, registerReviewFlowIpc, removeReviewFlowIpc } from '@features/review-flow/main';
+import { registerReviewFlowIpc, removeReviewFlowIpc } from '@features/review-flow/main';
 import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
   projectPublicProvisioningProgress,
@@ -39,7 +39,7 @@ import {
   validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
@@ -216,6 +216,7 @@ import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
 import { buildTeamProgressReporter, type ProjectContextProgressMapper, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
+import { createTeamReviewFlowService } from './teams/teamReviewFlow';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { parseUpdateConfigRequest } from './teams/teamUpdateConfigRequest';
 import { withTimeoutValue } from './teams/withTimeoutValue';
@@ -696,11 +697,7 @@ export function initializeTeamHandlers(
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
-  registerReviewFlowIpc(ipcMain, createReviewFlowFeature({
-    teamWriter: { setReviewFlowSettings: (teamName, settings) =>
-      getTeamDataService().setReviewFlowSettings(teamName, settings) },
-    getClaudeDir: getClaudeBasePath, getTeamsDir: getTeamsBasePath,
-  }));
+  registerReviewFlowIpc(ipcMain, createTeamReviewFlowService(getTeamDataService));
   ipcMain.handle(TEAM_LIST, handleListTeams);
   registerTeamProjectContextViewHandler(ipcMain);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);

@@ -19,6 +19,8 @@ export type CustomTeamTemplateValidationIssueCode =
   | 'duplicateMemberName'
   | 'memberRoleTooLong'
   | 'memberWorkflowTooLong'
+  /** Invalid content includes aggregate size exceeding the create-team persistence budget. */
+  | 'invalidContent'
   /**
    * The imported document carries an own property outside the portable
    * allowlist. `field` is the offending path (`templateId`,

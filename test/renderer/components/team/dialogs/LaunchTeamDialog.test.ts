@@ -1964,9 +1964,10 @@ describe('LaunchTeamDialog', () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
     });
-    const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
-      button.textContent?.toLowerCase().includes('create')
+    const createButton = Array.from(createHost.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Create'
     );
+    expect(createButton?.textContent).toBe('Create');
     expect(createButton?.disabled).toBe(false);
 
     vi.setSystemTime(baseTime + 100);
@@ -1977,6 +1978,10 @@ describe('LaunchTeamDialog', () => {
     expect(onCreate).not.toHaveBeenCalled();
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(createButton?.disabled).toBe(true);
+    expect(createButton?.getAttribute('aria-describedby')).toBe(
+      'create-team-launch-authority-blocker'
+    );
+    expect(createHost.textContent).toContain('verified model catalog is unavailable or stale');
     await act(async () => createDialogRoot.unmount());
   });
 

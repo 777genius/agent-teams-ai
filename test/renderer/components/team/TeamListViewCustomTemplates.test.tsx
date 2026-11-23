@@ -34,6 +34,18 @@ const storeState = vi.hoisted(() => {
       },
     ],
     teamManagementNoticeByTeam: {} as Record<string, unknown>,
+    paneLayout: {
+      panes: [
+        {
+          id: 'test-pane',
+          activeTabId: 'templates-integration-test',
+          tabs: [{ id: 'templates-integration-test', type: 'teams' }],
+        },
+      ],
+    },
+    getAllPaneTabs: vi.fn(),
+    openTeamsCreationPage: vi.fn(),
+    closeTeamsCreationPage: noop,
     teamsLoading: false,
     teamsError: null as string | null,
     fetchTeams: noop,
@@ -73,9 +85,11 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 vi.mock('@renderer/store', () => ({
-  useStore: (selector?: (state: typeof storeState) => unknown) =>
-    typeof selector === 'function' ? selector(storeState) : storeState,
-  getState: () => storeState,
+  useStore: Object.assign(
+    (selector?: (state: typeof storeState) => unknown) =>
+      typeof selector === 'function' ? selector(storeState) : storeState,
+    { getState: () => storeState }
+  ),
 }));
 vi.mock('zustand/react/shallow', () => ({ useShallow: (selector: unknown) => selector }));
 vi.mock('@features/localization/renderer', () => ({
@@ -102,10 +116,6 @@ vi.mock('@renderer/components/team/useTeamStopControl', () => ({
 }));
 vi.mock('@renderer/components/team/dialogs/teamRelaunchFlow', () => ({
   executeTeamRelaunch: vi.fn(),
-}));
-vi.mock('@renderer/components/team/dialogs/CreateTeamDialog', () => ({
-  CreateTeamDialog: ({ open }: { open: boolean }) =>
-    open ? React.createElement('div', { 'data-testid': 'create-team-dialog' }) : null,
 }));
 vi.mock('@renderer/components/ui/dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
@@ -163,7 +173,7 @@ function buttonByText(label: string, scope: ParentNode = host): HTMLButtonElemen
   return found;
 }
 
-/** The alpha row card (the draft card has no copy/save actions). */
+/** The alpha row card (a config-only card has no Copy action). */
 function alphaCard(): Element {
   const cards = Array.from(host.querySelectorAll('[role="button"]'));
   const card = cards.find((candidate) => candidate.textContent?.includes('Alpha'));
@@ -173,7 +183,7 @@ function alphaCard(): Element {
 
 async function renderView(): Promise<void> {
   await act(async () => {
-    root.render(<TeamListView />);
+    root.render(<TeamListView tabId="templates-integration-test" isActive />);
     await Promise.resolve();
   });
 }
@@ -184,7 +194,6 @@ async function flush(): Promise<void> {
     await Promise.all([
       import('@features/custom-team-templates/renderer/ui/SaveAsTemplateDialog'),
       import('@features/custom-team-templates/renderer/ui/MyTemplatesDialog'),
-      import('@renderer/components/team/dialogs/CreateTeamDialog'),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
@@ -220,6 +229,11 @@ beforeEach(() => {
     },
   });
   listTemplates.mockResolvedValue({ status: 'empty' });
+  storeState.getAllPaneTabs.mockReset();
+  storeState.getAllPaneTabs.mockReturnValue(
+    storeState.paneLayout.panes.flatMap((pane) => pane.tabs)
+  );
+  storeState.openTeamsCreationPage.mockReset();
   storeState.openTeamTab = vi.fn();
   host = document.createElement('div');
   document.body.appendChild(host);
@@ -257,22 +271,39 @@ describe('TeamListView custom team template actions', () => {
       description: '',
     });
     expect(getSavedRequest).not.toHaveBeenCalled();
-    expect(host.querySelector('[data-testid="create-team-dialog"]')).toBeNull();
+    expect(storeState.openTeamsCreationPage).not.toHaveBeenCalled();
     expect(storeState.openTeamTab).not.toHaveBeenCalled();
 
-    // Copy team still reads the saved request and opens the create dialog.
+    await act(async () => buttonByText('actions.close').click());
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+
+    // Copy team reads the saved request and seeds the shared creation page.
     await act(async () => {
       buttonByLabel('list.actions.copyTeam', card).click();
       await Promise.resolve();
     });
     await flush();
     expect(getSavedRequest).toHaveBeenCalledWith('alpha');
-    expect(host.querySelector('[data-testid="create-team-dialog"]')).not.toBeNull();
+    expect(storeState.openTeamsCreationPage).toHaveBeenCalledTimes(1);
+    expect(storeState.openTeamsCreationPage).toHaveBeenCalledWith(
+      {
+        copyData: expect.objectContaining({
+          teamName: 'alpha-1',
+          runtimeSelectionVersion: 1,
+          description: 'First team',
+          cwd: '/opt/acme/project',
+          prompt: 'Lead the work.',
+          members: [expect.objectContaining({ name: 'ann' })],
+        }),
+      },
+      true
+    );
     expect(preparePreview).toHaveBeenCalledTimes(1);
+    expect(saveTemplate).not.toHaveBeenCalled();
     expect(storeState.openTeamTab).not.toHaveBeenCalled();
   });
 
-  it('hides Save as Template for a draft team that has no saved configuration', async () => {
+  it('keeps Save as Template available for config-only teams without offering Copy', async () => {
     await renderView();
     const draftCard = Array.from(host.querySelectorAll('[role="button"]')).find((candidate) =>
       candidate.textContent?.includes('Draft')
@@ -281,8 +312,19 @@ describe('TeamListView custom team template actions', () => {
     const labels = Array.from(draftCard.querySelectorAll('button')).map((button) =>
       button.getAttribute('aria-label')
     );
-    expect(labels).not.toContain('customTemplates.actions.saveAsTemplate');
-    expect(preparePreview).not.toHaveBeenCalled();
+    expect(labels).not.toContain('list.actions.copyTeam');
+    expect(labels).toContain('customTemplates.actions.saveAsTemplate');
+    await act(async () => {
+      buttonByLabel('customTemplates.actions.saveAsTemplate', draftCard).click();
+      await Promise.resolve();
+    });
+    await flush();
+    expect(preparePreview).toHaveBeenCalledWith({
+      sourceTeamName: 'draft',
+      name: 'Draft',
+      description: '',
+    });
+    expect(storeState.openTeamTab).not.toHaveBeenCalled();
   });
 
   it('keeps row navigation out of the save dialog it opened', async () => {

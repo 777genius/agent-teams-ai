@@ -15,7 +15,7 @@ export interface SaveAsTemplateActionProps {
     teamName: string;
     /** Proposed display name; only name and description stay editable. */
     displayName: string;
-    /** Draft teams have no saved configuration to project. */
+    /** Config-only teams have a saved configuration even before runtime launch. */
     pendingCreate?: boolean;
   };
 }
@@ -23,18 +23,19 @@ export interface SaveAsTemplateActionProps {
 /**
  * Team-row action that opens the "Save as Template" dialog.
  *
- * The action renders nothing for a draft team (there is no saved configuration
- * to prepare a preview from), stops propagation so the row does not navigate,
+ * Configuration-only teams can provide a saved team.meta.json before runtime
+ * launch. The action stops propagation so the row does not navigate,
  * and lazy-loads the dialog so its code stays out of the initial bundle — the
  * same lifecycle the list uses for its other dialogs.
  */
 export const SaveAsTemplateAction = ({
   team,
-}: SaveAsTemplateActionProps): React.JSX.Element | null => {
+}: SaveAsTemplateActionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [open, setOpen] = useState(false);
-
-  if (team.pendingCreate) return null;
+  // Keep the lazily loaded flow mounted after first open so an unknown save
+  // retains its exact preview token when the same team row is reopened.
+  const [hasOpened, setHasOpened] = useState(false);
 
   const label = t('customTemplates.actions.saveAsTemplate');
 
@@ -44,13 +45,13 @@ export const SaveAsTemplateAction = ({
         <TooltipTrigger asChild>
           <Button
             type="button"
+            size="icon"
             variant="ghost"
-            size="sm"
-            data-testid="save-team-as-template"
-            className="size-8 shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-violet-500/10 hover:text-violet-300 focus-visible:opacity-100 group-hover:opacity-100"
+            className="size-6 shrink-0 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-violet-500/10 hover:text-violet-300 focus-visible:opacity-100 group-hover:opacity-100"
             aria-label={label}
             onClick={(event) => {
               event.stopPropagation();
+              setHasOpened(true);
               setOpen(true);
             }}
             onKeyDown={(event) => event.stopPropagation()}
@@ -60,7 +61,7 @@ export const SaveAsTemplateAction = ({
         </TooltipTrigger>
         <TooltipContent side="bottom">{label}</TooltipContent>
       </Tooltip>
-      {open ? (
+      {hasOpened ? (
         // Event-only boundary for everything mounted by this action. The
         // loading fallback renders inline inside the team row (the dialog
         // itself stops its own events), so a click on the overlay or an

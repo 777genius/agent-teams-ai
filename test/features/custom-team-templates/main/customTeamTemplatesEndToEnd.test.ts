@@ -1,4 +1,5 @@
 import { CustomTeamTemplateStorageInterruptedError } from '@features/custom-team-templates/core/application/CustomTeamTemplateStorageInterruptedError';
+import { STORAGE_SETTLEMENT_TIMEOUT_MS } from '@features/custom-team-templates/core/application/waitForStorageSettlement';
 import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { normalizeTemplateNameKey } from '@features/custom-team-templates/core/domain/templateNamePolicy';
 // Imported through the feature's public main entrypoint: this is the exact
@@ -330,6 +331,66 @@ describe('custom team templates end to end', () => {
       templateId,
     });
     expect(library.rows.get(templateId)).toEqual(conflicting);
+  });
+
+  it('rechecks absence only after an interrupted writer exits, then retries once', async () => {
+    vi.useFakeTimers();
+    try {
+      await writeTeam([{ name: 'alice', role: 'reviewer', workflow: 'Review.' }]);
+      const library = fakeLibrary();
+      let settle!: () => void;
+      const settled = new Promise<void>((resolve) => {
+        settle = () => resolve();
+      });
+      let firstWriteUncertain = true;
+      const create = vi.fn((request: CreateCustomTeamTemplateRecordRequest) =>
+        firstWriteUncertain
+          ? Promise.reject(
+              new CustomTeamTemplateStorageInterruptedError('worker timed out', 'unknown', settled)
+            )
+          : library.gateway.customTeamTemplateCreate(request)
+      );
+      const app = createCustomTeamTemplatesFeature({
+        backend: { gateway: { ...library.gateway, customTeamTemplateCreate: create } },
+        now: () => 0,
+        createPreviewToken: () => 'token-delayed',
+      });
+
+      const prepared = await app.preparePreview.execute({
+        sourceTeamName: TEAM,
+        name: 'Delayed worker',
+      });
+      expect(prepared.status).toBe('previewReady');
+      if (prepared.status !== 'previewReady') return;
+      const token = prepared.preview.previewToken;
+
+      const saving = app.saveTemplate.execute({ previewToken: token });
+      // Saving re-reads the real team files before dispatching the writer. Wait
+      // for that boundary so the fake deadline cannot expire before it exists.
+      await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await expect(saving).resolves.toMatchObject({ status: 'unresolvedWriteOutcome' });
+      expect(create).toHaveBeenCalledTimes(1);
+      await expect(app.recheckSave.execute({ previewToken: token })).resolves.toMatchObject({
+        status: 'unresolved',
+      });
+      expect(create).toHaveBeenCalledTimes(1);
+
+      settle();
+      await settled;
+      await expect(app.recheckSave.execute({ previewToken: token })).resolves.toMatchObject({
+        status: 'notSaved',
+      });
+      expect(create).toHaveBeenCalledTimes(1);
+      firstWriteUncertain = false;
+      await expect(app.saveTemplate.execute({ previewToken: token })).resolves.toMatchObject({
+        status: 'created',
+      });
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(library.rows.size).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('blocks saving entirely when the roster metadata cannot be read', async () => {

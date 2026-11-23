@@ -269,6 +269,55 @@ describe('InternalStorageWorkerCore', () => {
     expect(siblings.some((name) => name.includes('.corrupt-'))).toBe(true);
   });
 
+
+  it('does not treat a recovered database as an empty template library, even after restart', async () => {
+    const dbPath = await makeTmpDbPath();
+    const original = track(makeCore(dbPath));
+    expect(
+      original.handle('customTemplate.create', {
+        template: {
+          templateId: 'template-1',
+          name: 'Saved before corruption',
+          schemaVersion: 1,
+          teamPrompt: 'Review the change',
+          members: [{ name: 'reviewer', role: 'Reviewer', workflow: 'Inspect' }],
+        },
+        contentHash: 'hash-1',
+      })
+    ).toMatchObject({ status: 'created' });
+    original.close();
+
+    // The original file cannot be trusted after corruption. Keep its backup,
+    // while preventing the new, empty SQLite database from accepting templates.
+    await fs.writeFile(dbPath, 'not a SQLite database', 'utf8');
+    const recovered = track(makeCore(dbPath));
+    expect((recovered.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('recovered');
+    expect(() => recovered.handle('customTemplate.list', {})).toThrow(/Custom templates unavailable/);
+    expect(() => recovered.handle('customTemplate.create', {})).toThrow(/Custom templates unavailable/);
+
+    // Existing journal recovery is intentionally unaffected.
+    recovered.handle('stallJournal.replace', { teamName: 'demo', entries: [makeRecord()] });
+    expect(recovered.handle('stallJournal.load', { teamName: 'demo' })).toHaveLength(1);
+    const marker = dbPath + '.custom-template-recovery-pending';
+    expect(await fs.readFile(marker, 'utf8')).toContain('Restore or explicitly reconcile');
+    recovered.close();
+
+    const restarted = track(makeCore(dbPath));
+    expect((restarted.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('ok');
+    expect(() => restarted.handle('customTemplate.list', {})).toThrow(/Custom templates unavailable/);
+    expect(restarted.handle('stallJournal.load', { teamName: 'demo' })).toHaveLength(1);
+
+    // An operator may explicitly acknowledge data loss or restore a verified
+    // backup while the app is stopped. Only that offline step removes the marker.
+    restarted.close();
+    await fs.unlink(marker);
+    const acknowledged = track(makeCore(dbPath));
+    expect(acknowledged.handle('customTemplate.list', {})).toEqual({
+      templates: [],
+      unreadableRecords: [],
+    });
+  });
+
   it('records store imports idempotently (upsert by store + team)', async () => {
     const dbPath = await makeTmpDbPath();
     const core = track(makeCore(dbPath));

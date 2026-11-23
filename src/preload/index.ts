@@ -28,6 +28,7 @@ import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_SET_ZOOM_FACTOR_CHANNEL, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
+
 import {
   API_KEYS_DELETE,
   API_KEYS_LIST,
@@ -44,6 +45,32 @@ import {
   CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_PROGRESS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
+  CONFIG_ADD_CUSTOM_PROJECT_PATH,
+  CONFIG_ADD_IGNORE_REGEX,
+  CONFIG_ADD_IGNORE_REPOSITORY,
+  CONFIG_ADD_TRIGGER,
+  CONFIG_CLEAR_SNOOZE,
+  CONFIG_FIND_WSL_CLAUDE_ROOTS,
+  CONFIG_GET,
+  CONFIG_GET_CLAUDE_ROOT_INFO,
+  CONFIG_GET_TRIGGERS,
+  CONFIG_HIDE_SESSION,
+  CONFIG_HIDE_SESSIONS,
+  CONFIG_OPEN_IN_EDITOR,
+  CONFIG_PIN_SESSION,
+  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
+  CONFIG_REMOVE_IGNORE_REGEX,
+  CONFIG_REMOVE_IGNORE_REPOSITORY,
+  CONFIG_REMOVE_TRIGGER,
+  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
+  CONFIG_SELECT_FOLDERS,
+  CONFIG_SNOOZE,
+  CONFIG_TEST_TRIGGER,
+  CONFIG_UNHIDE_SESSION,
+  CONFIG_UNHIDE_SESSIONS,
+  CONFIG_UNPIN_SESSION,
+  CONFIG_UPDATE,
+  CONFIG_UPDATE_TRIGGER,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
@@ -263,37 +290,10 @@ import {
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
-import {
-  CONFIG_ADD_CUSTOM_PROJECT_PATH,
-  CONFIG_ADD_IGNORE_REGEX,
-  CONFIG_ADD_IGNORE_REPOSITORY,
-  CONFIG_ADD_TRIGGER,
-  CONFIG_CLEAR_SNOOZE,
-  CONFIG_FIND_WSL_CLAUDE_ROOTS,
-  CONFIG_GET,
-  CONFIG_GET_CLAUDE_ROOT_INFO,
-  CONFIG_GET_TRIGGERS,
-  CONFIG_HIDE_SESSION,
-  CONFIG_HIDE_SESSIONS,
-  CONFIG_OPEN_IN_EDITOR,
-  CONFIG_PIN_SESSION,
-  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
-  CONFIG_REMOVE_IGNORE_REGEX,
-  CONFIG_REMOVE_IGNORE_REPOSITORY,
-  CONFIG_REMOVE_TRIGGER,
-  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
-  CONFIG_SELECT_FOLDERS,
-  CONFIG_SNOOZE,
-  CONFIG_TEST_TRIGGER,
-  CONFIG_UNHIDE_SESSION,
-  CONFIG_UNHIDE_SESSIONS,
-  CONFIG_UNPIN_SESSION,
-  CONFIG_UPDATE,
-  CONFIG_UPDATE_TRIGGER,
-} from './constants/ipcChannels';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
+
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
@@ -461,6 +461,7 @@ import type {
 } from '@shared/types/extensions';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
+
 // Expose Sentry's classic IPC bridge so packaged renderers do not fall back to sentry-ipc:// fetch.
 try {
   installSentryRendererIpcBridge();
@@ -489,6 +490,7 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
 }
 
 installRendererLogForwarding();
+
 // Signal that preload executed (helps diagnose "UI stuck" with no logs).
 ipcRenderer.send(RENDERER_BOOT);
 

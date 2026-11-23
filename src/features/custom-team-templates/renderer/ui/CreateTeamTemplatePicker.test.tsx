@@ -107,9 +107,10 @@ describe('CreateTeamTemplatePicker', () => {
     expect(listTemplates).toHaveBeenCalledTimes(1);
     expect(onApply).not.toHaveBeenCalled();
     expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
-    expect(host.textContent).toContain('customTemplates.createFromTemplate.noneHint');
+    expect(optionNone()?.textContent).toContain('customTemplates.createFromTemplate.noneLabel');
     // Built-in and custom templates stay clearly distinguishable.
     expect(optionBuiltin('marketing')).not.toBeNull();
+    expect(optionBuiltin('marketing')?.querySelector('svg.lucide-megaphone')).not.toBeNull();
     expect(optionCustom('tmpl-custom-1')).not.toBeNull();
   });
 
@@ -331,21 +332,21 @@ describe('CreateTeamTemplatePicker', () => {
       expect(onApply).not.toHaveBeenCalled();
     });
 
-    it('does not overwrite a deliberate user selection made before the restore arrives', async () => {
+    it('synchronizes later parent-owned selection changes without applying twice', async () => {
       listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
       renderPicker(true, '');
       await flush();
 
-      // The user deliberately picks a built-in template before the draft loads.
       await click(optionBuiltin('marketing'));
       expect(onApply).toHaveBeenCalledTimes(1);
 
-      // A stale saved selection then arrives asynchronously.
+      // The parent now owns the updated selection. A later external change
+      // must update the cards, but must not re-apply or clobber draft fields.
       renderPicker(true, 'custom:tmpl-custom-1');
       await flush();
 
-      expect(optionBuiltin('marketing')?.getAttribute('aria-pressed')).toBe('true');
-      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('false');
+      expect(optionBuiltin('marketing')?.getAttribute('aria-pressed')).toBe('false');
+      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
       expect(onApply).toHaveBeenCalledTimes(1);
     });
 
@@ -417,6 +418,54 @@ describe('CreateTeamTemplatePicker', () => {
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply).toHaveBeenLastCalledWith(
       expect.objectContaining({ description: '', prompt: '', members: [] }),
+      'none',
+      'none'
+    );
+  });
+
+  it('does not replace edited draft contents until confirmation, and cancel preserves selection', async () => {
+    listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+    root.render(<CreateTeamTemplatePicker open confirmBeforeApply onApply={onApply} />);
+    await flush();
+
+    await click(optionCustom('tmpl-custom-1'));
+    const dialog = () => document.querySelector<HTMLElement>('[role="alertdialog"]');
+    const dialogButton = (part: string) =>
+      Array.from(dialog()?.querySelectorAll<HTMLButtonElement>('button') ?? []).find((button) =>
+        button.textContent?.includes(part)
+      ) ?? null;
+
+    expect(dialog()).not.toBeNull();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+
+    await click(dialogButton('actions.cancel'));
+    await flush();
+    expect(dialog()).toBeNull();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+
+    await click(optionCustom('tmpl-custom-1'));
+    await click(dialogButton('templates.confirmAction'));
+    await flush();
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+
+    // "No template" is also destructive: it clears the editable prompt and members.
+    await click(optionNone());
+    expect(dialog()).not.toBeNull();
+    expect(onApply).toHaveBeenCalledTimes(1);
+    await click(dialogButton('actions.cancel'));
+    await flush();
+    expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+    expect(onApply).toHaveBeenCalledTimes(1);
+
+    await click(optionNone());
+    await click(dialogButton('templates.confirmAction'));
+    await flush();
+    expect(onApply).toHaveBeenCalledTimes(2);
+    expect(onApply).toHaveBeenLastCalledWith(
+      expect.objectContaining({ prompt: '', members: [] }),
       'none',
       'none'
     );

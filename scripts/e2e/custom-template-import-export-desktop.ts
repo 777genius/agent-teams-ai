@@ -36,6 +36,7 @@ assert.equal(process.platform, 'linux', 'This harness uses a disposable Linux de
 const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'custom-template-TEST-')));
 const output = process.env.CUSTOM_TEMPLATE_E2E_OUTPUT_DIR ?? path.join(root, 'evidence');
 const claude = path.join(root, 'claude');
+const project = path.join(root, 'TEST-project');
 const userData = path.join(root, 'user-data');
 const statePath = path.join(root, 'native-dialog.json');
 const dialogAudit = path.join(root, 'native-dialog-audit.ndjson');
@@ -70,7 +71,9 @@ const portable = {
   members: [{ name: 'reviewer', role: 'Reviewer', workflow: 'Inspect\nTest\nReport' }],
 };
 
-await Promise.all([claude, userData, output].map((dir) => mkdir(dir, { recursive: true })));
+await Promise.all(
+  [claude, userData, output, project].map((dir) => mkdir(dir, { recursive: true }))
+);
 await writeFile(fixtureJson, JSON.stringify(portable, null, 2));
 await writeFile(invalidJson, '{invalid');
 await writeFile(invalidEncoding, Buffer.from([0xc3, 0x28]));
@@ -171,10 +174,11 @@ const button = (text: string, within = 'document') =>
 async function click(expression: string) {
   await until(
     `(() => { const e = ${expression}; if (!(e instanceof HTMLElement)) return false;
-    e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect();
+    // The creation page has a sticky header; 'nearest' can park cards underneath it.
+    e.scrollIntoView({block:'center',inline:'nearest'}); const r=e.getBoundingClientRect();
     const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
     return r.width>0 && r.height>0 && (hit===e || e.contains(hit)); })()`,
-    'unobstructed click target'
+    'unobstructed click target: ' + expression.slice(0, 160)
   );
   const point = await evaluate<{ x: number; y: number }>(
     `(() => { const r = (${expression}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
@@ -183,6 +187,30 @@ async function click(expression: string) {
     await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
   }
 }
+const templateConfirmDialog = `Array.from(document.querySelectorAll('[role="alertdialog"]')).find(e => e.querySelector('h2')?.textContent?.includes('Apply team template?'))`;
+
+async function acceptTemplateSelection(selector: string, appliedPredicate: string) {
+  if (
+    !(await evaluate<boolean>(
+      `Boolean(document.querySelector('[data-testid="create-team-template-picker"]'))`
+    ))
+  ) {
+    await click(`document.querySelector('[data-testid="open-create-template-picker"]')`);
+  }
+  await until(selector, 'template option visible');
+  await click(selector);
+  // An untouched form can apply directly; a populated form must confirm first.
+  await until(
+    `(${templateConfirmDialog}) || (${appliedPredicate})`,
+    'template selection confirmation or application'
+  );
+  if (await evaluate<boolean>(`Boolean(${templateConfirmDialog})`)) {
+    await click(button('Apply template', templateConfirmDialog));
+    await until(`!(${templateConfirmDialog})`, 'template confirmation closes');
+  }
+  await until(appliedPredicate, 'chosen template applied');
+}
+
 async function screenshot(name: string) {
   await pause(250);
   await cdp!.screenshot(path.join(output, name + '.png'));
@@ -197,9 +225,9 @@ async function library(): Promise<Template[]> {
   assert(['empty', 'ready'].includes(result.status), JSON.stringify(result));
   return result.templates ?? [];
 }
-async function openImport() {
+async function openImport(file?: string) {
+  await selection('open', file);
   await click(`document.querySelector('[data-testid="import-template-button"]')`);
-  await until(`${topDialog}?.textContent?.includes('Native file picker')`, 'native import dialog');
 }
 async function importFile(file: string) {
   await selection('open', file);
@@ -229,7 +257,7 @@ async function start() {
       XDG_STATE_HOME: path.join(root, 'xdg-state'),
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
       CLAUDE_TERMINAL_DAEMON_BINARY: runtime,
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       NODE_BINARY: process.execPath,
       ELECTRON_DISABLE_SANDBOX: '1',
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
@@ -321,33 +349,61 @@ try {
   await start();
   assert.equal((await library()).length, 0);
   await screenshot('01-empty-library');
+  await click(`document.querySelector('[data-testid="create-template-button"]')`);
+  await until(`document.querySelector('#edit-template-name')`, 'create template editor');
+  await click(`document.querySelector('#edit-template-name')`);
+  await cdp!.send('Input.insertText', { text: 'Created via UI' });
+  await click(button('Add member', topDialog));
+  await click(`document.querySelector('#member-0-name')`);
+  await cdp!.send('Input.insertText', { text: 'researcher' });
+  await until(`document.querySelector('[data-participant-avatar] img')`, 'agent avatar');
+  await click(`document.querySelector('#member-0-role')`);
+  await until(
+    `Array.from(document.querySelectorAll('[role="option"]')).some(e => e.textContent?.trim() === 'researcher')`,
+    'role selector'
+  );
+  await click(
+    `Array.from(document.querySelectorAll('[role="option"]')).find(e => e.textContent?.trim() === 'researcher')`
+  );
+  await click(`document.querySelector('#edit-template-prompt')`);
+  await cdp!.send('Input.insertText', { text: 'Review the evidence.' });
+  await click(button('Save template', topDialog));
+  await until(
+    `window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.some(t => t.name === 'Created via UI'))`,
+    'created template persisted'
+  );
+  const createdTemplate = (await library()).find((template) => template.name === 'Created via UI');
+  assert(createdTemplate);
+  assert.equal(createdTemplate.members[0]?.role, 'researcher');
+  await screenshot('00-created-template');
+  await click(
+    `document.querySelector('[data-testid="delete-template-${createdTemplate.templateId}"]')`
+  );
+  await click(button('Delete this template?', topDialog));
+  await until(
+    `window.electronAPI.customTeamTemplates.listTemplates().then(x => x.status === 'empty')`,
+    'test template deleted'
+  );
+  checks.push('Creating a template uses the shared role selector and participant avatar.');
   await openImport();
-  await selection('open');
-  await click(button('Import Template', topDialog));
-  await until(button('Import Template', topDialog), 'cancelled picker becomes interactive');
+  await until(`document.querySelectorAll('[role="dialog"]').length === 1`, 'cancel closes picker');
   assert.equal((await library()).length, 0);
-  checks.push('Cancelling the native picker does not write and leaves Import interactive.');
+  checks.push('Import directly opens the picker; cancellation does not write.');
 
+  await openImport(invalidJson);
+  await until(
+    `document.querySelector('[data-testid="import-template-invalid-json"]')`,
+    'invalid JSON'
+  );
   for (const [file, testId] of [
-    [invalidJson, 'import-template-invalid-json'],
     [invalidEncoding, 'import-template-invalid-encoding'],
     [descriptionTooLong, 'import-template-validation-failed'],
   ]) {
     await importFile(file);
     await until(`document.querySelector('[data-testid="${testId}"]')`, testId);
-    assert.equal(
-      await evaluate(
-        `Boolean(${button('Import Template', topDialog)} && ${button('Close', topDialog)})`
-      ),
-      true
-    );
     assert.equal((await library()).length, 0);
   }
-  assert.match(await evaluate<string>(`${topDialog}.innerText`), /description is too long/i);
-  await screenshot('02-validation-error-recovery');
-  checks.push(
-    'Invalid JSON, invalid UTF-8 and overlong description show precise errors, allow retry, and write nothing.'
-  );
+  checks.push('Invalid JSON, UTF-8 and oversized descriptions are rejected.');
 
   await importFile(fixtureJson);
   await until(`document.querySelector('[data-testid="import-template-done"]')`, 'import success');
@@ -373,8 +429,7 @@ try {
   );
   await closeDialog();
 
-  await openImport();
-  await importFile(exportedJson);
+  await openImport(exportedJson);
   await until(
     `document.querySelector('[data-testid="import-template-name-conflict"]')`,
     'duplicate name conflict'
@@ -411,6 +466,19 @@ try {
   );
   assert(saved.some((t) => t.name === portable.name + ' copy'));
   await closeDialog();
+  const bundlePath = path.join(root, 'all-templates.json');
+  await selection('save', bundlePath);
+  await click(`document.querySelector('[data-testid="export-all-templates"]')`);
+  await until(`document.body.innerText.includes('All templates exported')`, 'export all');
+  const bundle = JSON.parse(await readFile(bundlePath, 'utf8'));
+  assert.equal(bundle.format, 'agent-teams-custom-template-bundle');
+  assert.equal(bundle.templates.length, 2);
+  assert(!('templateId' in bundle.templates[0]));
+  await openImport(bundlePath);
+  await until(`document.querySelector('[data-testid="import-template-done"]')`, 'bundle import');
+  assert.match(await evaluate<string>(`${topDialog}.innerText`), /0 imported, 2 skipped/);
+  await closeDialog();
+  checks.push('Export All produces a portable bundle and re-import skips name conflicts.');
   await screenshot('06-two-independent-templates');
   checks.push(
     'Duplicate import does not overwrite; the rename flow creates a fresh identity and preserves the original.'
@@ -426,6 +494,273 @@ try {
   await screenshot('07-reopened-library');
   checks.push(
     'Closing and reopening My Templates re-reads both saved rows from the real storage worker.'
+  );
+
+  // Real management actions: duplicate -> edit -> delete an independent copy.
+  // The original imported template must remain byte-for-byte unchanged.
+  await click(
+    `document.querySelector('[data-testid="duplicate-template-${original.templateId}"]')`
+  );
+  await until("document.querySelector('#duplicate-template-name')", 'duplicate template dialog');
+  await click(button('Duplicate', topDialog));
+  await until(
+    `window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.length === 3)`,
+    'duplicated row'
+  );
+  const duplicate = (await library()).find(
+    (t) => !saved.some((old) => old.templateId === t.templateId)
+  );
+  assert(duplicate, 'Duplicate must allocate a fresh template id');
+  await until(
+    `document.querySelector('[data-testid="edit-template-${duplicate.templateId}"]')`,
+    'duplicate in library'
+  );
+  await click(`document.querySelector('[data-testid="edit-template-${duplicate.templateId}"]')`);
+  await until("document.querySelector('#edit-template-prompt')", 'edit template form');
+  await click("document.querySelector('#edit-template-prompt')");
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  const revisedPrompt = 'Edited through actual Electron UI';
+  await cdp!.send('Input.insertText', { text: revisedPrompt });
+  await click(`document.querySelector('[data-testid="template-edit-json"]')`);
+  await until(`document.querySelector('.cm-content[contenteditable="true"]')`, 'JSON editor');
+  await click(`document.querySelector('.cm-content[contenteditable="true"]')`);
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.insertText', { text: '{' });
+  await until(
+    `Array.from(${topDialog}.querySelectorAll('button')).find(e => e.textContent.trim() === 'Save changes')?.disabled`,
+    'invalid JSON blocks saving'
+  );
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.insertText', {
+    text: JSON.stringify(
+      {
+        name: duplicate.name,
+        description: portable.description,
+        teamPrompt: revisedPrompt,
+        members: portable.members,
+      },
+      null,
+      2
+    ),
+  });
+  await until(button('Save changes', topDialog), 'valid JSON enables saving');
+  await screenshot('08-json-editor');
+  await click(button('Save changes', topDialog));
+  await until(
+    `window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.some(t => t.templateId === ${JSON.stringify(duplicate.templateId)} && t.teamPrompt === ${JSON.stringify('Edited through actual Electron UI')}))`,
+    'edited copy persisted'
+  );
+  await until(
+    `document.querySelector('[data-testid="delete-template-${duplicate.templateId}"]')`,
+    'edited row visible'
+  );
+  await screenshot('08-edited-independent-copy');
+  await click(`document.querySelector('[data-testid="delete-template-${duplicate.templateId}"]')`);
+  await until(button('Delete this template?', topDialog), 'delete confirmation');
+  await click(button('Delete this template?', topDialog));
+  await until(
+    `window.electronAPI.customTeamTemplates.listTemplates().then(x => x.templates?.length === 2)`,
+    'duplicate deleted'
+  );
+  assert.deepEqual(await library(), saved);
+  await screenshot('09-copy-edited-deleted');
+  checks.push(
+    'Real Duplicate, Edit and Delete dialogs preserve the original template and revisions.'
+  );
+  checks.push('The shared JSON editor blocks invalid JSON and saves the full valid template.');
+
+  // Re-launch the actual Electron application with the same isolated profile.
+  // A dialog close/reopen alone cannot prove durable SQLite persistence.
+  await closeDialog();
+  await stop();
+  await start();
+  assert.deepEqual(await library(), saved);
+  await screenshot('10-library-after-app-restart');
+  checks.push(
+    'Saved templates survive a full Electron process restart with unchanged ids and content.'
+  );
+
+  // Exercise the current Create Team page, not the old dialog. The imported
+  // template must fill the editable draft without launching a provider.
+  await closeDialog();
+  await until(button('Create Team'), 'current create-team action');
+  await click(button('Create Team'));
+  await until(button('Custom path'), 'custom project selector');
+  await click(button('Custom path'));
+  await click(`document.querySelector('input[placeholder="/absolute/path/to/project"]')`);
+  await cdp!.send('Input.insertText', { text: project });
+  await until(
+    `document.querySelector('[data-testid="open-create-template-picker"]')`,
+    'template chooser button'
+  );
+  assert.equal(
+    await evaluate(
+      `Boolean(document.querySelector('[data-testid="create-team-template-picker"]'))`
+    ),
+    false
+  );
+  await click(`document.querySelector('[data-testid="open-create-template-picker"]')`);
+  await until(
+    `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`,
+    'custom template available in creation page'
+  );
+  const customOption = `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`;
+  const customApplied = `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`;
+  await acceptTemplateSelection(customOption, customApplied);
+  assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="Choose team provider"]'))`), false, 'Applying a template must not clear the current provider');
+  await until(
+    `Array.from(document.querySelectorAll('[data-testid="create-team-page"] input')).some(input => input.value === 'reviewer')`,
+    'custom template roster applied to editable team fields'
+  );
+  await screenshot('11-create-from-custom-template');
+  checks.push(
+    'Real Create Team page restores the imported prompt and member roster without starting a runtime.'
+  );
+
+  const builtin = `document.querySelector('[data-testid^="create-template-option-builtin-"]')`;
+  await click(`document.querySelector('[data-testid="open-create-template-picker"]')`);
+  await until(builtin, 'builtin choices');
+  await click(builtin);
+  await until(templateConfirmDialog, 'confirm replacement of populated custom draft');
+  assert.equal(
+    await evaluate<string>("document.querySelector('#team-prompt')?.value"),
+    portable.teamPrompt
+  );
+  assert.equal(
+    await evaluate<string>(
+      `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')?.getAttribute('aria-pressed')`
+    ),
+    'true'
+  );
+  await click(button('Cancel', templateConfirmDialog));
+  await until(`!(${templateConfirmDialog})`, 'template replacement cancellation');
+  assert.equal(
+    await evaluate<string>("document.querySelector('#team-prompt')?.value"),
+    portable.teamPrompt
+  );
+  await screenshot('12-confirmation-cancel-retains-draft');
+  checks.push('Cancelling a new template selection does not replace the custom prompt or roster.');
+
+  const builtinApplied = `document.querySelector('#team-prompt')?.value && document.querySelector('#team-prompt')?.value !== ${JSON.stringify(portable.teamPrompt)}`;
+  await acceptTemplateSelection(builtin, builtinApplied);
+  await screenshot('13-builtin-template-same-editor');
+
+  const noneApplied = `!document.querySelector('[data-testid="create-team-template-picker"]') && !document.querySelector('#team-prompt')`;
+  await acceptTemplateSelection(
+    `document.querySelector('[data-testid="create-template-option-none"]')`,
+    noneApplied
+  );
+  await screenshot('14-no-template');
+  checks.push('Selecting No template confirms before clearing populated draft content.');
+  await acceptTemplateSelection(customOption, customApplied);
+
+  const newTeam = 'template-e2e-imported-team';
+  await click("document.querySelector('#team-name')");
+  // The current Create Team page seeds a suggested draft name. Replace it,
+  // rather than append to it; this is a real keyboard interaction in Electron.
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    modifiers: 2,
+  });
+  await cdp!.send('Input.insertText', { text: newTeam });
+  await until(
+    `document.querySelector('#team-name')?.value === ${JSON.stringify(newTeam)}`,
+    'new name entered'
+  );
+  const draftCheck = `(async () => { const db = await new Promise((resolve, reject) => { const request = indexedDB.open('keyval-store'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); return await new Promise((resolve, reject) => { const request = db.transaction('keyval').objectStore('keyval').get('createTeamDraft:form'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); })()`;
+  await until(
+    `(${draftCheck}).then(draft => draft?.teamName === ${JSON.stringify(newTeam)} && draft.cwdMode === 'custom' && draft.customCwd === ${JSON.stringify(project)} && draft.launchTeam === false)`,
+    'sandbox project and config-only creation'
+  );
+  await click(button('Create'));
+  await until(
+    `window.electronAPI.teams.list().then(rows => rows.some(t => t.teamName === ${JSON.stringify(newTeam)}))`,
+    'config-only team persisted from imported template',
+    60_000
+  );
+  await screenshot('14-created-team-from-template');
+  checks.push('Config-only creation from imported template persists through the real Teams API.');
+
+  // Save the newly created real team back into the same library. This proves
+  // the original A1 preview/confirm action and completes a user-visible cycle.
+  await evaluate('window.__agentTeamsDevStore.getState().openTeamsTab()');
+  await until(
+    `document.querySelector('button[aria-label="Save as Template"]')`,
+    'Save as Template action on the persisted team'
+  );
+  await click(`document.querySelector('button[aria-label="Save as Template"]')`);
+  await until(
+    `document.querySelector('[data-testid="custom-template-preview"]')`,
+    'authoritative team snapshot preview'
+  );
+  await screenshot('15-save-team-as-template-preview');
+  await click(button('Save template', topDialog));
+  await until(
+    `document.querySelector('[data-testid="custom-template-saved"]')`,
+    'confirmed Save as Template'
+  );
+  const roundTrip = (await library()).filter(
+    (template) => !saved.some((before) => before.templateId === template.templateId)
+  );
+  assert.equal(roundTrip.length, 1, 'Exactly one new template saved from the created team');
+  assert.equal(roundTrip[0]!.teamPrompt, portable.teamPrompt);
+  assert.deepEqual(
+    roundTrip[0]!.members,
+    portable.members,
+    'Template round-trip must retain member role and workflow'
+  );
+  await screenshot('16-save-team-as-template-confirmed');
+  checks.push(
+    'Save as Template persists the same prompt, member name, role and workflow after real team creation.'
   );
 
   receipt.cdpPort = port;

@@ -9,6 +9,7 @@ const processes = require('./internal/processes.js');
 const maintenance = require('./internal/maintenance.js');
 const crossTeam = require('./internal/crossTeam.js');
 const runtime = require('./internal/runtime.js');
+const appRouting = require('./internal/appRouting.js');
 const workSync = require('./internal/workSync.js');
 const groupChats = require('./internal/groupChats.js');
 const agentBlocks = require('./internal/agentBlocks.js');
@@ -41,6 +42,7 @@ function createController(options) {
     maintenance: bindModule(context, maintenance),
     crossTeam: bindModule(context, crossTeam),
     runtime: bindModule(context, runtime),
+    appRouting: bindModule(context, appRouting),
     workSync: bindModule(context, workSync),
     groupChats: bindModule(context, groupChats),
   };

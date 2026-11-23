@@ -52,6 +52,17 @@ export {
 } from './logicalTeamRuntime';
 export { listOwnedContexts, ownsProjectHistory } from './ownedHistory';
 export type {
+  ProjectBoardPorts,
+  ProjectBoardRefusal,
+  ProjectBoardRequest,
+  ProjectBoardTarget,
+} from './projectBoardTarget';
+export {
+  createProjectBoardPorts,
+  ProjectBoardTargetError,
+  resolveProjectBoardTarget,
+} from './projectBoardTarget';
+export type {
   PreparedProjectContextLaunch,
   ProjectContextLaunchPorts,
   ProjectContextProgressMapper,
@@ -60,11 +71,21 @@ export type {
 } from './projectContextLaunch';
 export { launchInProjectContext } from './projectContextLaunch';
 export type { TeamModeMetaReader } from './projectContextMode';
+export { readTeamProjectContextMode, TeamMetadataUnreadableError } from './projectContextMode';
+export type { ProjectCopyLaunch } from './projectCopyLaunches';
 export {
-  readTeamProjectContextMode,
-  TeamMetadataUnreadableError,
-} from './projectContextMode';
+  createProjectLaunchProbe,
+  isProjectCopyLaunching,
+  trackProjectCopyLaunch,
+} from './projectCopyLaunches';
+export type { ProjectCopyPorts, ProjectCopyRefusal } from './projectCopyRouting';
+export {
+  ProjectContextRefusalError,
+  ProjectCopyUnavailableError,
+  resolveReadyProjectCopy,
+} from './projectCopyRouting';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
+export { isAbsoluteProjectPath } from './projectPathIdentity';
 export {
   projectPublicProvisioningProgress,
   rememberProjectRunIdentity,
@@ -114,3 +135,4 @@ export {
   recoverMissingProjectTeamDefinitions,
 } from './TeamProjectDefinitionBackup';
 export { TeamProjectDefinitionEditor } from './TeamProjectDefinitionEditor';
+export { TeamProjectLiveEditJournal } from './TeamProjectLiveEditJournal';

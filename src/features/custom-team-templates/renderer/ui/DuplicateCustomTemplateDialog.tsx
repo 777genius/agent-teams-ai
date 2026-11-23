@@ -54,6 +54,8 @@ export const DuplicateCustomTemplateDialog = ({
   >(null);
   const [issues, setIssues] = useState<readonly CustomTeamTemplateValidationIssue[]>([]);
 
+  const unresolvedWrite = errorState === 'unresolvedWriteOutcome';
+
   useEffect(() => {
     if (open && template) {
       setName(t('customTemplates.duplicate.defaultName', { name: template.name }));
@@ -66,7 +68,7 @@ export const DuplicateCustomTemplateDialog = ({
   if (!template) return null;
 
   const handleDuplicate = async () => {
-    if (busy || !name.trim()) return;
+    if (busy || unresolvedWrite || !name.trim()) return;
     setNameConflict(false);
     setErrorState(null);
     setIssues([]);
@@ -97,7 +99,8 @@ export const DuplicateCustomTemplateDialog = ({
           return;
         case 'unresolvedWriteOutcome':
           // Distinct from a known name conflict: the copy may exist. Keep the
-          // entered name so the user can check My Templates before retrying.
+          // entered name so the user can check My Templates. This dialog must
+          // not retry under a new identity while the previous write may commit.
           setErrorState('unresolvedWriteOutcome');
           return;
       }
@@ -224,7 +227,7 @@ export const DuplicateCustomTemplateDialog = ({
             <Input
               id="duplicate-template-name"
               value={name}
-              disabled={busy}
+              disabled={busy || unresolvedWrite}
               aria-invalid={nameIssues.length > 0 || undefined}
               aria-describedby={nameIssues.length > 0 ? 'duplicate-name-error' : undefined}
               onChange={(e) => {
@@ -246,7 +249,7 @@ export const DuplicateCustomTemplateDialog = ({
             {tCommon('actions.cancel')}
           </Button>
           <Button
-            disabled={busy || !name.trim()}
+            disabled={busy || unresolvedWrite || !name.trim()}
             aria-busy={busy}
             onClick={() => void handleDuplicate()}
           >

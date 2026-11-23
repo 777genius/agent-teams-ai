@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -11,14 +11,19 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { AlertTriangle, Copy, Download, Pencil, RefreshCw, Trash2, Upload } from 'lucide-react';
-
 import {
-  getPendingTemplateMutations,
-  resolveTemplateMutation,
-  usePendingTemplateMutations,
-} from '../hooks/pendingTemplateMutation';
+  AlertTriangle,
+  Copy,
+  Download,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from 'lucide-react';
+
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
+import { useTemplateFileOperations } from '../hooks/useTemplateFileOperations';
 import { useTemplateManagement } from '../hooks/useTemplateManagement';
 
 import { BuiltInTemplateCatalogue } from './BuiltInTemplateCatalogue';
@@ -29,7 +34,6 @@ import { EditCustomTemplateDialog } from './EditCustomTemplateDialog';
 import { ExportCustomTeamTemplateDialog } from './ExportCustomTeamTemplateDialog';
 import { ImportCustomTeamTemplateDialog } from './ImportCustomTeamTemplateDialog';
 
-import type { PendingTemplateMutation } from '../hooks/pendingTemplateMutation';
 import type {
   BuiltinTeamTemplateId,
   CustomTeamTemplateV1,
@@ -53,64 +57,26 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { state, reload } = useCustomTemplateLibrary(open);
-  const management = useTemplateManagement({ onSuccess: async () => void (await reload()) });
-  const { operations: pendingMutations, storageAvailable } = usePendingTemplateMutations();
-  const pendingMutation = pendingMutations.length > 0;
-  const mutationsDisabled = pendingMutation || !storageAvailable;
-  const [checkingMutation, setCheckingMutation] = useState(false);
-  const [reviewed, setReviewed] = useState<{
-    operations: readonly PendingTemplateMutation[];
-    completeness: 'complete' | 'partial';
-  } | null>(null);
+  const { desktopFile } = useTemplateFileOperations();
+  const management = useTemplateManagement({ onSuccess: reload });
   const [tab, setTab] = useState<TemplateLibraryTab>('my-templates');
 
   const [editingTemplate, setEditingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
+  const [creating, setCreating] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [duplicatingTemplate, setDuplicatingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [exportingTemplate, setExportingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [copyBuiltinOpen, setCopyBuiltinOpen] = useState(false);
   const [copyBuiltinId, setCopyBuiltinId] = useState<BuiltinTeamTemplateId | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportAllBusy, setExportAllBusy] = useState(false);
+  const [exportAllMessage, setExportAllMessage] = useState('');
 
   const failed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
 
-  useEffect(() => {
-    if (open) getPendingTemplateMutations();
-  }, [open]);
-
-  const checkPendingMutation = async (): Promise<void> => {
-    if (checkingMutation) return;
-    const pending = getPendingTemplateMutations();
-    if (!pending.length) return;
-    setCheckingMutation(true);
-    setReviewed(null);
-    try {
-      const completeness = await reload();
-      // A read is only a snapshot. It never proves the earlier writer stopped.
-      if (completeness !== 'failed' && getPendingTemplateMutations() === pending) {
-        setReviewed({ operations: pending, completeness });
-      }
-    } finally {
-      setCheckingMutation(false);
-    }
-  };
-
-  const reloadAfterUnknown = (): void => {
-    if (getPendingTemplateMutations().length) void reload();
-  };
-
-  const mutationLabels: Record<PendingTemplateMutation['kind'], string> = {
-    duplicate: t('customTemplates.actions.duplicate'),
-    copyBuiltin: t('customTemplates.actions.copyToMyTemplates'),
-    delete: t('customTemplates.actions.delete'),
-    save: t('customTemplates.actions.save'),
-    edit: t('customTemplates.actions.edit'),
-    import: t('customTemplates.import.action'),
-    unknown: t('customTemplates.states.unresolvedTitle'),
-  };
-
   const handleEditSaved = (_updated: CustomTeamTemplateV1): void => {
     setEditingTemplate(null);
+    setCreating(false);
     void reload();
   };
 
@@ -140,61 +106,6 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           <DialogTitle>{t('customTemplates.library.title')}</DialogTitle>
           <DialogDescription>{t('customTemplates.library.description')}</DialogDescription>
         </DialogHeader>
-
-        {!storageAvailable ? (
-          <p role="alert">{t('customTemplates.states.mutationStorageUnavailable')}</p>
-        ) : null}
-        {pendingMutation ? (
-          <div role="alert" data-testid="template-library-unresolved" className="space-y-2">
-            <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
-            <p>{t('customTemplates.states.pendingProfileBody')}</p>
-            <ul>
-              {pendingMutations.map((operation) => (
-                <li key={operation.id}>
-                  {mutationLabels[operation.kind]}
-                  {operation.label ? `: ${operation.label}` : ''}
-                </li>
-              ))}
-            </ul>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={checkingMutation || state.status === 'loading'}
-              onClick={() => void checkPendingMutation()}
-            >
-              {t('customTemplates.actions.recheck')}
-            </Button>
-            {reviewed?.operations === pendingMutations ? (
-              <div className="space-y-2">
-                <p>{t('customTemplates.states.snapshotWarning')}</p>
-                {reviewed.completeness === 'partial' ? (
-                  <p role="alert">{t('customTemplates.states.partialSnapshotWarning')}</p>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    if (getPendingTemplateMutations() === reviewed.operations) {
-                      for (const operation of reviewed.operations) {
-                        if (!resolveTemplateMutation(operation)) break;
-                      }
-                      setReviewed(null);
-                    }
-                  }}
-                >
-                  {t(
-                    reviewed.completeness === 'partial'
-                      ? 'customTemplates.actions.allowAfterExternalCheck'
-                      : 'customTemplates.actions.allowNewChanges'
-                  )}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setReviewed(null)}>
-                  {t('customTemplates.actions.keepChangesBlocked')}
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
 
         <Tabs value={tab} onValueChange={(value) => setTab(value as TemplateLibraryTab)}>
           <TabsList aria-label={t('customTemplates.library.title')}>
@@ -232,14 +143,67 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                       type="button"
                       variant="outline"
                       size="sm"
+                      data-testid="create-template-button"
+                      disabled={management.busy}
+                      onClick={() => {
+                        setCreating(true);
+                        setEditingTemplate({
+                          templateId: 'new-template-draft',
+                          schemaVersion: 1,
+                          name: '',
+                          teamPrompt: '',
+                          members: [],
+                        });
+                      }}
+                    >
+                      <Plus className="size-3.5" />
+                      {t('customTemplates.bulk.create')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       data-testid="import-template-button"
-                      disabled={management.busy || mutationsDisabled || importOpen}
+                      disabled={management.busy || importOpen}
                       onClick={() => setImportOpen(true)}
                     >
                       <Upload className="mr-1.5 size-3.5" />
                       {t('customTemplates.import.action')}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="export-all-templates"
+                      disabled={exportAllBusy || state.status !== 'ready' || !desktopFile}
+                      onClick={() => {
+                        setExportAllBusy(true);
+                        setExportAllMessage('');
+                        void desktopFile
+                          ?.exportAllToFile()
+                          .then((result) => {
+                            if (result.status === 'exported')
+                              setExportAllMessage(t('customTemplates.bulk.exported'));
+                            else if (result.status === 'bundleTooLarge')
+                              setExportAllMessage(t('customTemplates.bulk.tooLarge'));
+                            else if (result.status !== 'cancelled')
+                              setExportAllMessage(t('customTemplates.bulk.exportFailed'));
+                          })
+                          .catch(() => setExportAllMessage(t('customTemplates.bulk.exportFailed')))
+                          .finally(() => setExportAllBusy(false));
+                      }}
+                    >
+                      <Download className="size-3.5" />
+                      {exportAllBusy
+                        ? t('customTemplates.bulk.exporting')
+                        : t('customTemplates.bulk.exportAll')}
+                    </Button>
                   </div>
+                  {exportAllMessage && (
+                    <p role="status" className="text-sm">
+                      {exportAllMessage}
+                    </p>
+                  )}
                   {(state.status === 'ready' || state.status === 'partial') && (
                     <ul className="mt-3 space-y-2" data-testid="custom-template-library">
                       {state.templates.map((template) => {
@@ -277,7 +241,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                                 variant="outline"
                                 size="sm"
                                 data-testid={`edit-template-${template.templateId}`}
-                                disabled={management.busy || mutationsDisabled}
+                                disabled={management.busy}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setEditingTemplate(template);
@@ -291,7 +255,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                                 variant="outline"
                                 size="sm"
                                 data-testid={`duplicate-template-${template.templateId}`}
-                                disabled={management.busy || mutationsDisabled}
+                                disabled={management.busy}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDuplicatingTemplate(template);
@@ -305,7 +269,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                                 variant="outline"
                                 size="sm"
                                 data-testid={`delete-template-${template.templateId}`}
-                                disabled={management.busy || mutationsDisabled}
+                                disabled={management.busy}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDeletingTemplate(template);
@@ -372,7 +336,6 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           <TabsContent value="built-in">
             <div className="space-y-3">
               <BuiltInTemplateCatalogue
-                copyDisabled={mutationsDisabled}
                 onCopyBuiltin={(id) => {
                   setCopyBuiltinId(id);
                   setCopyBuiltinOpen(true);
@@ -387,7 +350,6 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                   setCopyBuiltinId(null);
                   setCopyBuiltinOpen(true);
                 }}
-                disabled={mutationsDisabled}
               >
                 <Copy className="size-3.5" />
                 {t('customTemplates.actions.copyToMyTemplates')}
@@ -411,42 +373,35 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
         <EditCustomTemplateDialog
           open={editingTemplate !== null}
           template={editingTemplate}
+          creating={creating}
           onClose={() => {
             setEditingTemplate(null);
-            reloadAfterUnknown();
+            setCreating(false);
           }}
           onSaved={handleEditSaved}
         />
         <DuplicateCustomTemplateDialog
           open={duplicatingTemplate !== null}
           template={duplicatingTemplate}
-          onClose={() => {
-            setDuplicatingTemplate(null);
-            reloadAfterUnknown();
-          }}
+          onClose={() => setDuplicatingTemplate(null)}
           onDuplicated={handleDuplicated}
         />
         <DeleteCustomTemplateDialog
           open={deletingTemplate !== null}
           template={deletingTemplate}
-          onClose={() => {
-            setDeletingTemplate(null);
-            reloadAfterUnknown();
-          }}
+          onClose={() => setDeletingTemplate(null)}
           onDeleted={handleDeleted}
           onReload={() => void reload()}
         />
         <CopyBuiltinTemplateDialog
           open={copyBuiltinOpen}
-          onClose={() => {
-            setCopyBuiltinOpen(false);
-            reloadAfterUnknown();
-          }}
+          onClose={() => setCopyBuiltinOpen(false)}
           onCopied={handleCopied}
           initialBuiltinId={copyBuiltinId ?? undefined}
         />
         <ImportCustomTeamTemplateDialog
           open={importOpen}
+          startImmediately
           onClose={() => {
             setImportOpen(false);
             void reload();

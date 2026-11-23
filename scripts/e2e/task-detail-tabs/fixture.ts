@@ -57,7 +57,7 @@ export function prepareTaskTabsFixture(
     TASK_TABS_TEST_RUNTIME_VERSION: runtimeVersion,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: join(root, 'deny-runtime.mjs'),
     CLAUDE_TERMINAL_DAEMON_BINARY: join(root, 'deny-runtime.mjs'),
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
   };
   mkdirSync(join(claude, 'projects'), { recursive: true, mode: 0o700 });
   for (const key of ['CONFIG', 'DATA', 'CACHE', 'STATE', 'RUNTIME'])

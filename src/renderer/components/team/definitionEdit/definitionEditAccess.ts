@@ -14,8 +14,8 @@ export interface DefinitionEditAccess {
  * - a read-only retained copy never edits;
  * - an ordinary team and a per-project team edit the same way (a per-project
  *   team edits its logical definition);
- * - while provisioning, or while a per-project team runs (the main process
- *   refuses edits while any project runs), the controls explain why they are off.
+ * - while provisioning, controls explain why they are off. The main process
+ *   validates the running project's ownership and serializes live edits.
  */
 export function getDefinitionEditAccess(input: {
   retainedHistory: boolean;
@@ -26,9 +26,6 @@ export function getDefinitionEditAccess(input: {
   if (input.retainedHistory) return { canEdit: false, unavailableKey: null };
   if (input.isProvisioning) {
     return { canEdit: true, unavailableKey: 'detail.tooltips.editUnavailableProvisioning' };
-  }
-  if (input.logicalTeamName && input.isAlive) {
-    return { canEdit: true, unavailableKey: 'detail.tooltips.editUnavailableRunningProject' };
   }
   return { canEdit: true, unavailableKey: null };
 }

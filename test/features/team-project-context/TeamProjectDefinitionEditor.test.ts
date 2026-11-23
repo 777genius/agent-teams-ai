@@ -16,7 +16,10 @@ function fixture(options: {
     list: vi.fn(async () => options.contexts ?? []),
     isOwnedExecutionAlias: vi.fn(async (name: string) => (options.aliases ?? []).includes(name)),
   };
-  const gate = { assertAllContextsStopped: vi.fn(async (_name: string) => undefined) };
+  const gate = {
+    assertAllContextsStopped: vi.fn(async (_name: string) => undefined),
+    findRunningContextForEdit: vi.fn(async (_name: string) => null),
+  };
   const ports = {
     getMode: vi.fn(async (name: string) => {
       const mode = options.modes?.[name] ?? 'shared';

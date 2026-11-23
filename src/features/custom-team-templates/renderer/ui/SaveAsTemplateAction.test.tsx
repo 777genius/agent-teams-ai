@@ -125,12 +125,66 @@ describe('SaveAsTemplateAction', () => {
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
-  it('does not render for a draft team without a saved configuration', async () => {
+  it('allows saving a config-only team before runtime provisioning', async () => {
     await renderAction({ teamName: 'draft', displayName: 'Draft', pendingCreate: true });
-    expect(
-      host.querySelector('button[aria-label="customTemplates.actions.saveAsTemplate"]')
-    ).toBeNull();
-    expect(preparePreview).not.toHaveBeenCalled();
+    await act(async () => {
+      actionButton().click();
+    });
+    await flush();
+    expect(preparePreview).toHaveBeenCalledWith({
+      sourceTeamName: 'draft',
+      name: 'Draft',
+      description: '',
+    });
+    expect(host.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it('reopens an unresolved save with its original token and no second create', async () => {
+    saveTemplate.mockResolvedValue({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'template-1',
+    });
+    recheckSave.mockResolvedValue({
+      status: 'saved',
+      template: {
+        templateId: 'template-1',
+        name: 'Alpha',
+        schemaVersion: 1,
+        teamPrompt: 'Lead the work.',
+        members: [{ name: 'ann', role: 'Developer' }],
+      },
+    });
+    await renderAction({ teamName: 'alpha', displayName: 'Alpha' });
+    await act(async () => actionButton().click());
+    await flush();
+    const findButton = (text: string): HTMLButtonElement => {
+      const found = Array.from(
+        host.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')
+      ).find((button) => button.textContent?.trim() === text);
+      if (!found) throw new Error('Missing dialog button: ' + text);
+      return found;
+    };
+    await act(async () => findButton('customTemplates.actions.save').click());
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+    expect(saveTemplate).toHaveBeenCalledWith({
+      previewToken: 'token-1',
+      name: 'Alpha',
+      description: '',
+    });
+    expect(host.textContent).toContain('customTemplates.states.unresolvedTitle');
+
+    await act(async () => findButton('actions.close').click());
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => actionButton().click());
+    await flush();
+
+    expect(preparePreview).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('customTemplates.states.unresolvedTitle');
+    await act(async () => findButton('customTemplates.actions.recheck').click());
+    expect(recheckSave).toHaveBeenCalledWith({ previewToken: 'token-1' });
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+    expect(host.querySelector('[data-testid="custom-template-saved"]')).not.toBeNull();
+    expect(onRowClick).not.toHaveBeenCalled();
   });
 
   it('does not prepare again on a parent re-render', async () => {

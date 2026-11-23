@@ -146,19 +146,25 @@ describe('createHttpCustomTeamTemplatesApi browser file import', () => {
   });
 
   it.each(['top-level array', 'nested property'])(
-    'rejects an unserializable %s before dispatch without claiming a possible write',
+    'reports a %s serialization failure before dispatch without claiming a possible write',
     async (shape) => {
       const fetchMock = vi.fn();
       vi.stubGlobal('fetch', fetchMock);
       const api = createHttpCustomTeamTemplatesApi('http://127.0.0.1:4321');
-      const deepJson = `${'['.repeat(20_000)}0${']'.repeat(20_000)}`;
-      const contents = shape === 'top-level array' ? deepJson : `{"format":${deepJson}}`;
-      const file = new File([contents], 'deep.json');
+      const parsed = shape === 'top-level array' ? [0] : { format: [0] };
+      const file = new File([JSON.stringify(parsed)], 'template.json');
+      // Serialization limits differ across runtimes. Exercise the failure
+      // boundary directly instead of relying on a particular nesting limit.
+      const stringify = vi.spyOn(JSON, 'stringify').mockImplementationOnce(() => {
+        throw new RangeError('serialization failed');
+      });
 
       await expect(api.browserFile!.importFromFile(file)).resolves.toEqual({
         status: 'unsupportedFormat',
       });
 
+      expect(stringify).toHaveBeenCalledTimes(1);
+      expect(stringify).toHaveBeenCalledWith({ portable: parsed });
       expect(fetchMock).not.toHaveBeenCalled();
       expect(vi.getTimerCount()).toBe(0);
     }

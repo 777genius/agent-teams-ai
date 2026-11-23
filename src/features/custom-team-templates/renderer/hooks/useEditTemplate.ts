@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES,
   type CustomTeamTemplateMemberV1,
   type CustomTeamTemplateV1,
   type CustomTeamTemplateValidationIssue,
@@ -8,16 +9,6 @@ import {
   type UpdateCustomTeamTemplateFields,
 } from '@features/custom-team-templates/contracts';
 import { api } from '@renderer/api';
-
-import {
-  beginTemplateMutation,
-  finishTemplateMutation,
-  getPendingTemplateMutation,
-  usePendingTemplateMutations,
-  wasTemplateMutationResolved,
-} from './pendingTemplateMutation';
-
-import type { PendingTemplateMutation } from './pendingTemplateMutation';
 
 export type EditTemplateStatus =
   | 'idle'
@@ -29,13 +20,13 @@ export type EditTemplateStatus =
   | 'unreadableRecord'
   | 'storageUnavailable'
   | 'unresolvedWriteOutcome'
-  | 'resolvedElsewhere'
   | 'requestFailed'
   | 'requestSizeValidationFailed';
 
 export interface UseEditTemplateInput {
   open: boolean;
   template: CustomTeamTemplateV1 | null;
+  creating?: boolean;
   onSaved?: (updated: CustomTeamTemplateV1) => void;
 }
 
@@ -57,6 +48,7 @@ export interface UseEditTemplateResult {
   addMember: (member?: Partial<CustomTeamTemplateMemberV1>) => void;
   updateMember: (index: number, patch: Partial<CustomTeamTemplateMemberV1>) => void;
   removeMember: (index: number) => void;
+  replaceMembers: (members: readonly CustomTeamTemplateMemberV1[]) => void;
   save: () => Promise<boolean>;
   recheck: () => Promise<boolean>;
   reset: () => void;
@@ -68,6 +60,16 @@ export interface UseEditTemplateResult {
 interface PendingUpdate {
   expectedRevision: number;
   fields: UpdateCustomTeamTemplateFields;
+}
+
+/** Fastify rejects oversized payloads before starting either write operation. */
+function isHttpPayloadTooLarge(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    String((error as { message: unknown }).message).includes('HTTP 413')
+  );
 }
 
 function normalizeDescription(value: string | undefined): string | null {
@@ -88,6 +90,20 @@ function membersMatch(
       (member.workflow ?? null) === (expected.workflow ?? null)
     );
   });
+}
+
+/** A creation can only be confirmed by its server-issued identity and exact content. */
+function matchesPendingCreate(
+  stored: CustomTeamTemplateV1,
+  fields: UpdateCustomTeamTemplateFields
+): boolean {
+  return (
+    resolveTemplateRevision(stored) === 1 &&
+    stored.name === fields.name.normalize('NFC').trim() &&
+    (stored.description ?? null) === normalizeDescription(fields.description) &&
+    stored.teamPrompt === fields.teamPrompt.trim() &&
+    membersMatch(stored.members, fields.members)
+  );
 }
 
 /**
@@ -120,10 +136,9 @@ function matchesPendingUpdate(stored: CustomTeamTemplateV1, pending: PendingUpda
 export function useEditTemplate({
   open,
   template,
+  creating = false,
   onSaved,
 }: UseEditTemplateInput): UseEditTemplateResult {
-  const { operations: pendingMutations, storageAvailable } = usePendingTemplateMutations();
-  const lastMutationRef = useRef<PendingTemplateMutation | null>(null);
   const [name, setNameState] = useState(template?.name ?? '');
   const [description, setDescriptionState] = useState(template?.description ?? '');
   const [teamPrompt, setTeamPromptState] = useState(template?.teamPrompt ?? '');
@@ -142,17 +157,9 @@ export function useEditTemplate({
   const requestIdRef = useRef(0);
   const lastTemplateIdRef = useRef<string | null>(null);
   const pendingUpdateRef = useRef<PendingUpdate | null>(null);
-
-  useEffect(() => {
-    if (
-      status === 'unresolvedWriteOutcome' &&
-      lastMutationRef.current &&
-      wasTemplateMutationResolved(lastMutationRef.current)
-    ) {
-      pendingUpdateRef.current = null;
-      setStatus('resolvedElsewhere');
-    }
-  }, [status, pendingMutations, storageAvailable]);
+  // Only typed server responses expose the new id. An unknown transport failure
+  // has no trustworthy id and must not be misreported as a confirmed create.
+  const pendingCreateIdRef = useRef<string | null>(null);
 
   // Initialize draft when opened or when template selection changes
   useEffect(() => {
@@ -160,6 +167,7 @@ export function useEditTemplate({
       if (!open) {
         requestIdRef.current += 1;
         pendingUpdateRef.current = null;
+        pendingCreateIdRef.current = null;
         setBusy(false);
         setStatus('idle');
         setIssues([]);
@@ -173,6 +181,7 @@ export function useEditTemplate({
       lastTemplateIdRef.current = template.templateId;
       requestIdRef.current += 1;
       pendingUpdateRef.current = null;
+      pendingCreateIdRef.current = null;
       setNameState(template.name);
       setDescriptionState(template.description ?? '');
       setTeamPromptState(template.teamPrompt);
@@ -224,9 +233,15 @@ export function useEditTemplate({
     setIssues((prev) => prev.filter((i) => !i.field.startsWith('members')));
   }, []);
 
+  const replaceMembers = useCallback((next: readonly CustomTeamTemplateMemberV1[]) => {
+    setMembersState(next.map((member) => ({ ...member })));
+    setIssues((prev) => prev.filter((issue) => !issue.field.startsWith('members')));
+  }, []);
+
   const reset = useCallback(() => {
     if (!template) return;
     pendingUpdateRef.current = null;
+    pendingCreateIdRef.current = null;
     setNameState(template.name);
     setDescriptionState(template.description ?? '');
     setTeamPromptState(template.teamPrompt);
@@ -260,14 +275,7 @@ export function useEditTemplate({
   }, [revisionConflict]);
 
   const save = useCallback(async (): Promise<boolean> => {
-    if (
-      busy ||
-      !template ||
-      status === 'unresolvedWriteOutcome' ||
-      status === 'resolvedElsewhere' ||
-      getPendingTemplateMutation()
-    )
-      return false;
+    if (busy || !template || status === 'unresolvedWriteOutcome') return false;
 
     // Normalize the team prompt with the established trim() policy before
     // validation, hashing, and writing. A valid string keeps its internal
@@ -288,18 +296,67 @@ export function useEditTemplate({
       })),
     };
     const pending: PendingUpdate = { expectedRevision, fields };
-    const operation = beginTemplateMutation({ kind: 'edit', label: template.name });
-    if (!operation) {
-      setStatus('storageUnavailable');
-      return false;
-    }
-    lastMutationRef.current = operation;
 
     const requestId = ++requestIdRef.current;
     pendingUpdateRef.current = pending;
+    pendingCreateIdRef.current = null;
     setBusy(true);
     setStatus('saving');
     setIssues([]);
+
+    if (creating) {
+      const portable = {
+        format: 'agent-teams-custom-template' as const,
+        schemaVersion: 1 as const,
+        ...fields,
+      };
+      // Avoid dispatching an oversized browser request that Fastify will reject
+      // before the import handler. Its definitive HTTP 413 is also handled below.
+      const requestBytes = new TextEncoder().encode(JSON.stringify({ portable })).byteLength;
+      if (requestBytes > CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES) {
+        pendingUpdateRef.current = null;
+        setStatus('requestSizeValidationFailed');
+        setBusy(false);
+        return false;
+      }
+      let result: Awaited<ReturnType<typeof api.customTeamTemplates.importTemplate>>;
+      try {
+        result = await api.customTeamTemplates.importTemplate({ portable });
+      } catch (error) {
+        if (requestId === requestIdRef.current) {
+          if (isHttpPayloadTooLarge(error)) {
+            pendingUpdateRef.current = null;
+            setStatus('requestSizeValidationFailed');
+          } else {
+            setStatus('unresolvedWriteOutcome');
+          }
+        }
+        return false;
+      } finally {
+        if (requestId === requestIdRef.current) setBusy(false);
+      }
+
+      if (requestId !== requestIdRef.current) return false;
+      // Result processing, including UI callbacks, must not enter the transport catch.
+      if (result.status === 'imported') {
+        pendingUpdateRef.current = null;
+        setStatus('saved');
+        onSaved?.(result.template);
+        return true;
+      }
+      if (result.status === 'validationFailed') {
+        setIssues(result.issues);
+        setStatus('idle');
+      } else if (result.status === 'nameConflict') {
+        setStatus('nameConflict');
+      } else if (result.status === 'unresolvedWriteOutcome') {
+        pendingCreateIdRef.current = result.templateId || null;
+        setStatus('unresolvedWriteOutcome');
+      } else {
+        setStatus('storageUnavailable');
+      }
+      return false;
+    }
 
     let result: Awaited<ReturnType<typeof api.customTeamTemplates.updateTemplate>>;
     try {
@@ -314,25 +371,14 @@ export function useEditTemplate({
       // payloads before the route handler runs, so the mutation was never
       // dispatched. Treat it as a definitive, known failure rather than an
       // ambiguous unresolved write.
-      const isHttp413 =
-        typeof error === 'object' &&
-        error !== null &&
-        'message' in error &&
-        String((error as { message: string }).message).includes('HTTP 413');
-      if (isHttp413) {
-        finishTemplateMutation(operation);
+      if (isHttpPayloadTooLarge(error)) {
         setStatus('requestSizeValidationFailed');
         return false;
       }
       // A genuine dispatched transport failure (timeout, abort, network loss,
       // malformed response) keeps the outcome unknown and requires a
       // read-only re-check.
-      if (wasTemplateMutationResolved(operation)) {
-        pendingUpdateRef.current = null;
-        setStatus('resolvedElsewhere');
-      } else {
-        setStatus('unresolvedWriteOutcome');
-      }
+      setStatus('unresolvedWriteOutcome');
       return false;
     } finally {
       if (requestId === requestIdRef.current) {
@@ -340,7 +386,6 @@ export function useEditTemplate({
       }
     }
 
-    if (result.status !== 'unresolvedWriteOutcome') finishTemplateMutation(operation);
     if (requestId !== requestIdRef.current) return false;
 
     // Only result processing runs here: an exception from onSaved or any other
@@ -380,34 +425,58 @@ export function useEditTemplate({
       case 'unresolvedWriteOutcome': {
         // The server could not reconcile its own write either, so keep the
         // dispatched payload for a later read-only re-check.
-        if (wasTemplateMutationResolved(operation)) {
-          pendingUpdateRef.current = null;
-          setStatus('resolvedElsewhere');
-        } else {
-          setStatus('unresolvedWriteOutcome');
-        }
+        setStatus('unresolvedWriteOutcome');
         return false;
       }
     }
-  }, [busy, description, expectedRevision, members, name, onSaved, status, teamPrompt, template]);
+  }, [
+    busy,
+    creating,
+    description,
+    expectedRevision,
+    members,
+    name,
+    onSaved,
+    status,
+    teamPrompt,
+    template,
+  ]);
 
   const recheck = useCallback(async (): Promise<boolean> => {
     const pending = pendingUpdateRef.current;
     if (busy || !template || status !== 'unresolvedWriteOutcome' || !pending) return false;
+    const createId = pendingCreateIdRef.current;
+    // A network failure does not reveal the server-generated identity. Matching
+    // by name alone would risk claiming another concurrent creation as ours.
+    if (creating && !createId) return false;
 
     const requestId = ++requestIdRef.current;
     setBusy(true);
 
     let stored: CustomTeamTemplateV1 | null = null;
+    let advancedRecord: CustomTeamTemplateV1 | null = null;
     try {
       const result = await api.customTeamTemplates.listTemplates();
       if (requestId !== requestIdRef.current) return false;
       if (result.status === 'ready' || result.status === 'hasUnreadableRecords') {
         const candidate = result.templates.find(
-          (entry) => entry.templateId === template.templateId
+          (entry) => entry.templateId === (creating ? createId : template.templateId)
         );
-        if (candidate && matchesPendingUpdate(candidate, pending)) {
+        if (
+          candidate &&
+          (creating
+            ? matchesPendingCreate(candidate, pending.fields)
+            : matchesPendingUpdate(candidate, pending))
+        ) {
           stored = candidate;
+        } else if (
+          !creating &&
+          candidate &&
+          resolveTemplateRevision(candidate) > pending.expectedRevision
+        ) {
+          // The old expected revision can no longer be written. Preserve the
+          // user's draft and offer the regular explicit conflict choices.
+          advancedRecord = candidate;
         }
       }
     } catch {
@@ -419,24 +488,29 @@ export function useEditTemplate({
       }
     }
 
-    if (requestId !== requestIdRef.current || !stored) return false;
+    if (requestId !== requestIdRef.current) return false;
+    if (advancedRecord) {
+      pendingUpdateRef.current = null;
+      setRevisionConflict(advancedRecord);
+      setStatus('revisionConflict');
+      return false;
+    }
+    if (!stored) return false;
 
     pendingUpdateRef.current = null;
+    pendingCreateIdRef.current = null;
     setStatus('saved');
     setExpectedRevision(resolveTemplateRevision(stored));
     onSaved?.(stored);
     return true;
-  }, [busy, onSaved, status, template]);
+  }, [busy, creating, onSaved, status, template]);
 
-  const canSave =
-    !busy &&
-    name.trim().length > 0 &&
-    status !== 'unresolvedWriteOutcome' &&
-    status !== 'resolvedElsewhere' &&
-    pendingMutations.length === 0 &&
-    storageAvailable;
+  const canSave = !busy && name.trim().length > 0 && status !== 'unresolvedWriteOutcome';
   const canRecheck =
-    !busy && status === 'unresolvedWriteOutcome' && pendingUpdateRef.current !== null;
+    !busy &&
+    status === 'unresolvedWriteOutcome' &&
+    pendingUpdateRef.current !== null &&
+    (!creating || pendingCreateIdRef.current !== null);
 
   return {
     name,
@@ -456,6 +530,7 @@ export function useEditTemplate({
     addMember,
     updateMember,
     removeMember,
+    replaceMembers,
     save,
     recheck,
     reset,

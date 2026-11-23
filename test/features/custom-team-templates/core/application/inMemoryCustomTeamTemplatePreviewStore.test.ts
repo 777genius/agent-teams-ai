@@ -23,6 +23,32 @@ const baseInput = {
 };
 
 describe('InMemoryCustomTeamTemplatePreviewStore', () => {
+  it('never evicts an in-flight confirmed token under capacity or after expiry', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+      capacity: 1,
+    });
+    const pending = store.issue(baseInput);
+    store.confirmSave(pending.token, {
+      templateId: 'tmpl-1',
+      name: 'Template',
+      nameKey: 'template',
+    });
+    expect(store.tryBeginSave(pending.token)).toBe(true);
+    expect(store.tryBeginSave(pending.token)).toBe(false);
+    now = 200;
+    expect(() => store.issue({ ...baseInput, templateId: 'tmpl-2' })).toThrow(
+      'All retained template saves are unresolved'
+    );
+    expect(store.resolve(pending.token).status).toBe('expired');
+    store.finishSave(pending.token);
+    expect(store.isSaveInFlight(pending.token)).toBe(false);
+    expect(store.issue({ ...baseInput, templateId: 'tmpl-2' }).token).toBe('token-2');
+  });
+
   it('retains the reviewed state behind an opaque token', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 1_000,
@@ -359,6 +385,7 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     });
     const first = store.issue({ ...baseInput, templateId: 'tmpl-1' });
     store.confirmSave(first.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    store.markUnresolvedWrite(first.token);
     store.issue({ ...baseInput, templateId: 'tmpl-2' });
 
     // The store is full (1 submitted + 1 unsubmitted). Issuing a third must
@@ -370,53 +397,28 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(store.resolve('token-3').status).toBe('found');
   });
 
-  it('reclaims a settled write before losing an unsubmitted preview', () => {
+
+  it('evicts settled submissions before unresolved writes and refuses when all writes are unresolved', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 0,
       createToken: counterTokens(),
       capacity: 2,
     });
-    const settled = store.issue({ ...baseInput, templateId: 'tmpl-1' });
-    store.confirmSave(settled.token, { templateId: 'tmpl-1', name: 'One', nameKey: 'one' });
-    store.markSettledWrite(settled.token);
-    const preview = store.issue({ ...baseInput, templateId: 'tmpl-2' });
-    store.issue({ ...baseInput, templateId: 'tmpl-3' });
+    const unresolved = store.issue(baseInput);
+    store.confirmSave(unresolved.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    store.markUnresolvedWrite(unresolved.token);
+    const settled = store.issue({ ...baseInput, templateId: 'tmpl-2' });
+    store.confirmSave(settled.token, { templateId: 'tmpl-2', name: 'Template', nameKey: 'template' });
+    const third = store.issue({ ...baseInput, templateId: 'tmpl-3' });
+    expect(store.resolve(unresolved.token).status).toBe('found');
     expect(store.resolve(settled.token).status).toBe('unknown');
-    expect(store.resolve(preview.token).status).toBe('found');
-  });
-
-  it('keeps both pending operations when all preview slots are confirmed', () => {
-    const store = new InMemoryCustomTeamTemplatePreviewStore({
-      now: () => 0,
-      createToken: counterTokens(),
-      capacity: 2,
-    });
-    const first = store.issue({ ...baseInput, templateId: 'tmpl-1' });
-    const second = store.issue({ ...baseInput, templateId: 'tmpl-2' });
-    store.confirmSave(first.token, { templateId: 'tmpl-1', name: 'One', nameKey: 'one' });
-    store.markUnresolvedWrite(first.token);
-    store.confirmSave(second.token, { templateId: 'tmpl-2', name: 'Two', nameKey: 'two' });
-    expect(() => store.issue({ ...baseInput, templateId: 'tmpl-3' })).toThrow(
-      'All preview slots are occupied'
+    store.confirmSave(third.token, { templateId: 'tmpl-3', name: 'Template', nameKey: 'template' });
+    store.markUnresolvedWrite(third.token);
+    expect(() => store.issue({ ...baseInput, templateId: 'tmpl-4' })).toThrow(
+      'All retained template saves are unresolved'
     );
-    expect(store.resolve(first.token).status).toBe('found');
-    expect(store.resolve(second.token).status).toBe('found');
-    expect(store.size).toBe(2);
-  });
-
-  it('evicts only an unsubmitted preview when an unresolved save is retained', () => {
-    const store = new InMemoryCustomTeamTemplatePreviewStore({
-      now: () => 0,
-      createToken: counterTokens(),
-      capacity: 2,
-    });
-    const pending = store.issue({ ...baseInput, templateId: 'tmpl-1' });
-    store.confirmSave(pending.token, { templateId: 'tmpl-1', name: 'One', nameKey: 'one' });
-    store.markUnresolvedWrite(pending.token);
-    const disposable = store.issue({ ...baseInput, templateId: 'tmpl-2' });
-    store.issue({ ...baseInput, templateId: 'tmpl-3' });
-    expect(store.resolve(pending.token).status).toBe('found');
-    expect(store.resolve(disposable.token).status).toBe('unknown');
+    expect(store.resolve(unresolved.token).status).toBe('found');
+    expect(store.resolve(third.token).status).toBe('found');
   });
 
   it('clears every retained preview and confirmed operation on disposal', () => {

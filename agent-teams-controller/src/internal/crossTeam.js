@@ -6,7 +6,7 @@ const { createControllerContext } = require('./context.js');
 const { withFileLockSync } = require('./fileLock.js');
 const messageStore = require('./messageStore.js');
 const cascadeGuard = require('./cascadeGuard.js');
-const runtime = require('./runtime.js');
+const appRouting = require('./appRouting.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const {
   formatCrossTeamText,
@@ -396,7 +396,7 @@ function deliverCrossTeamMessage(context, flags) {
  */
 async function routeCrossTeamTarget(context, toTeam) {
   if (!TEAM_NAME_PATTERN.test(toTeam) || toTeam === context.teamName) return toTeam;
-  const recipient = await runtime.getCrossTeamRecipient(context, toTeam);
+  const recipient = await appRouting.getCrossTeamRecipient(context, toTeam);
   if (recipient === null) return toTeam;
   const routed =
     recipient && typeof recipient.teamName === 'string' ? recipient.teamName.trim() : '';
@@ -427,7 +427,7 @@ async function listCrossTeamTargets(context, flags) {
     typeof flags === 'object' && flags && typeof flags.excludeTeam === 'string'
       ? flags.excludeTeam
       : context.teamName;
-  const fromApp = await runtime.getCrossTeamTargets(context);
+  const fromApp = await appRouting.getCrossTeamTargets(context);
   if (!Array.isArray(fromApp)) return listConfiguredTeams(context, excludeTeam);
   return fromApp
     .filter((target) => target && target.teamName !== excludeTeam)

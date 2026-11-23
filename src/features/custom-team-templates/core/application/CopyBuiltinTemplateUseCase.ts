@@ -127,7 +127,9 @@ export class CopyBuiltinTemplateUseCase {
             };
             return { status: 'copied', template: saved };
           }
-          if (check.status === 'absent') {
+          // Absence from a replacement worker is not proof that the original
+          // worker cannot still commit. Retry only after physical settlement.
+          if (check.status === 'absent' && settlement === 'settled') {
             if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
               continue;
             }

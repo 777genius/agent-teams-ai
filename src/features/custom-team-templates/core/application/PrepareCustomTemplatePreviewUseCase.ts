@@ -5,6 +5,7 @@ import {
 } from '../domain/templatePreviewPolicy';
 
 import { CustomTemplatePreviewCapacityError } from './InMemoryCustomTeamTemplatePreviewStore';
+
 import type { InMemoryCustomTeamTemplatePreviewStore } from './InMemoryCustomTeamTemplatePreviewStore';
 import type {
   CustomTeamTemplateHasher,
@@ -111,7 +112,7 @@ export class PrepareCustomTemplatePreviewUseCase {
     }
 
     const contentHash = this.deps.hasher.hashCanonicalContent(preview.preview.canonicalContent);
-    let state: ReturnType<InMemoryCustomTeamTemplatePreviewStore['issue']>;
+    let state;
     try {
       state = this.deps.previewStore.issue({
       sourceTeamName: read.snapshot.sourceTeamName,

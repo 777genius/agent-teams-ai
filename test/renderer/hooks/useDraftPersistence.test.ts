@@ -99,7 +99,7 @@ describe('draftStorage', () => {
   });
 
   describe('TTL expiry', () => {
-    it.each(['createTeam:description', 'createTeam:prompt', 'createTeam:prompt:chips'])(
+    it.each(['createTeam:description', 'createTeam:prompt', 'createTeam:prompt:chips', 'createTeam:templateSelection'])(
       'retains unfinished creation data past the generic 24-hour TTL (%s)',
       async (key) => {
         await draftStorage.saveDraft(key, 'unfinished team work');

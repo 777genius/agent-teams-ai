@@ -45,7 +45,6 @@ import type {
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStorageGateway,
 } from '@features/application-command-ledger';
-
 import type {
   CreateCustomTeamTemplateRecordRequest,
   CreateCustomTeamTemplateRecordResult,

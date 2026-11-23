@@ -83,13 +83,24 @@ export class RecheckCustomTeamTemplateSaveUseCase {
     switch (check.status) {
       case 'saved':
         this.deps.previewStore.clearUnresolvedWrite(token);
-        this.deps.previewStore.markSettledWrite(token);
         return { status: 'saved', template: check.template };
       case 'conflict':
         this.deps.previewStore.clearUnresolvedWrite(token);
         return { status: 'templateIdConflict', templateId: check.templateId };
       case 'absent':
-        this.deps.previewStore.clearUnresolvedWrite(token);
+        // A read that races an earlier unconfirmed writer is only a snapshot.
+        // Never present it as safe to retry until the write settles conclusively.
+        if (this.deps.previewStore.isSaveInFlight(token)) {
+          return { status: 'unresolved', templateId: check.templateId };
+        }
+        if (this.deps.previewStore.hasUnresolvedWrite(token)) {
+          if (!this.deps.previewStore.canConfirmAbsenceAfterUnresolvedWrite(token)) {
+            return { status: 'unresolved', templateId: check.templateId };
+          }
+          // All interrupted writers are physically settled. The successful
+          // post-settlement read proves absence without dispatching another write.
+          this.deps.previewStore.clearUnresolvedWrite(token);
+        }
         return { status: 'notSaved', templateId: check.templateId };
       case 'unresolved':
         return { status: 'unresolved', templateId: check.templateId };

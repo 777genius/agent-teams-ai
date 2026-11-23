@@ -4085,16 +4085,29 @@ export default interface Resources {
       }
     },
     "customTemplates": {
+      "bulk": {
+        "create": "Create Template",
+        "createTitle": "Create template",
+        "chooseTemplate": "Choose a template",
+        "invalidEditorJson": "Use a JSON object with name, description, teamPrompt and members. Each member accepts only name, role and workflow as text.",
+        "createDescription": "Choose a name and add instructions and members for this reusable template.",
+        "createUnresolved": "The template may have been saved. Close this dialog and check your library before trying again.",
+        "exportAll": "Export All",
+        "exporting": "Exporting…",
+        "exported": "All templates exported.",
+        "exportFailed": "Could not export templates. Please try again.",
+        "tooLarge": "The library is too large to export as one file. Export templates individually instead.",
+        "importDone": "Template import finished",
+        "importSummary": "{{imported}} imported, {{skipped}} skipped because their names already exist.",
+        "importStopped": "Import stopped because an item could not be imported; check your library before trying again."
+      },
       "actions": {
         "addMember": "Add member",
-        "allowAfterExternalCheck": "I checked externally; allow new changes",
-        "allowNewChanges": "I understand; allow new changes",
         "copyToMyTemplates": "Copy to My Templates",
         "delete": "Delete",
         "duplicate": "Duplicate",
         "edit": "Edit",
         "export": "Export",
-        "keepChangesBlocked": "Keep changes blocked",
         "myTemplates": "My Templates",
         "recheck": "Re-check outcome",
         "removeMember": "Remove member",
@@ -4211,10 +4224,10 @@ export default interface Resources {
         "description": "Export “{{name}}” as a portable JSON file.",
         "errors": {
           "downloadFailed": "The download could not be started. Try again.",
+          "transportFailed": "The export request could not be completed. Try again.",
           "filePickerFailed": "The file picker could not be opened.",
           "fileWriteFailed": "The file could not be written. Try again.",
-          "invalidRequest": "The export request was invalid.",
-          "transportFailed": "The export request could not be completed. Try again."
+          "invalidRequest": "The export request was invalid."
         },
         "exporting": "Exporting…",
         "success": "Export successful",
@@ -4262,19 +4275,7 @@ export default interface Resources {
         "memberNames": "Members: {{names}}",
         "noDescription": "No description",
         "noMembers": "Prompt-only template — no members recorded",
-        "recoveryBackupWarning": "A usable backup may not exist. Restoring an older database or starting over can replace newer data belonging to other features.",
-        "recoveryInterrupted": "A previous database recovery was interrupted. Its outcome is unknown; changes are blocked until the files are inspected.",
-        "recoveryInterruptedMarkerPath": "Interrupted recovery marker:",
-        "recoveryMarkerInstructions": "After inspecting the files and deciding how to restore the database or start over, remove these marker files if present, then restart the app or server:",
-        "recoveryMarkerPath": "Marker file:",
-        "recoveryMarkerWriteFailed": "The recovery marker could not be confirmed as saved. Do not start another app or server instance until the files have been inspected.",
-        "recoveryOtherStores": "New storage operations in this app session are blocked while recovery is required; they do not switch to JSON automatically.",
-        "recoveryRequired": "Database damage was detected or an earlier recovery left a marker. Changes are blocked until the files are inspected.",
-        "recoveryStopAndPreserve": "Stop all app and server instances using this database, then copy the entire storage directory. Include app.db, its -wal and -shm files, and any app.db.corrupt-* entries if present.",
-        "recoveryStorageDirectory": "Storage directory:",
-        "storageSafetyUnavailable": "The storage worker is unavailable or its safety checks could not be completed. JSON fallback is disabled to prevent conflicting writes. Check storage permissions and restart the app; if the worker is unavailable, reinstall the app without deleting your data.",
         "storageUnavailable": "The template library is unavailable right now.",
-        "storageVerificationRequired": "The storage database or recovery markers could not be verified. JSON fallback is disabled to prevent conflicting writes. Stop all instances and preserve the files; check storage permissions and restart the app. If the storage worker is unavailable, reinstall the app without deleting your data.",
         "tabs": {
           "builtIn": "Built-in",
           "myTemplates": "My Templates"
@@ -4306,20 +4307,14 @@ export default interface Resources {
       },
       "states": {
         "loading": "Loading…",
-        "mutationStorageUnavailable": "New changes are blocked because this profile cannot store the recovery record. Enable local storage and reopen the library.",
         "notSaved": "Confirmed: this template was not saved. You can save it again.",
-        "partialSnapshotWarning": "The list is incomplete and the outcome is unknown. Confirm only after checking outside this list, or keep changes blocked.",
-        "pendingProfileBody": "These changes in this browser or app profile may still be running or have an unconfirmed outcome. Nothing was retried automatically. Other profiles have separate records.",
-        "pendingSaveHelp": "Close this dialog, open Templates, and select My Templates. Select Re-check outcome, then choose whether to allow new changes. If the list is incomplete, check outside the list first.",
         "preparing": "Preparing preview…",
         "previewExpired": "This preview is no longer valid. Review the refreshed preview before saving.",
         "rechecking": "Re-checking the save outcome…",
-        "resolvedElsewhere": "This uncertain change was already reviewed in another window. Close and reopen this dialog to start a new change.",
         "saved": "Template saved",
         "savedAlready": "This template was already saved.",
         "savedBody": "“{{name}}” is now in My Templates.",
         "saving": "Saving…",
-        "snapshotWarning": "This list is a snapshot. The previous change could still complete later. Continue only if you accept this uncertainty.",
         "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
         "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
         "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
@@ -6690,6 +6685,7 @@ export default interface Resources {
       "badges": {
         "custom": "Custom",
         "default": "Default",
+        "differ": "Differs by project",
         "repair": "Needs repair"
       },
       "broken": {
@@ -6708,6 +6704,7 @@ export default interface Resources {
       },
       "feedback": {
         "error": "Could not save: {{message}}",
+        "notApplied": "Saved for the team, but not applied yet in every project: they are listed above. Save again to apply it there.",
         "saved": "Saved",
         "saving": "Saving…"
       },
@@ -6738,6 +6735,18 @@ export default interface Resources {
       },
       "popover": {
         "openSettings": "Change the default for all teams…"
+      },
+      "projects": {
+        "differ": "The projects of this team use different review flows. Saving applies the settings below to all of them:",
+        "followsDefault": "the default",
+        "item": "{{project}}: {{flow}}",
+        "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
+        "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project.",
+        "prompt": "Instructions: \"{{prompt}}\"",
+        "scope": "One review flow for every project of this team.",
+        "unreadable": "settings that can't be read",
+        "unreadableProjects": "The projects of this team cannot be read, so its review flow cannot be shown or changed: {{message}}",
+        "use": "Use these settings"
       },
       "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
       "promptLabel": "Instructions for agents (optional)",

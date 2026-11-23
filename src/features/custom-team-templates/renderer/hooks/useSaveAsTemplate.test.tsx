@@ -113,6 +113,8 @@ describe('useSaveAsTemplate name-conflict recovery', () => {
     await saveNow();
 
     expect(latest?.nameConflict).toBe(true);
+    // The previous preview must not re-enable Save while a name conflict is unresolved.
+    expect(latest?.canSave).toBe(false);
     // The reviewed preview is preserved for the retry; the typed fields stay.
     expect(latest?.preview?.previewToken).toBe('token-1');
     expect(latest?.name).toBe('Alpha');
@@ -147,6 +149,38 @@ describe('useSaveAsTemplate name-conflict recovery', () => {
     });
     expect(latest?.attempt).toEqual({ status: 'saved', template, alreadyPresent: false });
     expect(latest?.notice).toBeNull();
+  });
+
+
+  it('recovers by renaming when initial prepare reports a name conflict', async () => {
+    preparePreview.mockResolvedValueOnce({
+      status: 'nameConflict',
+      existingTemplateId: 'template-existing',
+    } satisfies PrepareCustomTeamTemplatePreviewResult);
+    await render();
+
+    expect(latest?.nameConflict).toBe(true);
+    expect(latest?.preview).toBeNull();
+    expect(latest?.canSave).toBe(false);
+
+    preparePreview.mockResolvedValueOnce(ready('token-new', 'Free name'));
+    await renameNow('Free name');
+    expect(preparePreview).toHaveBeenCalledTimes(2);
+    expect(preparePreview).toHaveBeenLastCalledWith({
+      sourceTeamName: 'alpha',
+      name: 'Free name',
+      description: '',
+    });
+    expect(latest?.preview?.previewToken).toBe('token-new');
+    expect(latest?.nameConflict).toBe(false);
+    expect(latest?.canSave).toBe(true);
+
+    await saveNow();
+    expect(saveTemplate).toHaveBeenCalledWith({
+      previewToken: 'token-new',
+      name: 'Free name',
+      description: '',
+    });
   });
 
   it('keeps stale-preview protection when the source changes after a name conflict', async () => {

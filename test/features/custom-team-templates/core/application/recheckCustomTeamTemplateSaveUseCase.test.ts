@@ -154,6 +154,54 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
     });
   });
 
+  it('does not report absence while an identical save is still in flight', async () => {
+    const fixture = operation({ read: { status: 'notFound' } });
+    expect(fixture.store.tryBeginSave(fixture.token)).toBe(true);
+    await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'unresolved',
+      templateId: TEMPLATE_ID,
+    });
+    fixture.store.finishSave(fixture.token);
+    await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'notSaved',
+      templateId: TEMPLATE_ID,
+    });
+  });
+
+  it('does not treat a read racing an unresolved writer as confirmed absence', async () => {
+    const fixture = operation({ read: { status: 'notFound' } });
+    fixture.store.markUnresolvedWrite(fixture.token);
+
+    await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'unresolved',
+      templateId: TEMPLATE_ID,
+    });
+    expect(fixture.store.hasUnresolvedWrite(fixture.token)).toBe(true);
+    expect(fixture.create).not.toHaveBeenCalled();
+  });
+
+  it('proves absence only after the original unknown writer settles late', async () => {
+    let settle!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const fixture = operation({ read: { status: 'notFound' } });
+    fixture.store.markUnresolvedWrite(fixture.token, settled);
+
+    await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'unresolved',
+      templateId: TEMPLATE_ID,
+    });
+    settle();
+    await settled;
+    await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'notSaved',
+      templateId: TEMPLATE_ID,
+    });
+    expect(fixture.store.hasUnresolvedWrite(fixture.token)).toBe(false);
+    expect(fixture.create).not.toHaveBeenCalled();
+  });
+
   it('never reports an unreadable existing record as confirmed absence', async () => {
     const fixture = operation({ read: { status: 'unreadable', templateId: TEMPLATE_ID } });
 

@@ -2,15 +2,13 @@
 # Agent Teams standalone Docker image
 #
 # Runs the HTTP server without Electron, serving the full UI over HTTP.
-# Mount your ~/.claude directory to make session data available, and keep a
-# volume on /data/app-data so the app's own data (saved team templates and
-# other internal storage) survives container replacement.
+# Mount ~/.claude for sessions and /data/app-data to persist saved templates.
 #
 # Build:  docker build -t agent-teams-ai .
 # Run:    docker run -p 3456:3456 -v ~/.claude:/data/.claude:ro -v agent-teams-app-data:/data/app-data agent-teams-ai
 # =============================================================================
 
-ARG NODE_VERSION=26.11.1
+ARG NODE_VERSION=26.12.1
 # Keep in sync with "packageManager" in package.json.
 ARG PNPM_VERSION=11.22.0
 
@@ -68,19 +66,11 @@ COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
-COPY --from=builder /app/out/renderer ./out/renderer
-# The internal-storage SQLite worker is built by electron-vite into
-# dist-electron/main, which is not shipped in this image. Copy it next to the
-# standalone bundle so InternalStorageWorkerClient resolves it co-located
-# (candidate #1) instead of reporting unavailable storage for template writes.
-# The worker requires its shared chunks (relative ./chunks/*.cjs requires, with
-# content-hashed names that change per build), so the whole chunks directory
-# travels with it.
 COPY --from=builder /app/dist-electron/main/internal-storage-worker.cjs ./dist-standalone/internal-storage-worker.cjs
 COPY --from=builder /app/dist-electron/main/chunks ./dist-standalone/chunks
+COPY --from=builder /app/out/renderer ./out/renderer
 
-# Create data directory for Claude session mount and the persistent app-data
-# volume (internal storage: saved templates and friends).
+# Create data directory for Claude session mount
 RUN mkdir -p /data/.claude /data/app-data
 
 ENV NODE_ENV=production

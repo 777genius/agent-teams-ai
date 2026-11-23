@@ -213,26 +213,28 @@ export class SaveCustomTeamTemplateUseCase {
       },
       contentHash: confirmed.contentHash,
     };
-    // An earlier dispatched writer may still commit. Do not send a second
-    // write until re-check establishes absence and clears the uncertain flag.
-    if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {
+    // A previous writer may still commit after an IPC timeout. Its unconfirmed
+    // absence must never authorize a second dispatch for this token.
+    if (!this.deps.previewStore.tryBeginSave(state.token)) {
+      // A writer is already active or unresolved; never dispatch a second save.
       return { status: 'unresolvedWriteOutcome', templateId };
     }
-    const result = await this.createWithRecovery(gateway, request, false);
-    if (result.status === 'unresolvedWriteOutcome') {
-      this.deps.previewStore.markUnresolvedWrite(state.token);
-    } else if (
-      result.status === 'created' ||
-      result.status === 'alreadySaved' ||
-      result.status === 'nameConflict' ||
-      result.status === 'templateIdConflict'
-    ) {
-      this.deps.previewStore.clearUnresolvedWrite(state.token);
-      if (result.status === 'created' || result.status === 'alreadySaved') {
-        this.deps.previewStore.markSettledWrite(state.token);
+    try {
+      const result = await this.createWithRecovery(gateway, request, state.token);
+      if (result.status === 'unresolvedWriteOutcome') {
+        this.deps.previewStore.markUnresolvedWrite(state.token);
+      } else if (
+        result.status === 'created' ||
+        result.status === 'alreadySaved' ||
+        result.status === 'nameConflict' ||
+        result.status === 'templateIdConflict'
+      ) {
+        this.deps.previewStore.clearUnresolvedWrite(state.token);
       }
+      return result;
+    } finally {
+      this.deps.previewStore.finishSave(state.token);
     }
-    return result;
   }
 
   /**
@@ -364,6 +366,7 @@ export class SaveCustomTeamTemplateUseCase {
   private async createWithRecovery(
     gateway: CustomTeamTemplateStorageGateway,
     request: CreateCustomTeamTemplateRecordRequest,
+    token: string,
     hadPriorUnresolvedWrite: boolean = false
   ): Promise<ConfirmCustomTeamTemplateSaveResult> {
     const templateId = request.template.templateId;
@@ -376,9 +379,16 @@ export class SaveCustomTeamTemplateUseCase {
     for (let attempt = 1; attempt <= TEMPLATE_CREATE_MAX_ATTEMPTS; attempt++) {
       let decision: WriteDecision;
       try {
-        decision = mapCreateResult(await gateway.customTeamTemplateCreate(request));
+        const response = await gateway.customTeamTemplateCreate(request);
+        if (response.status === 'existingRecordUnreadable') {
+          // This create call has completed. Preserve any earlier unsettled
+          // writer, but record that this particular response cannot commit
+          // later. A subsequent post-settlement read may establish absence.
+          this.deps.previewStore.markUnresolvedWrite(token, Promise.resolve());
+        }
+        decision = mapCreateResult(response);
       } catch (error) {
-        decision = await this.classifyFailure(gateway, request, error, hadUnknownExecution);
+        decision = await this.classifyFailure(gateway, request, error, hadUnknownExecution, token);
       }
       // If any attempt had unknown execution, remember it for subsequent attempts.
       // We check the error in classifyFailure, but also need to track it here for
@@ -413,9 +423,15 @@ export class SaveCustomTeamTemplateUseCase {
     gateway: CustomTeamTemplateStorageGateway,
     request: CreateCustomTeamTemplateRecordRequest,
     error: unknown,
-    hadUnknownExecution: boolean
+    hadUnknownExecution: boolean,
+    token: string
   ): Promise<WriteDecision> {
     if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+      if (error.execution === 'unknown') {
+        // Retain the real worker's settlement signal even when the bounded wait
+        // returns first. A later read can prove absence only after it settles.
+        this.deps.previewStore.markUnresolvedWrite(token, error.settled);
+      }
       // The settlement promise is bounded: a worker whose termination was never
       // confirmed can leave it pending forever, and a save request must always
       // settle within a finite time.

@@ -1,7 +1,11 @@
 // @vitest-environment node
 
 import { BoundControlContext } from '@features/external-agent-connection/main';
-import { TeamProjectContextRegistry } from '@features/team-project-context/main';
+import {
+  isProjectCopyLaunching,
+  TeamProjectContextRegistry,
+  trackProjectCopyLaunch,
+} from '@features/team-project-context/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { registerTeamRoutes } from '@main/http/teams';
 import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
@@ -2133,6 +2137,187 @@ describe('MCP team tools over the local REST control API', () => {
       setAppDataBasePath(null);
       setClaudeBasePathOverride(null);
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The board tools of an external MCP client on a per-project team: the app picks the copy of
+  // the project the caller names, never the copy of another project, and refuses to guess.
+  it('works on the board of a per-project team in the project the MCP caller names', async () => {
+    const root = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-per-project-board-')));
+    setClaudeBasePathOverride(root);
+    setAppDataBasePath(path.join(root, 'app-state'));
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    registerTeamRoutes(app, services);
+    const controlUrl = 'http://per-project-board.test';
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    // Board tools take no controlUrl: the controller finds the app as an agent's controller does.
+    const teamName = 'per-project-board';
+    const teamsBase = path.join(root, 'teams');
+    const project = (id: string) => path.join(root, `project-${id}`);
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    try {
+      await writeFile(path.join(root, 'team-control-api.json'), JSON.stringify({ baseUrl: controlUrl }));
+      await teamDataService.createTeamConfig(
+        {
+          projectContextMode: 'per_project',
+          teamName,
+          cwd: root,
+          providerId: 'codex',
+          members: [{ name: 'builder', role: 'Engineer' }],
+        },
+        { claimOwnerOnCreate: true }
+      );
+      // A real launch in project E: its copy counts as being launched from the reservation, before
+      // its provisioning run starts, until the run was ready and the copy confirmed.
+      await mkdir(project('e'));
+      const start = services.teamApis!.provisioningStart;
+      const createCopy = start.createTeam;
+      const launchedAtStart: [string, boolean][] = [];
+      start.createTeam = (request, onProgress) => {
+        launchedAtStart.push([request.teamName, isProjectCopyLaunching(request.teamName)]);
+        return createCopy(request, onProgress);
+      };
+      const launchE = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/launch`,
+        payload: { cwd: project('e') },
+      });
+      expect(launchE.statusCode, launchE.body).toBe(200);
+      expect(launchedAtStart).toEqual([[expect.stringMatching(/^ptc-/), true]]);
+      const copyE = launchedAtStart[0][0];
+      await vi.waitFor(async () => {
+        expect(await registry.find(teamName, project('e'))).toMatchObject({ state: 'ready' });
+        expect(isProjectCopyLaunching(copyE)).toBe(false);
+      });
+      start.createTeam = createCopy;
+      const copyIn = async (id: string) => {
+        await mkdir(project(id));
+        const { executionTeamName } = await registry.reserve(teamName, project(id));
+        await mkdir(path.join(teamsBase, executionTeamName), { recursive: true });
+        await mkdir(path.join(root, 'tasks', executionTeamName), { recursive: true });
+        await writeFile(
+          path.join(teamsBase, executionTeamName, 'config.json'),
+          JSON.stringify({
+            name: executionTeamName,
+            projectPath: project(id),
+            members: [
+              { name: 'team-lead', role: 'team-lead', agentType: 'team-lead' },
+              { name: 'builder', role: 'Engineer', agentType: 'teammate' },
+            ],
+          }),
+          'utf8'
+        );
+        await claimTeamForThisProfile({
+          teamsBasePath: teamsBase,
+          teamName: executionTeamName,
+          reason: 'create',
+        });
+        await registry.confirmReady(teamName, project(id), executionTeamName);
+        return executionTeamName;
+      };
+      const copyA = await copyIn('a');
+      const copyB = await copyIn('b');
+      // Project C: a copy whose launch has not finished; project D: no history at all.
+      await mkdir(project('c'));
+      const pendingCopy = (await registry.reserve(teamName, project('c'))).executionTeamName;
+      await mkdir(project('d'));
+      const indexPath = path.join(teamsBase, teamName, 'project-contexts.json');
+      const index = await readFile(indexPath, 'utf8');
+      const call = async (tool: string, args: Record<string, unknown>) =>
+        parseJsonToolResult(await getTool(tool).execute({ claudeDir: root, teamName, ...args }));
+      const subjects = async (args: Record<string, unknown>) =>
+        JSON.stringify(await call('task_list', args));
+
+      await call('task_create', {
+        projectPath: project('a'),
+        subject: 'ONLY_IN_PROJECT_A',
+        createdBy: 'user',
+      });
+      await call('task_create', {
+        projectPath: project('b'),
+        subject: 'ONLY_IN_PROJECT_B',
+        createdBy: 'user',
+      });
+      const inA = await subjects({ projectPath: project('a') });
+      const inB = await subjects({ projectPath: project('b') });
+      expect(inA).toContain('ONLY_IN_PROJECT_A');
+      expect(inA).not.toContain('ONLY_IN_PROJECT_B');
+      expect(inB).toContain('ONLY_IN_PROJECT_B');
+      expect(inB).not.toContain('ONLY_IN_PROJECT_A');
+      // The exact name of a copy keeps working without a project.
+      expect(await subjects({ teamName: copyA })).toContain('ONLY_IN_PROJECT_A');
+
+      await call('message_send', {
+        projectPath: project('b'),
+        from: 'team-lead',
+        to: 'builder',
+        text: 'MESSAGE_ONLY_IN_PROJECT_B',
+      });
+      const inbox = (copy: string) =>
+        readFile(path.join(teamsBase, copy, 'inboxes', 'builder.json'), 'utf8').catch(() => '');
+      expect(await inbox(copyB)).toContain('MESSAGE_ONLY_IN_PROJECT_B');
+      expect(await inbox(copyA)).not.toContain('MESSAGE_ONLY_IN_PROJECT_B');
+
+      // A copy named with a project must be the copy of that project.
+      expect(await subjects({ teamName: copyA, projectPath: project('a') })).toContain(
+        'ONLY_IN_PROJECT_A'
+      );
+      const mismatch = call('task_list', { teamName: copyB, projectPath: project('a') });
+      await expect(mismatch).rejects.toMatchObject({ code: 'PROJECT_MISMATCH', name: 'UserError' });
+      await expect(mismatch).rejects.toThrow(/^\[PROJECT_MISMATCH\] /);
+
+      // No project, a project without history, a relative path: refused, never guessed. The code
+      // leads the text: an MCP client only sees the message.
+      const required = getTool('task_list').execute({ claudeDir: root, teamName });
+      await expect(required).rejects.toMatchObject({ code: 'PROJECT_REQUIRED' });
+      await expect(required).rejects.toThrow(/^\[PROJECT_REQUIRED\] /);
+      const persistedA = await registry.inspect(teamName, project('a'));
+      expect(persistedA).not.toBeNull();
+      await expect(required).rejects.toThrow(persistedA!.projectPath);
+      await expect(
+        call('task_create', { projectPath: project('d'), subject: 'NO_HISTORY', createdBy: 'user' })
+      ).rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
+      await expect(call('task_list', { projectPath: 'project-a' })).rejects.toThrow(/absolute/);
+
+      // A pending copy: waiting helps only while a launch of it runs in the app.
+      await expect(call('task_list', { projectPath: project('c') })).rejects.toMatchObject({
+        code: 'PROJECT_LAUNCH_INCOMPLETE',
+      });
+      const pendingLaunch = trackProjectCopyLaunch(pendingCopy);
+      await expect(call('task_list', { projectPath: project('c') })).rejects.toMatchObject({
+        code: 'PROJECT_LAUNCH_PENDING',
+      });
+      pendingLaunch.end();
+
+      // Unreadable metadata of a team without config.json reaches the app, which refuses it.
+      await mkdir(path.join(teamsBase, 'broken-board'));
+      await writeFile(path.join(teamsBase, 'broken-board', 'team.meta.json'), '{ not json');
+      await expect(
+        getTool('task_list').execute({ claudeDir: root, teamName: 'broken-board' })
+      ).rejects.toThrow(/^\[TEAM_METADATA_UNREADABLE\] /);
+      await writeFile(path.join(teamsBase, 'broken-board', 'team.meta.json'), JSON.stringify({
+        version: 2, projectContextMode: 'per_project', cwd: root, createdAt: 1,
+      }));
+      await expect(
+        getTool('task_list').execute({ claudeDir: root, teamName: 'broken-board' })
+      ).rejects.toThrow(/^\[TEAM_METADATA_UNREADABLE\] /);
+
+      // Resolving never creates a copy, and the team itself never gets a board.
+      expect(await readFile(indexPath, 'utf8')).toBe(index);
+      await expect(readFile(path.join(teamsBase, teamName, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    } finally {
+      try {
+        restoreFetch();
+        await app.close();
+      } finally {
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        TeamConfigReader.clearCacheForTests();
+        await rm(root, { recursive: true, force: true });
+      }
     }
   });
 

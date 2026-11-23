@@ -14,16 +14,11 @@
 export const DEFAULT_CUSTOM_TEMPLATE_PREVIEW_TTL_MS = 10 * 60 * 1000;
 export const DEFAULT_CUSTOM_TEMPLATE_PREVIEW_CAPACITY = 32;
 
-/** Protects submitted operations when preview admission is at capacity. */
-export class CustomTemplatePreviewCapacityError extends Error {
-  constructor() {
-    super('All preview slots are occupied by submitted template operations');
-    this.name = 'CustomTemplatePreviewCapacityError';
-  }
-}
-
 /** Bounded attempts used to avoid ever reusing a live token. */
 const TOKEN_COLLISION_ATTEMPTS = 8;
+
+/** Every retained operation may still commit; new previews must not destroy its re-check token. */
+export class CustomTemplatePreviewCapacityError extends Error {}
 
 export interface CustomTeamTemplatePreviewStateInput {
   /** Team the projection was read from; a token can never be re-pointed at another team. */
@@ -62,8 +57,6 @@ export interface CustomTeamTemplatePreviewState extends CustomTeamTemplatePrevie
    * commit. Cleared when a save or re-check establishes a definitive outcome.
    */
   hasUnresolvedWrite?: boolean;
-  /** A definitive successful save; no longer needs retention for re-check. */
-  hasSettledWrite?: boolean;
 }
 
 /**
@@ -136,12 +129,18 @@ export interface InMemoryCustomTeamTemplatePreviewStoreOptions {
 
 export class InMemoryCustomTeamTemplatePreviewStore {
   private readonly entries = new Map<string, CustomTeamTemplatePreviewState>();
+  /** Only one confirmation may dispatch a write for a token at a time. */
+  private readonly inFlightSaves = new Set<string>();
+  /** A failed worker can settle after the bounded save wait has timed out. */
+  private readonly unsettledWriters = new Map<string, Set<Promise<void>>>();
+  private readonly trackedWriterTokens = new Set<string>();
   private readonly ttlMs: number;
   private readonly capacity: number;
 
   constructor(private readonly options: InMemoryCustomTeamTemplatePreviewStoreOptions) {
     this.ttlMs = options.ttlMs ?? DEFAULT_CUSTOM_TEMPLATE_PREVIEW_TTL_MS;
     this.capacity = options.capacity ?? DEFAULT_CUSTOM_TEMPLATE_PREVIEW_CAPACITY;
+    if (!Number.isInteger(this.capacity) || this.capacity < 1) throw new RangeError('Invalid preview capacity');
   }
 
   /** Retains one preview and returns the state (including its opaque token). */
@@ -149,13 +148,16 @@ export class InMemoryCustomTeamTemplatePreviewStore {
     const createdAtMs = this.options.now();
     this.dropExpired(createdAtMs);
     while (this.entries.size >= this.capacity) {
-      // A confirmed operation may still be running even when it has not yet
-      // reported an unresolved outcome. Never evict its only re-check identity.
-      const settled = [...this.entries].find(([, state]) => state.hasSettledWrite);
-      const unsubmitted = [...this.entries].find(([, state]) => !state.confirmedSave);
-      const evictable = settled ?? unsubmitted;
-      if (!evictable) throw new CustomTemplatePreviewCapacityError();
-      this.entries.delete(evictable[0]);
+      // Settled submissions no longer need a re-check token. Never evict an
+      // unresolved operation, even if it has expired or is the oldest entry.
+      const entries = [...this.entries];
+      const candidate =
+        entries.find(([token, state]) => state.confirmedSave && !state.hasUnresolvedWrite && !this.inFlightSaves.has(token)) ??
+        entries.find(([token, state]) => !state.confirmedSave && !this.inFlightSaves.has(token));
+      if (!candidate) {
+        throw new CustomTemplatePreviewCapacityError('All retained template saves are unresolved');
+      }
+      this.entries.delete(candidate[0]);
     }
 
     const token = this.allocateToken();
@@ -261,15 +263,51 @@ export class InMemoryCustomTeamTemplatePreviewStore {
    * still commit. The flag is cleared when a save or re-check establishes a
    * definitive outcome.
    */
-  markUnresolvedWrite(token: string): void {
-    const state = this.entries.get(token);
-    if (state) {
-      this.entries.set(token, { ...state, hasUnresolvedWrite: true });
+  /** Atomically fences a save against concurrent confirmations and unresolved writers. */
+  tryBeginSave(token: string): boolean {
+    if (!this.entries.has(token) || this.inFlightSaves.has(token) || this.hasUnresolvedWrite(token)) {
+      return false;
     }
+    this.inFlightSaves.add(token);
+    return true;
+  }
+
+  finishSave(token: string): void {
+    this.inFlightSaves.delete(token);
+  }
+
+  isSaveInFlight(token: string): boolean {
+    return this.inFlightSaves.has(token);
+  }
+
+  markUnresolvedWrite(token: string, settled?: Promise<void>): void {
+    const state = this.entries.get(token);
+    if (!state) return;
+    this.entries.set(token, { ...state, hasUnresolvedWrite: true });
+    if (!settled) return;
+    this.trackedWriterTokens.add(token);
+    const pending = this.unsettledWriters.get(token) ?? new Set<Promise<void>>();
+    pending.add(settled);
+    this.unsettledWriters.set(token, pending);
+    const onSettled = (): void => {
+      const active = this.unsettledWriters.get(token);
+      active?.delete(settled);
+      if (active?.size === 0) this.unsettledWriters.delete(token);
+    };
+    // Rejection also signals the worker has stopped; consume it to avoid
+    // an unhandled rejection after the bounded wait has already returned.
+    void settled.then(onSettled, onSettled);
+  }
+
+  /** Absence is authoritative only after every previously unknown writer exited. */
+  canConfirmAbsenceAfterUnresolvedWrite(token: string): boolean {
+    return this.trackedWriterTokens.has(token) && !this.unsettledWriters.has(token);
   }
 
   /** Clears a previously marked unresolved write once the outcome is definitive. */
   clearUnresolvedWrite(token: string): void {
+    this.unsettledWriters.delete(token);
+    this.trackedWriterTokens.delete(token);
     const state = this.entries.get(token);
     if (state?.hasUnresolvedWrite) {
       const { hasUnresolvedWrite: _removed, ...rest } = state;
@@ -282,17 +320,12 @@ export class InMemoryCustomTeamTemplatePreviewStore {
     return this.entries.get(token)?.hasUnresolvedWrite === true;
   }
 
-  /** A definitive save may be discarded before unsubmitted previews at capacity. */
-  markSettledWrite(token: string): void {
-    const state = this.entries.get(token);
-    if (state?.confirmedSave && !state.hasUnresolvedWrite) {
-      this.entries.set(token, { ...state, hasSettledWrite: true });
-    }
-  }
-
   /** Drops every retained preview and confirmed operation (used on shutdown). */
   clear(): void {
     this.entries.clear();
+    this.inFlightSaves.clear();
+    this.unsettledWriters.clear();
+    this.trackedWriterTokens.clear();
   }
 
   get size(): number {
@@ -306,7 +339,7 @@ export class InMemoryCustomTeamTemplatePreviewStore {
         // expiry so re-check can reconcile it. Once the outcome is settled the
         // entry is dropped, so it stops occupying capacity: re-check already
         // reported the definitive result and will not be offered again.
-        if (state.confirmedSave && state.hasUnresolvedWrite) {
+        if (this.inFlightSaves.has(token) || (state.confirmedSave && state.hasUnresolvedWrite)) {
           continue;
         }
         this.entries.delete(token);

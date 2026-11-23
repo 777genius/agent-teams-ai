@@ -25,6 +25,7 @@ let mainInspectorWebSocketUrl = null;
 let expectedMainInspectorPort = null;
 let cdp = null;
 let inputSelectAllDomFallbacks = 0;
+let inputNativeFocusFallbacks = 0;
 
 function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
@@ -244,7 +245,7 @@ async function startApp(fixture) {
     XDG_STATE_HOME: fixture.xdgStateHome,
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
     ...(process.platform === 'win32' ? {} : { SHELL: '/bin/sh' }),
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
@@ -429,7 +430,66 @@ class CdpClient {
 
   async fill(selector, value) {
     const expression = `document.querySelector(${JSON.stringify(selector)})`;
+    // Radix may remove a picker before its exiting overlay stops intercepting clicks.
+    // Wait for the actual input hit target instead of clicking through the overlay.
+    const inputHitTest = `(() => {
+      const input = ${expression};
+      if (!input || !input.isConnected || input.disabled || input.readOnly) return false;
+      input.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const rect = input.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2, rect.top + rect.height / 2
+      );
+      return rect.width > 0 && rect.height > 0 &&
+        (hit === input || input.contains(hit));
+    })()`;
+    try {
+      await this.waitFor(inputHitTest, `unobstructed input ${selector}`, 10_000);
+    } catch (error) {
+      const blocker = await this.evaluate(`(() => {
+        const input = ${expression};
+        if (!input) return { missing: true };
+        const rect = input.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2, rect.top + rect.height / 2
+        );
+        return {
+          tag: hit?.tagName ?? null,
+          role: hit?.getAttribute('role') ?? null,
+          testId: hit?.getAttribute('data-testid') ?? null,
+          className: String(hit?.className ?? '').slice(0, 160),
+          activeTag: document.activeElement?.tagName ?? null,
+        };
+      })()`);
+      throw new Error(`Input remained covered: ${selector} ${JSON.stringify(blocker)}`, { cause: error });
+    }
     await this.click(expression);
+    // A Radix dialog can finish restoring focus after its DOM has closed.
+    // Do not send the keyboard accelerator before a real click focuses the input.
+    const focused = `document.activeElement === ${expression}`;
+    for (let attempt = 0; attempt < 3 && !(await this.evaluate(focused)); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      await this.click(expression);
+    }
+    if (!(await this.evaluate(focused))) {
+      // A cold macOS CI Electron window can receive CDP mouse events without
+      // acquiring native keyboard focus. Never bypass a covered/disabled field:
+      // a genuine user would not be able to click it either.
+      const unobstructed = await this.evaluate(inputHitTest);
+      assert(unobstructed, `Input is obscured after real CDP clicks: ${selector}`);
+      if (process.platform === 'darwin') {
+        // Fixture-only focus recovery, separately counted in the E2E receipt.
+        // This does not prove macOS native window activation or click-to-focus.
+        const recovered = await this.evaluate(`(() => {
+          const input = ${expression};
+          input.focus({ preventScroll: true });
+          return document.activeElement === input;
+        })()`);
+        assert(recovered, `Mac CDP input focus recovery failed: ${selector}`);
+        inputNativeFocusFallbacks++;
+      }
+    }
+    await this.waitFor(focused, `input focused for ${selector}`, 1_500);
     const mac = process.platform === 'darwin';
     const modifier = mac ? 4 : 2; // CDP: Meta or Control
     const modifierKey = mac ? 'Meta' : 'Control';
@@ -663,6 +723,44 @@ async function expandCreateAdvancedCli(client, toggle, inputSelector) {
   })()`, 'Advanced CLI toggle fully visible and receiving pointer events');
   await client.click(toggle);
   await client.waitFor(`Boolean(${input})`, 'Advanced CLI input expanded');
+}
+
+/**
+ * Reopen a remounted Create Team page using real CDP clicks. The draft picker
+ * can finish hydrating before the optional section settles; a click made
+ * during that remount can be lost. Re-check the actual expanded control instead
+ * of treating a dispatched click as proof that the section opened.
+ */
+async function restoreCreateAdvancedCliAfterRemount(client, optionalToggle, advancedToggle, inputSelector) {
+  const expanded = `(${optionalToggle})?.getAttribute('aria-expanded') === 'true'`;
+  const input = `document.querySelector(${JSON.stringify(inputSelector)})`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await client.evaluate(`${expanded} && Boolean(${input})`)) return;
+    try {
+      await client.waitFor(
+        "document.querySelector('[data-testid=create-team-page] #launch-team')?.getAttribute('data-state') === 'checked'",
+        'run-after-create option retained on remount', 5_000
+      );
+      if (!(await client.evaluate(expanded))) await client.click(optionalToggle);
+      await client.waitFor(
+        `${expanded} && Boolean(${advancedToggle})`,
+        'real optional launch settings expanded after remount', 5_000
+      );
+      await expandCreateAdvancedCli(client, advancedToggle, inputSelector);
+      await client.waitFor(`${expanded} && Boolean(${input})`,
+        'real Advanced CLI input visible after remount', 5_000);
+      return;
+    } catch (error) {
+      if (attempt !== 2) continue;
+      const state = await client.evaluate(`(() => ({
+        optionalExpanded: ${expanded},
+        launchChecked: document.querySelector('[data-testid=create-team-page] #launch-team')?.getAttribute('data-state'),
+        advancedTogglePresent: Boolean(${advancedToggle}),
+        inputPresent: Boolean(${input}),
+      }))()`);
+      throw new Error(`Cannot reopen remounted Advanced CLI controls: ${JSON.stringify(state)}`, { cause: error });
+    }
+  }
 }
 
 async function setBrowserWindowZoom(inspector, factor) {
@@ -990,20 +1088,42 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   // The name input appears before asynchronous draft state is fully restored.
   // Match the same enabled template-selector hydration gate as the original
   // English E2E, using its actual Traditional Chinese accessible label.
-  await cdp.waitFor(
-    `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="團隊範本"]'); return button && !button.disabled; })()`,
-    'hydrated native zh-TW create-team form', 45_000
-  );
+  await waitForCreateTemplateHydration(cdp, 'hydrated native zh-TW create-team form');
   // A previous config-only draft may persist Solo team; use the real toggle to
   // make the member roster visible instead of mutating component state directly.
   const solo = "document.querySelector('[data-testid=create-team-page] #solo-team')";
   if (await cdp.evaluate(`${solo}?.getAttribute('data-state') === 'checked'`))
     await cdp.click(solo);
   const add = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"新增成員\"]')";
-  await cdp.click(add);
   const row = '[data-testid=create-team-page] [data-role=member-row]';
-  await cdp.waitFor(`document.querySelector(${JSON.stringify(row)})`,
-    'member row created through translated UI');
+  const rowExists = `Boolean(document.querySelector(${JSON.stringify(row)}))`;
+  // In cold Windows Electron a CDP click can be dropped during the first
+  // post-locale-change roster render. Retry only while the row is absent:
+  // never create a second member, and require the real rendered row.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await cdp.evaluate(rowExists)) break;
+    await cdp.waitFor(`(() => {
+      const button = ${add};
+      if (!button || button.disabled) return false;
+      button.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const rect = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2, rect.top + rect.height / 2
+      );
+      return rect.width > 0 && rect.height > 0 &&
+        (hit === button || button.contains(hit));
+    })()`, 'unobstructed translated Add member button', 10_000);
+    await cdp.click(add);
+    try {
+      await cdp.waitFor(rowExists, 'member row created through translated UI', 4_000);
+      break;
+    } catch (error) {
+      if (attempt === 2) throw error;
+    }
+  }
+  assert.equal(await cdp.evaluate(
+    `document.querySelectorAll(${JSON.stringify(row)}).length`
+  ), 1, 'Translated Add member must create exactly one editable row');
   const mcpToggle = `Array.from(document.querySelectorAll(${JSON.stringify(row + ' button')}))
     .find(button => button.getAttribute('aria-label')?.includes('MCP')
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
@@ -1204,6 +1324,60 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
   }
 }
 
+
+const templatePickerTrigger =
+  "document.querySelector('[data-testid=create-team-page] [data-testid=open-create-template-picker]')";
+const templatePickerRoot =
+  "document.querySelector('[data-testid=create-team-template-picker]')";
+
+// A disappearing Radix dialog can leave a focus-restoration event in flight.
+// Retry real clicks only while the picker is still closed; never re-apply a template.
+async function openCreateTemplatePicker(client, label) {
+  const hitTest = `(() => {
+    const button = ${templatePickerTrigger};
+    if (!button || button.disabled) return false;
+    button.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const rect = button.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit === button || button.contains(hit);
+  })()`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await client.evaluate(`Boolean(${templatePickerRoot})`)) return;
+    await client.waitFor(hitTest, `${label}: picker trigger unobstructed`, 15_000);
+    await client.click(templatePickerTrigger);
+    try {
+      await client.waitFor(`Boolean(${templatePickerRoot})`, `${label}: picker opened`, 3_500);
+      return;
+    } catch (error) {
+      if (await client.evaluate(`Boolean(${templatePickerRoot})`)) return;
+      if (attempt === 2) throw error;
+    }
+  }
+}
+
+// The template button remains clickable while the four persisted drafts load.
+// The picker itself disables its options until all drafts have hydrated.
+// Verify the real renderer gate, then dismiss it without changing the draft.
+async function waitForCreateTemplateHydration(client, label) {
+  await client.waitFor(
+    `${templatePickerTrigger} && !${templatePickerTrigger}.disabled`,
+    `${label}: picker trigger`, 45_000
+  );
+  await openCreateTemplatePicker(client, label);
+  await client.waitFor(
+    "document.querySelector('[data-testid=create-team-template-picker] [data-testid=create-template-option-none]')?.disabled === false",
+    label, 45_000
+  );
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+  });
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+  });
+  await client.waitFor(`!${templatePickerRoot}`, `${label}: picker dismissed`);
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -1242,10 +1416,7 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'opened');
     // The input can render before the asynchronous persisted form and prompt drafts hydrate.
     // Wait for the real UI's hydration gate before testing per-name defaults.
-    await cdp.waitFor(
-      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
-      'create-team form and prompt draft hydration'
-    );
+    await waitForCreateTemplateHydration(cdp, 'create-team form and prompt draft hydration');
 
     log('restore unedited Advanced CLI defaults for a saved team name');
     const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
@@ -1259,11 +1430,10 @@ async function main() {
     const optionalSettingsButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.includes('Optional launch settings')
         && button.getBoundingClientRect().width > 0)`;
-    await cdp.click(optionalSettingsButton);
     const createAdvancedToggle = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.trim() === 'Advanced' && !button.disabled
         && button.getBoundingClientRect().width > 0)`;
-    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     try {
       await cdp.waitFor(
         `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
@@ -1313,15 +1483,8 @@ async function main() {
     await cdp.evaluate('delete window.__createPageBeforeBack');
     // Resume hydrates the form and text drafts independently of restoring its name.
     // Do not open the optional controls while they may still remount.
-    await cdp.waitFor(
-      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
-      'resumed creation form and text drafts hydrated'
-    );
-    const optionalExpandedAfterResume = await cdp.evaluate(
-      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
-    );
-    if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
-    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    await waitForCreateTemplateHydration(cdp, 'resumed creation form and text drafts hydrated');
+    await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     try {
       await cdp.waitFor(
         `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
@@ -1555,12 +1718,7 @@ async function main() {
     // A pane split can remount CreateTeamDialog: verify session-only CLI edits survive.
     const inputStillMounted = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
     if (!inputStillMounted) {
-      const optionalButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
-        .find(button => button.textContent?.includes('Optional launch settings')
-          && button.getBoundingClientRect().width > 0)`;
-      const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
-      if (!expanded) await cdp.click(optionalButton);
-      await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+      await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     }
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
@@ -1632,15 +1790,8 @@ async function main() {
       'restored creation draft for config-only save');
     // Verify the documented debug override survives actual renderer -> IPC ->
     // persisted metadata. The fixture never launches tmux or a paid provider.
-    await cdp.waitFor(
-      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
-      'hydrated form before native teammate-mode override'
-    );
-    const overrideSettingsExpanded = await cdp.evaluate(
-      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
-    );
-    if (!overrideSettingsExpanded) await cdp.click(optionalSettingsButton);
-    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    await waitForCreateTemplateHydration(cdp, 'hydrated form before native teammate-mode override');
+    await restoreCreateAdvancedCliAfterRemount(cdp, optionalSettingsButton, createAdvancedToggle, customArgsSelector);
     const allowedTeammateArgs = '--max-turns 5 --teammate-mode tmux';
     await cdp.fill(customArgsSelector, allowedTeammateArgs);
     await cdp.waitFor(
@@ -1818,35 +1969,29 @@ async function main() {
       "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
       ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
-      const trigger = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')";
-      const option = "Array.from(document.querySelectorAll('[role=option]'))" +
-        ".find(item => item.textContent?.includes('Software Product Team'))";
-      // A ready Radix trigger can miss one native click while the creation form
-      // commits its restored draft. Re-check the real hit target before retrying.
-      const triggerReady = "(() => { const button = " + trigger +
-        "; if (!button?.isConnected || button.disabled) return false;" +
-        " button.scrollIntoView({block:'center',inline:'nearest'});" +
-        " const rect=button.getBoundingClientRect();" +
-        " const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);" +
-        " return rect.width>0 && rect.height>0 && (hit===button || button.contains(hit)); })()";
-      let optionReady = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await cdp.waitFor(triggerReady, 'visible unobstructed team template trigger', 15_000);
-        await cdp.click(trigger);
-        try {
-          await cdp.waitFor(option, 'Software Product Team option', 4_000);
-          optionReady = true;
-          break;
-        } catch (error) {
-          const open = await cdp.evaluate(
-            trigger + "?.getAttribute('aria-expanded') === 'true'"
-          );
-          // An open menu without the expected item is a genuine catalog/locale
-          // mismatch, not a missed click. Do not toggle it closed to hide it.
-          if (open || attempt === 2) throw error;
-        }
+      const option =
+        "document.querySelector('[data-testid=create-template-option-builtin-software-product]')";
+      // The new template picker is a dialog, not a combobox. Cancellation of
+      // the nested confirmation intentionally leaves the picker open.
+      if (!(await cdp.evaluate(`Boolean(${templatePickerRoot})`))) {
+        await openCreateTemplatePicker(cdp, 'select built-in team template');
       }
-      assert(optionReady, 'Team template options did not open');
+      await cdp.waitFor(
+        `${option} && !${option}.disabled`,
+        'hydrated Software Product Team template tile'
+      );
+      // The nested confirmation can still cover its parent picker after
+      // Cancel. A DOM-ready option is not necessarily a native click target.
+      await cdp.waitFor(
+        `(() => {
+          const button = ${option};
+          const rect = button?.getBoundingClientRect();
+          if (!rect || button.disabled || rect.width <= 0 || rect.height <= 0) return false;
+          const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          return hit === button || button.contains(hit);
+        })()`,
+        'unobstructed template tile after confirmation', 15_000
+      );
       await cdp.click(option);
       await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };
@@ -1869,10 +2014,42 @@ async function main() {
       ),
       'Template confirmation focus escaped into the background form'
     );
-    await cdp.click(
+    const cancelTemplateButton =
       `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
-      ".find(button => button.textContent?.trim() === 'Cancel')"
-    );
+      ".find(button => button.textContent?.trim() === 'Cancel')";
+    const confirmationDismissed = `!Boolean(${templateConfirmationExpression})`;
+    // The Radix focus trap may still be settling after Tab. A dispatched CDP
+    // click is not proof of cancellation: check the native hit target and the
+    // real dialog state before accepting the result or attempting another click.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await cdp.waitFor(`(() => {
+        const button = ${cancelTemplateButton};
+        if (!button?.isConnected || button.disabled) return false;
+        button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+        const rect = button.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const hit = document.elementFromPoint(x, y);
+        return rect.width > 0 && rect.height > 0 &&
+          x >= 0 && x < innerWidth && y >= 0 && y < innerHeight &&
+          Boolean(hit && (hit === button || button.contains(hit)));
+      })()`, 'unobstructed template Cancel button', 15_000);
+      await cdp.click(cancelTemplateButton);
+      try {
+        await cdp.waitFor(confirmationDismissed,
+          'template replacement confirmation dismissed after Cancel', 3_000);
+        break;
+      } catch (error) {
+        if (attempt !== 2) continue;
+        const state = await cdp.evaluate(`(() => ({
+          confirmationPresent: Boolean(${templateConfirmationExpression}),
+          cancelPresent: Boolean(${cancelTemplateButton}),
+          focusedElement: document.activeElement?.outerHTML?.slice(0, 250) ?? null,
+        }))()`);
+        throw new Error(`Template Cancel did not dismiss confirmation: ${JSON.stringify(state)}`,
+          { cause: error });
+      }
+    }
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
@@ -1885,6 +2062,23 @@ async function main() {
       JSON.stringify('Design, build and validate apps, websites and digital products.'),
       'template applied after explicit confirmation'
     );
+    await cdp.waitFor(`!${templatePickerRoot}`, 'picker dismissed after applying template');
+    await openCreateTemplatePicker(cdp, 'reopen applied team template');
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-template-option-builtin-software-product]')?.getAttribute('aria-pressed') === 'true'",
+      'applied built-in selection in reopened picker'
+    );
+    await cdp.waitFor(
+      "document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')",
+      'applied built-in prompt retained in editable form'
+    );
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    await cdp.waitFor(`!${templatePickerRoot}`, 'verified template picker dismissed');
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
@@ -2060,6 +2254,7 @@ async function main() {
       nativeElectronZoom200Rendered: true,
       splitPaneSingleEditor: true,
       macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
+      macInputFocusFallbackCount: inputNativeFocusFallbacks,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();

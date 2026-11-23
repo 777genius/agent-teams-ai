@@ -61,7 +61,6 @@ export interface InternalStorageApplicationCommandLedgerBackend {
 }
 
 export interface InternalStorageCustomTeamTemplatesBackend {
-  /** No JSON fallback: custom templates have no legacy store. */
   gateway: CustomTeamTemplateStorageGateway;
 }
 
@@ -80,7 +79,6 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable, so callers must leave durable commands off.
    */
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
-  /** SQLite gateway, or null when the worker bundle is unavailable. */
   customTeamTemplatesBackend: InternalStorageCustomTeamTemplatesBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;

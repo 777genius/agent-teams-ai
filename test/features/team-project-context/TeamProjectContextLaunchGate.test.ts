@@ -69,7 +69,7 @@ describe('isStoppedTeamRuntime and isConfirmedStoppedTeamRuntime', () => {
   });
 
   it('does not take a stale ready or disconnected progress, or a run id that is not cleared yet, for stopped', () => {
-    expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf('ready') }))).toBe(false);
+    expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-second' }) }))).toBe(false);
     expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf('disconnected') }))).toBe(false);
     // The transient right after a stop: the tracked run id is not cleared yet.
     expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: null }))).toBe(false);
@@ -85,6 +85,55 @@ describe('isStoppedTeamRuntime and isConfirmedStoppedTeamRuntime', () => {
 });
 
 describe('TeamProjectContextLaunchGate', () => {
+  describe('findRunningContextForEdit', () => {
+    it('selects the one live project and permits an entirely stopped team', async () => {
+      const f = fixture();
+      await expect(f.gate.findRunningContextForEdit('builders')).resolves.toBeNull();
+      f.states.set('ptc-second', {
+        teamName: 'ptc-second', isAlive: true, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-second' }),
+      });
+      await expect(f.gate.findRunningContextForEdit('builders')).resolves.toEqual({ executionTeamName: 'ptc-second', runId: 'run-x' });
+    });
+
+    it('requires the tracked run to be alive and report the same ready identity', async () => {
+      const f = fixture();
+      f.runtime.hasProvisioningRun.mockImplementation((name) => name === 'ptc-first');
+      f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: true, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-first' }) });
+      await expect(f.gate.findRunningContextForEdit('builders')).resolves.toEqual({ executionTeamName: 'ptc-first', runId: 'run-x' });
+      f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: true, runId: 'another', progress: progressOf('ready', { teamName: 'ptc-first' }) });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('launching');
+      f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: false, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-first' }) });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('launching');
+    });
+
+    it('refuses multiple running projects or a logical runtime', async () => {
+      const f = fixture();
+      f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: true, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-first' }) });
+      f.states.set('ptc-second', { teamName: 'ptc-second', isAlive: true, runId: 'run-x', progress: progressOf('ready', { teamName: 'ptc-second' }) });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('more than one');
+      f.states.clear();
+      f.states.set('builders', { teamName: 'builders', isAlive: true, runId: 'run-3', progress: null });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('running');
+    });
+
+    it('refuses provisioning, reserved copies and unresolved stopped ownership', async () => {
+      const f = fixture();
+      f.runtime.hasProvisioningRun.mockImplementation((name) => name === 'ptc-first');
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('launching');
+      f.runtime.hasProvisioningRun.mockReturnValue(false);
+      f.contexts.list.mockResolvedValue([first, { ...second, state: 'reserved' }]);
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('prepared');
+      f.contexts.list.mockResolvedValue([first, second]);
+      f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: false, runId: 'unreleased', progress: null });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('running');
+      f.states.set('ptc-first', {
+        teamName: 'ptc-first', isAlive: true, runId: 'retained',
+        progress: progressOf('failed', { retainedSecondaryRuntime: true }),
+      });
+      await expect(f.gate.findRunningContextForEdit('builders')).rejects.toThrow('running');
+    });
+  });
+
   it('allows B only when the logical team and A have confirmed stopped ownership', async () => {
     const f = fixture();
     await expect(f.gate.assertOtherContextsStopped('builders', 'ptc-second'))

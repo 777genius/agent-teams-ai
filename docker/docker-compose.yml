@@ -6,13 +6,6 @@
 #
 # Then open http://localhost:3456 in your browser.
 #
-# Data:
-#   /data/.claude   — your Claude session data, mounted read-only (CLAUDE_DIR).
-#   /data/app-data  — the app's own data (saved team templates, internal
-#                     storage), kept in the named volume `app-data` so it
-#                     survives container replacement. Do not remove this
-#                     volume unless you intend to discard that data.
-#
 # Security note:
 #   The standalone server has zero outbound network calls — no telemetry,
 #   no analytics, no auto-updater. For maximum isolation, uncomment
@@ -25,11 +18,10 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     ports:
-      - '3456:3456'
+      - "3456:3456"
     volumes:
       - ${CLAUDE_DIR:-~/.claude}:/data/.claude:ro
-      # Persistent app data (see "Data" above). Named volume, read-write.
-      - app-data:/data/app-data
+      - agent-teams-app-data:/data/app-data
     environment:
       - NODE_ENV=production
       - CLAUDE_ROOT=/data/.claude
@@ -41,4 +33,4 @@ services:
     # network_mode: "none"
 
 volumes:
-  app-data:
+  agent-teams-app-data:

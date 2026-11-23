@@ -287,6 +287,44 @@ function useCase(
 }
 
 describe('SaveCustomTeamTemplateUseCase', () => {
+  it('dispatches only one write for simultaneous confirmations of the same token', async () => {
+    let begin!: () => void;
+    let finish!: (result: CreateCustomTeamTemplateRecordResult) => void;
+    const started = new Promise<void>((resolve) => {
+      begin = resolve;
+    });
+    const writing = new Promise<CreateCustomTeamTemplateRecordResult>((resolve) => {
+      finish = resolve;
+    });
+    const fixture = gatewayFixture({
+      create: [{ status: 'created', template: storedTemplate(PREVIEW_ID) }],
+    });
+    const write = vi.fn(() => {
+      begin();
+      return writing;
+    });
+    const gateway = { ...fixture.gateway, customTeamTemplateCreate: write };
+    const preview = await preparedPreview({ gateway });
+    const save = useCase({ gateway }, preview.store);
+
+    const first = save.execute({ previewToken: preview.token });
+    await started;
+    expect(preview.store.isSaveInFlight(preview.token)).toBe(true);
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'unresolvedWriteOutcome',
+      templateId: preview.stateTemplateId,
+    });
+    expect(write).toHaveBeenCalledTimes(1);
+
+    finish({ status: 'created', template: storedTemplate(PREVIEW_ID) });
+    await expect(first).resolves.toEqual({
+      status: 'created',
+      template: storedTemplate(PREVIEW_ID),
+    });
+    expect(preview.store.isSaveInFlight(preview.token)).toBe(false);
+    expect(preview.store.hasUnresolvedWrite(preview.token)).toBe(false);
+  });
+
   it('saves the confirmed projection under the stable preview identity', async () => {
     const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate() }] });
     const preview = await preparedPreview({ gateway: fixture.gateway });
@@ -1103,7 +1141,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
       fixture.requests.every((request) => request.template.templateId === preview.stateTemplateId)
     ).toBe(true);
 
-    // Re-check keeps reconciling the original operation, not a fresh one.
+    // The writer has already settled. A fresh successful not-found read can
+    // prove absence, but it must still reconcile the original frozen identity.
     const read = vi.fn().mockResolvedValue({ status: 'notFound' as const });
     fixture.getById.mockImplementation(read);
     await expect(
@@ -1114,6 +1153,25 @@ describe('SaveCustomTeamTemplateUseCase', () => {
       }).execute({ previewToken: preview.token })
     ).resolves.toEqual({ status: 'notSaved', templateId: preview.stateTemplateId });
     expect(read).toHaveBeenCalledWith({ templateId: preview.stateTemplateId });
+
+    // Clearing uncertainty must not allow either editable field to rebind the token.
+    for (const override of [{ name: 'Different Name' }, { description: 'Other notes' }]) {
+      await expect(save.execute({ previewToken: preview.token, ...override })).resolves.toEqual({
+        status: 'validationFailed',
+        issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+      });
+    }
+    expect(fixture.create).toHaveBeenCalledTimes(1);
+
+    // Only the identical request is now safe to retry; it retains the original id.
+    const template = storedTemplate(preview.stateTemplateId);
+    fixture.create.mockResolvedValueOnce({ status: 'created', template });
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'created',
+      template,
+    });
+    expect(fixture.create).toHaveBeenCalledTimes(2);
+    expect(fixture.create).toHaveBeenLastCalledWith(fixture.requests[0]);
   });
 
   it('allows only the identical request on an exact-identity retry after an uncertain write', async () => {
@@ -1380,7 +1438,6 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         status: 'unresolvedWriteOutcome',
         templateId: preview.stateTemplateId,
       });
-      expect(fixture.create).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

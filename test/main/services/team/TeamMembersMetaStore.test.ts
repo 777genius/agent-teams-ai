@@ -15,6 +15,33 @@ vi.mock('@main/utils/pathDecoder', () => ({
 import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
 
 describe('TeamMembersMetaStore', () => {
+  it('reads a pinned team root and filters known CLI suffix artifacts only when explicitly allowed', async () => {
+    const store = new TeamMembersMetaStore();
+    const stableBase = path.join(tempDir, 'snapshot-teams');
+    const name = 'snapshot-team';
+    const directory = path.join(stableBase, name);
+    await fs.mkdir(directory, { recursive: true });
+    await fs.writeFile(
+      path.join(directory, 'members.meta.json'),
+      JSON.stringify({
+        version: 1,
+        members: [
+          { name: 'alice', role: 'Reviewer' },
+          { name: 'alice-2', role: 'Reviewer' },
+        ],
+      })
+    );
+
+    expect(await store.getMeta(name, { requireCompleteMembers: true })).toBeNull();
+    expect(await store.getMeta(name, { requireCompleteMembers: true }, stableBase)).toBeNull();
+    const result = await store.getMeta(
+      name,
+      { requireCompleteMembers: true, allowCliAutoSuffixArtifacts: true },
+      stableBase
+    );
+    expect(result?.members.map((member) => member.name)).toEqual(['alice']);
+  });
+
   let tempDir = '';
 
   beforeEach(async () => {

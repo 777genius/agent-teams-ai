@@ -68,8 +68,6 @@ export const SaveAsTemplateDialog = ({
     attempt,
     canSave,
     canRecheck,
-    libraryMutationPending,
-    mutationStorageAvailable,
     busy,
     setName,
     setDescription,
@@ -162,8 +160,8 @@ export const SaveAsTemplateDialog = ({
         retry: false,
       };
     }
-    if (attemptStatus === 'resolvedElsewhere') {
-      return { message: t('customTemplates.states.resolvedElsewhere'), tone: 'info', retry: false };
+    if (attemptStatus === 'notSaved') {
+      return { message: t('customTemplates.states.notSaved'), tone: 'info', retry: false };
     }
     if (attemptStatus === 'idConflict') {
       return {
@@ -192,10 +190,6 @@ export const SaveAsTemplateDialog = ({
   })();
 
   const saving = attemptStatus === 'saving' || attemptStatus === 'rechecking';
-  const outcomeUnknown =
-    attemptStatus === 'unresolved' ||
-    attemptStatus === 'requestFailed' ||
-    (attempt?.status === 'unavailable' && attempt.during === 'recheck');
   const saveDisabled = !canSave || saving;
   // Only an in-flight write may block dismissal: a slow preview must never
   // trap the dialog.
@@ -229,16 +223,6 @@ export const SaveAsTemplateDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {libraryMutationPending ? (
-            <div role="alert" data-testid="template-library-unresolved" className="text-sm">
-              {mutationStorageAvailable
-                ? t('customTemplates.states.pendingProfileBody')
-                : t('customTemplates.states.mutationStorageUnavailable')}
-              {mutationStorageAvailable ? (
-                <p>{t('customTemplates.states.pendingSaveHelp')}</p>
-              ) : null}
-            </div>
-          ) : null}
           {noticeBox ? (
             <div
               role="status"
@@ -312,7 +296,7 @@ export const SaveAsTemplateDialog = ({
             <Input
               id="custom-template-name"
               value={name}
-              disabled={saving || saved !== null || outcomeUnknown}
+              disabled={saving || saved !== null}
               aria-invalid={nameIssues.length > 0 || undefined}
               aria-describedby={nameIssues.length > 0 ? 'custom-template-name-error' : undefined}
               onChange={(event) => setName(event.target.value)}
@@ -331,7 +315,7 @@ export const SaveAsTemplateDialog = ({
             <Textarea
               id="custom-template-description"
               value={description}
-              disabled={saving || saved !== null || outcomeUnknown}
+              disabled={saving || saved !== null}
               aria-invalid={descriptionIssues.length > 0 || undefined}
               aria-describedby={
                 descriptionIssues.length > 0 ? 'custom-template-description-error' : undefined

@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
+import { TEAM_TEMPLATE_ICONS, TemplateApplyConfirmDialog } from '@features/team-templates/renderer';
 import { Button } from '@renderer/components/ui/button';
-import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
 import {
@@ -19,6 +20,10 @@ import type { CustomTeamTemplateV1 } from '@features/custom-team-templates/contr
 
 export interface CreateTeamTemplatePickerProps {
   open: boolean;
+  /** Prevent selection changes while Create Team submission is in flight. */
+  disabled?: boolean;
+  /** Protect existing draft fields (including No template, which clears them). */
+  confirmBeforeApply?: boolean;
   initialSelection?: string;
   /** True once the persisted template selection has been restored (or confirmed absent). */
   initialSelectionReady?: boolean;
@@ -48,6 +53,8 @@ function resolveInitialSelection(initialSelection: string | undefined): string {
 
 export const CreateTeamTemplatePicker = ({
   open,
+  disabled = false,
+  confirmBeforeApply = false,
   initialSelection,
   initialSelectionReady,
   hydrated,
@@ -63,10 +70,10 @@ export const CreateTeamTemplatePicker = ({
   const [selection, setSelection] = useState<string>(() =>
     resolveInitialSelection(initialSelection)
   );
-  // A deliberate user choice always outranks a draft selection that arrives
-  // later: draft persistence restores asynchronously, long after mount.
-  const userSelectionMadeRef = useRef(false);
+  // Parent owns the persisted selection: both the header shortcut and this
+  // catalogue must reflect one applied template without re-applying the draft.
   const [lastCustomSnapshot, setLastCustomSnapshot] = useState<CustomTeamTemplateV1 | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
 
   // Hydration readiness: while the persisted selection has not been restored,
   // option changes are blocked so they cannot race with the pending restore.
@@ -79,17 +86,18 @@ export const CreateTeamTemplatePicker = ({
     (loading === undefined ? undefined : !loading) ??
     true;
 
-  // Draft persistence restores the saved selection after mount. Adopt it only
-  // while the picker still shows its default, so the visible selection matches
-  // the restored prompt/members without re-applying the template (restoration
-  // must never overwrite user-edited prompt/member data).
+  // Hydration blocks interactions until the parent has restored the selection.
+  // Keep both template entry points synchronized without replacing user edits.
   useEffect(() => {
-    if (userSelectionMadeRef.current) return;
     setSelection((current) => {
       const next = resolveInitialSelection(initialSelection);
       return current === next ? current : next;
     });
   }, [initialSelection]);
+
+  useEffect(() => {
+    if (!open || !selectionReady || disabled) setPendingSelection(null);
+  }, [open, selectionReady, disabled]);
 
   const customs = state.status === 'ready' || state.status === 'partial' ? state.templates : [];
   const libraryLoading = state.status === 'idle' || state.status === 'loading';
@@ -113,10 +121,8 @@ export const CreateTeamTemplatePicker = ({
       : null;
   const previewCustom = selectedCustom ?? (staleCustomId ? lastCustomSnapshot : null);
 
-  const handleSelect = (value: string): void => {
-    if (!selectionReady) return;
-    userSelectionMadeRef.current = true;
-    if (value === selection) return;
+  const applySelection = (value: string): void => {
+    if (!open || !selectionReady || disabled || value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
       customs,
@@ -142,6 +148,23 @@ export const CreateTeamTemplatePicker = ({
     }
   };
 
+  const handleSelect = (value: string): void => {
+    if (!open || !selectionReady || disabled || value === selection || pendingSelection !== null)
+      return;
+    const result = resolveCreateTeamTemplateDraft(value, {
+      builtins: TEAM_TEMPLATES,
+      customs,
+    });
+    if (result.status !== 'none' && result.status !== 'builtin' && result.status !== 'custom') {
+      return;
+    }
+    if (confirmBeforeApply) {
+      setPendingSelection(value);
+    } else {
+      applySelection(value);
+    }
+  };
+
   const optionClass = (active: boolean): string =>
     `rounded-md border p-3 text-left transition-colors ${
       active
@@ -151,15 +174,14 @@ export const CreateTeamTemplatePicker = ({
 
   return (
     <div data-testid="create-team-template-picker" className="space-y-3">
-      <div>
-        <p className="text-sm font-medium text-[var(--color-text)]">
-          {t('customTemplates.createFromTemplate.title')}
-        </p>
-        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-          {t('customTemplates.createFromTemplate.description')}
-        </p>
-      </div>
-
+      <TemplateApplyConfirmDialog
+        open={pendingSelection !== null && open && selectionReady && !disabled}
+        onCancel={() => setPendingSelection(null)}
+        onConfirm={() => {
+          if (pendingSelection !== null) applySelection(pendingSelection);
+          setPendingSelection(null);
+        }}
+      />
       {!selectionReady ? (
         <p
           role="status"
@@ -174,7 +196,7 @@ export const CreateTeamTemplatePicker = ({
         type="button"
         variant="ghost"
         data-testid="create-template-option-none"
-        disabled={!selectionReady}
+        disabled={!selectionReady || disabled}
         aria-pressed={selection === CREATE_TEAM_TEMPLATE_NONE_VALUE}
         aria-busy={!selectionReady}
         className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(selection === CREATE_TEAM_TEMPLATE_NONE_VALUE)}`}
@@ -182,9 +204,6 @@ export const CreateTeamTemplatePicker = ({
       >
         <span className="text-sm font-semibold text-[var(--color-text)]">
           {t('customTemplates.createFromTemplate.noneLabel')}
-        </span>
-        <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
-          {t('customTemplates.createFromTemplate.noneHint')}
         </span>
       </Button>
 
@@ -198,23 +217,27 @@ export const CreateTeamTemplatePicker = ({
               template.id as Parameters<typeof builtinTemplateSelectionValue>[0]
             );
             const active = selection === value;
+            const Icon = TEAM_TEMPLATE_ICONS[template.id];
             return (
               <Button
                 key={template.id}
                 type="button"
                 variant="ghost"
                 data-testid={`create-template-option-builtin-${template.id}`}
-                disabled={!selectionReady}
+                disabled={!selectionReady || disabled}
                 aria-pressed={active}
                 aria-busy={!selectionReady}
                 className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(active)}`}
                 onClick={() => handleSelect(value)}
               >
                 <span className="flex items-start justify-between gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-text)]">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
+                    <Icon
+                      className="size-4 shrink-0 text-[var(--color-text-muted)]"
+                      aria-hidden="true"
+                    />
                     {t(`templates.names.${template.id}`)}
                   </span>
-                  <ShieldCheck className="size-4 shrink-0 text-sky-400" />
                 </span>
                 <span className="mt-1 line-clamp-2 block text-xs text-[var(--color-text-muted)]">
                   {t(`templates.descriptions.${template.id}`)}
@@ -284,7 +307,7 @@ export const CreateTeamTemplatePicker = ({
                   type="button"
                   variant="ghost"
                   data-testid={`create-template-option-custom-${template.templateId}`}
-                  disabled={!selectionReady}
+                  disabled={!selectionReady || disabled}
                   aria-pressed={active}
                   aria-busy={!selectionReady}
                   className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(active)}`}
@@ -385,7 +408,7 @@ export const CreateTeamTemplatePicker = ({
           </>
         ) : (
           <p className="text-[var(--color-text-muted)]">
-            {t('customTemplates.createFromTemplate.noneHint')}
+            {t('customTemplates.createFromTemplate.noneLabel')}
           </p>
         )}
       </div>

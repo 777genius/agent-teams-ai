@@ -20,3 +20,5 @@ export const TEMPLATE_TEAM_PROMPT_MAX_LENGTH = 200_000;
 export const TEMPLATE_MAX_MEMBERS = 100;
 export const TEMPLATE_MEMBER_ROLE_MAX_LENGTH = 128;
 export const TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH = 200_000;
+/** 240 KiB Create Team cap minus room for team identity, provider and generated metadata. */
+export const TEMPLATE_MAX_CREATE_DRAFT_BYTES = 220 * 1024;

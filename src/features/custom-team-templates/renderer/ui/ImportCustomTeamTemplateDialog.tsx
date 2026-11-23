@@ -14,17 +14,9 @@ import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { AlertTriangle, Download, Upload } from 'lucide-react';
 
-import {
-  beginTemplateMutation,
-  finishTemplateMutation,
-  getPendingTemplateMutation,
-  usePendingTemplateMutations,
-  wasTemplateMutationResolved,
-} from '../hooks/pendingTemplateMutation';
 import { useTemplateFileOperations } from '../hooks/useTemplateFileOperations';
 import { useTemplateImport } from '../hooks/useTemplateImport';
 
-import type { PendingTemplateMutation } from '../hooks/pendingTemplateMutation';
 import type {
   CustomTeamTemplateValidationIssue,
   ImportCustomTeamTemplateFromBrowserFileResult,
@@ -47,6 +39,7 @@ type ImportOutcomeResult =
 interface ImportCustomTeamTemplateDialogProps {
   open: boolean;
   onClose: () => void;
+  startImmediately?: boolean;
 }
 
 type ImportStage = 'idle' | 'importing' | 'conflict' | 'done';
@@ -65,7 +58,6 @@ type ImportErrorState =
   | 'validationFailed'
   | 'storageUnavailable'
   | 'templateIdConflict'
-  | 'resolvedElsewhere'
   | 'unresolvedWriteOutcome';
 
 /** The dialog state one finished import attempt maps onto. */
@@ -92,6 +84,7 @@ const NO_ISSUES: readonly CustomTeamTemplateValidationIssue[] = [];
 function describeImportOutcome(result: ImportOutcomeResult): ImportOutcomeView {
   switch (result.status) {
     case 'imported':
+    case 'bundleImported':
       return { stage: 'done', errorState: null, issues: NO_ISSUES };
     case 'nameConflict':
       return { stage: 'conflict', errorState: null, issues: NO_ISSUES };
@@ -145,12 +138,12 @@ function describeImportOutcome(result: ImportOutcomeResult): ImportOutcomeView {
 export const ImportCustomTeamTemplateDialog = ({
   open,
   onClose,
+  startImmediately = false,
 }: ImportCustomTeamTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { platform, desktopFile, browserFile } = useTemplateFileOperations();
   const { importTemplate } = useTemplateImport();
-  const { operations: pendingMutations, storageAvailable } = usePendingTemplateMutations();
 
   const [importStage, setImportStage] = useState<ImportStage>('idle');
   const [errorState, setErrorState] = useState<ImportErrorState | null>(null);
@@ -166,26 +159,18 @@ export const ImportCustomTeamTemplateDialog = ({
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastMutationRef = useRef<PendingTemplateMutation | null>(null);
-
-  useEffect(() => {
-    if (
-      errorState === 'unresolvedWriteOutcome' &&
-      lastMutationRef.current &&
-      wasTemplateMutationResolved(lastMutationRef.current)
-    ) {
-      setErrorState('resolvedElsewhere');
-    }
-  }, [errorState, pendingMutations, storageAvailable]);
+  const autoStarted = useRef(false);
+  const [bundleResult, setBundleResult] = useState<{
+    imported: number;
+    skipped: number;
+    stopped: boolean;
+  } | null>(null);
 
   const isBusy = importStage === 'importing' || renameBusy;
   // A dispatched import whose outcome is unknown may already have committed, so
-  // Closing the dialog cannot release a possibly dispatched import.
-  const isUnresolved =
-    errorState === 'unresolvedWriteOutcome' ||
-    errorState === 'resolvedElsewhere' ||
-    pendingMutations.length > 0 ||
-    !storageAvailable;
+  // every entry point that could send another write stays blocked until the user
+  // closes the dialog and starts a fresh import.
+  const isUnresolved = errorState === 'unresolvedWriteOutcome';
 
   const resetFileInput = useCallback(() => {
     if (fileInputRef.current) {
@@ -195,6 +180,7 @@ export const ImportCustomTeamTemplateDialog = ({
 
   const handleClose = useCallback(() => {
     setImportStage('idle');
+    setBundleResult(null);
     setErrorState(null);
     setIssues([]);
     setConflictPortable(null);
@@ -243,60 +229,43 @@ export const ImportCustomTeamTemplateDialog = ({
     }
   };
 
-  const handleImportResult = useCallback(
-    (result: ImportOutcomeResult, operation: PendingTemplateMutation) => {
-      if (result.status === 'unresolvedWriteOutcome' && wasTemplateMutationResolved(operation)) {
-        setImportStage('idle');
-        setErrorState('resolvedElsewhere');
-        setIssues([]);
-        return;
-      }
-      const view = describeImportOutcome(result);
-      setImportStage(view.stage);
-      setErrorState(view.errorState);
-      setIssues(view.issues);
-      if (result.status === 'nameConflict') {
-        // The reviewed portable content is retained so a rename retry never has to
-        // re-read or re-parse the untrusted file. Stale rename validation issues
-        // from a previous conflict must not leak into the new one.
-        setConflictPortable(result.portable);
-        setConflictExistingId(result.existingTemplateId);
-        setRenameName(result.portable.name);
-        setRenameIssues([]);
-      }
-    },
-    []
-  );
+  const handleImportResult = useCallback((result: ImportOutcomeResult) => {
+    const view = describeImportOutcome(result);
+    setImportStage(view.stage);
+    setErrorState(view.errorState);
+    setIssues(view.issues);
+    if (result.status === 'bundleImported') setBundleResult(result);
+    if (result.status === 'nameConflict') {
+      // The reviewed portable content is retained so a rename retry never has to
+      // re-read or re-parse the untrusted file. Stale rename validation issues
+      // from a previous conflict must not leak into the new one.
+      setConflictPortable(result.portable);
+      setConflictExistingId(result.existingTemplateId);
+      setRenameName(result.portable.name);
+      setRenameIssues([]);
+    }
+  }, []);
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      if (
-        errorState === 'unresolvedWriteOutcome' ||
-        errorState === 'resolvedElsewhere' ||
-        getPendingTemplateMutation()
-      )
-        return;
-      if (platform !== 'browser' || !browserFile) return;
-      const operation = beginTemplateMutation({ kind: 'import', label: file.name });
-      if (!operation) {
-        setErrorState('storageUnavailable');
-        return;
-      }
-      lastMutationRef.current = operation;
+      if (errorState === 'unresolvedWriteOutcome') return;
 
       setImportStage('importing');
       setErrorState(null);
       setIssues([]);
 
       try {
-        const result = await browserFile.importFromFile(file);
-        if (result.status !== 'unresolvedWriteOutcome') finishTemplateMutation(operation);
-        handleImportResult(result, operation);
+        if (platform !== 'browser' || !browserFile) {
+          setImportStage('idle');
+          return;
+        }
+        handleImportResult(await browserFile.importFromFile(file));
       } catch {
-        // The adapter also writes; a rejection cannot prove it was not dispatched.
-        handleImportResult({ status: 'unresolvedWriteOutcome', templateId: '' }, operation);
+        // A rejected browser read is definitive: nothing was written, so the
+        // dialog must offer a retry instead of staying busy.
+        handleImportResult({ status: 'transportFailed' });
       } finally {
         resetFileInput();
       }
@@ -306,18 +275,7 @@ export const ImportCustomTeamTemplateDialog = ({
 
   const handleDesktopImport = useCallback(async () => {
     if (!desktopFile) return;
-    if (
-      errorState === 'unresolvedWriteOutcome' ||
-      errorState === 'resolvedElsewhere' ||
-      getPendingTemplateMutation()
-    )
-      return;
-    const operation = beginTemplateMutation({ kind: 'import', label: '' });
-    if (!operation) {
-      setErrorState('storageUnavailable');
-      return;
-    }
-    lastMutationRef.current = operation;
+    if (errorState === 'unresolvedWriteOutcome') return;
 
     setImportStage('importing');
     setErrorState(null);
@@ -325,31 +283,36 @@ export const ImportCustomTeamTemplateDialog = ({
 
     try {
       const result = await desktopFile.importFromFile();
-      if (result.status !== 'unresolvedWriteOutcome') finishTemplateMutation(operation);
-      handleImportResult(result, operation);
+      if (result.status === 'cancelled') {
+        handleClose();
+        return;
+      }
+      handleImportResult(result);
     } catch {
       // This IPC call also writes the template. A rejected reply cannot prove
       // the write did not commit; picker/read failures already have typed results.
-      handleImportResult({ status: 'unresolvedWriteOutcome', templateId: '' }, operation);
+      handleImportResult({ status: 'unresolvedWriteOutcome', templateId: '' });
     }
-  }, [desktopFile, handleImportResult, errorState]);
+  }, [desktopFile, handleImportResult, handleClose, errorState]);
+
+  useEffect(() => {
+    if (!open) {
+      autoStarted.current = false;
+      return;
+    }
+    if (startImmediately && !autoStarted.current && platform === 'electron' && desktopFile) {
+      autoStarted.current = true;
+      void handleDesktopImport();
+    }
+  }, [open, platform, desktopFile, handleDesktopImport, startImmediately]);
 
   const handleRenameConfirm = useCallback(async () => {
     if (!conflictPortable || !conflictExistingId) return;
     if (!renameName.trim()) return;
-    // A previous attempt may have committed without a confirmed answer.
-    if (
-      errorState === 'unresolvedWriteOutcome' ||
-      errorState === 'resolvedElsewhere' ||
-      getPendingTemplateMutation()
-    )
-      return;
-    const operation = beginTemplateMutation({ kind: 'import', label: renameName.trim() });
-    if (!operation) {
-      setErrorState('storageUnavailable');
-      return;
-    }
-    lastMutationRef.current = operation;
+    // A previous attempt may have committed without a confirmed answer. Retrying
+    // it automatically could create a duplicate template, so the user must close
+    // the dialog and start a fresh import after checking My Templates.
+    if (errorState === 'unresolvedWriteOutcome') return;
 
     setRenameBusy(true);
     setRenameIssues([]);
@@ -366,19 +329,11 @@ export const ImportCustomTeamTemplateDialog = ({
     try {
       result = await importTemplate(renamed);
     } catch {
-      setErrorState(
-        wasTemplateMutationResolved(operation) ? 'resolvedElsewhere' : 'unresolvedWriteOutcome'
-      );
+      setErrorState('unresolvedWriteOutcome');
       setRenameBusy(false);
       return;
     }
 
-    if (result && result.status !== 'unresolvedWriteOutcome') finishTemplateMutation(operation);
-    if (result?.status === 'unresolvedWriteOutcome' && wasTemplateMutationResolved(operation)) {
-      setErrorState('resolvedElsewhere');
-      setRenameBusy(false);
-      return;
-    }
     const view = describeImportOutcome(result ?? { status: 'transportFailed' });
     switch (result?.status) {
       case 'imported':
@@ -428,8 +383,16 @@ export const ImportCustomTeamTemplateDialog = ({
             >
               <Download className="mt-0.5 size-4 shrink-0" />
               <div>
-                <p className="font-medium">{t('customTemplates.import.success')}</p>
-                <p>{t('customTemplates.import.successBody')}</p>
+                <p className="font-medium">
+                  {bundleResult
+                    ? t('customTemplates.bulk.importDone')
+                    : t('customTemplates.import.success')}
+                </p>
+                <p>
+                  {bundleResult
+                    ? `${t('customTemplates.bulk.importSummary', bundleResult)} ${bundleResult.stopped ? t('customTemplates.bulk.importStopped') : ''}`
+                    : t('customTemplates.import.successBody')}
+                </p>
               </div>
             </div>
           ) : null}
@@ -598,25 +561,6 @@ export const ImportCustomTeamTemplateDialog = ({
             </div>
           ) : null}
 
-          {errorState === 'resolvedElsewhere' ? (
-            <p role="status" data-testid="import-template-resolved-elsewhere">
-              {t('customTemplates.states.resolvedElsewhere')}
-            </p>
-          ) : null}
-
-          {isUnresolved &&
-          !isBusy &&
-          errorState !== 'unresolvedWriteOutcome' &&
-          errorState !== 'resolvedElsewhere' ? (
-            <p role="alert">
-              {t(
-                storageAvailable
-                  ? 'customTemplates.states.pendingProfileBody'
-                  : 'customTemplates.states.mutationStorageUnavailable'
-              )}
-            </p>
-          ) : null}
-
           {importStage === 'conflict' && conflictPortable ? (
             <div className="space-y-1.5">
               <Label htmlFor="import-rename-name">
@@ -701,10 +645,7 @@ export const ImportCustomTeamTemplateDialog = ({
                   // Clearing cancel should not surface a stale rename failure
                   // banner in the idle import view. Keep unresolvedWriteOutcome
                   // because a possibly committed write must still block retries.
-                  if (
-                    errorState !== 'unresolvedWriteOutcome' &&
-                    errorState !== 'resolvedElsewhere'
-                  ) {
+                  if (errorState !== 'unresolvedWriteOutcome') {
                     setErrorState(null);
                   }
                   resetFileInput();
@@ -715,7 +656,9 @@ export const ImportCustomTeamTemplateDialog = ({
               {/* A possibly committed import is never re-sent automatically, so the
                   retry stays disabled until the user starts a fresh import. */}
               <Button
-                disabled={renameBusy || !renameName.trim() || isUnresolved}
+                disabled={
+                  renameBusy || !renameName.trim() || errorState === 'unresolvedWriteOutcome'
+                }
                 aria-busy={renameBusy}
                 onClick={() => handleRenameConfirm()}
               >

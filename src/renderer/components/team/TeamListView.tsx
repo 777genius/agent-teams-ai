@@ -1,7 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useAppTranslation } from '@features/localization/renderer';
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
@@ -227,9 +227,7 @@ function renderTeamRecentPaths(
     </div>
   );
 }
-
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
-
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
@@ -551,12 +549,14 @@ export const TeamListView = memo(function TeamListView({
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
   );
+
   /** Team names currently in active provisioning — prevents name conflicts in create dialog. */
   const provisioningTeamNames = useMemo(() => {
     return Object.keys(currentProvisioningRunIdByTeam).filter((teamName) =>
       isTeamProvisioningActive(provisioningState, teamName)
     );
   }, [currentProvisioningRunIdByTeam, provisioningState]);
+
   /** Merge real teams with synthetic launching cards for active provisioning. */
   const teamsWithProvisioning = useMemo(() => {
     const existingNames = new Set(teams.map((t) => t.teamName));
@@ -574,6 +574,7 @@ export const TeamListView = memo(function TeamListView({
       return null;
     }
   }, [electronMode]);
+
   // Fetch alive teams on mount and when teams list changes.
   useEffect(() => {
     let cancelled = false;
@@ -599,6 +600,7 @@ export const TeamListView = memo(function TeamListView({
       .filter((item): item is string => Boolean(item))
       .join('|');
   }, [currentProvisioningRunIdByTeam, provisioningRuns]);
+
   // Terminal launch progress can arrive before aliveList catches up.
   useEffect(() => {
     if (!readyProgressRefreshKey) return;

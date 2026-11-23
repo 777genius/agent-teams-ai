@@ -5,10 +5,7 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-import {
-  createHttpCustomTeamTemplatesApi,
-  type CustomTeamTemplatesApi,
-} from '@features/custom-team-templates';
+import { createHttpCustomTeamTemplatesApi, type CustomTeamTemplatesApi } from '@features/custom-team-templates';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -231,7 +228,6 @@ function createBrowserRuntimeProviderError(
 function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
-
 export class HttpAPIClient implements ElectronAPI {
   get customTeamTemplates(): CustomTeamTemplatesApi {
     return createHttpCustomTeamTemplatesApi(this.baseUrl);
@@ -247,7 +243,6 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Review flow settings are only available in the desktop app');
     },
   };
-
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -277,7 +272,6 @@ export class HttpAPIClient implements ElectronAPI {
     dismiss: async () => ({ saved: false }),
     onStateChanged: () => () => {},
   };
-
   private unavailableAnnouncements(): AnnouncementsSnapshot {
     return {
       status: 'unavailable',
@@ -288,7 +282,6 @@ export class HttpAPIClient implements ElectronAPI {
       autoShowEnabled: false,
     };
   }
-
   private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
@@ -310,6 +303,7 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team import is only available in the desktop app');
     },
   };
+
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
     this.initEventSource();
@@ -340,6 +334,7 @@ export class HttpAPIClient implements ElectronAPI {
       }) as EventListener);
     }
     this.eventListeners.get(channel)!.add(callback);
+
     return () => {
       this.eventListeners.get(channel)?.delete(callback);
     };
@@ -357,6 +352,7 @@ export class HttpAPIClient implements ElectronAPI {
    */
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern with bounded quantifier; no backtracking risk
   private static readonly ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z?$/;
+
   private static reviveDates(_key: string, value: unknown): unknown {
     if (typeof value === 'string' && HttpAPIClient.ISO_DATE_RE.test(value)) {
       const d = new Date(value);
@@ -441,6 +437,7 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   getAppVersion = (): Promise<string> => this.get<string>('/api/version');
+
   getWindowsElevationStatus = async (): Promise<WindowsElevationStatus> => ({
     platform: 'browser',
     isWindows: false,
@@ -448,17 +445,21 @@ export class HttpAPIClient implements ElectronAPI {
     checkFailed: false,
     error: null,
   });
+
   getCodexAccountSnapshot = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   refreshCodexAccountSnapshot = (_options?: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
   }): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   startCodexChatgptLogin = (
     _options?: CodexStartChatgptLoginOptions
   ): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   cancelCodexChatgptLogin = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
 

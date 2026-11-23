@@ -3,10 +3,12 @@ import { isCanonicalSettingsLeadMember } from '@shared/utils/leadDetection';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
+  parseNumericSuffixName,
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
 
 import {
+  TEMPLATE_MAX_CREATE_DRAFT_BYTES,
   TEMPLATE_MAX_MEMBERS,
   TEMPLATE_MEMBER_ROLE_MAX_LENGTH,
   TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH,
@@ -143,6 +145,20 @@ export function validateTemplateContent(
   if (content.members.length > TEMPLATE_MAX_MEMBERS) {
     issues.push({ code: 'tooManyMembers', field: 'members' });
   }
+  // Creation serializes the *whole* request, not each workflow independently.
+  // UTF-8 JSON length matches the backend's Buffer.byteLength(JSON.stringify(request)).
+  // Reserve 20 KiB for ordinary form fields that a portable template omits.
+  const estimatedCreateDraft = JSON.stringify({
+    teamName: 'template-team',
+    projectContextMode: 'shared',
+    runtimeSelectionVersion: 1,
+    prompt: content.teamPrompt,
+    members: content.members,
+    syncModelsWithLead: true,
+  });
+  if (new TextEncoder().encode(estimatedCreateDraft).byteLength > TEMPLATE_MAX_CREATE_DRAFT_BYTES) {
+    issues.push({ code: 'invalidContent', field: 'members' });
+  }
 
   const rosterNames = content.members.map((member) => member.name);
   const keepAutoSuffixedName = createCliAutoSuffixNameGuard(rosterNames);
@@ -154,9 +170,12 @@ export function validateTemplateContent(
     if (!name) {
       issues.push({ code: 'memberNameRequired', field: `${baseField}.name` });
     } else {
+      // Match creation's reserved-name policy even for a lone 'dev-2'.
+      const suffix = parseNumericSuffixName(name);
       if (
         validateTeamMemberNameFormat(name) ||
         isReservedName(name) ||
+        (suffix !== null && suffix.suffix >= 2) ||
         !keepAutoSuffixedName(name) ||
         !keepNonProvisionerName(name)
       ) {

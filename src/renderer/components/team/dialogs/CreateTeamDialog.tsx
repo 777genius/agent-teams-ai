@@ -15,7 +15,6 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
-import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   useWorkspaceTrustStatus,
@@ -44,12 +43,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -105,7 +98,6 @@ import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganizati
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
-import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
@@ -115,15 +107,14 @@ import {
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
+import { CreateTeamPromptField } from './CreateTeamPromptField';
 import {
   sanitizeTeamName,
   validateRequest,
   validateTeamNameInline,
 } from './createTeamSubmissionValidation';
-import { CreateTeamNameField } from './CreateTeamNameField';
-import { CreateTeamPromptField } from './CreateTeamPromptField';
 import { CreateTeamSurface } from './CreateTeamSurface';
-import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
+import { CreateTeamTemplateSelectionField } from './CreateTeamTemplateSelectionField';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -205,6 +196,7 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useDialogMemberModelScope } from './useDialogMemberModelScope';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
@@ -231,9 +223,7 @@ import type {
   TeamFastMode,
   TeamProviderId,
 } from '@shared/types';
-
 export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
-
 const TEAM_COLOR_NAMES = [
   'blue',
   'green',
@@ -249,7 +239,6 @@ const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
-
 export const CreateTeamDialog = ({
   open,
   presentation = 'dialog',
@@ -324,6 +313,7 @@ export const CreateTeamDialog = ({
       ),
     [effectiveCliStatus?.providers]
   );
+
   // ── Persisted draft state (survives tab navigation) ──────────────────
   const createTeamDraft = useCreateTeamDraft();
   const {
@@ -375,13 +365,8 @@ export const CreateTeamDialog = ({
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
-  const {
-    templateSelectionDraft,
-    appliedTemplateSource,
-    setAppliedTemplateSource,
-    storedTemplateSelection,
-    clearTemplateSelection,
-  } = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
+  const templateSelection = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
+  const templateSelectionReady = templateSelection.templateSelectionDraft.isLoaded;
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -436,9 +421,15 @@ export const CreateTeamDialog = ({
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const advancedPreferencesEditedRef = useRef(Boolean(readCreateTeamAdvancedSession()?.edited));
-  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(readCreateTeamAdvancedSession()?.worktreeEnabled ?? false);
-  const [worktreeName, setWorktreeNameRaw] = useState(readCreateTeamAdvancedSession()?.worktreeName ?? '');
-  const [customArgs, setCustomArgsRaw] = useState(readCreateTeamAdvancedSession()?.customArgs ?? '');
+  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(
+    readCreateTeamAdvancedSession()?.worktreeEnabled ?? false
+  );
+  const [worktreeName, setWorktreeNameRaw] = useState(
+    readCreateTeamAdvancedSession()?.worktreeName ?? ''
+  );
+  const [customArgs, setCustomArgsRaw] = useState(
+    readCreateTeamAdvancedSession()?.customArgs ?? ''
+  );
   useEffect(() => {
     migrateLegacyCreateTeamPreferences();
   }, []);
@@ -503,7 +494,8 @@ export const CreateTeamDialog = ({
   ]);
   useEffect(() => {
     // Restore per-name defaults until Advanced CLI has been manually edited.
-    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesEditedRef.current) return;
+    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesEditedRef.current)
+      return;
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
     const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
@@ -534,7 +526,10 @@ export const CreateTeamDialog = ({
   }, []);
   const setWorktreeEnabled = (value: boolean): void => {
     advancedPreferencesEditedRef.current = true;
-    patchCreateTeamAdvancedSession({ worktreeEnabled: value, worktreeName: value ? worktreeName : '' });
+    patchCreateTeamAdvancedSession({
+      worktreeEnabled: value,
+      worktreeName: value ? worktreeName : '',
+    });
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
     if (!value) {
@@ -572,7 +567,7 @@ export const CreateTeamDialog = ({
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
-    clearTemplateSelection();
+    templateSelection.clearTemplateSelection();
     resetUIState();
     if (presentation === 'page') await resetCreateTeamDraft();
   };
@@ -999,14 +994,17 @@ export const CreateTeamDialog = ({
       const providerModelChecksSignature = buildProviderPrepareModelChecksSignature(
         new Map([[providerId, selectedModelChecksByProvider.get(providerId) ?? []]])
       );
-      const cacheKey = appendProviderPrepareInvalidationEpoch(buildProviderPrepareModelCacheKey({
-        cwd: effectiveCwd,
-        providerId,
-        backendSummary,
-        limitContext: effectiveAnthropicRuntimeLimitContext,
-        runtimeStatusSignature: providerRuntimeStatusSignature,
-        modelChecksSignature: providerModelChecksSignature,
-      }), prepareProviderInvalidationEpochById[providerId]);
+      const cacheKey = appendProviderPrepareInvalidationEpoch(
+        buildProviderPrepareModelCacheKey({
+          cwd: effectiveCwd,
+          providerId,
+          backendSummary,
+          limitContext: effectiveAnthropicRuntimeLimitContext,
+          runtimeStatusSignature: providerRuntimeStatusSignature,
+          modelChecksSignature: providerModelChecksSignature,
+        }),
+        prepareProviderInvalidationEpochById[providerId]
+      );
       const issueReasons = getShortLivedProviderPrepareModelIssueReasons({
         providerId,
         cacheKey,
@@ -1037,6 +1035,7 @@ export const CreateTeamDialog = ({
     selectedModelChecksByProviderSignature,
     selectedMemberProviders,
   ]);
+
   useEffect(() => {
     if (multimodelEnabled) {
       return;
@@ -1051,7 +1050,9 @@ export const CreateTeamDialog = ({
       setMembers(nextMembers);
     }
   }, [members, multimodelEnabled, selectedProviderId, setMembers]);
+
   useProviderReadinessRevalidation(open, selectedMemberProviders, cliStatus);
+
   const handleCodexReconnect = useCallback(
     (mode: 'browser' | 'device_code' = 'browser') => {
       void (async () => {
@@ -1060,6 +1061,7 @@ export const CreateTeamDialog = ({
     },
     [codexAccount]
   );
+
   useEffect(() => {
     if (
       submissionFence.busy ||
@@ -1082,6 +1084,7 @@ export const CreateTeamDialog = ({
     submissionFence,
     t,
   ]);
+
   useEffect(() => {
     if (submissionFence.busy || (open && !active)) return;
     if (
@@ -2610,13 +2613,19 @@ export const CreateTeamDialog = ({
               local={canCreate}
               isLight={isLight}
               onManagementApplied={onManagementApplied}
-              form={createTeamDraft}
-              descriptionDraft={descriptionDraft}
-              promptDraft={promptDraft}
-              defaultDescription={buildDefaultTeamDescription()}
-              hasPromptChips={promptChipDraft.chips.length > 0}
-              clearPromptChips={promptChipDraft.clearChipDraft}
-              disabled={isSubmitting || !open || !active}
+              disabled={isSubmitting || !open || !active || !templateSelectionReady}
+              templatePicker={
+                <CreateTeamTemplateSelectionField
+                  disabled={isSubmitting || !open || !active || !templateSelectionReady}
+                  open={open}
+                  isCopy={Boolean(initialData)}
+                  form={createTeamDraft}
+                  templateSelection={templateSelection}
+                  descriptionDraft={descriptionDraft}
+                  promptDraft={promptDraft}
+                  promptChipDraft={promptChipDraft}
+                />
+              }
             />
           }
         >
@@ -2665,43 +2674,41 @@ export const CreateTeamDialog = ({
             </p>
           ) : null}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <CreateTeamNameField
-              teamName={teamName}
-              suggestedTeamName={suggestedTeamName}
-              fieldError={fieldErrors.teamName}
-              teamNameInlineError={teamNameInlineError}
-              isNameTakenByExistingTeam={isNameTakenByExistingTeam}
-              isNameProvisioning={isNameProvisioning}
-              sanitizedTeamName={sanitizedTeamName}
-              onTeamNameChange={handleTeamNameChange}
-            />
-            <div className="md:col-span-2">
-              <CreateTeamTemplatePicker
-                open={open}
-                initialSelection={initialData ? '' : storedTemplateSelection.value}
-                initialSelectionReady={initialData ? true : templateSelectionDraft.isLoaded !== false}
-                onApply={(draft, source, selectionValue) => {
-                  setAppliedTemplateSource(source);
-                  templateSelectionDraft.setValue(
-                    JSON.stringify({ source, value: selectionValue ?? '' })
-                  );
-                  if (source !== 'none') {
-                    setRuntimeSelection(1);
-                    setLaunchTeam(false);
-                    setSoloTeam(false);
-                    setSyncModelsWithLead(true, { persistStoredPreference: false });
-                  }
-                  descriptionDraft.setValue(draft.description ?? '');
-                  promptDraft.setValue(draft.prompt ?? '');
-                  promptChipDraft.clearChipDraft();
-                  setMembers(
-                    buildInitialRosterMemberDrafts({
-                      copiedMembers: draft.members,
-                      multimodelEnabled,
-                    })
-                  );
-                }}
+            <div className="w-full max-w-[24rem] space-y-1.5 md:col-span-2">
+              <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
+              <Input
+                id="team-name"
+                className={cn(
+                  'h-8 text-xs',
+                  (fieldErrors.teamName || teamNameInlineError || isNameTakenByExistingTeam) &&
+                    'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
+                )}
+                value={teamName}
+                onChange={(event) => handleTeamNameChange(event.target.value)}
+                placeholder={suggestedTeamName}
               />
+              {isNameTakenByExistingTeam ? (
+                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                  {t('create.errors.nameExists')}
+                </p>
+              ) : teamNameInlineError ? (
+                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                  {teamNameInlineError}
+                </p>
+              ) : isNameProvisioning ? (
+                <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
+                  {t('create.errors.nameLaunching')}
+                </p>
+              ) : fieldErrors.teamName ? (
+                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                  {fieldErrors.teamName}
+                </p>
+              ) : null}
+              {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  {t('create.onDisk')} <span className="font-mono">{sanitizedTeamName}</span>
+                </p>
+              ) : null}
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
               <TeamRosterEditorSection
@@ -2775,7 +2782,7 @@ export const CreateTeamDialog = ({
                 launchTeam={launchTeam}
                 onLaunchTeamChange={setLaunchTeam}
               />
-              {!launchTeam && appliedTemplateSource !== 'none' ? (
+              {!launchTeam && templateSelection.appliedTemplateSource !== 'none' ? (
                 <div className="mt-4">
                   <CreateTeamPromptField
                     promptDraft={promptDraft}
@@ -2786,7 +2793,6 @@ export const CreateTeamDialog = ({
                     taskSuggestions={taskSuggestions}
                     projectPath={effectiveCwd || null}
                     onSuggestionsNeeded={enableWorkflowMentionSuggestions}
-                    id="team-prompt-template"
                   />
                 </div>
               ) : null}
@@ -3033,9 +3039,7 @@ export const CreateTeamDialog = ({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="team-description">
-                      {t('create.fields.description')}
-                    </Label>
+                    <Label htmlFor="team-description">{t('create.fields.description')}</Label>
                     <AutoResizeTextarea
                       id="team-description"
                       className="text-xs"

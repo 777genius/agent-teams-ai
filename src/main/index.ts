@@ -22,6 +22,7 @@ import {
   type TeamGroupChatsFeature,
 } from '@features/team-group-chats/main';
 import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
+import { startCustomTeamTemplatesFeature } from './startCustomTeamTemplatesFeature';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
@@ -159,6 +160,7 @@ import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/Json
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
+import { isAgentTeamsMcpHttpEnabled } from '@main/services/team/AgentTeamsMcpHttpConfig';
 import {
   buildMemberWorkSyncReviewPickupEscalationMessageId,
   buildMemberWorkSyncReviewPickupEscalationText,
@@ -170,7 +172,6 @@ import {
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
-  isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -227,7 +228,6 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
-import { startCustomTeamTemplatesFeature } from './startCustomTeamTemplatesFeature';
 import { composeTeamMemberSettings } from './composeTeamMemberSettings';
 import { registerWindowZoomHandler } from '@features/appearance/main';
 import {
@@ -441,7 +441,6 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   const args = value.split(/\s+/).filter(Boolean);
   return args.length > 0 ? args : undefined;
 }
-
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -485,7 +484,6 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
-
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined,
   gatewayRuntime?: ReturnType<typeof createGatewayLaunchRuntime>
@@ -506,7 +504,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
-
   reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = await createAttachmentBridgeEnvironment(binaryPath);
   let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
@@ -533,7 +530,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
-  const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  const useHttpMcpBridge = isAgentTeamsMcpHttpEnabled(bridgeEnv);
   assertStartupActive(isShutdownStarted);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
@@ -577,7 +574,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
       return;
     }
-
     await applyMcpLaunchSpecEnv(targetEnv, options);
     if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
@@ -761,6 +757,7 @@ async function resolveTeamDisplayName(teamName: string): Promise<string> {
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
   logger.debug(`[inbox-notify] called: team=${teamName} detail=${detail}`);
   const config = configManager.getConfig();
+
   // Skip orphaned team directories without config.json (e.g., "default").
   // Claude Code may write to these when its internal teamContext is lost after session resume.
   // Our stdout capture in TeamProvisioningService already persists these messages under the
@@ -775,11 +772,13 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
   if (!match) return;
   const memberName = match[1];
+
   // Determine inbox type and per-type toggle state.
   // Storage is always unconditional; toggles only suppress the OS toast.
   const leadName = teamDataService ? await teamDataService.getLeadMemberName(teamName) : null;
   const isLeadInbox = leadName !== null && memberName === leadName;
   const isUserInbox = memberName === 'user';
+
   if (!isLeadInbox && !isUserInbox) return;
 
   const suppressToast =
@@ -788,10 +787,12 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
     (isUserInbox && !config.notifications.notifyOnUserInbox);
 
   const key = `${teamName}:${memberName}`;
+
   try {
     const messages = await teamInboxReader.getMessagesFor(teamName, memberName);
     const isFirstLoad = !inboxMessageCounts.has(key);
     const prevCount = inboxMessageCounts.get(key) ?? 0;
+
     if (isFirstLoad) {
       // First load — seed count, don't notify for pre-existing messages
       logger.debug(`[inbox-notify] first load for ${key}: seeding count=${messages.length}`);
@@ -807,9 +808,11 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
     // Messages are sorted newest-first, so new ones are at the beginning
     const newMessages = messages.slice(0, messages.length - prevCount);
     inboxMessageCounts.set(key, messages.length);
+
     logger.debug(
       `[inbox-notify] ${key}: prevCount=${prevCount} newCount=${messages.length} newMessages=${newMessages.length} suppressToast=${String(suppressToast)}`
     );
+
     const teamDisplayName = await resolveTeamDisplayName(teamName);
 
     for (let i = 0; i < newMessages.length; i++) {
@@ -951,7 +954,7 @@ let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let teamGroupChatsFeature: TeamGroupChatsFeature;
-let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature> | null = null;
+let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature>;
 let teamImportFeature: TeamImportFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
@@ -2980,7 +2983,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         teamGroupChatsFeature,
-        customTeamTemplatesFeature: customTeamTemplatesFeature ?? undefined,
+        customTeamTemplatesFeature,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
@@ -3184,7 +3187,6 @@ async function shutdownServices(): Promise<void> {
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
       customTeamTemplatesFeature?.dispose();
-      customTeamTemplatesFeature = null;
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       projectFolderFeature.removeProjectFolderIpc(ipcMain);
       removeTeamImportIpc(ipcMain);

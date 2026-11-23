@@ -38,40 +38,38 @@ export type TemplateLibraryState =
  */
 export function useCustomTemplateLibrary(open: boolean): {
   state: TemplateLibraryState;
-  /** Distinguishes a complete read from an incomplete snapshot or a failure. */
-  reload: () => Promise<'complete' | 'partial' | 'failed'>;
+  reload: () => Promise<void>;
 } {
   const [state, setState] = useState<TemplateLibraryState>({ status: 'idle' });
   const requestIdRef = useRef(0);
 
-  const reload = useCallback(async (): Promise<'complete' | 'partial' | 'failed'> => {
+  const reload = useCallback(async (): Promise<void> => {
     const requestId = ++requestIdRef.current;
     setState({ status: 'loading' });
     try {
       const result = await api.customTeamTemplates.listTemplates();
-      if (requestId !== requestIdRef.current) return 'failed';
+      if (requestId !== requestIdRef.current) return;
       switch (result.status) {
         case 'empty':
           setState({ status: 'empty' });
-          return 'complete';
+          return;
         case 'ready':
           setState({ status: 'ready', templates: result.templates });
-          return 'complete';
+          return;
         case 'hasUnreadableRecords':
           setState({
             status: 'partial',
             templates: result.templates,
             unreadableRecords: result.unreadableRecords,
           });
-          return 'partial';
+          return;
         case 'storageUnavailable':
           setState({ status: 'storageUnavailable' });
-          return 'failed';
+          return;
       }
     } catch {
-      if (requestId !== requestIdRef.current) return 'failed';
+      if (requestId !== requestIdRef.current) return;
       setState({ status: 'requestFailed' });
-      return 'failed';
     }
   }, []);
 
