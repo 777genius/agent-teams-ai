@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  getTeamMessagesSidebarUiState,
+  setTeamMessagesSidebarUiState,
+} from '@renderer/components/team/sidebar/teamSidebarUiState';
 import { useStore } from '@renderer/store';
 
 import { requestAttentionChatNavigation } from './conversationAttentionNavigation';
@@ -26,7 +30,19 @@ export function useAttentionInboxNavigation() {
     // ProjectScopedTeamDetailView opens a logical tab, but its ready project
     // mounts MessagesPanel for the *physical* execution team. Match that panel,
     // not its logical parent, otherwise the requested conversation is lost.
+    // Preload the physical team's *existing* sidebar state before the logical
+    // tab can mount it. Otherwise initial hydration may persist the old
+    // collapsed view after the one-shot navigation intent was consumed.
+    const sidebarKey = JSON.stringify([contextId, chat.teamName]);
+    setTeamMessagesSidebarUiState(sidebarKey, {
+      ...getTeamMessagesSidebarUiState(sidebarKey),
+      messagesCollapsed: false,
+      messagesSearchQuery: '',
+      conversationSurface: 'thread',
+      conversationScope: scope,
+    });
     openTeamTab(chat.logicalTeamName || chat.teamName, chat.projectPath);
+    // Still needed when the MessagesPanel is already mounted.
     requestAttentionChatNavigation({ contextId, teamName: chat.teamName, scope });
   }, [contextId, openTeamTab]);
 
