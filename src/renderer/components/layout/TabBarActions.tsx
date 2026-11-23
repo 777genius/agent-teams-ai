@@ -7,10 +7,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useAttentionInbox } from '@features/user-attention/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { Bell, Loader2, PanelRight } from 'lucide-react';
+import { Bell, Inbox, Loader2, PanelRight } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MoreMenu } from './MoreMenu';
@@ -23,6 +24,7 @@ function formatDiscordMemberCount(count: number): string {
 
 export const TabBarActions = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const { model: attentionModel } = useAttentionInbox();
   const {
     unreadCount,
     openNotificationsTab,
@@ -164,6 +166,29 @@ export const TabBarActions = (): React.JSX.Element => {
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('notifications.title')}</TooltipContent>
+      </Tooltip>
+
+      {/* Human attention is distinct from ordinary notification history. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" aria-label="Needs your attention"
+            className="relative rounded-md p-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
+            onClick={() => {
+              const state = useStore.getState();
+              const focused = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
+              const existing = focused?.tabs.find((tab) => tab.type === 'attention');
+              if (existing) state.setActiveTab(existing.id);
+              else state.openTab({ type: 'attention', label: 'Attention' });
+            }}>
+            <Inbox className="size-4" aria-hidden="true" />
+            {attentionModel && attentionModel.taskCount + attentionModel.chatCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white tabular-nums">
+                {attentionModel.taskCount + attentionModel.chatCount > 99 ? '99+' : attentionModel.taskCount + attentionModel.chatCount}
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Needs your attention</TooltipContent>
       </Tooltip>
 
       {/* GitHub link */}
