@@ -1,8 +1,3 @@
-import {
-  DELIVERY_EVENT_LABELS,
-  DELIVERY_PROVIDERS,
-  NOTIFICATION_DELIVERY_EVENTS,
-} from '../../contracts';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
@@ -15,6 +10,11 @@ import {
 } from '@renderer/components/ui/select';
 import { BellPlus, CheckCircle2, Send, Trash2 } from 'lucide-react';
 
+import {
+  DELIVERY_EVENT_LABELS,
+  DELIVERY_PROVIDERS,
+  NOTIFICATION_DELIVERY_EVENTS,
+} from '../../contracts';
 import { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
 
 import type { ChannelTestStatus, DeliveryProvider } from '../../contracts';

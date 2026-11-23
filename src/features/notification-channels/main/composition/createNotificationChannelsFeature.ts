@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
-
 import { NotificationChannelsService } from '../../core/application/NotificationChannelsService';
 import { ThinwrapDeliverySender } from '../adapters/output/ThinwrapDeliverySender';
 import { JsonDeliveryChannelRepository } from '../infrastructure/JsonDeliveryChannelRepository';
+
+import type { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
 
 export type NotificationChannelsFeatureFacade = Pick<
   NotificationChannelsService,

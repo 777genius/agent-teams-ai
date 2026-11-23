@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
-import type { DeliveryChannelDto, DeliveryEvent, SaveDeliveryChannelRequest } from '../../contracts';
 import { resolveLocalSettingsUrl } from '../utils/localSettingsOrigin';
+
+import type { DeliveryChannelDto, DeliveryEvent, SaveDeliveryChannelRequest } from '../../contracts';
 
 const NEW_CHANNEL: SaveDeliveryChannelRequest = {
   name: '',

@@ -1,5 +1,3 @@
-import type { DetectedError } from '@shared/types/notifications';
-
 import {
   DELIVERY_EVENT_LABELS,
   NOTIFICATION_DELIVERY_EVENTS,
@@ -7,6 +5,8 @@ import {
   type DeliveryProvider,
   type SaveDeliveryChannelRequest,
 } from '../../contracts';
+
+import type { DetectedError } from '@shared/types/notifications';
 
 export function isDeliveryEvent(value: unknown): value is DeliveryEvent {
   return typeof value === 'string' &&

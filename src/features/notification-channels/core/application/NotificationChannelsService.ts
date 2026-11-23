@@ -1,4 +1,8 @@
-import type { DetectedError } from '@shared/types/notifications';
+import {
+  normalizeChannelInput,
+  toOutboundNotification,
+  validateProviderCredential,
+} from '../domain/routing';
 
 import type {
   ChannelTestStatus,
@@ -8,11 +12,7 @@ import type {
   DeliveryProvider,
   SaveDeliveryChannelRequest,
 } from '../../contracts';
-import {
-  normalizeChannelInput,
-  toOutboundNotification,
-  validateProviderCredential,
-} from '../domain/routing';
+import type { DetectedError } from '@shared/types/notifications';
 
 export interface StoredDeliveryChannel {
   id: string;

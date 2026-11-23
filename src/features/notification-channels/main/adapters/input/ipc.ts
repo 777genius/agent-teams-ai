@@ -1,7 +1,7 @@
-import type { IpcMain } from 'electron';
-
 import { NOTIFICATION_CHANNELS_IPC } from '../../../contracts';
+
 import type { NotificationChannelsFeatureFacade } from '../../composition/createNotificationChannelsFeature';
+import type { IpcMain } from 'electron';
 
 export function registerNotificationChannelsIpc(
   ipc: Pick<IpcMain, 'handle'>,
