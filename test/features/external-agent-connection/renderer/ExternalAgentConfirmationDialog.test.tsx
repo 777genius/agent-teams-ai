@@ -45,7 +45,7 @@ describe('external agent confirmation dialog', () => {
 
   it('shows a client-reported connection and dismisses the matching pending request', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    let notify: ((value: ExternalAgentConfirmation) => void) | undefined;
+    let notify: ((value: ExternalAgentConfirmation | null) => void) | undefined;
     const dismiss = vi.fn(async () => undefined);
     const api: ExternalAgentConnectionApi = {
       getConnectionInfo: vi.fn(),
@@ -70,6 +70,9 @@ describe('external agent confirmation dialog', () => {
       'Codex reports it connected to both MCP and the interface'
     );
     expect(document.body.textContent).toContain('client reports its name and CDP verification');
+    await act(async () => notify?.(null));
+    expect(document.body.textContent).not.toContain('Agent connected to this app');
+    await act(async () => notify?.({ id: 'sandbox-event', agentName: 'Codex', cdpVerified: true }));
     const done = [...document.querySelectorAll('button')].find(
       (button) => button.textContent === 'Done'
     );
