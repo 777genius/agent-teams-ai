@@ -36,7 +36,11 @@ export function projectAttentionMessage(message: InboxMessage): InboxMessage | n
 
   // Capture the existing read identity before truncating user-visible preview.
   const messageId = messageIdentity(message);
-  const text = stripAgentBlocks(message.text).trim().slice(0, 240);
+  const sanitized = stripAgentBlocks(message.text).trim();
+  const attachmentCount = (message.attachments?.length ?? 0) + (message.fileReferences?.length ?? 0);
+  // An attachment-only message is still a message addressed to the user.
+  const text = sanitized.slice(0, 240) ||
+    (attachmentCount > 0 ? `Attachment (${attachmentCount})` : '');
   if (!text) return null;
   return {
     from: message.from,
