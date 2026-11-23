@@ -6,6 +6,7 @@ import type { InboxMessage, TeamTask } from '@shared/types/team';
 export class TeamDataAttentionSource implements AttentionSourcePort {
   constructor(private readonly deps: {
     getContextId(): string;
+    listGroupNames?: (teamName: string) => Promise<Record<string, string>>;
     getTeamDataService(): Pick<TeamDataService,
       'listTeams' | 'getUserAttentionTasks' | 'getMessageFeed'>;
   }) {}
@@ -24,5 +25,9 @@ export class TeamDataAttentionSource implements AttentionSourcePort {
 
   async listNormalizedMessages(teamName: string): Promise<readonly InboxMessage[]> {
     return (await this.deps.getTeamDataService().getMessageFeed(teamName)).messages;
+  }
+
+  async listGroupNames(teamName: string): Promise<Record<string, string>> {
+    return this.deps.listGroupNames ? this.deps.listGroupNames(teamName) : {};
   }
 }
