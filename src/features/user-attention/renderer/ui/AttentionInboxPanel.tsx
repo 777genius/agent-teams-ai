@@ -71,7 +71,7 @@ export function AttentionInboxPanel({
       {loading && !model && <p role="status" className="py-4 text-xs text-text-muted">{t('attention.loading')}</p>}
       {error && (
         <p role="alert" className="mb-3 text-xs text-red-400">
-          {error} <button type="button" onClick={onRetry} className="underline">{t('attention.retry')}</button>
+          {t('attention.loadFailed')} <button type="button" onClick={onRetry} className="underline">{t('attention.retry')}</button>
         </p>
       )}
       {model && !model.complete && (
