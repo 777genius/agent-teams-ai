@@ -200,6 +200,7 @@
     "@terminal-platform/workspace-elements": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz",
     "@terminal-platform/workspace-gateway-node": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz",
     "@terminal-platform/workspace-react": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz",
+    "@thinwrap/notifications": "1.2.0",
     "@tiptap/extension-placeholder": "3.30.5",
     "@tiptap/markdown": "3.30.5",
     "@tiptap/pm": "3.30.5",
