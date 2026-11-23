@@ -29,7 +29,7 @@ function execGit(args: string[], cwd: string): Promise<string> {
   });
 }
 
-function slugify(value: string): string {
+function legacySlugify(value: string): string {
   return (
     value
       .trim()
@@ -38,6 +38,11 @@ function slugify(value: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 48) || 'member'
   );
+}
+
+function slugify(value: string): string {
+  const full = value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'member';
+  return full.length <= 48 ? full : `${full.slice(0, 37)}-${shortHash(full)}`;
 }
 
 function shortHash(value: string): string {
@@ -247,5 +252,124 @@ describe('TeamMemberWorktreeManager', () => {
     });
     expect(resolution.branchName).toBe(branchName);
     await expect(execGit(['rev-parse', 'HEAD'], resolution.worktreePath)).resolves.toBe(branchHead);
+  });
+
+  it('keeps distinct long member and team names in distinct worktrees', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const prefix = 'a'.repeat(48);
+    const [bob, alice, otherTeam] = await Promise.all([
+      manager.ensureMemberWorktree({ teamName: 'Atlas HQ', memberName: `${prefix}bob`, baseCwd: repoPath }),
+      manager.ensureMemberWorktree({ teamName: 'Atlas HQ', memberName: `${prefix}alice`, baseCwd: repoPath }),
+      manager.ensureMemberWorktree({ teamName: `${prefix}other`, memberName: `${prefix}bob`, baseCwd: repoPath }),
+    ]);
+    expect(new Set([bob.worktreePath, alice.worktreePath, otherTeam.worktreePath]).size).toBe(3);
+    expect(new Set([bob.branchName, alice.branchName, otherTeam.branchName]).size).toBe(3);
+    for (const resolution of [bob, alice, otherTeam]) {
+      await expect(execGit(['branch', '--show-current'], resolution.worktreePath)).resolves.toBe(
+        resolution.branchName
+      );
+    }
+  });
+
+  it('coalesces concurrent creation attempts without creating duplicate checkouts', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const request = { teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: repoPath };
+    const results = await Promise.all(
+      Array.from({ length: 12 }, () => manager.ensureMemberWorktree(request))
+    );
+    expect(results.every((result) => result.worktreePath === results[0]?.worktreePath)).toBe(true);
+    const registered = await execGit(['worktree', 'list', '--porcelain'], repoPath);
+    expect(registered.match(/^worktree /gm)).toHaveLength(2);
+    await expect(manager.ensureMemberWorktree(request)).resolves.toEqual(results[0]);
+  });
+
+  it('rejects the shared checkout and nested directories passed as persisted member cwd', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const nested = path.join(repoPath, 'nested');
+    await fs.mkdir(nested);
+    const manager = new TeamMemberWorktreeManager();
+    for (const existingCwd of [repoPath, nested]) {
+      await expect(
+        manager.ensureMemberWorktree({
+          teamName: 'Atlas HQ',
+          memberName: 'Bob',
+          baseCwd: repoPath,
+          existingCwd,
+        })
+      ).rejects.toThrow('not a separate checkout root');
+    }
+    await expect(fs.stat(expectedWorktreePath(repoPath))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('rejects a persisted member cwd belonging to a foreign repository', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const foreignRepoPath = await createGitRepo(path.join(tempRoot, 'foreign'));
+    const foreignWorktree = path.join(tempRoot, 'foreign-worktree');
+    await execGit(['worktree', 'add', '-b', 'foreign-work', foreignWorktree, 'HEAD'], foreignRepoPath);
+    await expect(
+      new TeamMemberWorktreeManager().ensureMemberWorktree({
+        teamName: 'Atlas HQ',
+        memberName: 'Bob',
+        baseCwd: repoPath,
+        existingCwd: foreignWorktree,
+      })
+    ).rejects.toThrow('belongs to a different git repository');
+  });
+
+  (process.platform === 'win32' ? it.skip : it)(
+    'rejects a managed worktree path symlinked to the main checkout',
+    async () => {
+      const repoPath = await createGitRepo(tempRoot);
+      const managedPath = expectedWorktreePath(repoPath);
+      await fs.mkdir(path.dirname(managedPath), { recursive: true });
+      await fs.symlink(repoPath, managedPath, 'dir');
+      await expect(
+        new TeamMemberWorktreeManager().ensureMemberWorktree({
+          teamName: 'Atlas HQ',
+          memberName: 'Bob',
+          baseCwd: repoPath,
+        })
+      ).rejects.toThrow('not a separate checkout root');
+      await expect(execGit(['status', '--porcelain'], repoPath)).resolves.toBe('');
+    }
+  );
+
+  it('reuses a persisted existing worktree on a different branch without changing files', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const manager = new TeamMemberWorktreeManager();
+    const request = { teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: repoPath };
+    const initial = await manager.ensureMemberWorktree(request);
+    await execGit(['switch', '-c', 'task-branch'], initial.worktreePath);
+    await fs.writeFile(path.join(initial.worktreePath, 'notes.txt'), 'preserved\n');
+    const restored = await manager.ensureMemberWorktree({
+      ...request,
+      existingCwd: initial.worktreePath,
+    });
+    expect(restored).toEqual({ ...initial, branchName: 'task-branch' });
+    expect(await fs.readFile(path.join(initial.worktreePath, 'notes.txt'), 'utf8')).toBe('preserved\n');
+  });
+
+  it('refuses to guess the owner of old truncated-name checkouts without a persisted path', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const memberName = `${'a'.repeat(48)}alice`;
+    const oldPath = path.join(
+      hoisted.appDataRoot, 'team-worktrees',
+      `${slugify(path.basename(repoPath))}-${shortHash(repoPath)}`,
+      legacySlugify('Atlas HQ'), legacySlugify(memberName)
+    );
+    const oldBranch = `agent-teams/atlas-hq/${legacySlugify(memberName)}-${shortHash(repoPath)}`;
+    await fs.mkdir(path.dirname(oldPath), { recursive: true });
+    await execGit(['worktree', 'add', '-b', oldBranch, oldPath, 'HEAD'], repoPath);
+    const manager = new TeamMemberWorktreeManager();
+    await expect(
+      manager.ensureMemberWorktree({ teamName: 'Atlas HQ', memberName, baseCwd: repoPath })
+    ).rejects.toThrow('ambiguous truncated name');
+    const restored = await manager.ensureMemberWorktree({
+      teamName: 'Atlas HQ', memberName, baseCwd: repoPath, existingCwd: oldPath,
+    });
+    expect(restored.worktreePath).toBe(oldPath);
+    expect(restored.branchName).toBe(oldBranch);
   });
 });
