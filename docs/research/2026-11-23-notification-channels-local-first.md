@@ -200,8 +200,9 @@ Pick **one delivery engine** for the default install:
 - **C — Apprise CLI**: 183-service ambition, Python packaging accepted.
 - **D — Apprise API local web UI**: prefer ready-made website, willing to accept on-demand Python server and security burden.
 - **E — Webhook-first**: external automations are primarily the user's responsibility.
+- **F — Thinwrap TypeScript**: no extra executable/server; built-in Telegram, Discord, Slack, Teams and Google Chat adapters.
 
-Then confirm **(i)** external notifications outbound-only for the MVP, **(ii)** whether native presets or link to a URL Builder is acceptable, and **(iii)** whether additional binaries may ship in the desktop app. Do not implement or merge provider choice before these answers.
+**Decision superseded on 2026-11-23:** the owner explicitly authorized autonomous, end-to-end implementation on this PR. Selected **F — Thinwrap**: outbound only, native presets in the existing settings UI, no extra binaries, and no added resident service. This resolves the original owner-choice gate; do not interpret the earlier question as an active blocker.
 
 Suggested narrow follow-up after choice: one implementation PR, small domain route policy, one selected engine adapter, initial 2 priority events, guided UI, tests, packaged E2E. Keep the User Attention Inbox PR independent.
 
@@ -311,7 +312,7 @@ Do **not** open an external public web page with secrets in query params or embe
 
 Gate `N0` (~100-220 **spike code lines**, discard after review): install exact pinned Notifly release in disposable branch/sandbox, inspect NPM tarball versus GitHub source and TypeScript 7 compatibility. Verify `getServiceSchemas` / `buildUrl` / `smartParse` and `notify`. Simulate Telegram, Discord, ntfy and webhook with injected/mock fetch. **No real token/test message without explicit opt-in**.
 
-Gate `N1` security (~150-300 test lines): prove no secret in error string/logger/config, invalid token is masked, URL parser rejects malformed targets, malicious redirects/private-IP-DNS do not escape HTTP policy (or keep custom webhook **disabled in v1**). Test Android/mobile push is **provider service behavior**, not an app feature; no assurance of background delivery after app exits.
+Gate `N1` security (~150-300 test lines): prove no secret in error string/logger/config, invalid token is masked, URL parser rejects malformed targets, malicious redirects/private-IP-DNS do not escape HTTP policy (or keep **every** configurable-host adapter disabled in v1, including custom webhook, ntfy and Gotify). Test Android/mobile push is **provider service behavior**, not an app feature; no assurance of background delivery after app exits.
 
 Gate `N2` packaging (~150-250 E2E lines): actual Electron pack/dev renderer and Mac/Windows/Linux artifact smoke for zero extra executable, no dependency on browser DOM, private route auth and no config leak through HTTP. Perform same scripted send contract against Shoutrrr on failure to qualify Notifly (including binary provenance and secret handling).
 
@@ -357,3 +358,15 @@ This was directly reproduced with the built-in Node WHATWG URL parser (without n
 - **Maximum catalog alternative:** Apprise CLI/API if user deliberately accepts Python packaging or a local server.
 
 **No implementation decision made here:** the owner still chooses, now with a verified reason Notifly should not be the default **today**. The reported `11.4` LOC estimate for Notifly is valid only after the blocking upstream version exists; it does not include fixing third-party code. Updated recommendation overrides the provisional text at the end of `11.7`.
+
+
+## 13. Implementation decision and first vertical slice (2026-11-23)
+
+Owner authorized implementation rather than another decision round. Thinwrap is pinned to `@thinwrap/notifications@1.2.0` (no extra native binary) and constrained to its built-in **Telegram, Discord, Slack, Teams and Google Chat** senders. The app owns one narrow input form per credential kind; it does not reimplement those vendor protocols.
+
+- Source events: committed `NotificationManager` events; only explicit allowlisted, unread team event types are eligible. No historical replay, raw agent text, usernames, team names or filesystem paths are sent.
+- Security: existing encrypted `ApiKeyService`; 0600 metadata file contains only credential references. Incoming HTTP mutations require same-origin, loopback Host and loopback peer IP. Every outbound request must remain on the exact vendor HTTPS host and webhook path, with redirects disabled and a 10-second timeout.
+- UI and portability: existing React/Radix settings page via shared cross-process contracts; Electron IPC and local-only Fastify HTTP adapters use the same application service. Native desktop notifications remain unchanged; external channels start disabled.
+- **Not supported in v1:** raw arbitrary webhook URLs, ntfy, Gotify, local LAN targets, remote multi-user settings, guaranteed delivery while the app is closed, native push SDKs, or retries after uncertain provider outcomes. The HTTP safety gate applies to **all configurable-host adapters**, not just custom webhook. Add new hosts only after DNS/redirect/IP policy proof.
+- Verification: focused application, domain, HTTP and provider-adapter tests are included. Genuine external sending requires user-supplied credentials and explicit Test; no test should send to a real third party without the user's click. Full packaged multi-OS E2E remains a release gate, not a claim made by the research doc.
+

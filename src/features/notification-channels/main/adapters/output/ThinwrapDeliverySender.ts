@@ -15,7 +15,7 @@ function createGuardedFetch(provider: DeliveryProvider, secret: string): typeof 
       ? String(input)
       : input.url);
     const expected = provider === 'telegram'
-      ? new URL('https://api.telegram.org/bot' + encodeURIComponent(secret) + '/sendMessage')
+      ? new URL('https://api.telegram.org/bot' + encodeURIComponent(secret).replace(/%3A/gi, ':') + '/sendMessage')
       : new URL(secret);
     if (requested.protocol !== 'https:' || requested.port !== '' ||
       requested.username || requested.password ||
