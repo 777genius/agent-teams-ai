@@ -442,13 +442,21 @@ async function verifyAttentionProjectNavigation(f: Fixture) {
     await waitFor(hasVisibleTeam(target.alias), 'Attention selects the owned execution team');
     assert.equal(await cdp.evaluate(hasVisibleTeam(target.other)), false,
       'Attention opened the other project history');
-    await waitFor('(async () => { const ui = await import("/components/team/sidebar/teamSidebarUiState.ts");' +
+    const readSidebarState = '(async () => { const ui = await import("/components/team/sidebar/teamSidebarUiState.ts");' +
       'const s = window.__agentTeamsDevStore.getState();' +
       'const chat = ui.getTeamMessagesSidebarUiState(JSON.stringify([s.activeContextId, ' +
       JSON.stringify(target.alias) + ']));' +
-      'return chat.conversationSurface === "thread" && chat.conversationScope.kind === "direct"' +
-      ' && chat.conversationScope.participant === "alice" && !chat.messagesCollapsed; })()',
-      'Attention opens the exact Messenger thread on the physical alias');
+      'return { conversationSurface: chat.conversationSurface, conversationScope: chat.conversationScope,' +
+      ' messagesCollapsed: chat.messagesCollapsed, messagesSearchQuery: chat.messagesSearchQuery }; })()';
+    try {
+      await waitFor('(async () => { const chat = await (' + readSidebarState + ');' +
+        'return chat.conversationSurface === "thread" && chat.conversationScope.kind === "direct"' +
+        ' && chat.conversationScope.participant === "alice" && !chat.messagesCollapsed; })()',
+        'Attention opens the exact Messenger thread on the physical alias');
+    } catch (error) {
+      const actual = await cdp.evaluate(readSidebarState);
+      throw new Error(String(error) + '; sidebar=' + JSON.stringify(actual) + '; project=' + target.projectId);
+    }
     await waitFor('document.body.innerText.includes(' + JSON.stringify(target.marker) + ')',
       'visible native message in the selected project');
     await cdp.screenshot(path.join(f.screenshots, 'attention-' + target.projectId + '.png'));

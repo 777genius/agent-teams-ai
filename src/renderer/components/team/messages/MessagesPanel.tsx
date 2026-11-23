@@ -477,7 +477,6 @@ export const MessagesPanel = memo(function MessagesPanel({
     }
     setMessagesCollapsed(false);
   }, [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat, openChat]);
-  useAttentionConversationNavigation(activeContextId, teamName, handleAttentionOpenChat);
 
   const handleExpandedChange = useCallback(
     (nextExpanded: boolean): void => {
@@ -516,6 +515,11 @@ export const MessagesPanel = memo(function MessagesPanel({
     setBottomSheetSnapIndex(initialSidebarStateRef.current.bottomSheetSnapIndex);
     setSortChatsByActivity(initialSidebarStateRef.current.sortChatsByActivity === true);
   }, [sidebarStateKey]);
+
+  // A pending Attention intent may be consumed on the first mount of a project
+  // history. Apply it after restoring the sidebar state so restoration cannot
+  // overwrite the requested expansion, search reset or bottom-sheet position.
+  useAttentionConversationNavigation(activeContextId, teamName, handleAttentionOpenChat);
 
   useEffect(() => {
     const persistTeamName = sidebarStateKey;

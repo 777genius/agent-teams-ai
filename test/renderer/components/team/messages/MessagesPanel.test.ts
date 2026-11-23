@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { requestAttentionChatNavigation } from '@features/user-attention/renderer/hooks/conversationAttentionNavigation';
 import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel';
 import {
   buildRevisionNoticeText,
@@ -461,6 +462,49 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.bottomSheetSnapIndex = 2;
     sidebarUiState.conversationSurface = 'thread';
     sidebarUiState.conversationScope = { kind: 'team-feed' };
+  });
+
+  it('applies pending Attention navigation after restoring collapsed sidebar state', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'list';
+    sidebarUiState.messagesCollapsed = true;
+    sidebarUiState.messagesSearchQuery = 'previous thread search';
+    const teamName = 'attention-project-history-fixture';
+    const contextId = storeState.activeContextId;
+    const target = { kind: 'direct' as const, participant: 'alice' };
+    requestAttentionChatNavigation({ contextId, teamName, scope: target });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    vi.mocked(setTeamMessagesSidebarUiState).mockClear();
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(MessagesPanel, {
+            teamName,
+            position: 'sidebar',
+            onPositionChange: vi.fn(),
+            members: [],
+            tasks: [],
+            timeWindow: null,
+            pendingRepliesByMember: {},
+            onPendingReplyChange: vi.fn(),
+          })
+        );
+      });
+      expect(setTeamMessagesSidebarUiState).toHaveBeenLastCalledWith(
+        JSON.stringify([contextId, teamName]),
+        expect.objectContaining({
+          conversationSurface: 'thread',
+          conversationScope: target,
+          messagesCollapsed: false,
+          messagesSearchQuery: '',
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('keeps a selectable cross-team draft out of the local feed fallback', async () => {
