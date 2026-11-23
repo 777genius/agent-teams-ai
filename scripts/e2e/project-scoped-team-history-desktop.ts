@@ -31,6 +31,73 @@ let cdp: {
 } | undefined;
 const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+type DiagnosticStage =
+  | 'startup' | 'native-history' | 'ui-history' | 'alias-redirect'
+  | 'definition-edit' | 'member-settings' | 'review-flow' | 'cross-team'
+  | 'schedules' | 'launch-settings' | 'launch-settings:first-a' | 'launch-settings:second-b'
+  | 'launch-settings:unset-b' | 'launch-settings:schedule-a' | 'launch-settings:provider-change-b'
+  | 'http-create-launch' | 'mcp-board';
+
+const diagnosticOperations = [
+  ['window.electronAPI.teams.launchTeam(', 'team-launch'],
+  ['window.electronAPI.teams.getSavedRequest(', 'team-saved-request'],
+  ['window.electronAPI.schedules.create(', 'schedule-create'],
+  ['window.electronAPI.schedules.triggerNow(', 'schedule-trigger-now'],
+  ['window.electronAPI.startup.getStatus(', 'startup-status'],
+] as const;
+type DiagnosticOperation = (typeof diagnosticOperations)[number][1] | 'renderer-evaluate';
+let diagnosticStage: { label: DiagnosticStage; startedAtMs: number } = {
+  label: 'startup', startedAtMs: Date.now(),
+};
+interface DiagnosticEvaluation {
+  label: DiagnosticOperation; startedAtMs: number; finishedAtMs?: number;
+  outcome: 'pending' | 'fulfilled' | 'rejected';
+}
+let lastEvaluation: DiagnosticEvaluation | null = null;
+
+function noteStage(label: DiagnosticStage): void {
+  diagnosticStage = { label, startedAtMs: Date.now() };
+  lastEvaluation = null;
+}
+
+/** Record fixed labels only: never serialize renderer expressions or IPC arguments. */
+function observeEvaluations(client: NonNullable<typeof cdp>): NonNullable<typeof cdp> {
+  const evaluate = client.evaluate.bind(client);
+  client.evaluate = async (expression: string) => {
+    const operation: DiagnosticEvaluation = {
+      label: diagnosticOperations.find(([prefix]) => expression.includes(prefix))?.[1]
+        ?? 'renderer-evaluate',
+      startedAtMs: Date.now(), outcome: 'pending',
+    };
+    lastEvaluation = operation;
+    try {
+      const result = await evaluate(expression);
+      operation.outcome = 'fulfilled';
+      return result;
+    } catch (error) {
+      operation.outcome = 'rejected';
+      lastEvaluation = operation;
+      throw error;
+    } finally {
+      operation.finishedAtMs = Date.now();
+    }
+  };
+  return client;
+}
+
+function failureDiagnostics() {
+  const now = Date.now();
+  return {
+    stage: diagnosticStage.label,
+    stageElapsedMs: Math.max(0, now - diagnosticStage.startedAtMs),
+    operation: lastEvaluation ? {
+      label: lastEvaluation.label,
+      outcome: lastEvaluation.outcome,
+      elapsedMs: Math.max(0, (lastEvaluation.finishedAtMs ?? now) - lastEvaluation.startedAtMs),
+    } : null,
+  };
+}
+
 async function json(file: string, data: unknown): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, JSON.stringify(data, null, 2) + '\n');
@@ -250,7 +317,7 @@ async function start(f: Fixture): Promise<void> {
         );
         if (renderer) {
           debuggerPort = Number(match[1]);
-          cdp = await CdpClient.connect(renderer.webSocketDebuggerUrl);
+          cdp = observeEvaluations(await CdpClient.connect(renderer.webSocketDebuggerUrl));
           return;
         }
       } catch {
@@ -275,7 +342,7 @@ async function reconnectRenderer(): Promise<boolean> {
     (target) => target.type === 'page' && target.url.startsWith('http://localhost:')
   );
   if (!renderer) return false;
-  const next = await CdpClient.connect(renderer.webSocketDebuggerUrl);
+  const next = observeEvaluations(await CdpClient.connect(renderer.webSocketDebuggerUrl));
   const old = cdp;
   cdp = next;
   if (old && old !== next) void old.close().catch(() => undefined);
@@ -1717,6 +1784,7 @@ async function verifyLaunchSettings(f: Fixture) {
   }
 
   // 1. A launch in project A: the team keeps what was chosen, but not trust or runtime arguments.
+  noteStage('launch-settings:first-a');
   const first = await launch(f.projectA, {
     providerId: 'anthropic', model: 'opus', effort: 'high', limitContext: true,
     skipPermissions: true, extraCliArgs: '--max-turns 5',
@@ -1740,6 +1808,7 @@ async function verifyLaunchSettings(f: Fixture) {
 
   // 2. A launch in project B that changes them: the team and the launched copy follow, the
   // runtime arguments of project B stay its own, and the copy of project A is now behind the team.
+  noteStage('launch-settings:second-b');
   const second = await launch(f.projectB, {
     providerId: 'anthropic', model: 'sonnet', effort: 'medium', limitContext: true,
     extraCliArgs: '--own-to-project-b', skipPermissions: false,
@@ -1757,6 +1826,7 @@ async function verifyLaunchSettings(f: Fixture) {
   assert.equal((await metaOf(f.nativeA)).model, 'opus', 'The copy of project A is behind the team');
 
   // 3. An explicit unset goes back to the default for the whole team; the rest is kept.
+  noteStage('launch-settings:unset-b');
   const third = await launch(f.projectB, {
     providerId: 'anthropic', model: 'sonnet', effort: undefined, limitContext: true,
     extraCliArgs: '--own-to-project-b', skipPermissions: false,
@@ -1769,6 +1839,7 @@ async function verifyLaunchSettings(f: Fixture) {
   // 4. A schedule in project A runs the settings of the team, not the older ones of its copy. The
   // runtime records what it was launched with in the copy: with the stale model of the copy
   // ("opus") it would write that back; the model of the team is "sonnet".
+  noteStage('launch-settings:schedule-a');
   const { launchIdentity: _staleIdentity, ...copyABehind } = await metaOf(f.nativeA);
   await json(metaPath(f.nativeA), copyABehind);
   const schedule = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
@@ -1794,6 +1865,7 @@ async function verifyLaunchSettings(f: Fixture) {
   // another provider). Another provider cannot be launched here without credentials, so the team
   // is seeded as if its last launch had been on one: the part under test is what a launch does to
   // the saved settings it finds.
+  noteStage('launch-settings:provider-change-b');
   await json(metaPath(f.logical), {
     ...(await metaOf(f.logical)), providerId: 'codex', model: 'codex-model', effort: 'medium',
     limitContext: true,
@@ -1840,6 +1912,7 @@ async function run() {
   const f = await fixture();
   let success = false;
   try {
+    noteStage('startup');
     await start(f);
     // On Windows the same real Electron renderer startup can exceed 60 s:
     // the separate creation-page E2E reaches its first interaction after
@@ -1857,18 +1930,26 @@ async function run() {
       rendererStartupBudgetMs
     );
     const beforeIndex = await readFile(f.indexPath, 'utf8');
+    noteStage('native-history');
     await verifyNative(f);
     assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
       'Read-only project navigation mutated durable context mapping');
+    noteStage('ui-history');
     await verifyUi(f);
+    noteStage('alias-redirect');
     await verifyAliasRedirect(f);
+    noteStage('definition-edit');
     await verifyDefinitionEdit(f);
+    noteStage('member-settings');
     await verifyMemberSettings(f);
+    noteStage('review-flow');
     await verifyTeamReviewFlow(f);
+    noteStage('cross-team');
     await verifyCrossTeam(f);
     const readAudit = async () => (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
     const auditBeforeSchedule = (await readAudit()).length;
+    noteStage('schedules');
     const scheduledRun = await verifySchedules(f);
     // Even in CI, never launch an actual provider or substitute test credentials.
     // Only the scheduled launch of the stopped project copy may reach the denying runtime.
@@ -1900,6 +1981,7 @@ async function run() {
     assert.equal(unexpected.length, 0,
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
     // After the strict audit above: the launches of these sections reach the denying runtime on purpose.
+    noteStage('launch-settings');
     await verifyLaunchSettings(f);
     // The runtime child writes its audit line a moment after a launch: wait until the audit of the
     // previous section stops growing, so a late line of it is not counted for the next section.
@@ -1914,6 +1996,7 @@ async function run() {
       return length;
     };
     const auditBeforeHttp = await settledAuditLength('the launch settings section');
+    noteStage('http-create-launch');
     const httpLaunch = await verifyHttpCreateAndLaunch(f);
     const afterHttp = (await readAudit()).slice(auditBeforeHttp);
     assert(afterHttp.filter(isLaunch).length <= 2,
@@ -1921,6 +2004,7 @@ async function run() {
     assert.equal(afterHttp.filter((args) => !isLaunch(args) && !isReadOnly(args)).length, 0,
       'Unexpected runtime calls after the HTTP launch');
     const auditBeforeBoard = await settledAuditLength('the HTTP section');
+    noteStage('mcp-board');
     const mcpBoard = await verifyMcpBoardTools(f, httpLaunch);
     // Board tools read and write files only: nothing of them may reach the runtime.
     const afterBoard = (await readAudit()).slice(auditBeforeBoard);
@@ -1935,9 +2019,10 @@ async function run() {
       httpLaunch, mcpBoard,
     }, null, 2));
   } catch (error) {
+    const diagnostics = failureDiagnostics();
     await cdp?.screenshot(path.join(f.screenshots, 'failure.png')).catch(() => undefined);
     await json(path.join(f.screenshots, 'failure.json'), {
-      error: String(error), logs: logs.slice(-80),
+      error: String(error), diagnostics, logs: logs.slice(-80),
       visibleBody: await cdp?.evaluate('document.body?.innerText').catch(() => null),
     });
     throw error;
