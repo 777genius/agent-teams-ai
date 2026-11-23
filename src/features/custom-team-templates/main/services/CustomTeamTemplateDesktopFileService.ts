@@ -12,6 +12,7 @@ import type {
   ExportCustomTeamTemplateToFileResult,
   ImportCustomTeamTemplateFromFileResult,
   ImportCustomTeamTemplateResult,
+  ListCustomTeamTemplatesResult,
 } from '@features/custom-team-templates/contracts';
 
 /**
@@ -31,6 +32,7 @@ export interface CustomTeamTemplateExportExecutor {
 export interface CustomTeamTemplateDesktopFileServiceDeps {
   importTemplate: CustomTeamTemplateImportExecutor;
   exportTemplate: CustomTeamTemplateExportExecutor;
+  listTemplates?: { execute(): Promise<ListCustomTeamTemplatesResult> };
   files: CustomTeamTemplateFileGateway;
   /** Overridable only for tests; production uses the documented contract ceiling. */
   maxImportFileBytes?: number;
@@ -124,7 +126,71 @@ export class CustomTeamTemplateDesktopFileService {
     // unexpected throw is still reported as a closed outcome so the IPC handler
     // never rejects.
     try {
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        !Array.isArray(parsed) &&
+        (parsed as { format?: unknown }).format === 'agent-teams-custom-template-bundle'
+      ) {
+        const bundle = parsed as { schemaVersion?: unknown; templates?: unknown };
+        if (
+          bundle.schemaVersion !== 1 ||
+          !Array.isArray(bundle.templates) ||
+          bundle.templates.length > 1000
+        )
+          return { status: 'unsupportedFormat' };
+        let imported = 0;
+        let skipped = 0;
+        for (const portable of bundle.templates) {
+          let result: ImportCustomTeamTemplateResult;
+          try {
+            result = await this.deps.importTemplate.execute({ portable });
+          } catch {
+            return { status: 'bundleImported', imported, skipped, stopped: true };
+          }
+          if (result.status === 'imported') imported++;
+          else if (result.status === 'nameConflict') skipped++;
+          else return { status: 'bundleImported', imported, skipped, stopped: true };
+        }
+        return { status: 'bundleImported', imported, skipped, stopped: false };
+      }
       return await this.deps.importTemplate.execute({ portable: parsed });
+    } catch {
+      return { status: 'storageUnavailable' };
+    }
+  }
+
+  async exportAllToFile(): Promise<ExportCustomTeamTemplateToFileResult> {
+    try {
+      const listed = await this.deps.listTemplates?.execute();
+      if (!listed) return { status: 'storageUnavailable' };
+      if (listed.status !== 'ready') return { status: 'storageUnavailable' };
+      if (listed.templates.length > 1000) return { status: 'bundleTooLarge' };
+      const templates = [];
+      let estimatedBytes = 256;
+      for (const template of listed.templates) {
+        const result = await this.deps.exportTemplate.execute({ templateId: template.templateId });
+        if (result.status !== 'exported') return result;
+        estimatedBytes += Buffer.byteLength(JSON.stringify(result.portable, null, 2), 'utf8') + 8;
+        if (estimatedBytes > this.maxImportFileBytes) return { status: 'bundleTooLarge' };
+        templates.push(result.portable);
+      }
+      const contents = `${JSON.stringify({ format: 'agent-teams-custom-template-bundle', schemaVersion: 1, templates }, null, 2)}\n`;
+      if (Buffer.byteLength(contents, 'utf8') > this.maxImportFileBytes)
+        return { status: 'bundleTooLarge' };
+      let destination: string | null;
+      try {
+        destination = await this.deps.files.pickExportDestination('team-templates.json');
+      } catch {
+        return { status: 'filePickerFailed' };
+      }
+      if (destination === null) return { status: 'cancelled' };
+      try {
+        await this.deps.files.writeFileAtomically(destination, contents);
+      } catch {
+        return { status: 'fileWriteFailed' };
+      }
+      return { status: 'exported' };
     } catch {
       return { status: 'storageUnavailable' };
     }

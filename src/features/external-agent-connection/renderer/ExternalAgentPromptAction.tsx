@@ -69,6 +69,12 @@ export function ExternalAgentPromptAction({
             runApi={api.directRun}
             connection={info}
             isLight={isLight}
+            onRetry={
+              info.mcp.status !== 'ready' && info.errorCode !== 'MCP_HTTP_DISABLED'
+                ? () => void retry()
+                : undefined
+            }
+            retrying={retrying}
             onSettings={() => {
               setOpen(false);
               onSettings();
@@ -79,19 +85,17 @@ export function ExternalAgentPromptAction({
             {error ?? t(local ? 'externalPrompt.loading' : 'externalPrompt.localOnly')}
           </p>
         )}
-        {local &&
-          info?.errorCode !== 'MCP_HTTP_DISABLED' &&
-          (error || info?.mcp.status !== 'ready') && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={retrying}
-              onClick={() => void retry()}
-            >
-              {t('externalPrompt.retry')}
-            </Button>
-          )}
+        {local && error && !info && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={retrying}
+            onClick={() => void retry()}
+          >
+            {t('externalPrompt.retry')}
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );

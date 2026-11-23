@@ -210,6 +210,15 @@ async function typeRenameName(value: string): Promise<void> {
 }
 
 describe('ImportCustomTeamTemplateDialog', () => {
+  it('opens the desktop picker immediately and closes on cancellation', async () => {
+    platformRef.current = 'electron';
+    desktopFile.importFromFile.mockResolvedValueOnce({ status: 'cancelled' });
+    await act(async () => {
+      root.render(<ImportCustomTeamTemplateDialog open startImmediately onClose={onClose} />);
+    });
+    expect(desktopFile.importFromFile).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
   it('shows the file input when browser capability is available', async () => {
     await render();
     expect(fileInput()).not.toBeNull();

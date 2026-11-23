@@ -314,7 +314,7 @@ export async function startOwnedDesktopApp(
     ...process.env,
     AGENT_TEAMS_ELECTRON_USER_DATA_DIR: path.join(runRoot, 'user-data'),
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtimeSource,
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     TMPDIR: tmpRoot,
     npm_config_cache: path.join(runRoot, 'npm-cache'),

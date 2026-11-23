@@ -43,12 +43,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -104,7 +98,6 @@ import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganizati
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
-import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
@@ -428,9 +421,15 @@ export const CreateTeamDialog = ({
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const advancedPreferencesEditedRef = useRef(Boolean(readCreateTeamAdvancedSession()?.edited));
-  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(readCreateTeamAdvancedSession()?.worktreeEnabled ?? false);
-  const [worktreeName, setWorktreeNameRaw] = useState(readCreateTeamAdvancedSession()?.worktreeName ?? '');
-  const [customArgs, setCustomArgsRaw] = useState(readCreateTeamAdvancedSession()?.customArgs ?? '');
+  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(
+    readCreateTeamAdvancedSession()?.worktreeEnabled ?? false
+  );
+  const [worktreeName, setWorktreeNameRaw] = useState(
+    readCreateTeamAdvancedSession()?.worktreeName ?? ''
+  );
+  const [customArgs, setCustomArgsRaw] = useState(
+    readCreateTeamAdvancedSession()?.customArgs ?? ''
+  );
   useEffect(() => {
     migrateLegacyCreateTeamPreferences();
   }, []);
@@ -495,7 +494,8 @@ export const CreateTeamDialog = ({
   ]);
   useEffect(() => {
     // Restore per-name defaults until Advanced CLI has been manually edited.
-    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesEditedRef.current) return;
+    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesEditedRef.current)
+      return;
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
     const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
@@ -526,7 +526,10 @@ export const CreateTeamDialog = ({
   }, []);
   const setWorktreeEnabled = (value: boolean): void => {
     advancedPreferencesEditedRef.current = true;
-    patchCreateTeamAdvancedSession({ worktreeEnabled: value, worktreeName: value ? worktreeName : '' });
+    patchCreateTeamAdvancedSession({
+      worktreeEnabled: value,
+      worktreeName: value ? worktreeName : '',
+    });
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
     if (!value) {
@@ -991,14 +994,17 @@ export const CreateTeamDialog = ({
       const providerModelChecksSignature = buildProviderPrepareModelChecksSignature(
         new Map([[providerId, selectedModelChecksByProvider.get(providerId) ?? []]])
       );
-      const cacheKey = appendProviderPrepareInvalidationEpoch(buildProviderPrepareModelCacheKey({
-        cwd: effectiveCwd,
-        providerId,
-        backendSummary,
-        limitContext: effectiveAnthropicRuntimeLimitContext,
-        runtimeStatusSignature: providerRuntimeStatusSignature,
-        modelChecksSignature: providerModelChecksSignature,
-      }), prepareProviderInvalidationEpochById[providerId]);
+      const cacheKey = appendProviderPrepareInvalidationEpoch(
+        buildProviderPrepareModelCacheKey({
+          cwd: effectiveCwd,
+          providerId,
+          backendSummary,
+          limitContext: effectiveAnthropicRuntimeLimitContext,
+          runtimeStatusSignature: providerRuntimeStatusSignature,
+          modelChecksSignature: providerModelChecksSignature,
+        }),
+        prepareProviderInvalidationEpochById[providerId]
+      );
       const issueReasons = getShortLivedProviderPrepareModelIssueReasons({
         providerId,
         cacheKey,
@@ -2607,14 +2613,19 @@ export const CreateTeamDialog = ({
               local={canCreate}
               isLight={isLight}
               onManagementApplied={onManagementApplied}
-              form={createTeamDraft}
-              descriptionDraft={descriptionDraft}
-              promptDraft={promptDraft}
-              defaultDescription={buildDefaultTeamDescription()}
-              hasPromptChips={promptChipDraft.chips.length > 0}
-              clearPromptChips={promptChipDraft.clearChipDraft}
-              onTemplateApplied={templateSelection.applyBuiltinTemplate}
               disabled={isSubmitting || !open || !active || !templateSelectionReady}
+              templatePicker={
+                <CreateTeamTemplateSelectionField
+                  disabled={isSubmitting || !open || !active || !templateSelectionReady}
+                  open={open}
+                  isCopy={Boolean(initialData)}
+                  form={createTeamDraft}
+                  templateSelection={templateSelection}
+                  descriptionDraft={descriptionDraft}
+                  promptDraft={promptDraft}
+                  promptChipDraft={promptChipDraft}
+                />
+              }
             />
           }
         >
@@ -2700,16 +2711,6 @@ export const CreateTeamDialog = ({
               ) : null}
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
-              <CreateTeamTemplateSelectionField
-                disabled={isSubmitting}
-                open={open}
-                isCopy={Boolean(initialData)}
-                form={createTeamDraft}
-                templateSelection={templateSelection}
-                descriptionDraft={descriptionDraft}
-                promptDraft={promptDraft}
-                promptChipDraft={promptChipDraft}
-              />
               <TeamRosterEditorSection
                 runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                 members={members}
@@ -3038,9 +3039,7 @@ export const CreateTeamDialog = ({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="team-description">
-                      {t('create.fields.description')}
-                    </Label>
+                    <Label htmlFor="team-description">{t('create.fields.description')}</Label>
                     <AutoResizeTextarea
                       id="team-description"
                       className="text-xs"

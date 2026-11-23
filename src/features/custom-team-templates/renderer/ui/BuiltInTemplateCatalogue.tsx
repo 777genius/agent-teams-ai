@@ -1,5 +1,6 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
+import { TEAM_TEMPLATE_ICONS } from '@features/team-templates/renderer';
 import {
   RosterParticipantFrame,
   RosterParticipantIdentity,
@@ -14,31 +15,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
-import {
-  ChevronDown,
-  ClipboardList,
-  Code2,
-  GraduationCap,
-  Handshake,
-  Headset,
-  Megaphone,
-  PenLine,
-  Search,
-} from 'lucide-react';
-
-import type { TeamTemplateV1 } from '@features/team-templates';
-import type { LucideIcon } from 'lucide-react';
-
-const TEMPLATE_ICONS = {
-  'software-product': Code2,
-  marketing: Megaphone,
-  content: PenLine,
-  research: Search,
-  sales: Handshake,
-  'customer-support': Headset,
-  operations: ClipboardList,
-  learning: GraduationCap,
-} satisfies Record<TeamTemplateV1['id'], LucideIcon>;
+import { ChevronDown } from 'lucide-react';
 
 /**
  * Static catalogue of the closed built-in team templates.
@@ -76,7 +53,7 @@ export const BuiltInTemplateCatalogue = ({
         ];
         const colors = buildTeamMemberColorMap(participants, { preferProvidedColors: false });
         const avatars = buildMemberAvatarMap(participants);
-        const Icon = TEMPLATE_ICONS[template.id];
+        const Icon = TEAM_TEMPLATE_ICONS[template.id];
         return (
           <Collapsible
             key={template.id}

@@ -25,6 +25,8 @@ interface Props {
   connection: ConnectionInfoV1;
   isLight: boolean;
   onSettings(): void;
+  onRetry?(): void;
+  retrying?: boolean;
   runApi?: ExternalAgentRunApi;
 }
 
@@ -54,6 +56,8 @@ export const ExternalAgentPromptDialog = ({
   connection,
   isLight,
   onSettings,
+  onRetry,
+  retrying = false,
   runApi,
 }: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
@@ -273,6 +277,11 @@ export const ExternalAgentPromptDialog = ({
               ? settingsT('general.externalAgentConnection.disabledExplanation')
               : (currentConnection.reason ?? t('externalPrompt.connectionRequired'))}
           </p>
+        )}
+        {onRetry && (
+          <Button type="button" variant="outline" size="sm" disabled={retrying} onClick={onRetry}>
+            {t('externalPrompt.retry')}
+          </Button>
         )}
       </div>
       {runApi && (

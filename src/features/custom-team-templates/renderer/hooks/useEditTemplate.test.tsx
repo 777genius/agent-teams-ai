@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateTemplate = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
+const importTemplate = vi.hoisted(() => vi.fn());
 
 vi.mock('@renderer/api', () => ({
-  api: { customTeamTemplates: { updateTemplate, listTemplates } },
+  api: { customTeamTemplates: { updateTemplate, listTemplates, importTemplate } },
 }));
 
 import { useEditTemplate, type UseEditTemplateResult } from './useEditTemplate';
@@ -46,11 +47,12 @@ let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let latest: UseEditTemplateResult | null = null;
 let open = true;
+let creating = false;
 let selected: CustomTeamTemplateV1 | null = template;
 let onSaved: ReturnType<typeof vi.fn>;
 
 const Harness = (): React.ReactNode => {
-  latest = useEditTemplate({ open, template: selected, onSaved });
+  latest = useEditTemplate({ open, template: selected, creating, onSaved });
   return null;
 };
 
@@ -80,8 +82,10 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   updateTemplate.mockReset();
   listTemplates.mockReset();
+  importTemplate.mockReset();
   onSaved = vi.fn();
   open = true;
+  creating = false;
   selected = template;
   latest = null;
   host = document.createElement('div');
@@ -185,6 +189,29 @@ describe('useEditTemplate unresolved writes', () => {
     expect(latest?.status).toBe('unresolvedWriteOutcome');
     expect(latest?.canRecheck).toBe(true);
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('keeps a successfully imported create saved when onSaved throws', async () => {
+    const created: CustomTeamTemplateV1 = {
+      ...template,
+      templateId: 'created-1',
+      revision: 1,
+    };
+    importTemplate.mockResolvedValue({ status: 'imported', template: created });
+    onSaved.mockImplementation(() => {
+      throw new Error('renderer callback failed');
+    });
+    creating = true;
+    await render();
+
+    await act(async () => {
+      await expect(latest?.save()).rejects.toThrow('renderer callback failed');
+    });
+
+    expect(importTemplate).toHaveBeenCalledTimes(1);
+    expect(latest?.status).toBe('saved');
+    expect(latest?.busy).toBe(false);
+    expect(latest?.canRecheck).toBe(false);
   });
 
   it('does not treat an exception from onSaved as a transport failure', async () => {

@@ -12,6 +12,7 @@ import type { ImportCustomTeamTemplateResult } from './operations';
 export const CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS = {
   importFromFile: 'custom-team-templates:import-from-file',
   exportToFile: 'custom-team-templates:export-to-file',
+  exportAllToFile: 'custom-team-templates:export-all-to-file',
 } as const;
 
 export type CustomTeamTemplateFileOperation = keyof typeof CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS;
@@ -58,6 +59,7 @@ export const CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES = 128 * 1024 * 1024;
  */
 export type ImportCustomTeamTemplateFromFileResult =
   | ImportCustomTeamTemplateResult
+  | { status: 'bundleImported'; imported: number; skipped: number; stopped: boolean }
   | { status: 'cancelled' }
   | { status: 'invalidJson' }
   | { status: 'invalidEncoding' }
@@ -90,6 +92,7 @@ export type ExportCustomTeamTemplateToFileResult =
   | { status: 'unreadableRecord'; templateId: string }
   | { status: 'storageUnavailable' }
   | { status: 'filePickerFailed' }
+  | { status: 'bundleTooLarge' }
   | { status: 'fileWriteFailed' };
 
 /**
@@ -98,11 +101,12 @@ export type ExportCustomTeamTemplateToFileResult =
  * The Electron preload bridge exposes this as
  * `window.electronAPI.customTeamTemplates.desktopFile`; the browser HTTP
  * adapter deliberately leaves it undefined instead of fabricating a file
- * dialog. Neither method accepts a filesystem path.
+ * dialog. No method accepts a filesystem path.
  */
 export interface CustomTeamTemplatesDesktopFileApi {
   importFromFile(): Promise<ImportCustomTeamTemplateFromFileResult>;
   exportToFile(
     request: ExportCustomTeamTemplateToFileRequest
   ): Promise<ExportCustomTeamTemplateToFileResult>;
+  exportAllToFile(): Promise<ExportCustomTeamTemplateToFileResult>;
 }

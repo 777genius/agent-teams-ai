@@ -113,7 +113,7 @@ export const TeamListHeader = ({
             <TooltipTrigger asChild>
               <span className="inline-flex">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   className="size-8 p-0"
                   disabled={!canCreate}

@@ -10,6 +10,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { InternalStorageFeature } from '@features/internal-storage/main';
 
+const expectedChannels = [
+  ...Object.values(CUSTOM_TEAM_TEMPLATE_CHANNELS),
+  ...Object.values(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS),
+].sort((left, right) => left.localeCompare(right));
+
 const ipc = vi.hoisted(() => {
   const handlers = new Map<string, (...args: unknown[]) => unknown>();
   return {
@@ -74,16 +79,13 @@ describe('startCustomTeamTemplatesFeature', () => {
     vi.clearAllMocks();
   });
 
-  it('registers every shared data channel and both desktop file channels at startup', () => {
+  it('registers all shared data and desktop file channels at startup', () => {
     startCustomTeamTemplatesFeature(internalStorage());
 
     expect([...ipc.handlers.keys()].sort((left, right) => left.localeCompare(right))).toEqual(
-      [
-        ...Object.values(CUSTOM_TEAM_TEMPLATE_CHANNELS),
-        ...Object.values(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS),
-      ].sort((left, right) => left.localeCompare(right))
+      expectedChannels
     );
-    expect(ipc.handlers.size).toBe(12);
+    expect(ipc.handlers.size).toBe(expectedChannels.length);
   });
 
   it('wires desktop import to the composed import use case', async () => {
@@ -147,12 +149,12 @@ describe('startCustomTeamTemplatesFeature', () => {
 
   it('removes every handler and disposes the composed feature once', () => {
     const startup = startCustomTeamTemplatesFeature(internalStorage());
-    expect(ipc.handlers.size).toBe(12);
+    expect(ipc.handlers.size).toBe(expectedChannels.length);
 
     startup.dispose();
 
     expect(ipc.handlers.size).toBe(0);
-    expect(ipc.removeHandler).toHaveBeenCalledTimes(12);
+    expect(ipc.removeHandler).toHaveBeenCalledTimes(expectedChannels.length);
     expect(featureMock.dispose).toHaveBeenCalledTimes(1);
   });
 });

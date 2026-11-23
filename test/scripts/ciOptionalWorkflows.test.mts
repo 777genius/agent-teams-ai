@@ -171,10 +171,10 @@ test('Kanban-only changes trigger dedicated E2E, not unrelated create/template E
   const sharedTeam = 'src/renderer/components/team/TeamDetailView.tsx';
   const create = 'src/renderer/components/team/CreateTeamPage.tsx';
   const template = 'src/features/custom-team-templates/renderer/ui/CustomTemplateDialog.tsx';
-  const scenarios: ReadonlyArray<readonly [string, readonly string[]]> = [
-    ['custom-team-templates-desktop-e2e', ['pull_request']],
-    ['teams-create-page-desktop-e2e', ['pull_request', 'push']],
-  ];
+  const scenarios = [
+    ['custom-team-templates-desktop-e2e', ['pull_request'] as const],
+    ['teams-create-page-desktop-e2e', ['pull_request', 'push'] as const],
+  ] as const;
   for (const [name, events] of scenarios) {
     for (const event of events) {
       const paths = pathsForTrigger(name, event);
@@ -272,4 +272,26 @@ test('updater contract-only PR jobs do not reserve native Linux E2E runners', ()
   }
   assert.match(workflow('updater-windows-ota'), /  windows-ota:/);
   assert.match(workflow('updater-linux-packages'), /  native:/);
+});
+
+test('updater E2E launch environments disable MCP HTTP for current and legacy builds', () => {
+  for (const name of [
+    'mac-updater.mts',
+    'mac-old-updater.mts',
+    'mac-manual-migration.mts',
+    'linux-feasibility.mts',
+    'linux-ota.mts',
+    'linux-packages.mts',
+    'windows-ota-profile.mts',
+  ]) {
+    const source = readFileSync(
+      new URL(`../../scripts/e2e/release-updater/${name}`, import.meta.url),
+      'utf8'
+    );
+    assert.match(
+      source,
+      /AGENT_TEAMS_MCP_HTTP: '0',\r?\n[ \t]*CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',/,
+      `${name} must disable current and predecessor MCP HTTP`
+    );
+  }
 });

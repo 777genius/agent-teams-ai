@@ -5,10 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateTemplate = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
+const importTemplate = vi.hoisted(() => vi.fn());
 
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
-  api: { customTeamTemplates: { updateTemplate, listTemplates } },
+  api: { customTeamTemplates: { updateTemplate, listTemplates, importTemplate } },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -39,6 +40,29 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     React.createElement('header', null, children),
   DialogTitle: ({ children }: { children: React.ReactNode }) =>
     React.createElement('h2', null, children),
+}));
+vi.mock('@renderer/components/team/dialogs/MembersJsonEditor', () => ({
+  MembersJsonEditor: ({
+    value,
+    onChange,
+    onClose,
+    error,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    onClose: () => void;
+    error: string | null;
+  }) => (
+    <div>
+      <textarea
+        aria-label="JSON"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <button onClick={onClose}>Hide JSON</button>
+      {error && <span>{error}</span>}
+    </div>
+  ),
 }));
 
 import { EditCustomTemplateDialog } from './EditCustomTemplateDialog';
@@ -126,6 +150,7 @@ async function recheck(): Promise<void> {
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   updateTemplate.mockReset();
+  importTemplate.mockReset();
   listTemplates.mockReset();
   updateTemplate.mockResolvedValue({
     status: 'updated',
@@ -149,6 +174,303 @@ afterEach(() => {
 });
 
 describe('EditCustomTemplateDialog', () => {
+  it('edits the full template as JSON and blocks invalid or unknown fields', async () => {
+    await render();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="template-edit-json"]')?.click();
+    });
+    const json = field('[aria-label="JSON"]');
+    expect(JSON.parse(json.value).members[0].name).toBe('alice');
+    await act(async () => {
+      setText('[aria-label="JSON"]', '{');
+    });
+    expect(saveButton().disabled).toBe(true);
+    expect(host.textContent).toContain('customTemplates.bulk.invalidEditorJson');
+    await act(async () => {
+      setText(
+        '[aria-label="JSON"]',
+        JSON.stringify({
+          name: 'Updated',
+          description: '',
+          teamPrompt: 'New prompt',
+          members: [{ name: 'bob', role: 'reviewer', workflow: 'Inspect' }],
+          unexpected: true,
+        })
+      );
+    });
+    expect(saveButton().disabled).toBe(true);
+    await act(async () => {
+      setText(
+        '[aria-label="JSON"]',
+        JSON.stringify({
+          name: 'Updated',
+          description: '',
+          teamPrompt: 'New prompt',
+          members: [{ name: 'bob', role: 'reviewer', workflow: 'Inspect' }],
+        })
+      );
+    });
+    expect(saveButton().disabled).toBe(false);
+    await save();
+    expect(updateTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: {
+          name: 'Updated',
+          description: undefined,
+          teamPrompt: 'New prompt',
+          members: [{ name: 'bob', role: 'reviewer', workflow: 'Inspect' }],
+        },
+      })
+    );
+  });
+  it('reloads the JSON editor from the newer revision after a save conflict', async () => {
+    const current: CustomTeamTemplateV1 = {
+      ...template,
+      name: 'Concurrent edit',
+      description: 'Updated elsewhere',
+      teamPrompt: 'New server prompt',
+      members: [{ name: 'bob', role: 'writer' }],
+      revision: 6,
+    };
+    updateTemplate.mockResolvedValueOnce({
+      status: 'revisionConflict',
+      current,
+    } satisfies UpdateCustomTeamTemplateResult);
+
+    await render();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="template-edit-json"]')?.click();
+    });
+    await act(async () => {
+      setText(
+        '[aria-label="JSON"]',
+        JSON.stringify({
+          name: 'Stale draft',
+          description: 'Not the latest description',
+          teamPrompt: 'Old prompt',
+          members: [{ name: 'alice', role: 'reviewer' }],
+        })
+      );
+    });
+    await save();
+    expect(host.querySelector('[data-testid="edit-template-revision-conflict"]')).not.toBeNull();
+
+    const reload = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('customTemplates.edit.conflictReload')
+    );
+    expect(reload).toBeDefined();
+    await act(async () => {
+      reload?.click();
+    });
+
+    // Reload must discard the old JSON editor state, not just update hidden form fields.
+    expect(host.querySelector('[aria-label="JSON"]')).toBeNull();
+    expect(field('#edit-template-name').value).toBe(current.name);
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="template-edit-json"]')?.click();
+    });
+    expect(JSON.parse(field('[aria-label="JSON"]').value)).toEqual({
+      name: current.name,
+      description: current.description,
+      teamPrompt: current.teamPrompt,
+      members: current.members,
+    });
+
+    await save();
+    expect(updateTemplate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        expectedRevision: 6,
+        fields: expect.objectContaining({
+          name: current.name,
+          teamPrompt: current.teamPrompt,
+          members: current.members,
+        }),
+      })
+    );
+  });
+
+  it('rechecks a server-identified unresolved create without dispatching it twice', async () => {
+    const draftName = 'New stored template';
+    const stored: CustomTeamTemplateV1 = {
+      ...template,
+      templateId: 'server-created-123',
+      name: draftName,
+      revision: 1,
+    };
+    importTemplate.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: stored.templateId,
+    });
+    listTemplates.mockResolvedValueOnce({ status: 'ready', templates: [stored] });
+
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft-create', name: '' }}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', draftName);
+    });
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .find((button) => button.textContent?.includes('customTemplates.actions.save'))
+        ?.click();
+    });
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+    expect(onSaved).not.toHaveBeenCalled();
+    await recheck();
+    expect(listTemplates).toHaveBeenCalledTimes(1);
+    expect(importTemplate).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledWith(stored);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an unknown create pending when the stored record does not match', async () => {
+    importTemplate.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'server-created-123',
+    });
+    listTemplates.mockResolvedValueOnce({
+      status: 'ready',
+      templates: [{ ...template, templateId: 'server-created-123', revision: 1 }],
+    });
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft-create', name: '' }}
+          onClose={onClose}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', 'Different payload');
+    });
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .find((button) => button.textContent?.includes('customTemplates.actions.save'))
+        ?.click();
+    });
+    await recheck();
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(importTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows recovery from a definite HTTP 413 while creating a template', async () => {
+    importTemplate.mockRejectedValueOnce(new Error('HTTP 413 Payload Too Large'));
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft-413', name: '' }}
+          onClose={onClose}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', 'Reusable large template');
+    });
+    await act(async () => {
+      const save = [...host.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('customTemplates.actions.save')
+      );
+      save?.click();
+    });
+    expect(host.querySelector('[data-testid="edit-template-request-failed"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    const createButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('customTemplates.actions.save')
+    );
+    expect(createButton?.disabled).toBe(false);
+  });
+
+  it('supports entering the first newline in a new custom-role value', async () => {
+    await render({
+      ...template,
+      members: [{ name: 'alice', role: 'Custom specialist' }],
+    });
+    const editor = field('#member-0-role-custom');
+    expect(editor.tagName).toBe('TEXTAREA');
+    expect(editor.getAttribute('aria-label')).toBeTruthy();
+    await act(async () => {
+      setText('#member-0-role-custom', 'Custom specialist\nNext responsibility');
+    });
+    await save();
+    expect(updateTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: expect.objectContaining({
+          members: [{ name: 'alice', role: 'Custom specialist\nNext responsibility' }],
+        }),
+      })
+    );
+  });
+
+  it('keeps an existing custom-role editor mounted while clearing and replacing its text', async () => {
+    await render({
+      ...template,
+      members: [{ name: 'alice', role: 'Custom specialist' }],
+    });
+    const selector = '#member-0-role-custom';
+    const editor = field(selector);
+    for (const nextRole of ['', 'reviewer', 'Replacement specialist']) {
+      await act(async () => {
+        setText(selector, nextRole);
+      });
+      expect(field(selector)).toBe(editor);
+      expect(editor.value).toBe(nextRole);
+    }
+    await save();
+    expect(updateTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: expect.objectContaining({
+          members: [{ name: 'alice', role: 'Replacement specialist' }],
+        }),
+      })
+    );
+  });
+
+  it('creates a new template using the same editor and portable validation', async () => {
+    importTemplate.mockResolvedValueOnce({ status: 'imported', template });
+    await act(async () => {
+      root.render(
+        <EditCustomTemplateDialog
+          open
+          creating
+          template={{ ...template, templateId: 'draft', name: '' }}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      );
+    });
+    await act(async () => {
+      setText('#edit-template-name', 'New reusable team');
+    });
+    await act(async () => {
+      const button = [...host.querySelectorAll('button')].find((item) =>
+        item.textContent?.includes('customTemplates.actions.save')
+      );
+      button?.click();
+    });
+    expect(importTemplate).toHaveBeenCalledWith({
+      portable: expect.objectContaining({
+        format: 'agent-teams-custom-template',
+        name: 'New reusable team',
+        members: template.members,
+      }),
+    });
+    expect(onSaved).toHaveBeenCalledWith(template);
+    expect(updateTemplate).not.toHaveBeenCalled();
+  });
   it.each([
     { memberField: 'workflow', newline: '\n' },
     { memberField: 'workflow', newline: '\r\n' },
@@ -167,7 +489,8 @@ describe('EditCustomTemplateDialog', () => {
           },
         ],
       });
-      const selector = `#member-0-${memberField}`;
+      const selector =
+        memberField === 'role' ? '#member-0-role + div textarea' : `#member-0-${memberField}`;
       const control = field(selector);
       // Browsers may normalize CRLF to LF; the two lines must remain distinct.
       expect(control.value.replace(/\r\n/g, '\n')).toBe('Review change.\nCheck risks.');

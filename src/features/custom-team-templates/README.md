@@ -18,8 +18,8 @@ creation picker, and nothing else:
 
 - `SaveAsTemplateAction` — team-row action beside "Copy team". It renders nothing for a draft team, stops row navigation, and lazy-loads `SaveAsTemplateDialog`.
 - `MyTemplatesAction` — team-list header action that lazy-loads `MyTemplatesDialog`.
-- `CreateTeamTemplatePicker` — small dialog-free control rendered inline by the
-  Create Team dialog. It prefills the existing creation form from a built-in
+- `CreateTeamTemplatePicker` — catalogue shown in the Create Team template
+  selection dialog. It prefills the existing creation form from a built-in
   catalogue entry or a saved custom template and sends no creation request
   itself; creation still goes through the dialog's unchanged `team:create` /
   `team:createConfig` path, so all team and member identities stay

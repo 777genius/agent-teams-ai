@@ -222,7 +222,7 @@ async function start(f: Fixture): Promise<void> {
       NODE_BINARY: await realpath(process.execPath),
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: f.runtimeCommand,
       CLAUDE_TERMINAL_DAEMON_BINARY: f.runtimeCommand,
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
       ELECTRON_DISABLE_SANDBOX: '1',
       pnpm_config_verify_deps_before_run: 'false',

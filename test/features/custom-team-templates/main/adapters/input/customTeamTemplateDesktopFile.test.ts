@@ -490,3 +490,76 @@ describe('CustomTeamTemplateDesktopFileService export', () => {
     expect(original.rows.get('tmpl-1')).toEqual(stored);
   });
 });
+
+describe('portable template bundles', () => {
+  it('exports only portable data and skips duplicate names on re-import', async () => {
+    const initial: CustomTeamTemplateV1 = {
+      templateId: 'tmpl-one',
+      schemaVersion: 1,
+      name: PORTABLE.name,
+      description: PORTABLE.description,
+      teamPrompt: PORTABLE.teamPrompt,
+      members: PORTABLE.members,
+      revision: 4,
+    };
+    const { gateway } = library([initial]);
+    const fileGateway = files();
+    const listTemplates = {
+      execute: vi.fn(async () => ({ status: 'ready' as const, templates: [initial] })),
+    };
+    const service = new CustomTeamTemplateDesktopFileService({
+      importTemplate: new ImportCustomTeamTemplateUseCase({
+        gateway,
+        hasher,
+        createTemplateId: () => 'tmpl-new',
+      }),
+      exportTemplate: new ExportCustomTeamTemplateUseCase({ gateway }),
+      listTemplates,
+      files: fileGateway,
+    });
+    expect(await service.exportAllToFile()).toEqual({ status: 'exported' });
+    const content = vi.mocked(fileGateway.writeFileAtomically).mock.calls[0][1];
+    const bundle = JSON.parse(content);
+    expect(bundle).toEqual({
+      format: 'agent-teams-custom-template-bundle',
+      schemaVersion: 1,
+      templates: [PORTABLE],
+    });
+    vi.mocked(fileGateway.readUtf8File).mockResolvedValue({ status: 'ok', contents: content });
+    expect(await service.importFromFile()).toEqual({
+      status: 'bundleImported',
+      imported: 0,
+      skipped: 1,
+      stopped: false,
+    });
+  });
+
+  it('stops after a failed item and reports already imported records', async () => {
+    const fileGateway = files({
+      readUtf8File: readResult({
+        status: 'ok',
+        contents: JSON.stringify({
+          format: 'agent-teams-custom-template-bundle',
+          schemaVersion: 1,
+          templates: [PORTABLE, PORTABLE, PORTABLE],
+        }),
+      }),
+    });
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 'imported', template: {} })
+      .mockResolvedValueOnce({ status: 'unresolvedWriteOutcome', templateId: 'unknown' });
+    const service = new CustomTeamTemplateDesktopFileService({
+      importTemplate: { execute },
+      exportTemplate: { execute: vi.fn() },
+      files: fileGateway,
+    });
+    expect(await service.importFromFile()).toEqual({
+      status: 'bundleImported',
+      imported: 1,
+      skipped: 0,
+      stopped: true,
+    });
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+});
