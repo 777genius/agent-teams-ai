@@ -26,23 +26,28 @@ export function createUserAttentionFeature(deps: {
   ): Promise<AttentionTeamSnapshot> {
     try {
       const data = deps.getTeamDataService();
-      const [tasks, feed] = await Promise.all([
+      const [tasksResult, feedResult] = await Promise.allSettled([
         data.getUserAttentionTasks(team.teamName),
         data.getMessageFeed(team.teamName),
       ]);
       const unique = new Map<string, NonNullable<ReturnType<typeof projectAttentionMessage>>>();
-      for (const message of feed.messages) {
-        const candidate = projectAttentionMessage(message);
-        if (!candidate) continue;
-        const key = candidate.messageId ?? `${candidate.timestamp}:${candidate.from}`;
-        if (!unique.has(key)) unique.set(key, candidate);
+      if (feedResult.status === 'fulfilled') {
+        for (const message of feedResult.value.messages) {
+          const candidate = projectAttentionMessage(message);
+          if (!candidate) continue;
+          const key = candidate.messageId ?? `${candidate.timestamp}:${candidate.from}`;
+          if (!unique.has(key)) unique.set(key, candidate);
+        }
       }
       return {
         teamName: team.teamName,
         teamDisplayName: team.displayName,
         projectPath: team.projectPath,
-        tasks: projectAttentionTasks(tasks, team),
+        tasks: tasksResult.status === 'fulfilled' ? projectAttentionTasks(tasksResult.value, team) : [],
         messages: [...unique.values()],
+        ...(tasksResult.status === 'rejected' || feedResult.status === 'rejected'
+          ? { error: 'Some attention sources are unavailable' }
+          : {}),
       };
     } catch {
       // Fail visibly rather than misreporting zero attention for this team.
