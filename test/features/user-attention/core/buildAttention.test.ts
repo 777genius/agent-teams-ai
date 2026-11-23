@@ -117,6 +117,7 @@ describe('Attention Inbox pure domain', () => {
       teams: [{
         teamName: 'one',
         teamDisplayName: 'One',
+        directParticipants: ['alice'],
         tasks: [],
         messages: [dm, dm, group],
         groupNames: { g1: 'Architecture decisions' },
@@ -140,11 +141,44 @@ describe('Attention Inbox pure domain', () => {
   });
 
   it('uses group scope for mentions and direct scope for human-addressed teammate messages', () => {
-    expect(conversationForAttentionMessage(message('m', 'alice', 'user', 'Hi')).scope)
+    expect(conversationForAttentionMessage(message('m', 'alice', 'user', 'Hi'), new Set(['alice'])).scope)
       .toEqual({ kind: 'direct', participant: 'alice' });
     expect(conversationForAttentionMessage(message('g', 'alice', 'user', '@user hi', {
       groupChatId: 'general', groupMessageId: 'g',
-    })).scope).toEqual({ kind: 'group', groupChatId: 'general' });
+    }), new Set()).scope).toEqual({ kind: 'group', groupChatId: 'general' });
+  });
+
+  it('routes former and unknown participants to one available team-feed without dropping unread messages', () => {
+    const snapshot: AttentionSnapshot = {
+      contextId: 'local', complete: true,
+      teams: [{
+        teamName: 'team', teamDisplayName: 'Team',
+        directParticipants: ['alice'], leadName: 'team-lead', tasks: [],
+        messages: [
+          message('former-1', 'former', 'user', 'An unanswered historical message'),
+          message('former-2', 'other-removed', 'user', 'Another historical message'),
+          message('active', 'alice', 'user', 'Current teammate'),
+          message('lead-1', 'lead', 'user', 'Lead alias'),
+          message('lead-2', 'team-lead', 'user', 'Lead canonical name'),
+        ],
+      }],
+    };
+    const model = buildAttentionModel(snapshot, () => ({
+      direct: new Set(), group: new Set(),
+    }), (m) => m.messageId ?? '');
+    expect(model.unreadMessageCount).toBe(5);
+    expect(model.chatCount).toBe(3);
+    expect(model.chats.find((chat) => chat.scope.kind === 'team-feed')?.unreadCount).toBe(2);
+    expect(model.chats.find((chat) => chat.scope.kind === 'direct' &&
+      chat.scope.participant === 'team-lead')?.unreadCount).toBe(2);
+    expect(conversationForAttentionMessage(
+      message('unknown', 'former', 'user', 'History'), new Set()
+    ).scope).toEqual({ kind: 'team-feed' });
+    const afterRead = buildAttentionModel(snapshot, () => ({
+      direct: new Set(['former-1', 'former-2']), group: new Set(),
+    }), (m) => m.messageId ?? '');
+    expect(afterRead.chatCount).toBe(2);
+    expect(afterRead.unreadMessageCount).toBe(3);
   });
 
   it('combines verified execution-alias counts under the logical team', () => {
@@ -175,6 +209,7 @@ describe('Attention Inbox pure domain', () => {
       teams: [{
         teamName: 'stopped',
         teamDisplayName: 'Stopped',
+        directParticipants: ['alice', 'bob'],
         tasks: [{
           teamName: 'stopped', teamDisplayName: 'Stopped', taskId: 't1',
           subject: 'Choose strategy', requestedAt: null,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { buildAttentionModel } from '../../../../src/features/user-attention/core/domain/buildAttention';
 import { createUserAttentionFeature } from '../../../../src/features/user-attention/main/composition/createUserAttentionFeature';
 
 describe('User Attention read facade', () => {
@@ -90,6 +91,33 @@ describe('User Attention read facade', () => {
     expect(child?.tasks[0].logicalTeamName).toBe('logical');
     const targeted = await facade.getUserAttentionSnapshot('native-1');
     expect(targeted.teams.map((team) => team.teamName)).toEqual(['native-1']);
+  });
+
+  it('uses canonical active member summaries and routes removed senders to team-feed', async () => {
+    const facade = createUserAttentionFeature({
+      getContextId: () => 'local',
+      getTeamDataService: () => ({
+        listTeams: async () => [{ teamName: 'alpha', displayName: 'Alpha',
+          members: [{ name: 'alice' }], leadName: 'team-lead' }],
+        getUserAttentionTasks: async () => [],
+        getMessageFeed: async () => ({ teamName: 'alpha', feedRevision: '1', messages: [
+          { messageId: 'active', from: 'alice', to: 'user', text: 'Active member',
+            timestamp: '2026-11-23T12:00:00Z', read: false },
+          { messageId: 'removed', from: 'former', to: 'user', text: 'Historical member',
+            timestamp: '2026-11-23T12:01:00Z', read: false },
+        ] }),
+      } as never),
+    });
+    const snapshot = await facade.getUserAttentionSnapshot();
+    expect(snapshot.teams[0].directParticipants).toEqual(['alice']);
+    expect(snapshot.teams[0].leadName).toBe('team-lead');
+    const model = buildAttentionModel(snapshot, () => ({
+      direct: new Set(), group: new Set(),
+    }), (message) => message.messageId ?? '');
+    expect(model.chats.map((chat) => chat.scope)).toEqual([
+      { kind: 'team-feed' }, { kind: 'direct', participant: 'alice' },
+    ]);
+    expect(model.unreadMessageCount).toBe(2);
   });
 
   it('fences a root switch during in-flight reads', async () => {

@@ -102,7 +102,11 @@ async function setup() {
       createdAt: Date.now() - 86400000,
       leadAgentId: members[0].agentId, members, projectPath: project,
     });
-    await json(path.join(teamDir, 'members.meta.json'), { version: 1, members });
+    const former = { ...members[1], name: 'former', agentId: 'former@' + team,
+      removedAt: Date.now() - 3600000 };
+    await json(path.join(teamDir, 'members.meta.json'), {
+      version: 1, members: team === first ? [...members, former] : members,
+    });
     await json(path.join(teamDir, 'team.meta.json'), {
       version: 1, cwd: project, createdAt: Date.now() - 86400000,
     });
@@ -310,6 +314,41 @@ async function checkDesktop() {
   evidence.checks.push('live Dashboard clarification appears and disappears');
 
   await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
+
+  // Historical messages still need attention after their sender is removed.
+  const formerInbox = path.join(claude, 'teams', first, 'inboxes', 'user.json');
+  const existing = JSON.parse(await readFile(formerInbox, 'utf8'));
+  await json(formerInbox, [...existing, {
+    from: 'former', to: 'user', text: 'ATTENTION_E2E_REMOVED_MEMBER',
+    timestamp: nowIso(), read: false, messageId: 'attention-former-' + first,
+  }]);
+  await until(async () => {
+    const snapshot = await getSnapshot();
+    const team = snapshot.teams.find((entry) => entry.teamName === first);
+    return team?.directParticipants?.includes('alice') &&
+      !team.directParticipants.includes('former') &&
+      team.messages.some((message) => message.messageId === 'attention-former-' + first);
+  }, 'removed member remains an unread candidate without an active direct thread', 90_000);
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const row = Array.from(panel?.querySelectorAll('button') ?? [])
+      .find((button) => button.textContent.includes('ATTENTION_E2E_REMOVED_MEMBER'));
+    if (!row) return false;
+    row.click();
+    return true;
+  })()`), 'live removed-member Attention row is actionable', 90_000);
+  await until(async () => cdp.evaluate(`(async () => {
+    const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
+    const state = window.__agentTeamsDevStore.getState();
+    const active = state.getAllPaneTabs().find((tab) => tab.id === state.activeTabId);
+    const chat = ui.getTeamMessagesSidebarUiState(JSON.stringify([state.activeContextId, ${JSON.stringify(first)}]));
+    return active?.type === 'team' && active.teamName === ${JSON.stringify(first)} &&
+      chat.conversationSurface === 'thread' && chat.conversationScope.kind === 'team-feed' &&
+      !chat.messagesCollapsed && document.body.innerText.includes('ATTENTION_E2E_REMOVED_MEMBER');
+  })()`), 'removed-member message opens the actual team-feed thread');
+  await cdp.screenshot(path.join(artifactRoot, 'attention-removed-member.png'));
+  evidence.checks.push('removed member unread message routes to an available team-feed');
 }
 async function cleanup() {
   await cdp?.close().catch(() => {});

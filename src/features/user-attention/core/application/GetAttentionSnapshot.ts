@@ -39,6 +39,8 @@ export class GetAttentionSnapshot implements UserAttentionApi {
       projectPath: team.projectPath,
       tasks: tasksResult.status === 'fulfilled' ? projectAttentionTasks(tasksResult.value, team) : [],
       messages: [...unique.values()],
+      directParticipants: team.directParticipants ?? [],
+      leadName: team.leadName,
       groupNames,
       ...(tasksResult.status === 'rejected' || messagesResult.status === 'rejected'
         ? { error: 'Some attention sources are unavailable' }
@@ -67,6 +69,8 @@ export class GetAttentionSnapshot implements UserAttentionApi {
           logicalTeamName: team.teamName,
           displayName: team.displayName,
           projectPath: history.projectPath,
+          directParticipants: history.directParticipants,
+          leadName: history.leadName,
         });
       }
     }

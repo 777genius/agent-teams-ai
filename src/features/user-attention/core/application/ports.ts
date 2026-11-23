@@ -6,7 +6,14 @@ export interface AttentionTeamSource {
   projectPath?: string;
   deletedAt?: string;
   logicalTeamName?: string;
-  projectHistoryContexts?: readonly { executionTeamName: string; projectPath: string }[];
+  directParticipants?: readonly string[];
+  leadName?: string;
+  projectHistoryContexts?: readonly {
+    executionTeamName: string;
+    projectPath: string;
+    directParticipants?: readonly string[];
+    leadName?: string;
+  }[];
 }
 
 export interface AttentionSourcePort {

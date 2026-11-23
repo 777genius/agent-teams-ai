@@ -1,4 +1,5 @@
 // Pure conversation identity for non-renderer callers. Keep UI exports in renderer/index.ts.
+export { belongsToConversation, isLeadConversationParticipant } from './core/domain/belongsToConversation';
 export {
   conversationScopeKey,
   createDirectScope,

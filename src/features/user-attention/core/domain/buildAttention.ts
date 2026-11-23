@@ -1,6 +1,8 @@
 import {
+  belongsToConversation,
   conversationScopeKey,
   createDirectScope,
+  isLeadConversationParticipant,
   isUserUnreadMessage,
   normalizeConversationParticipant,
 } from '@features/team-direct-chats';
@@ -41,7 +43,12 @@ function timeMs(timestamp: string | null | undefined): number {
 }
 
 /** A human-facing conversation has a single canonical home, never also team-feed. */
-export function conversationForAttentionMessage(message: InboxMessage, groupName?: string): {
+export function conversationForAttentionMessage(
+  message: InboxMessage,
+  activeParticipants: ReadonlySet<string>,
+  leadName?: string,
+  groupName?: string
+): {
   scope: ConversationScope;
   name: string;
 } {
@@ -52,10 +59,17 @@ export function conversationForAttentionMessage(message: InboxMessage, groupName
     };
   }
   const sender = normalizeConversationParticipant(message.from);
-  if (!sender || sender.includes('/')) {
+  const lead = normalizeConversationParticipant(leadName);
+  const leadNames = lead ? [lead] : [];
+  const participant = lead && isLeadConversationParticipant(sender, leadNames) ? lead : sender;
+  const scope = createDirectScope(participant);
+  // Removed/unknown members have no available direct thread. Keep their
+  // unread messages actionable through the canonical team-feed conversation.
+  if (!participant || (!activeParticipants.has(participant) && participant !== lead) ||
+      !belongsToConversation(message, scope, leadNames)) {
     return { scope: { kind: 'team-feed' }, name: 'Team messages' };
   }
-  return { scope: createDirectScope(sender), name: message.from };
+  return { scope, name: participant === lead && leadName ? leadName : message.from };
 }
 
 export function buildAttentionModel(
@@ -76,6 +90,7 @@ export function buildAttentionModel(
       tasks.push(task);
     }
     const reads = getReads(team.teamName);
+    const activeParticipants = new Set((team.directParticipants ?? []).map(normalizeConversationParticipant));
     const chatMap = new Map<string, AttentionChat>();
     const seenMessages = new Set<string>();
 
@@ -87,7 +102,8 @@ export function buildAttentionModel(
       if (!isUserUnreadMessage(message, readSet, toMessageKey)) continue;
 
       const conversation = conversationForAttentionMessage(
-        message, message.groupChatId ? team.groupNames?.[message.groupChatId] : undefined
+        message, activeParticipants, team.leadName,
+        message.groupChatId ? team.groupNames?.[message.groupChatId] : undefined
       );
       const scopeKey = conversationScopeKey(conversation.scope);
       const entry = chatMap.get(scopeKey);

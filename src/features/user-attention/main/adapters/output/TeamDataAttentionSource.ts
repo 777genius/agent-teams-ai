@@ -3,7 +3,7 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import type { AttentionSourcePort, AttentionTeamSource } from '../../../core/application/ports';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
-import type { InboxMessage, TeamTask } from '@shared/types/team';
+import type { InboxMessage, TeamSummary, TeamTask } from '@shared/types/team';
 
 /** Thin main-owned adapter to existing canonical task and normalized chat readers. */
 export class TeamDataAttentionSource implements AttentionSourcePort {
@@ -21,7 +21,23 @@ export class TeamDataAttentionSource implements AttentionSourcePort {
   }
 
   async listTeams(): Promise<readonly AttentionTeamSource[]> {
-    return projectTeamSummaries(await this.deps.getTeamDataService().listTeams(), this.meta);
+    const raw = await this.deps.getTeamDataService().listTeams();
+    const visible = await projectTeamSummaries(raw, this.meta);
+    const byName = new Map(raw.map((team) => [team.teamName, team]));
+    // The logical summary deliberately folds away native aliases. Their own
+    // active rosters are still needed to resolve available Messenger threads.
+    const roster = (team: TeamSummary | undefined) => ({
+      directParticipants: (team?.members ?? []).map((member) => member.name),
+      leadName: team?.leadName,
+    });
+    return visible.map((team) => ({
+      ...team,
+      ...roster(byName.get(team.teamName)),
+      projectHistoryContexts: team.projectHistoryContexts?.map((history) => ({
+        ...history,
+        ...roster(byName.get(history.executionTeamName)),
+      })),
+    }));
   }
 
   async listHumanTasks(teamName: string): Promise<readonly TeamTask[]> {

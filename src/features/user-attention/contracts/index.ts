@@ -23,6 +23,9 @@ export interface AttentionTeamSnapshot {
   tasks: AttentionTaskCandidate[];
   /** Canonical, user-addressed message candidates. Read state remains client-owned. */
   messages: InboxMessage[];
+  /** Active direct-chat roster from the canonical team summary (excluding removed members). */
+  directParticipants?: readonly string[];
+  leadName?: string;
   /** Optional labels from the existing group-chat catalog; no second group model. */
   groupNames?: Record<string, string>;
   error?: string;
