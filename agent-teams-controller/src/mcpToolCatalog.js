@@ -8,7 +8,10 @@ const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES = [
   'team_trash',
 ];
 
-const AGENT_TEAMS_TEAM_TOOL_NAMES = [...AGENT_TEAMS_MANAGEMENT_TOOL_NAMES];
+const AGENT_TEAMS_TEAM_TOOL_NAMES = [
+  ...AGENT_TEAMS_MANAGEMENT_TOOL_NAMES,
+  'app_show_connection_confirmation',
+];
 
 const AGENT_TEAMS_TASK_TOOL_NAMES = [
   'member_briefing',

@@ -53,6 +53,39 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
       jsonTextContent(await getController('agent-teams-control').runtime.getConnectionInfo()),
   });
   server.addTool({
+    name: 'app_show_connection_confirmation',
+    description:
+      'Show the user that this MCP client reached the desktop app. First call app_get_connection_info and pass its current context. Only set cdpVerified after verifying the live renderer through CDP; name and CDP verification are self-reported.',
+    parameters: z
+      .object({
+        agentName: z
+          .string()
+          .trim()
+          .min(1)
+          .max(80)
+          // eslint-disable-next-line no-control-regex -- control characters cannot appear in the displayed name
+          .regex(/^[^\u0000-\u001f\u007f]+$/),
+        cdpVerified: z
+          .boolean()
+          .optional()
+          .describe(
+            'Whether this client verified the live renderer over CDP; this is self-reported.'
+          ),
+        expectedContext: z
+          .object({
+            appInstanceId: z.string().min(1),
+            dataRootFingerprint: z.string().min(1),
+            connectionGeneration: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+          })
+          .strict(),
+      })
+      .strict(),
+    execute: async (args) =>
+      jsonTextContent(
+        await getController('agent-teams-control').runtime.showConnectionConfirmation(args)
+      ),
+  });
+  server.addTool({
     name: 'team_list',
     description: 'List teams through the local Agent Teams control API',
     parameters: z.object({

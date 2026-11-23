@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
 import { AnnouncementHost } from '@features/announcements/renderer';
-import { useAppearanceTypographyController, useAppearanceZoomController } from '@features/appearance/renderer';
+import {
+  useAppearanceTypographyController,
+  useAppearanceZoomController,
+} from '@features/appearance/renderer';
+import { ExternalAgentConfirmationDialog } from '@features/external-agent-connection/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
@@ -125,6 +129,7 @@ export const App = (): React.JSX.Element => {
           <ContextSwitchOverlay />
           <TabbedLayout />
           <ConfirmDialog />
+          <ExternalAgentConfirmationDialog api={api.externalAgentConnection} />
           <ToolApprovalSheet />
           <AnnouncementHost ready={newsReady} />
         </TooltipProvider>
