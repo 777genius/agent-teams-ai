@@ -1,0 +1,168 @@
+import { api } from '@renderer/api';
+import { subscribeTeamMessageReadStore } from '@renderer/utils/teamMessageReadStorage';
+
+import type { AttentionSnapshot } from '../../contracts';
+import type { TeamChangeEvent } from '@shared/types/team';
+
+export interface AttentionStoreState {
+  contextId: string;
+  snapshot: AttentionSnapshot | null;
+  loading: boolean;
+  error: string | null;
+  version: number;
+}
+
+let state: AttentionStoreState = {
+  contextId: '',
+  snapshot: null,
+  loading: false,
+  error: null,
+  version: 0,
+};
+let currentContextId = '';
+let epoch = 0;
+let fullLoading = false;
+let queuedFull = false;
+let queuedTeams = new Set<string>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let stopEvents: (() => void) | null = null;
+let stopReadState: (() => void) | null = null;
+const listeners = new Set<() => void>();
+
+function publish(changes: Partial<AttentionStoreState> = {}): void {
+  state = { ...state, ...changes, version: state.version + 1 };
+  for (const listener of listeners) listener();
+}
+
+function queue(teamName?: string): void {
+  if (!teamName) queuedFull = true;
+  else if (!queuedFull) queuedTeams.add(teamName);
+  if (flushTimer || listeners.size === 0) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    void flush();
+  }, 250);
+}
+
+async function fetchSnapshot(teamName?: string): Promise<void> {
+  if (!currentContextId) return;
+  const requestContext = currentContextId;
+  const requestEpoch = epoch;
+  if (!teamName) {
+    fullLoading = true;
+    publish({ loading: true, error: null });
+  }
+  try {
+    const response = await api.getUserAttentionSnapshot(teamName);
+    if (requestEpoch !== epoch || response.contextId !== requestContext) return;
+    if (!teamName) {
+      publish({ snapshot: response, loading: false, error: null });
+    } else {
+      const before = state.snapshot;
+      if (!before) {
+        queue();
+        return;
+      }
+      const teams = before.teams.filter((team) => team.teamName !== teamName);
+      teams.push(...response.teams);
+      publish({
+        snapshot: {
+          contextId: requestContext,
+          teams,
+          complete: teams.every((team) => !team.error),
+        },
+        error: null,
+      });
+    }
+  } catch {
+    if (requestEpoch === epoch) {
+      publish({ loading: false, error: 'Unable to load attention status' });
+    }
+  } finally {
+    if (!teamName && requestEpoch === epoch) {
+      fullLoading = false;
+      if (queuedFull || queuedTeams.size > 0) queue();
+    }
+  }
+}
+
+async function flush(): Promise<void> {
+  if (fullLoading || !currentContextId) return;
+  if (queuedFull || !state.snapshot) {
+    queuedFull = false;
+    queuedTeams.clear();
+    await fetchSnapshot();
+    return;
+  }
+  const names = [...queuedTeams];
+  queuedTeams.clear();
+  // A bounded fan-out; team events cannot start N copies of the global scan.
+  for (const name of names) {
+    if (!currentContextId) return;
+    await fetchSnapshot(name);
+  }
+}
+
+function onTeamChange(_event: unknown, event: TeamChangeEvent): void {
+  if (event.type === 'task' || event.type === 'inbox' ||
+      event.type === 'lead-message' || event.type === 'config') {
+    queue(event.type === 'config' ? undefined : event.teamName);
+  }
+}
+
+function connect(): void {
+  if (stopEvents) return;
+  stopEvents = api.teams.onTeamChange?.(onTeamChange) ?? (() => undefined);
+  stopReadState = subscribeTeamMessageReadStore(() => publish());
+  window.addEventListener('focus', onFocus);
+  if (currentContextId) queue();
+}
+
+function onFocus(): void {
+  queue();
+}
+
+function disconnect(): void {
+  stopEvents?.();
+  stopEvents = null;
+  stopReadState?.();
+  stopReadState = null;
+  window.removeEventListener('focus', onFocus);
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = null;
+  queuedFull = false;
+  queuedTeams.clear();
+}
+
+export function subscribeAttention(listener: () => void): () => void {
+  listeners.add(listener);
+  if (listeners.size === 1) connect();
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) disconnect();
+  };
+}
+
+export function getAttentionStoreState(): AttentionStoreState {
+  return state;
+}
+
+export function setAttentionContext(contextId: string): void {
+  if (currentContextId === contextId) return;
+  currentContextId = contextId;
+  epoch += 1;
+  fullLoading = false;
+  queuedFull = false;
+  queuedTeams.clear();
+  publish({
+    contextId,
+    snapshot: null,
+    loading: Boolean(contextId),
+    error: null,
+  });
+  if (contextId) queue();
+}
+
+export function refreshAttention(): void {
+  queue();
+}
