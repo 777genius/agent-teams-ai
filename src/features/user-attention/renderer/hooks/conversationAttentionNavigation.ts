@@ -15,8 +15,9 @@ let nextNonce = 0;
 const subscribers = new Set<(intent: NavigationIntent) => void>();
 
 export function requestAttentionChatNavigation(input: Omit<NavigationIntent, 'nonce' | 'createdAt'>): void {
-  latest = { ...input, nonce: ++nextNonce, createdAt: Date.now() };
-  for (const subscriber of subscribers) subscriber(latest);
+  const intent: NavigationIntent = { ...input, nonce: ++nextNonce, createdAt: Date.now() };
+  latest = intent;
+  for (const subscriber of subscribers) subscriber(intent);
 }
 
 /** Pending intent also reaches team panels mounted *after* opening the tab. */
@@ -35,7 +36,8 @@ export function useAttentionConversationNavigation(
         return;
       }
       handledRef.current = intent.nonce;
-      if (latest?.nonce === intent.nonce) latest = null;
+      // Keep the intent until its short expiry: another already-open pane may
+      // mount its MessagesPanel only after openTeamTab focuses that pane.
       open(intent.scope);
     };
     subscribers.add(onIntent);
