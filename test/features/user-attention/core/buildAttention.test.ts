@@ -60,6 +60,19 @@ describe('Attention Inbox pure domain', () => {
     }))).not.toBeNull();
   });
 
+  it('does not count @user inside a hidden agent block as human attention', () => {
+    const hidden = message('hidden-mention', 'alice', 'user',
+      '<info_for_agent>@user internal</info_for_agent> Regular agent update', {
+        groupChatId: 'general', groupMessageId: 'hidden-mention',
+      });
+    expect(projectAttentionMessage(hidden)).toBeNull();
+    const visible = message('visible-mention', 'alice', 'user',
+      '<info_for_agent>internal</info_for_agent> Please choose @user', {
+        groupChatId: 'general', groupMessageId: 'visible-mention',
+      });
+    expect(projectAttentionMessage(visible)?.text).toBe('Please choose @user');
+  });
+
   it('retains unread group mentions beyond the 240-character preview', () => {
     const original = message('late-mention', 'alice', 'user', `${'a'.repeat(290)} @user choose one`, {
       groupChatId: 'design', groupMessageId: 'late-mention',

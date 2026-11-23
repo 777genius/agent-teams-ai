@@ -19,7 +19,10 @@ function messageIdentity(message: InboxMessage): string {
 
 /** Project just the human-facing candidate, never internal agent traffic. */
 export function projectAttentionMessage(message: InboxMessage): InboxMessage | null {
-  if (!isUserAttentionMessage(message) ||
+  // Decide attention from the complete human-visible text, not hidden agent
+  // blocks and not the 240-character preview (mentions may occur later).
+  const sanitized = stripAgentBlocks(message.text).trim();
+  if (!isUserAttentionMessage({ ...message, text: sanitized }) ||
       message.messageKind === 'task_comment_notification' ||
       isInboxNoiseMessage(message.text) ||
       isTeamInternalControlMessageEnvelope(message) ||
@@ -36,7 +39,6 @@ export function projectAttentionMessage(message: InboxMessage): InboxMessage | n
 
   // Capture the existing read identity before truncating user-visible preview.
   const messageId = messageIdentity(message);
-  const sanitized = stripAgentBlocks(message.text).trim();
   const attachmentCount = (message.attachments?.length ?? 0) + (message.fileReferences?.length ?? 0);
   // An attachment-only message is still a message addressed to the user.
   const text = sanitized.slice(0, 240) ||
