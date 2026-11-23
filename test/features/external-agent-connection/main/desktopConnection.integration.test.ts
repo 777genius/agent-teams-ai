@@ -450,6 +450,26 @@ it('delivers a confirmation only for the current app context and keeps it until 
     expect(await connection.getPendingConfirmation!()).toEqual(pending);
     await connection.dismissConfirmation!(pending!.id);
     expect(await connection.getPendingConfirmation!()).toBeNull();
+    expect(send).toHaveBeenLastCalledWith('external-agent-connection:confirmation', null);
+
+    expect((await post({ agentName: 'Codex', expectedContext })).status).toBe(200);
+    await connection.updateRoot(() => undefined);
+    expect(await connection.getPendingConfirmation!()).toBeNull();
+    expect(send).toHaveBeenLastCalledWith('external-agent-connection:confirmation', null);
+
+    const rootContext = (await connection.getConnectionInfo()).context;
+    expect((await post({ agentName: 'Codex', expectedContext: rootContext })).status).toBe(200);
+    await connection.changeContext(() => undefined);
+    expect(await connection.getPendingConfirmation!()).toBeNull();
+    expect(send).toHaveBeenLastCalledWith('external-agent-connection:confirmation', null);
+
+    const switchedContext = (await connection.getConnectionInfo()).context;
+    expect((await post({ agentName: 'Codex', expectedContext: switchedContext })).status).toBe(
+      200
+    );
+    await connection.closeAdmission();
+    expect(await connection.getPendingConfirmation!()).toBeNull();
+    expect(send).toHaveBeenLastCalledWith('external-agent-connection:confirmation', null);
   } finally {
     await connection.shutdown();
     await app.close();
