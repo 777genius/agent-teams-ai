@@ -153,7 +153,7 @@ async function start(): Promise<void> {
   const userDataPath = getAppDataBasePath();
   const notificationChannelsFeature = createNotificationChannelsFeature({
     storePath: join(getAppDataPath(), 'notification-channels.json'),
-    apiKeys: new ApiKeyService(getClaudeBasePath()),
+    apiKeys: new ApiKeyService(join(getAppDataPath(), 'notification-channel-credentials')),
     canDeliver: () => {
       const settings = ConfigManager.getInstance().getConfig().notifications;
       return settings.enabled &&

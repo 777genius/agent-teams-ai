@@ -1947,7 +1947,8 @@ async function initializeServices(): Promise<void> {
   const apiKeyService = new ApiKeyService();
   notificationChannelsFeature = createNotificationChannelsFeature({
     storePath: join(getAppDataPath(), 'notification-channels.json'),
-    apiKeys: apiKeyService,
+    // Dedicated vault: generic apiKeys.list/lookup/delete never open this file.
+    apiKeys: new ApiKeyService(join(getAppDataPath(), 'notification-channel-credentials')),
     canDeliver: () => {
       const settings = configManager.getConfig().notifications;
       return settings.enabled &&
