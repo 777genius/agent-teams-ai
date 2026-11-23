@@ -46,7 +46,7 @@ describe('dashboard agent connection', () => {
     const root = createRoot(host);
     await act(async () => root.render(<DashboardView />));
     const button = host.querySelector<HTMLButtonElement>(
-      '[data-testid="dashboard-connect-ai-agent"]'
+      'button[aria-label="general.externalAgentConnection.connectButton"]'
     );
     const providers = host.querySelector('[data-testid="providers"]');
     expect(button).not.toBeNull();
