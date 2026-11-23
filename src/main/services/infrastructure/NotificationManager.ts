@@ -1267,6 +1267,13 @@ export class NotificationManager extends EventEmitter {
       return null;
     }
 
+    // Only explicitly visible, newly committed team events may reach external
+    // destinations. Native-toast suppression from the event source also suppresses
+    // outbound delivery; avoid leaking hidden/initial-fetch notifications.
+    if (!payload.suppressToast && !stored.isRead) {
+      this.emit('notification-delivery', stored);
+    }
+
     // Team-specific toast policy: enabled/snoozed + suppressToast + dedupeKey throttle only
     const enabled = this.areNotificationsEnabled();
     const throttled = this.isToastThrottled(error);

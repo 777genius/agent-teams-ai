@@ -149,6 +149,20 @@ describe('NotificationManager.addTeamNotification', () => {
     NotificationManager.resetInstance();
   });
 
+  it('emits external delivery only for visible, committed, non-duplicate events', async () => {
+    const delivery = vi.fn();
+    manager.on('notification-delivery', delivery);
+    const payload = makeTeamPayload({ dedupeKey: 'external-visible-1' });
+    await manager.addTeamNotification(payload);
+    expect(delivery).toHaveBeenCalledOnce();
+    await manager.addTeamNotification(payload);
+    expect(delivery).toHaveBeenCalledOnce();
+    await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'external-hidden-2', suppressToast: true })
+    );
+    expect(delivery).toHaveBeenCalledOnce();
+  });
+
   it('stores team notification and returns StoredNotification', async () => {
     const result = await manager.addTeamNotification(makeTeamPayload());
 

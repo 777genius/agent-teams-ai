@@ -21,11 +21,13 @@ describe('Notification Channels application', () => {
   let secrets: Map<string, string>;
   let sent: ReturnType<typeof vi.fn>;
   let service: NotificationChannelsService;
+  let canDeliver: boolean;
 
   beforeEach(() => {
     records = [];
     secrets = new Map();
     sent = vi.fn(async () => ({ success: true }));
+    canDeliver = true;
     let index = 0;
     const credentials: DeliveryCredentials = {
       create: async (_name, value) => {
@@ -45,6 +47,7 @@ describe('Notification Channels application', () => {
       sender: { send: sent },
       newId: () => 'f97bfa8d-5f66-4cd1-a789-12bda1097e28',
       now: () => '2026-11-23T12:00:00.000Z',
+      canDeliver: () => canDeliver,
     });
   });
 
@@ -62,6 +65,15 @@ describe('Notification Channels application', () => {
     expect(JSON.stringify(await service.list())).not.toContain(TOKEN);
     expect((await service.list())[0].enabled).toBe(false);
     expect(id).toBeTruthy();
+  });
+
+  it('honors the global disable/snooze policy, without suppressing manual test', async () => {
+    const id = await add(true);
+    canDeliver = false;
+    await service.dispatch(event);
+    expect(sent).not.toHaveBeenCalled();
+    expect((await service.test(id)).success).toBe(true);
+    expect(sent).toHaveBeenCalledOnce();
   });
 
   it('does not send unless explicitly enabled and selected', async () => {

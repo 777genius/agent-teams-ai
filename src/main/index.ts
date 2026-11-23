@@ -1948,6 +1948,11 @@ async function initializeServices(): Promise<void> {
   notificationChannelsFeature = createNotificationChannelsFeature({
     storePath: join(getAppDataPath(), 'notification-channels.json'),
     apiKeys: apiKeyService,
+    canDeliver: () => {
+      const settings = configManager.getConfig().notifications;
+      return settings.enabled &&
+        (settings.snoozedUntil == null || settings.snoozedUntil <= Date.now());
+    },
   });
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
     composeGatewayProviderRuntime({
@@ -2940,6 +2945,8 @@ async function initializeServices(): Promise<void> {
 
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
+  });
+  notificationManager.on('notification-delivery', (notification: unknown) => {
     void notificationChannelsFeature?.dispatch(
       notification as Parameters<NotificationChannelsFeatureFacade['dispatch']>[0]
     ).catch(() => {

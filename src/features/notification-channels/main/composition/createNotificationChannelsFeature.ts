@@ -14,6 +14,7 @@ export type NotificationChannelsFeatureFacade = Pick<
 export function createNotificationChannelsFeature(options: {
   storePath: string;
   apiKeys: Pick<ApiKeyService, 'save' | 'delete' | 'readValueById'>;
+  canDeliver?(): boolean;
 }): NotificationChannelsFeatureFacade {
   return new NotificationChannelsService({
     repository: new JsonDeliveryChannelRepository(options.storePath),
@@ -33,5 +34,6 @@ export function createNotificationChannelsFeature(options: {
     },
     newId: randomUUID,
     now: () => new Date().toISOString(),
+    canDeliver: options.canDeliver,
   });
 }

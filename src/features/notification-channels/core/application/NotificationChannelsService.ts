@@ -49,6 +49,7 @@ export interface NotificationChannelsDependencies {
   sender: DeliverySender;
   newId(): string;
   now(): string;
+  canDeliver?(): boolean;
 }
 
 function toDto(channel: StoredDeliveryChannel): DeliveryChannelDto {
@@ -167,6 +168,7 @@ export class NotificationChannelsService {
   }
 
   async dispatch(notification: DetectedError): Promise<void> {
+    if (this.deps.canDeliver && !this.deps.canDeliver()) return;
     const outbound = toOutboundNotification(notification);
     if (!outbound) return;
     const channels = (await this.deps.repository.read()).filter((channel) =>

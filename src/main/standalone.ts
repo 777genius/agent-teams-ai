@@ -24,6 +24,7 @@ import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 import { join } from 'node:path';
 import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
+import { ConfigManager } from './services/infrastructure/ConfigManager';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
@@ -152,6 +153,11 @@ async function start(): Promise<void> {
   const notificationChannelsFeature = createNotificationChannelsFeature({
     storePath: join(userDataPath, 'notification-channels.json'),
     apiKeys: new ApiKeyService(),
+    canDeliver: () => {
+      const settings = ConfigManager.getInstance().getConfig().notifications;
+      return settings.enabled &&
+        (settings.snoozedUntil == null || settings.snoozedUntil <= Date.now());
+    },
   });
   internalStorageFeature = createInternalStorageFeature({ userDataPath });
   await internalStorageFeature.probeBackend();
@@ -178,6 +184,8 @@ async function start(): Promise<void> {
   // Forward notification events to SSE
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
+  });
+  notificationManager.on('notification-delivery', (notification: unknown) => {
     void notificationChannelsFeature.dispatch(
       notification as Parameters<typeof notificationChannelsFeature.dispatch>[0]
     ).catch(() => logger.warn('External notification delivery skipped.'));
