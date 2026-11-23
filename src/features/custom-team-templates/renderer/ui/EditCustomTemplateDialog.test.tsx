@@ -415,6 +415,30 @@ describe('EditCustomTemplateDialog', () => {
     );
   });
 
+  it('keeps an existing custom-role editor mounted while clearing and replacing its text', async () => {
+    await render({
+      ...template,
+      members: [{ name: 'alice', role: 'Custom specialist' }],
+    });
+    const selector = '#member-0-role-custom';
+    const editor = field(selector);
+    for (const nextRole of ['', 'reviewer', 'Replacement specialist']) {
+      await act(async () => {
+        setText(selector, nextRole);
+      });
+      expect(field(selector)).toBe(editor);
+      expect(editor.value).toBe(nextRole);
+    }
+    await save();
+    expect(updateTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: expect.objectContaining({
+          members: [{ name: 'alice', role: 'Replacement specialist' }],
+        }),
+      })
+    );
+  });
+
   it('creates a new template using the same editor and portable validation', async () => {
     importTemplate.mockResolvedValueOnce({ status: 'imported', template });
     await act(async () => {

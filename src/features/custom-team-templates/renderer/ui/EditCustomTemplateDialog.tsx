@@ -57,7 +57,12 @@ const TemplateRoleSelect = ({
         setCustom(value === CUSTOM_ROLE);
         onChange(value === CUSTOM_ROLE || value === NO_ROLE ? '' : value);
       }}
-      onCustomRoleChange={onChange}
+      onCustomRoleChange={(nextRole) => {
+        // Editing custom text must not change the selected mode when the role
+        // temporarily becomes empty or happens to match a preset.
+        setCustom(true);
+        onChange(nextRole);
+      }}
     />
   );
 };
