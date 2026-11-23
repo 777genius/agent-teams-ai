@@ -24,6 +24,28 @@ outer `as const` в workflow policy test уже присутствует в пр
 | Linux OpenCode V2 live Add | Original job 137334455234 / artifact 14777978491: Add остаётся held, model outcome unobserved. Native probe начинает работу с 56.4s из исходного 90s; первый submit приходит только на 50.88s. Bounded private decode reuse использует exact bytes после каждого fresh store read, новые opaque tokens и прежнюю single-entry memo. Все raw validators и consumers проверены на отсутствие mutation/escape; публичные проекции клонируются. Host build/test TS7, 14/14 decode checks и R1/R2 PASS. | Source delta 6 строк плюс regression tests. Один matched Linux profile: 96 guard calls 1150.845 → 880.094 ms; parsing hotspot исчез, но I/O variance исключает обещание стабильных 23.5% или E2E PASS. |
 | Native import Stop | Original job 137334455290 / artifact 14778019318: original Stop отказывает в work-sync-inventory. Ordinary SQLite publication теряла уже записанный envelope incarnation; подлинная empty/caught_up history также была вне прежнего inactive-only census. Сохраняется фактическая bound identity при dirty/clean publication, принимается только точный no-work subset. Original Stop, drain, deadline, missing/foreign identity и live-work refusals сохранены. Actual Stop → export → validate → import сохраняет journal только как archive и не переносит root WorkSync replica/secret. | Восемь файлов; два этапа review. На исходной ветке 265 distinct TEST PASS, narrow TS7 PASS. Совмещённые main storage suites прошли, затем исправлен отдельный drift default project mode; новый GUI E2E ещё необходим. |
 
+Новое ревью #1220 на `6791c558` выявило отдельный отказ восстановления после
+временной ошибки public SQLite action или clean publication: следующий вызов
+останавливался на bound dirty fence раньше штатного primary recovery. Исправление
+опубликовано отдельным обычным потомком `fbab9428c5f5fb5765e6d22af50c96c1f3dd3493`
+в `review/provider-host-pr1220-recovery-20261123`; активный #1220 пока остаётся
+на `6791c558`, его original CI не отменяется. Read-only evidence API допускает
+восстановление только bare dirty binding, при `integrity: ok` и непустых свежих
+canonical statuses с явной исходной incarnation. Raw и mapped records проверяются
+до rewrite/action. Уже committed claim/generation сохраняется, предыдущая action
+не повторяется. Dirty JSON, candidate-bearing authority recovery, foreign или
+malformed evidence, recovered primary и empty/unversioned state без независимого
+подтверждения ownership остаются HOLD. Последнее — явная граница восстановления,
+а не утверждение, что любое пустое хранилище автоматически восстанавливается.
+Четыре уточнения отрицательных тестов сохраняют backup marker при foreign session,
+проверяют drain отдельно от process release, используют полноценный agenda item
+и поле decision, допустимое внешней audit schema. Шесть новых recovery cases
+RED на прежнем production source; candidate: семь suites, 287/287 PASS, strict
+scoped TS7, fast lint и оба source guards PASS. Перенос точных hunks на совмещённый
+main также прошёл независимое R2 и семь suites, 296/296 PASS; сохранены дополнительные
+main cases и `readTeamRootStats`/stale-incarnation handling. Scoped TS7, lint и guards
+на переносе PASS; BackendSelecting store остаётся 799 строк, caps не менялись.
+
 Новый main по умолчанию создаёт native команды с `projectContextMode: per_project`.
 Host Stage 1 пока хранит одну общую историю: этот PR не преобразует project
 histories в shared и не расширяет Host storage schema. Legacy import принимает
@@ -100,6 +122,35 @@ alternate-launch admission и исходного child trace повторены 
 затронутых cases — 5/5 PASS. Узкий strict TS7, fast lint (0 errors, одно прежнее
 warning), wrapper syntax и source-size guard PASS; captured-app остаётся
 797 строк. Полный original GUI сценарий ещё необходим.
+
+Первая полная finite Import попытка на опубликованном `e117f15b30931149700f49be2946211235a2ecd3`
+завершилась INCOMPLETE. Source Electron достиг renderer readiness и viewport
+1440×1000; при Create owner-check №62 не вернулся, сохранена ошибка
+`spawnSync /bin/ps ETIMEDOUT` до исходного 90s cutoff. Затем renderer и electron-vite
+получили SIGKILL. Bootstrap, пользовательских actions и Host consumer не было;
+исполнен только finite metadata peer. Original cleanup сохранил DEBT шести
+group members после исчезновения captured leader; сигналов по потерянной authority
+не отправляли. Пустой census другого tool PID namespace не является доказательством
+очистки исходного namespace. Полного post-flow source freeze эта неуспешная
+попытка не дала. Global `oom_kill` вырос с ранее наблюдённого 240 до 242, но baseline
+этой попытки отсутствовал и конкретный PID этому счётчику не приписывается.
+Следующая проверка подготовлена на новом совмещённом source со штатным finite
+1536 MiB Node budget и пассивным наблюдением PID/birth/RSS в том же namespace;
+прежние deadlines, UI controls, provider isolation и cleanup verdict сохраняются.
+После штатного pnpm postinstall повторный реальный SQLite create/write/read/close
+под Electron 44.10.1 / ABI149 прошёл; production и Node-only addon digests и девять
+immutable runtime input pins остались прежними.
+
+Исходный CI `bb13cc19`: все пять Packaged платформ прошли, aggregate ещё ожидается.
+Fast feedback PASS. Retained V1 / Host V2 job `137395023520` завершился ошибкой
+в отдельном pinned donor `4a0e062`: Create button оставался disabled после успешной
+deep model preparation, с сообщением runtime readiness. Исходный click не был
+отправлен; его 30s deadline не продлевался. Предшествующие V1/V2 business steps,
+scoped Stops и cold reads прошли, donor и общий cleanup подтверждены. Последующие
+три assertions не получили требуемых donor/source-selection receipts. Точная
+причина readiness из сохранённого общего UI сообщения не установлена; готовится
+узкая failure-only диагностика уже показанного blocker state без новых provider
+вызовов, изменений donor source или ослабления admission.
 
 Последняя полная проверка canonical root TS7 7.0.2 на точном `15deedada` шла
 отдельно от Electron/сборок с Go memory budget, без изменения tsconfig/типов.

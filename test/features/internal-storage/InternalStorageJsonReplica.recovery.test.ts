@@ -147,6 +147,37 @@ describe('opt-in replica recovery candidate', () => {
     );
   });
 
+  it('exposes only the existing bare dirty binding as evidence while clean and fallback readers refuse it', async () => {
+    await expect(replica.readBoundPublication(TEAM)).resolves.toBeNull();
+    await replica.markDirty(TEAM);
+    await expect(replica.readBoundPublication(TEAM)).resolves.toBeNull();
+    await replica.writeClean(TEAM, snapshot, INC);
+    await expect(replica.readBoundPublication(TEAM)).resolves.toEqual({
+      state: 'clean', incarnation: INC, snapshot,
+    });
+    await replica.markDirty(TEAM, INC);
+    const before = await readFile(path, 'utf8');
+    await expect(replica.readBoundPublication(TEAM)).resolves.toEqual({
+      state: 'dirty', incarnation: INC,
+    });
+    await expect(replica.readBoundClean(TEAM)).rejects.toThrow(InternalStorageFallbackUnsafeError);
+    await expect(replica.readClean(TEAM, false)).rejects.toThrow(InternalStorageFallbackUnsafeError);
+    expect(await readFile(path, 'utf8')).toBe(before);
+  });
+
+  it.each([
+    ['snapshot', snapshot], ['snapshot', null], ['incarnation', ' padded '],
+    ['incarnation', null], ['updatedAt', 'invalid'], ['runtimeAdmission', {}],
+  ])('refuses bare-dirty publication evidence with %s=%j without discarding it', async (key, value) => {
+    await replica.markDirty(TEAM, INC);
+    const envelope = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+    envelope[key as string] = value;
+    const before = JSON.stringify(envelope);
+    await writeFile(path, before);
+    await expect(replica.readBoundPublication(TEAM)).rejects.toThrow(InternalStorageFallbackUnsafeError);
+    expect(await readFile(path, 'utf8')).toBe(before);
+  });
+
   it.each(['clean', 'dirty'] as const)(
     'rejects %s data bound to another incarnation without modifying it',
     async (state) => {

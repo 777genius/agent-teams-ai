@@ -422,7 +422,8 @@ export class BackendSelectingMemberWorkSyncStore
         }
         await this.applyPendingPrimaryPurge(teamName);
         const publication = mutation || !this.sqlitePreparedTeams.has(teamName)
-          ? await captureReplicaPublication(teamName, this.replica!, this.options!.gateway)
+          ? await captureReplicaPublication(teamName, this.replica!, this.options!.gateway,
+              this.selector.getBackendInfo()?.integrity === 'ok')
           : undefined;
         if (!this.sqlitePreparedTeams.has(teamName)) {
           const replicaSnapshot = await this.replica!.readForPrimary(
