@@ -11,7 +11,7 @@ import { useAttentionInbox } from '@features/user-attention/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { Bell, Inbox, Loader2, PanelRight } from 'lucide-react';
+import { AlertCircle, Bell, Inbox, Loader2, MessageCircle, PanelRight } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MoreMenu } from './MoreMenu';
@@ -173,7 +173,10 @@ export const TabBarActions = (): React.JSX.Element => {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" aria-label={t('attention.title')}
-            className="relative rounded-md p-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
+            aria-description={attentionModel
+              ? `${t('attention.tasks')}: ${attentionModel.taskCount}; ${t('attention.chats')}: ${attentionModel.chatCount}`
+              : undefined}
+            className="relative inline-flex items-center gap-1 rounded-md px-2 py-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
             onClick={() => {
               const state = useStore.getState();
               const focused = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
@@ -182,14 +185,34 @@ export const TabBarActions = (): React.JSX.Element => {
               else state.openTab({ type: 'attention', label: t('attention.tab') });
             }}>
             <Inbox className="size-4" aria-hidden="true" />
-            {attentionModel && attentionModel.taskCount + attentionModel.chatCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white tabular-nums">
-                {attentionModel.taskCount + attentionModel.chatCount > 99 ? '99+' : attentionModel.taskCount + attentionModel.chatCount}
+            {attentionModel && (attentionModel.taskCount > 0 || attentionModel.chatCount > 0) && (
+              <span data-testid="attention-toolbar-counts"
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-red-400 tabular-nums"
+                aria-hidden="true">
+                {attentionModel.taskCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <AlertCircle size={10} />
+                    {attentionModel.taskCount > 99 ? '99+' : attentionModel.taskCount}
+                  </span>
+                )}
+                {attentionModel.chatCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <MessageCircle size={10} />
+                    {attentionModel.chatCount > 99 ? '99+' : attentionModel.chatCount}
+                  </span>
+                )}
               </span>
             )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{t('attention.title')}</TooltipContent>
+        <TooltipContent side="bottom">
+          {t('attention.title')}
+          {attentionModel && (
+            <span className="block text-xs">
+              {t('attention.tasks')}: {attentionModel.taskCount} · {t('attention.chats')}: {attentionModel.chatCount}
+            </span>
+          )}
+        </TooltipContent>
       </Tooltip>
       )}
 

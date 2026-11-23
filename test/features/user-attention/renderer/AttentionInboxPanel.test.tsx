@@ -81,6 +81,12 @@ describe('AttentionInboxPanel renderer', () => {
     expect(rootEl.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(4);
     expect(rootEl.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(5);
     expect(rootEl.querySelector('.overflow-y-auto')).not.toBeNull();
+    const headerCounts = rootEl.querySelector('[data-testid="attention-counts"]');
+    expect(headerCounts?.querySelector('[data-testid="attention-task-count"]')?.textContent)
+      .toContain('attention.tasks: 5');
+    expect(headerCounts?.querySelector('[data-testid="attention-chat-count"]')?.textContent)
+      .toContain('attention.chats: 5');
+    expect(headerCounts?.textContent).not.toContain('10');
     await act(async () => (rootEl.querySelector('[aria-label^="attention.openTask"]') as HTMLButtonElement).click());
     expect(onOpenTask).toHaveBeenCalledWith(tasks[0]);
     await act(async () => (rootEl.querySelector('[data-testid="chat-row"]') as HTMLButtonElement).click());

@@ -52,9 +52,23 @@ export function AttentionInboxPanel({
         <div className="flex min-w-0 items-center gap-2">
           <Inbox size={17} className="shrink-0 text-text-secondary" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-text">{t('attention.title')}</h2>
-          {model && (model.taskCount + model.chatCount) > 0 ? (
-            <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-xs text-white tabular-nums">
-              {model.taskCount + model.chatCount}
+          {model && (model.taskCount > 0 || model.chatCount > 0) ? (
+            <span data-testid="attention-counts"
+              className="inline-flex flex-wrap items-center gap-1 text-[11px] font-medium text-red-400 tabular-nums">
+              {model.taskCount > 0 && (
+                <span data-testid="attention-task-count" className="inline-flex items-center gap-0.5">
+                  <AlertCircle size={12} aria-hidden="true" />
+                  <span className="sr-only">{t('attention.tasks')}: </span>
+                  {model.taskCount}
+                </span>
+              )}
+              {model.chatCount > 0 && (
+                <span data-testid="attention-chat-count" className="inline-flex items-center gap-0.5">
+                  <MessageCircle size={12} aria-hidden="true" />
+                  <span className="sr-only">{t('attention.chats')}: </span>
+                  {model.chatCount}
+                </span>
+              )}
             </span>
           ) : null}
         </div>
