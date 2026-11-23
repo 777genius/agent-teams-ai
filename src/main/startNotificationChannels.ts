@@ -1,17 +1,20 @@
-import { createNotificationChannelsFeature, registerNotificationChannelsIpc,
-  removeNotificationChannelsIpc, type NotificationChannelsFeatureFacade,
+import { join } from 'node:path';
+
+import {
+  createNotificationChannelsFeature,
+  registerNotificationChannelsIpc,
+  removeNotificationChannelsIpc,
+  type NotificationChannelsFeatureFacade,
 } from '@features/notification-channels/main';
 import { getAppDataPath } from '@main/utils/pathDecoder';
+import type { DetectedError } from '@shared/types/notifications';
 import { createLogger } from '@shared/utils/logger';
-import { join } from 'node:path';
+import type { IpcMain } from 'electron';
 
 import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
 import { ConfigManager } from './services/infrastructure/ConfigManager';
-
 import type { HttpServer } from './services/infrastructure/HttpServer';
 import type { NotificationManager } from './services/infrastructure/NotificationManager';
-import type { DetectedError } from '@shared/types/notifications';
-import type { IpcMain } from 'electron';
 
 const logger = createLogger('Feature:NotificationChannels');
 

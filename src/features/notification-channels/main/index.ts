@@ -1,9 +1,9 @@
-export {
-  createNotificationChannelsFeature,
-  type NotificationChannelsFeatureFacade,
-} from './composition/createNotificationChannelsFeature';
+export { registerNotificationChannelsHttp } from './adapters/input/http';
 export {
   registerNotificationChannelsIpc,
   removeNotificationChannelsIpc,
 } from './adapters/input/ipc';
-export { registerNotificationChannelsHttp } from './adapters/input/http';
+export {
+  createNotificationChannelsFeature,
+  type NotificationChannelsFeatureFacade,
+} from './composition/createNotificationChannelsFeature';

@@ -1,7 +1,7 @@
-import { NOTIFICATION_CHANNELS_HTTP } from '../../../contracts';
-
-import type { NotificationChannelsFeatureFacade } from '../../composition/createNotificationChannelsFeature';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+
+import { NOTIFICATION_CHANNELS_HTTP } from '../../../contracts';
+import type { NotificationChannelsFeatureFacade } from '../../composition/createNotificationChannelsFeature';
 
 /** A localhost browser may manage credentials; cross-origin pages may not. */
 /** The settings API is local-only, including metadata reads. */

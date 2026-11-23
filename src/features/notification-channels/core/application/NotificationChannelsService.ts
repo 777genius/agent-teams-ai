@@ -1,3 +1,5 @@
+import type { DetectedError } from '@shared/types/notifications';
+
 import type {
   ChannelTestStatus,
   DeliveryChannelDto,
@@ -11,8 +13,6 @@ import {
   toOutboundNotification,
   validateProviderCredential,
 } from '../domain/routing';
-
-import type { DetectedError } from '@shared/types/notifications';
 
 export interface StoredDeliveryChannel {
   id: string;

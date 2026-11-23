@@ -1,12 +1,11 @@
 import { Chat, ConnectorError } from '@thinwrap/notifications';
 
-import { validateProviderCredential } from '../../../core/domain/routing';
-
+import type { DeliveryFailureCode, DeliveryProvider } from '../../../contracts';
 import type {
   DeliverySender,
   StoredDeliveryChannel,
 } from '../../../core/application/NotificationChannelsService';
-import type { DeliveryFailureCode, DeliveryProvider } from '../../../contracts';
+import { validateProviderCredential } from '../../../core/domain/routing';
 
 /** No arbitrary URLs, local endpoints, redirects, or bearer-URL leakage. */
 function createGuardedFetch(provider: DeliveryProvider, secret: string): typeof fetch {

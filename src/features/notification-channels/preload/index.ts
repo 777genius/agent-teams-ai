@@ -1,7 +1,6 @@
-import { NOTIFICATION_CHANNELS_IPC } from '../contracts';
-
-import type { NotificationChannelsApi } from '../contracts';
 import type { IpcRenderer } from 'electron';
+
+import { NOTIFICATION_CHANNELS_IPC, type NotificationChannelsApi } from '../contracts';
 
 export function createNotificationChannelsBridge(
   ipc: Pick<IpcRenderer, 'invoke'>
