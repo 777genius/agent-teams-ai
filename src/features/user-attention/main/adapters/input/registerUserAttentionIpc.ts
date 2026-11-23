@@ -1,4 +1,5 @@
 import { USER_ATTENTION_CHANNEL } from '@features/user-attention/contracts';
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 
 import type { UserAttentionFeatureFacade } from '../../composition/createUserAttentionFeature';
 import type { IpcMain } from 'electron';
@@ -8,11 +9,10 @@ export function registerUserAttentionIpc(
   feature: UserAttentionFeatureFacade
 ): void {
   ipcMain.handle(USER_ATTENTION_CHANNEL, (_event, teamName?: unknown) => {
-    if (teamName !== undefined &&
-        (typeof teamName !== 'string' || !/^[\w.-]{1,128}$/.test(teamName))) {
-      throw new Error('Invalid attention team name');
-    }
-    return feature.getUserAttentionSnapshot(teamName as string | undefined);
+    if (teamName === undefined) return feature.getUserAttentionSnapshot();
+    const validated = validateTeamName(teamName);
+    if (!validated.valid) throw new Error('Invalid attention team name');
+    return feature.getUserAttentionSnapshot(validated.value);
   });
 }
 
