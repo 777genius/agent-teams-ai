@@ -68,7 +68,13 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
         queue();
         return;
       }
-      const teams = before.teams.filter((team) => team.teamName !== teamName);
+      // A logical team refresh replaces its verified project aliases too.
+      const receivedNames = new Set(response.teams.map((team) => team.teamName));
+      const teams = before.teams.filter((team) =>
+        team.teamName !== teamName &&
+        team.logicalTeamName !== teamName &&
+        !receivedNames.has(team.teamName)
+      );
       teams.push(...response.teams);
       publish({
         snapshot: {

@@ -22,11 +22,12 @@ export function AttentionInboxView({ variant = 'full' }: {
   const openGlobalTaskDetail = useStore((state) => state.openGlobalTaskDetail);
   const openTab = useStore((state) => state.openTab);
   const onOpenTask = useCallback((task: AttentionTaskCandidate) => {
+    if (task.logicalTeamName) openTeamTab(task.logicalTeamName, task.projectPath);
     openGlobalTaskDetail(task.teamName, task.taskId);
-  }, [openGlobalTaskDetail]);
+  }, [openGlobalTaskDetail, openTeamTab]);
   const onOpenChat = useCallback((chat: AttentionChat, scope: ConversationScope) => {
     requestAttentionChatNavigation({ contextId, teamName: chat.teamName, scope });
-    openTeamTab(chat.teamName);
+    openTeamTab(chat.logicalTeamName || chat.teamName, chat.projectPath);
   }, [contextId, openTeamTab]);
   const onOpenFull = useCallback(() => {
     const state = useStore.getState();

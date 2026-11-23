@@ -5,6 +5,8 @@ export const USER_ATTENTION_HTTP_ROUTE = '/api/user-attention';
 
 export interface AttentionTaskCandidate {
   teamName: string;
+  /** Visible logical parent when source is a verified project execution alias. */
+  logicalTeamName?: string;
   teamDisplayName: string;
   taskId: string;
   displayId?: string;
@@ -15,6 +17,7 @@ export interface AttentionTaskCandidate {
 
 export interface AttentionTeamSnapshot {
   teamName: string;
+  logicalTeamName?: string;
   teamDisplayName: string;
   projectPath?: string;
   tasks: AttentionTaskCandidate[];

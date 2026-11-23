@@ -53,13 +53,14 @@ export function projectAttentionMessage(message: InboxMessage): InboxMessage | n
 
 export function projectAttentionTasks(
   tasks: readonly TeamTask[],
-  team: { teamName: string; displayName: string; projectPath?: string }
+  team: { teamName: string; logicalTeamName?: string; displayName: string; projectPath?: string }
 ): AttentionTaskCandidate[] {
   return tasks
     .filter((task) => task.needsClarification === 'user' &&
       task.status !== 'deleted' && !task.deletedAt)
     .map((task) => ({
       teamName: team.teamName,
+      ...(team.logicalTeamName ? { logicalTeamName: team.logicalTeamName } : {}),
       teamDisplayName: team.displayName,
       taskId: task.id,
       displayId: task.displayId,

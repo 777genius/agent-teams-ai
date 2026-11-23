@@ -11,6 +11,8 @@ import type { AttentionSnapshot, AttentionTaskCandidate } from '../../contracts'
 
 export interface AttentionChat {
   teamName: string;
+  logicalTeamName?: string;
+  projectPath?: string;
   teamDisplayName: string;
   scope: ConversationScope;
   name: string;
@@ -92,6 +94,8 @@ export function buildAttentionModel(
       if (!entry) {
         chatMap.set(scopeKey, {
           teamName: team.teamName,
+          logicalTeamName: team.logicalTeamName,
+          projectPath: team.projectPath,
           teamDisplayName: team.teamDisplayName,
           scope: conversation.scope,
           name: conversation.name,
@@ -107,7 +111,12 @@ export function buildAttentionModel(
       unreadMessageCount += 1;
     }
     chats.push(...chatMap.values());
-    countsByTeam.set(team.teamName, { tasks: seenTasks.size, chats: chatMap.size });
+    const logicalName = team.logicalTeamName || team.teamName;
+    const previous = countsByTeam.get(logicalName) ?? { tasks: 0, chats: 0 };
+    countsByTeam.set(logicalName, {
+      tasks: previous.tasks + seenTasks.size,
+      chats: previous.chats + chatMap.size,
+    });
   }
 
   tasks.sort((a, b) =>

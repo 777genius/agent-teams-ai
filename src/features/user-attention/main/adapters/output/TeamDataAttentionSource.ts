@@ -1,9 +1,14 @@
+import { projectTeamSummaries } from '@features/team-project-context/main';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+
 import type { AttentionSourcePort, AttentionTeamSource } from '../../../core/application/ports';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { InboxMessage, TeamTask } from '@shared/types/team';
 
 /** Thin main-owned adapter to existing canonical task and normalized chat readers. */
 export class TeamDataAttentionSource implements AttentionSourcePort {
+  private readonly meta = new TeamMetaStore();
+
   constructor(private readonly deps: {
     getContextId(): string;
     listGroupNames?: (teamName: string) => Promise<Record<string, string>>;
@@ -16,7 +21,7 @@ export class TeamDataAttentionSource implements AttentionSourcePort {
   }
 
   async listTeams(): Promise<readonly AttentionTeamSource[]> {
-    return this.deps.getTeamDataService().listTeams();
+    return projectTeamSummaries(await this.deps.getTeamDataService().listTeams(), this.meta);
   }
 
   async listHumanTasks(teamName: string): Promise<readonly TeamTask[]> {

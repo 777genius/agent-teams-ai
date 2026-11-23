@@ -101,6 +101,27 @@ describe('Attention Inbox pure domain', () => {
     })).scope).toEqual({ kind: 'group', groupChatId: 'general' });
   });
 
+  it('combines verified execution-alias counts under the logical team', () => {
+    const snapshot: AttentionSnapshot = {
+      contextId: 'local', complete: true,
+      teams: [{
+        teamName: 'native-a', logicalTeamName: 'logical', teamDisplayName: 'Logical',
+        tasks: [{ teamName: 'native-a', logicalTeamName: 'logical',
+          taskId: '1', subject: 'Task A', teamDisplayName: 'Logical', requestedAt: null }],
+        messages: [],
+      }, {
+        teamName: 'native-b', logicalTeamName: 'logical', teamDisplayName: 'Logical',
+        tasks: [{ teamName: 'native-b', logicalTeamName: 'logical',
+          taskId: '1', subject: 'Task B', teamDisplayName: 'Logical', requestedAt: null }],
+        messages: [],
+      }],
+    };
+    const model = buildAttentionModel(snapshot, () => ({ direct: new Set(), group: new Set() }),
+      (message) => message.messageId ?? '');
+    expect(model.taskCount).toBe(2);
+    expect(model.countsByTeam.get('logical')).toEqual({ tasks: 2, chats: 0 });
+  });
+
   it('includes stopped team entries, counts unique tasks and sorts chats by latest unread', () => {
     const snapshot: AttentionSnapshot = {
       contextId: 'local',

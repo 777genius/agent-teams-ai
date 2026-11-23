@@ -67,6 +67,31 @@ describe('User Attention read facade', () => {
     expect(snapshot.teams[0].error).toBeTruthy();
   });
 
+  it('includes verified project histories under their logical team', async () => {
+    const source = {
+      listTeams: async () => [{
+        teamName: 'logical', displayName: 'Logical team',
+        projectHistoryContexts: [{ executionTeamName: 'native-1', projectPath: '/projects/one' }],
+      }],
+      getUserAttentionTasks: async (teamName: string) => teamName === 'native-1'
+        ? [{ id: '2', subject: 'Review project decision', status: 'pending', needsClarification: 'user' }]
+        : [],
+      getMessageFeed: async (teamName: string) => ({ teamName, feedRevision: '1', messages: [] }),
+    };
+    const facade = createUserAttentionFeature({
+      getContextId: () => 'local',
+      getTeamDataService: () => source as never,
+    });
+    const snapshot = await facade.getUserAttentionSnapshot();
+    expect(snapshot.complete).toBe(true);
+    const child = snapshot.teams.find((team) => team.teamName === 'native-1');
+    expect(child?.logicalTeamName).toBe('logical');
+    expect(child?.projectPath).toBe('/projects/one');
+    expect(child?.tasks[0].logicalTeamName).toBe('logical');
+    const targeted = await facade.getUserAttentionSnapshot('native-1');
+    expect(targeted.teams.map((team) => team.teamName)).toEqual(['native-1']);
+  });
+
   it('fences a root switch during in-flight reads', async () => {
     let context = 'root-1';
     let resolve!: (value: { teamName: string; feedRevision: string; messages: [] }) => void;

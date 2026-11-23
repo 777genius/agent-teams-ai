@@ -34,6 +34,7 @@ export class GetAttentionSnapshot implements UserAttentionApi {
       : {};
     return {
       teamName: team.teamName,
+      ...(team.logicalTeamName ? { logicalTeamName: team.logicalTeamName } : {}),
       teamDisplayName: team.displayName,
       projectPath: team.projectPath,
       tasks: tasksResult.status === 'fulfilled' ? projectAttentionTasks(tasksResult.value, team) : [],
@@ -48,8 +49,29 @@ export class GetAttentionSnapshot implements UserAttentionApi {
   async getUserAttentionSnapshot(teamName?: string): Promise<AttentionSnapshot> {
     const contextId = this.source.currentContextId();
     const allTeams = await this.source.listTeams();
-    const eligible = allTeams.filter(
-      (team) => !team.deletedAt && (!teamName || team.teamName === teamName)
+    // Reuse verified project-history ownership: a visible logical team may
+    // contain several physical execution aliases, each with its own task/chat files.
+    const expanded: AttentionTeamSource[] = [];
+    const seen = new Set<string>();
+    const include = (team: AttentionTeamSource): void => {
+      if (seen.has(team.teamName)) return;
+      seen.add(team.teamName);
+      expanded.push(team);
+    };
+    for (const team of allTeams) {
+      if (team.deletedAt) continue;
+      include(team);
+      for (const history of team.projectHistoryContexts ?? []) {
+        include({
+          teamName: history.executionTeamName,
+          logicalTeamName: team.teamName,
+          displayName: team.displayName,
+          projectPath: history.projectPath,
+        });
+      }
+    }
+    const eligible = expanded.filter(
+      (team) => !teamName || team.teamName === teamName || team.logicalTeamName === teamName
     );
     const teams = new Array<AttentionTeamSnapshot>(eligible.length);
     let next = 0;
