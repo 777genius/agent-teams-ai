@@ -258,7 +258,7 @@ export class TeamMemberWorktreeManager {
     }
 
     await fs.promises.mkdir(path.dirname(worktreePath), { recursive: true });
-    await this.createWorktree({ baseRepoPath, worktreePath, branchName });
+    await this.createWorktree({ baseRepoPath, sourceCwd: request.baseCwd, worktreePath, branchName });
     return { baseRepoPath, worktreePath, branchName };
   }
 
@@ -341,6 +341,7 @@ export class TeamMemberWorktreeManager {
 
   private async createWorktree(params: {
     baseRepoPath: string;
+    sourceCwd: string;
     worktreePath: string;
     branchName: string;
   }): Promise<void> {
@@ -369,8 +370,12 @@ export class TeamMemberWorktreeManager {
       return;
     }
 
+    // Repository identity comes from the primary checkout, but a newly created
+    // teammate must start at the selected project's commit (possibly a linked
+    // checkout at a different HEAD). Pin the SHA to avoid switching branches.
+    const sourceHead = await execGit(['rev-parse', 'HEAD'], params.sourceCwd);
     await execGit(
-      ['worktree', 'add', '-b', params.branchName, params.worktreePath, 'HEAD'],
+      ['worktree', 'add', '-b', params.branchName, params.worktreePath, sourceHead],
       params.baseRepoPath
     );
   }
