@@ -11,6 +11,7 @@ import {
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
+import { NOTIFICATION_CHANNELS_HTTP } from '@features/notification-channels/contracts';
 import {
   type AssignOrganizationTeamRequest,
   type CreateOrganizationRequest,
@@ -69,7 +70,6 @@ import type {
 } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
-import { NOTIFICATION_CHANNELS_HTTP } from '@features/notification-channels/contracts';
 import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';

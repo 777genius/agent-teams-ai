@@ -16,13 +16,14 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import { join } from 'node:path';
+
 import { createCustomTeamTemplatesFeature, type CustomTeamTemplatesFeature } from '@features/custom-team-templates/main';
 import { createInternalStorageFeature } from '@features/internal-storage/main';
-import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createNotificationChannelsFeature } from '@features/notification-channels/main';
+import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
-import { join } from 'node:path';
 import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';

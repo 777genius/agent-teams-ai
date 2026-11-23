@@ -9,13 +9,13 @@ import {
   registerCustomTeamTemplatesHttp,
 } from '@features/custom-team-templates/main';
 import {
-  type OrganizationsFeatureFacade,
-  registerOrganizationsHttp,
-} from '@features/organizations/main';
-import {
   registerNotificationChannelsHttp,
   type NotificationChannelsFeatureFacade,
 } from '@features/notification-channels/main';
+import {
+  type OrganizationsFeatureFacade,
+  registerOrganizationsHttp,
+} from '@features/organizations/main';
 import {
   type RecentProjectsFeatureFacade,
   registerRecentProjectsHttp,
