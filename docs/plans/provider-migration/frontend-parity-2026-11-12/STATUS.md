@@ -141,6 +141,34 @@ group members после исчезновения captured leader; сигнал�
 под Electron 44.10.1 / ABI149 прошёл; production и Node-only addon digests и девять
 immutable runtime input pins остались прежними.
 
+Вторая полная finite Import попытка на опубликованном `171c3abf2621e81a650e84ebe44ec116e585759a`
+со штатным 1536 MiB profile завершилась INCOMPLETE до UI. После transformation
+3821 modules Vite исчерпал V8 heap при rendering main SSR chunks: GC удерживал
+1526.9 MiB, затем явный `Reached heap limit` и SIGABRT. Это подтверждённая причина
+второй попытки, не доказательство причины первой. Пассивный observer в исходном
+PID namespace записал 68 samples: peak Vite RSS 1,804,060 KiB, combined owned RSS
+2,628,124 KiB; global `oom_kill` остался 242. Минимальный наблюдённый global
+MemAvailable 1,325,492 KiB не является гарантией свободного cgroup budget.
+Original producer остался в connect с пустыми steps; Create/bootstrap/Host не
+запускались. Original cleanup сохранил remaining=[]; final 10s census того же
+namespace подтвердил отсутствие captured live/unknown/unattributed процессов.
+`capturedHostAbsent` остаётся исходным null, так как Host не запускался; старый
+cleanup DEBT первой попытки не переоценивается. После terminal все 2006 выбранных
+source hashes, 1280 input pins и observer hash совпали с prelaunch census;
+пять исходных receipts/logs сохранены побайтно. Добавлен отдельный точный
+2048 MiB profile только для Linux/x64, emulated Import lifecycle и headless=1.
+Он исключает смешение с прежними 1536/UV4 profiles, source-map selector и смену
+исходного UV16. Чистая проверка нового profile в начале dev wrapper отклоняет
+неполный контекст и посторонние Node flags до runtime preflight. Старые profiles
+и отсутствие selector сохраняют прежнее поведение. Actual closed fixture,
+исходный wrapper и настоящий normalizer проверены вместе: пять baseline cases
+RED, candidate suite 202 PASS / один прежний Darwin installer SKIP; шесть focused
+cases входят в это число. Scoped strict TS7, fast lint без errors, source-size
+и syntax guards PASS, оба независимых ревью завершены. Отдельный observer variant
+меняет только два selector literals, сохраняет исходные bytes и прошёл 17 controls.
+Достаточность 2048 MiB для сборки и полного GUI сценария пока не установлена;
+следующая попытка требует нового опубликованного head и зафиксированного плана.
+
 Исходный CI `bb13cc19`: все пять Packaged платформ прошли, aggregate ещё ожидается.
 Fast feedback PASS. Retained V1 / Host V2 job `137395023520` завершился ошибкой
 в отдельном pinned donor `4a0e062`: Create button оставался disabled после успешной

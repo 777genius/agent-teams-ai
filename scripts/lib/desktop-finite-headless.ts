@@ -21,7 +21,7 @@ export function desktopFiniteHeadlessSelected(
   assert.equal(environment.LEGACY_DESKTOP_PROOF_MODE, mode, 'finite TEST headless requires the original import lifecycle');
   assert.equal(environment.LEGACY_DESKTOP_TEST_DISPLAY, undefined, 'finite TEST headless refuses a mixed X display');
   assert.equal(environment.LEGACY_DESKTOP_TEST_XAUTHORITY, undefined, 'finite TEST headless refuses mixed X authorization');
-  const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_HEADLESS|TEST_CHILD_TRACE|TEST_FINITE_HEAP_(?:1536|1536_UV4)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
+  const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_HEADLESS|TEST_CHILD_TRACE|TEST_FINITE_HEAP_(?:1536|1536_UV4|2048)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
   for (const key of Object.keys(environment))
     if (key.startsWith('LEGACY_DESKTOP_')) assert.ok(allowed.test(key), `finite TEST headless refuses ${key}`);
   if (environment.LEGACY_DESKTOP_TEST_CHILD_TRACE !== undefined)

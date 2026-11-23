@@ -7,9 +7,28 @@ export function desktopFiniteHeapNodeOptions(
   environment: Readonly<NodeEnvironment> = process.env,
   platform: string = process.platform,
   arch: string = process.arch
-): '--max-old-space-size=1536' | undefined {
+): '--max-old-space-size=1536' | '--max-old-space-size=2048' | undefined {
   const selected = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
   const selectedUv4 = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4;
+  const selectedImport = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_2048;
+  if (selectedImport !== undefined) {
+    assert.equal(selected, undefined, 'finite TEST heap requires exactly one selector');
+    assert.equal(selectedUv4, undefined, 'finite TEST heap requires exactly one selector');
+    assert.equal(selectedImport, '1', 'finite TEST heap requires its exact selector');
+    assert.equal(platform, 'linux', 'finite TEST heap requires Linux');
+    assert.equal(arch, 'x64', 'finite TEST heap requires x64');
+    assert.equal(environment.LEGACY_DESKTOP_BACKEND_GO, '1', 'finite TEST heap requires explicit launch admission');
+    assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, '1', 'finite TEST heap requires provider emulation');
+    assert.equal(environment.LEGACY_DESKTOP_PROOF_MODE, 'emulated-import-lifecycle-ui',
+      '2048 MiB finite TEST heap requires the original import lifecycle');
+    assert.equal(environment.LEGACY_DESKTOP_TEST_HEADLESS, '1',
+      '2048 MiB finite TEST heap requires the original headless Import');
+    assert.equal(environment.AGENT_TEAMS_DISABLE_SOURCEMAPS, undefined,
+      '2048 MiB finite TEST heap preserves the original source maps');
+    assert.ok(environment.UV_THREADPOOL_SIZE === undefined || environment.UV_THREADPOOL_SIZE === '16',
+      '2048 MiB finite TEST heap preserves the original worker pool');
+    return '--max-old-space-size=2048';
+  }
   if (selected === undefined && selectedUv4 === undefined) return undefined;
   assert.ok(selected === undefined || selectedUv4 === undefined, 'finite TEST heap requires exactly one selector');
   assert.equal(selected ?? selectedUv4, '1', 'finite TEST heap requires its exact selector');
@@ -49,7 +68,9 @@ export function desktopFiniteHeapAppEnvironment(
   const options = desktopFiniteHeapNodeOptions(environment);
   return options === undefined ? {} : {
     NODE_OPTIONS: options,
-    ...(environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4 === '1'
+    ...(environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_2048 === '1'
+      ? { LEGACY_DESKTOP_TEST_FINITE_HEAP_2048: '1', LEGACY_DESKTOP_TEST_HEADLESS: '1' }
+      : environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4 === '1'
       ? { LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4: '1', UV_THREADPOOL_SIZE: '4' }
       : { LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' }),
     LEGACY_DESKTOP_BACKEND_GO: '1',
@@ -79,6 +100,17 @@ export function desktopInstallerSourceMapEnvironment(
   return { AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' };
 }
 
+/** The new Import profile must be complete before the original dev runtime preflight. */
+export function assertDesktopFinite2048DevEnvironment(
+  environment: Readonly<NodeEnvironment> = process.env,
+  platform: string = process.platform,
+  arch: string = process.arch
+): void {
+  if (environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_2048 === undefined) return;
+  const finite = desktopFiniteHeapNodeOptions(environment, platform, arch);
+  assert.equal(environment.NODE_OPTIONS, finite, 'finite TEST startup requires only its exact Node option');
+}
+
 /** The original dev entrypoint supplies its unchanged normalizer at this boundary. */
 export function normalizeDesktopDevNodeOptions(
   environment: NodeEnvironment,
@@ -92,7 +124,7 @@ export function normalizeDesktopDevNodeOptions(
     assert.equal(environment.NODE_OPTIONS, finite, 'finite TEST startup requires only its exact Node option');
   if (fixedWorkerPool)
     assert.equal(environment.UV_THREADPOOL_SIZE, '4', '1536 MiB UV4 finite TEST startup requires its fixed worker pool');
-  normalize(environment, finite === undefined ? undefined : 1536);
+  normalize(environment, finite === undefined ? undefined : finite === '--max-old-space-size=2048' ? 2048 : 1536);
   if (finite !== undefined)
     assert.equal(environment.NODE_OPTIONS, finite, 'finite TEST startup must retain its fixed Node option');
   if (fixedWorkerPool)

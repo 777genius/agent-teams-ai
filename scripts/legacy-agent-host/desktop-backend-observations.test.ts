@@ -13,7 +13,8 @@ import { runInNewContext } from 'node:vm';
 import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
 import { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
-import { desktopFiniteHeapNodeOptions, desktopInstallerSourceMapEnvironment, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
+import { assertDesktopFinite2048DevEnvironment, desktopFiniteHeapNodeOptions,
+  desktopInstallerSourceMapEnvironment, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
 import { desktopFiniteHeadlessSelected, desktopFiniteHeadlessElectronArgs,
   desktopFiniteHeadlessAppEnvironment } from '../lib/desktop-finite-headless.ts';
 import { resolveElectronViteArgs } from '../lib/dev-remote-debugging.ts';
@@ -245,28 +246,34 @@ test('the original dev wrapper rejects wrong headless context before preflight a
   });
   const run = async (env: Record<string, string | undefined>) => {
     const effects: string[] = [], launches: { command: string; args: string[] }[] = [];
+    const launchEnvironments: Record<string, string | undefined>[] = [];
     const main = runInNewContext(source.slice(argumentStart, argumentEnd) + '\n(' + source.slice(start, end).trim() + ')', {
       process: { env, execPath: '/TEST/node', stdout: { write() {} },
         argv: ['/TEST/node', '/TEST/repo/scripts/dev-with-runtime.mjs',
           '--remoteDebuggingPort', '9222', '--', '--remoteDebuggingPort', '9222', '--noSandbox'] },
       desktopFiniteHeadlessElectronArgs: () => desktopFiniteHeadlessElectronArgs(env),
+      assertDesktopFinite2048DevEnvironment: () => assertDesktopFinite2048DevEnvironment(env),
       applyOrganizationDemoMode: () => false,
       augmentRuntimeToolPath: () => effects.push('original-path-preparation'),
       resolveRuntimeCli: async () => { effects.push('original-sentinel-preflight'); return {
         binaryPath: '/TEST/bin/claude', sourceLabel: 'TEST sentinel', versionText: 'TEST-version' }; },
       formatRuntimeVersionForDisplay: (text: string) => text,
       stageLinuxNodeExec: () => effects.push('original-node-exec-stage'),
-      normalizeDesktopDevNodeOptions: () => effects.push('original-node-options'), ensureMinimumNodeOldSpaceEnv() {},
+      normalizeDesktopDevNodeOptions: (target: Record<string, string | undefined>) => {
+        effects.push('original-node-options'); normalizeDesktopDevNodeOptions(target, originalDevNodeOptions);
+      }, ensureMinimumNodeOldSpaceEnv: originalDevNodeOptions,
       readPackageManagerCommand: () => 'pnpm', uiRepoRoot: '/TEST/repo', scriptDir: '/TEST/repo/scripts',
       path: { join },
       resolveElectronViteArgs: async (args: string[]) => {
         assert.deepEqual([...args], ['--remoteDebuggingPort', '9222', '--remoteDebuggingPort', '9222', '--noSandbox']);
         effects.push('original-port-normalization'); return resolveElectronViteArgs([...args]);
       },
-      runOrExit(command: string, args: string[]) { launches.push({ command, args: [...args] }); },
+      runOrExit(command: string, args: string[], options: { env: Record<string, string | undefined> }) {
+        launches.push({ command, args: [...args] }); launchEnvironments.push({ ...options.env });
+      },
       ensureTerminalPlatformRuntime: () => effects.push('original-terminal-override'),
     }) as () => Promise<void>;
-    return { main, effects, launches };
+    return { main, effects, launches, launchEnvironments };
   };
   const rejected = await run({ ...finiteHeadlessEnvironment, LEGACY_DESKTOP_EMULATED_ONLY: '0' });
   await assert.rejects(rejected.main(), /finite TEST headless requires provider emulation/);
@@ -277,6 +284,11 @@ test('the original dev wrapper rejects wrong headless context before preflight a
     await assert.rejects(alternate.main(), new RegExp('finite TEST headless refuses ' + key));
     assert.deepEqual(alternate.effects, []); assert.deepEqual(alternate.launches, []);
   }
+  const missingHeadless = await run({ ...finiteHeadlessEnvironment,
+    LEGACY_DESKTOP_TEST_HEADLESS: undefined, LEGACY_DESKTOP_TEST_FINITE_HEAP_2048: '1',
+    NODE_OPTIONS: '--max-old-space-size=2048' });
+  await assert.rejects(missingHeadless.main(), /2048 MiB finite TEST heap requires the original headless Import/);
+  assert.deepEqual(missingHeadless.effects, []); assert.deepEqual(missingHeadless.launches, []);
   const ordinary = await run({}), headless = await run({ ...finiteHeadlessEnvironment });
   await ordinary.main(); await headless.main();
   assert.deepEqual(headless.effects, ordinary.effects);
@@ -289,6 +301,36 @@ test('the original dev wrapper rejects wrong headless context before preflight a
   assert.deepEqual(headless.launches[1], { command: 'pnpm', args: [
     ...ordinary.launches[1]!.args, ...desktopFiniteHeadlessElectronArgs(finiteHeadlessEnvironment),
   ] });
+  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') ||
+    ['NODE_OPTIONS', 'UV_THREADPOOL_SIZE', 'AGENT_TEAMS_DISABLE_SOURCEMAPS'].includes(key);
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => controlled(key)));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (controlled(key)) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, finiteImport2048Environment);
+  const child = desktopBackendEnvironment('/TEST/finite-import', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+  const selected = await run(child); await selected.main();
+  assert.deepEqual(selected.effects, headless.effects);
+  assert.deepEqual(selected.launches, headless.launches);
+  for (const environment of selected.launchEnvironments) {
+    assert.equal(environment.NODE_OPTIONS, '--max-old-space-size=2048');
+    assert.equal(environment.UV_THREADPOOL_SIZE, '16');
+    assert.equal(environment.AGENT_TEAMS_DISABLE_SOURCEMAPS, undefined);
+  }
+  for (const override of [
+    { LEGACY_DESKTOP_TEST_HEADLESS: undefined }, { LEGACY_DESKTOP_PROOF_MODE: 'emulated-import-ui' },
+    { LEGACY_DESKTOP_BACKEND_GO: '0' }, { LEGACY_DESKTOP_EMULATED_ONLY: undefined },
+    { LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '0' }, { LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4: '1' },
+    { AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' }, { UV_THREADPOOL_SIZE: '4' },
+    { NODE_OPTIONS: undefined }, { NODE_OPTIONS: '--max-old-space-size=1536' },
+    { NODE_OPTIONS: '--max-old-space-size=2048 --trace-gc' },
+  ]) {
+    const refused = await run({ ...child, ...override });
+    await assert.rejects(refused.main(), assert.AssertionError);
+    assert.deepEqual(refused.effects, []); assert.deepEqual(refused.launches, []);
+  }
 });
 
 const finiteEmulatedUiModes = [
@@ -540,6 +582,95 @@ test('ordinary dev normalization stays exact and a future finite floor regressio
     NODE_OPTIONS: '--max-old-space-size=1536' };
   assert.throws(() => normalizeDesktopDevNodeOptions(finite, env => originalDevNodeOptions(env), 'linux', 'x64'),
     /must retain its fixed Node option/);
+});
+
+const finiteImport2048Environment = {
+  ...finiteHeadlessEnvironment, LEGACY_DESKTOP_TEST_FINITE_HEAP_2048: '1',
+};
+
+test('2048 MiB finite Import selects its separate exact resource profile', () => {
+  assert.equal(desktopFiniteHeapNodeOptions(finiteImport2048Environment, 'linux', 'x64'),
+    '--max-old-space-size=2048');
+  assert.equal(desktopFiniteHeapNodeOptions({ ...finiteImport2048Environment, UV_THREADPOOL_SIZE: '16' },
+    'linux', 'x64'), '--max-old-space-size=2048');
+});
+
+test('2048 MiB early dev admission leaves absent and previous resource profiles untouched', () => {
+  const poisoned = { get LEGACY_DESKTOP_BACKEND_GO(): string { return assert.fail('previous paths stay untouched'); } };
+  assert.doesNotThrow(() => assertDesktopFinite2048DevEnvironment(poisoned, 'darwin', 'arm64'));
+  for (const key of ['LEGACY_DESKTOP_TEST_FINITE_HEAP_1536', 'LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4']) {
+    const previous = { [key]: 'old-path',
+      get LEGACY_DESKTOP_BACKEND_GO(): string { return assert.fail('previous paths stay untouched'); } };
+    assert.doesNotThrow(() => assertDesktopFinite2048DevEnvironment(previous));
+  }
+});
+
+test('2048 MiB finite Import refuses broader scopes, mixed resources and changed build settings', () => {
+  const refuse = (change: Record<string, string | undefined>, platform = 'linux', arch = 'x64') =>
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...finiteImport2048Environment, ...change },
+      platform, arch), assert.AssertionError);
+  for (const key of ['LEGACY_DESKTOP_TEST_HEADLESS', 'LEGACY_DESKTOP_BACKEND_GO', 'LEGACY_DESKTOP_EMULATED_ONLY'])
+    for (const value of [undefined, '', '0', 'true', '1 ']) refuse({ [key]: value });
+  for (const value of ['', '0', 'true', '2048', '1 ', '1\n'])
+    refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_2048: value });
+  for (const mode of [undefined, '', 'emulated-import-lifecycle-ui ', ...finiteEmulatedUiModes.filter(
+    value => value !== 'emulated-import-lifecycle-ui'), 'native-launch-ui', 'opencode-v2-management-ui',
+    'native-mixed-create-launch-ui', 'process-cold-ui', 'review-readback-ui'])
+    refuse({ LEGACY_DESKTOP_PROOF_MODE: mode });
+  for (const key of ['LEGACY_DESKTOP_TEST_FINITE_HEAP_1536', 'LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4'])
+    for (const value of ['', '0', '1']) refuse({ [key]: value });
+  for (const value of ['', '0', '1']) refuse({ AGENT_TEAMS_DISABLE_SOURCEMAPS: value });
+  for (const value of ['', '4', '04', '16 ', '128']) refuse({ UV_THREADPOOL_SIZE: value });
+  for (const platform of ['darwin', 'win32', 'freebsd']) refuse({}, platform);
+  for (const arch of ['arm64', 'ia32']) refuse({}, 'linux', arch);
+});
+
+test('2048 MiB finite Import actual parent and fixture carry only their exact budget into the real normalizer', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, t => {
+  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') ||
+    ['NODE_OPTIONS', 'UV_THREADPOOL_SIZE', 'AGENT_TEAMS_DISABLE_SOURCEMAPS', 'SENTRY_AUTH_TOKEN'].includes(key);
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => controlled(key)));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (controlled(key)) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, finiteHeadlessEnvironment,
+    { NODE_OPTIONS: '--require=/TEST/ambient.cjs', SENTRY_AUTH_TOKEN: 'PRIVATE-ambient-token' });
+  const environment = () => desktopBackendEnvironment('/TEST/finite-import', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+  const ordinary = environment();
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_2048 = '1';
+  assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+  const selected = environment();
+  assert.deepEqual(selected, { ...ordinary, NODE_OPTIONS: '--max-old-space-size=2048',
+    LEGACY_DESKTOP_TEST_FINITE_HEAP_2048: '1' });
+  for (const key of ['AGENT_TEAMS_DISABLE_SOURCEMAPS', 'UV_THREADPOOL_SIZE', 'SENTRY_AUTH_TOKEN',
+    'LEGACY_DESKTOP_TEST_FINITE_HEAP_1536', 'LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4'])
+    assert.equal(Object.hasOwn(selected, key), false);
+  assert.equal(selected.LEGACY_DESKTOP_TEST_CHILD_TRACE, '1');
+  assert.deepEqual(desktopFiniteHeadlessElectronArgs(selected), desktopFiniteHeadlessElectronArgs(ordinary));
+  const ui = { ...selected, UV_THREADPOOL_SIZE: '16' }, before = { ...ui }, minima: Array<number | undefined> = [];
+  normalizeDesktopDevNodeOptions(ui, (target, minimum) => {
+    minima.push(minimum); originalDevNodeOptions(target, minimum);
+  });
+  assert.deepEqual(minima, [2048]); assert.deepEqual(ui, before);
+});
+
+test('2048 MiB finite Import rejects arbitrary Node flags before its normalizer and detects a changed final budget', () => {
+  const selected = { ...finiteImport2048Environment, NODE_OPTIONS: '--max-old-space-size=2048' };
+  for (const option of [undefined, '', '--max-old-space-size=1536', '--max-old-space-size=8192',
+    '--max_old_space_size=2048', '--max-old-space-size=2048 ', '--max-old-space-size=2048 --trace-gc',
+    '--require=/TEST/ambient.cjs --max-old-space-size=2048']) {
+    let calls = 0;
+    const env = { ...selected, NODE_OPTIONS: option }, before = { ...env };
+    assert.throws(() => normalizeDesktopDevNodeOptions(env, () => { calls++; }, 'linux', 'x64'),
+      /only its exact Node option/);
+    assert.equal(calls, 0); assert.deepEqual(env, before);
+  }
+  assert.throws(() => normalizeDesktopDevNodeOptions({ ...selected }, env => {
+    env.NODE_OPTIONS = '--max-old-space-size=1536';
+  }, 'linux', 'x64'), /must retain its fixed Node option/);
 });
 
 const finiteV2HeapContexts: ReadonlyArray<Record<string, string>> = [

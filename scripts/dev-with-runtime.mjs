@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
-import { normalizeDesktopDevNodeOptions } from './lib/desktop-finite-node-options.ts';
+import { assertDesktopFinite2048DevEnvironment, normalizeDesktopDevNodeOptions } from './lib/desktop-finite-node-options.ts';
 import { desktopFiniteHeadlessElectronArgs } from './lib/desktop-finite-headless.ts';
 import {
   extractArchive,
@@ -667,6 +667,7 @@ async function resolveRuntimeCli() {
 }
 
 async function main() {
+  assertDesktopFinite2048DevEnvironment();
   const headlessArgs = desktopFiniteHeadlessElectronArgs();
   const candidate = process.env.AGENT_TEAMS_HOST_CANDIDATE === '1';
   if (
