@@ -59,6 +59,50 @@ describe('Thinwrap transport adapter', () => {
       'Agent Teams: Task blocked.')).toEqual({ success: true });
   });
 
+  it('sends a Microsoft Teams Workflow adaptive card on 202 Accepted', async () => {
+    const send = vi.fn(async (url: string, options: RequestInit) =>
+      new Response('', { status: 202 })
+    );
+    vi.stubGlobal('fetch', send);
+    const secret = 'https://sample.logic.azure.com/workflows/example/triggers/manual/paths/invoke?sig=private';
+    const result = await new ThinwrapDeliverySender().send(
+      makeChannel('ms-teams'), secret, 'Agent Teams: Review requested.'
+    );
+    expect(result).toEqual({ success: true });
+    expect(send).toHaveBeenCalledOnce();
+    const [, request] = send.mock.calls[0]!;
+    expect(request.redirect).toBe('error');
+    expect(String(request.body)).toContain('application/vnd.microsoft.card.adaptive');
+    expect(String(request.body)).not.toContain('private');
+  });
+
+  it('sends a Google Chat webhook without changing its signed query', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ name: 'spaces/AAA/messages/BBB' }), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      });
+    }));
+    const secret = 'https://chat.googleapis.com/v1/spaces/AAA/messages?key=key123&token=token123';
+    expect(await new ThinwrapDeliverySender().send(
+      makeChannel('google-chat'), secret, 'Agent Teams: Task blocked.'
+    )).toEqual({ success: true });
+    expect(urls).toEqual([secret]);
+  });
+
+  it('reports Telegram 429 without exposing token or retry metadata', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      ok: false, error_code: 429, description: 'Too Many Requests',
+      parameters: { retry_after: 5 },
+    }), { status: 429, headers: { 'content-type': 'application/json' } })));
+    const result = await new ThinwrapDeliverySender().send(
+      makeChannel('telegram'), TELEGRAM, 'Agent Teams: Message for you.'
+    );
+    expect(result).toEqual({ success: false, code: 'rate_limited' });
+    expect(JSON.stringify(result)).not.toContain(TELEGRAM);
+  });
+
   it('refuses local/webhook impostors without making a request', async () => {
     const network = vi.fn(async () => new Response('ok', { status: 200 }));
     vi.stubGlobal('fetch', network);
