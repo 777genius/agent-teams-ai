@@ -13,7 +13,8 @@ on:
       - 'src/main/http/index.ts'
       - 'src/preload/index.ts'
       - 'src/shared/types/api.ts'
-      - 'src/renderer/api/httpClient.ts'
+      - 'src/renderer/api/**'
+      - 'test/renderer/api/**'
       - 'src/renderer/components/settings/sections/NotificationsSection.tsx'
       - 'scripts/e2e/notification-channels-desktop.mjs'
       - 'scripts/e2e/notification-channels-standalone.mjs'
@@ -31,7 +32,7 @@ concurrency:
 
 jobs:
   desktop:
-    name: Real renderer → IPC → encrypted vault → Thinwrap → intercepted HTTPS
+    name: Real Electron + standalone Node E2E with isolated vault
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -45,6 +46,8 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - name: Prepare Linux virtual display
+        id: linux-display
+        continue-on-error: true
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb fonts-noto-cjk
@@ -64,14 +67,24 @@ jobs:
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Ensure Electron binary
+        id: electron-install
+        continue-on-error: true
         run: node ./scripts/ensure-electron-install.cjs --strict
       - name: Exercise real local delivery through Electron
+        id: electron-e2e
+        if: steps.linux-display.outcome == 'success' && steps.electron-install.outcome == 'success'
+        continue-on-error: true
         env:
           NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR: ${{ runner.temp }}/notification-channels-evidence
         run: xvfb-run -a pnpm test:e2e:notification-channels
       - name: Build standalone Node host
+        id: standalone-build
+        continue-on-error: true
         run: pnpm exec vite build --config docker/vite.standalone.config.ts
       - name: Exercise pure Node standalone HTTP and secure vault
+        id: standalone-e2e
+        if: steps.standalone-build.outcome == 'success'
+        continue-on-error: true
         env:
           NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR: ${{ runner.temp }}/notification-channels-evidence
         run: node scripts/e2e/notification-channels-standalone.mjs
@@ -86,3 +99,23 @@ jobs:
             ${{ runner.temp }}/notification-channels-evidence/*.png
             ${{ runner.temp }}/notification-channels-evidence/receipt.json
             ${{ runner.temp }}/notification-channels-evidence/standalone-*/receipt-standalone.json
+
+      - name: Require both real E2E outcomes
+        if: always()
+        shell: bash
+        env:
+          DISPLAY: ${{ steps.linux-display.outcome }}
+          ELECTRON_INSTALL: ${{ steps.electron-install.outcome }}
+          ELECTRON_E2E: ${{ steps.electron-e2e.outcome }}
+          STANDALONE_BUILD: ${{ steps.standalone-build.outcome }}
+          STANDALONE_E2E: ${{ steps.standalone-e2e.outcome }}
+        run: |
+          set -euo pipefail
+          for key in DISPLAY ELECTRON_INSTALL ELECTRON_E2E STANDALONE_BUILD STANDALONE_E2E; do
+            outcome="${!key}"
+            if [[ "$outcome" != 'success' ]]; then
+              echo "::error::Required E2E step $key was $outcome (not PASS)"
+              exit 1
+            fi
+          done
+          echo 'Both real Electron and standalone E2E passed.'
