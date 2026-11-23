@@ -84,6 +84,62 @@ describe('Attention snapshot live update scheduling', () => {
       .toEqual(['alpha', 'beta']);
   });
 
+  it('retains a failed team refresh until that team or its logical parent is refreshed', async () => {
+    const context = 'attention-partial-transport-error';
+    const alias = { ...team('native-a'), logicalTeamName: 'alpha' };
+    fake.fetch.mockResolvedValue({
+      contextId: context, complete: true, teams: [team('alpha'), team('beta'), alias],
+    });
+    setAttentionContext(context, 8);
+    unsubscribe = subscribeAttention(() => {});
+    await vi.advanceTimersByTimeAsync(250);
+
+    fake.fetch.mockImplementation(async (name) => {
+      if (name === 'native-a') throw new Error('Temporary HTTP failure');
+      return snapshot(context, ['beta']);
+    });
+    fake.changeListener?.(null, { type: 'inbox', teamName: 'native-a' } as TeamChangeEvent);
+    fake.changeListener?.(null, { type: 'task', teamName: 'beta' } as TeamChangeEvent);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState().snapshot?.complete).toBe(false);
+    expect(getAttentionStoreState().error).toBeTruthy();
+    expect(getAttentionStoreState().snapshot?.teams.map((row) => row.teamName).sort())
+      .toEqual(['alpha', 'beta', 'native-a']);
+
+    // A successful read of the logical parent removes an alias that no longer exists.
+    fake.fetch.mockResolvedValue(snapshot(context, ['alpha']));
+    fake.changeListener?.(null, { type: 'task', teamName: 'alpha' } as TeamChangeEvent);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState().snapshot?.complete).toBe(true);
+    expect(getAttentionStoreState().error).toBeNull();
+    expect(getAttentionStoreState().snapshot?.teams.map((row) => row.teamName).sort())
+      .toEqual(['alpha', 'beta']);
+  });
+
+  it('does not certify a failed full workspace refresh with a targeted success', async () => {
+    const context = 'attention-full-transport-error';
+    fake.fetch.mockResolvedValue(snapshot(context, ['alpha', 'beta']));
+    setAttentionContext(context, 9);
+    unsubscribe = subscribeAttention(() => {});
+    await vi.advanceTimersByTimeAsync(250);
+    fake.fetch.mockRejectedValueOnce(new Error('Temporary HTTP failure'));
+    window.dispatchEvent(new Event('focus'));
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState().snapshot?.complete).toBe(false);
+
+    fake.fetch.mockResolvedValueOnce(snapshot(context, ['beta']));
+    fake.changeListener?.(null, { type: 'task', teamName: 'beta' } as TeamChangeEvent);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState().snapshot?.complete).toBe(false);
+    expect(getAttentionStoreState().error).toBeTruthy();
+
+    fake.fetch.mockResolvedValueOnce(snapshot(context, ['alpha', 'beta']));
+    window.dispatchEvent(new Event('focus'));
+    await vi.advanceTimersByTimeAsync(250);
+    expect(getAttentionStoreState().snapshot?.complete).toBe(true);
+    expect(getAttentionStoreState().error).toBeNull();
+  });
+
   it('stops refreshing a server without the route, but not a transient failure', async () => {
     const context = 'attention-unsupported-http';
     fake.fetch.mockRejectedValueOnce(new UserAttentionUnsupportedError());

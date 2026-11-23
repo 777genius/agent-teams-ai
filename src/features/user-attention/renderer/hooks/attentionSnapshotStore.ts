@@ -30,6 +30,10 @@ let fullLoading = false;
 let flushing = false;
 let queuedFull = false;
 let queuedTeams = new Set<string>();
+// A successful refresh of another team must not certify stale data.
+// Undefined is the full-workspace request, recoverable only by a full refresh.
+const failedRefreshes = new Set<string | undefined>();
+const LOAD_ERROR = 'Unable to load attention status';
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let stopEvents: (() => void) | null = null;
 let stopReadState: (() => void) | null = null;
@@ -62,12 +66,13 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
   const requestEpoch = epoch;
   if (!teamName) {
     fullLoading = true;
-    publish({ loading: true, error: null });
+    publish({ loading: true });
   }
   try {
     const response = await api.getUserAttentionSnapshot(teamName);
     if (requestEpoch !== epoch || response.contextId !== requestContext) return;
     if (!teamName) {
+      failedRefreshes.clear();
       publish({ snapshot: response, loading: false, error: null });
     } else {
       const before = state.snapshot;
@@ -83,13 +88,21 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
         !receivedNames.has(team.teamName)
       );
       teams.push(...response.teams);
+      failedRefreshes.delete(teamName);
+      for (const name of receivedNames) failedRefreshes.delete(name);
+      // A logical-team response authoritatively replaces its old aliases,
+      // including aliases which no longer exist.
+      for (const previous of before.teams) {
+        if (previous.logicalTeamName === teamName) failedRefreshes.delete(previous.teamName);
+      }
+      const stale = failedRefreshes.size > 0;
       publish({
         snapshot: {
           contextId: requestContext,
           teams,
-          complete: teams.every((team) => !team.error),
+          complete: !stale && teams.every((team) => !team.error),
         },
-        error: null,
+        error: stale ? LOAD_ERROR : null,
       });
     }
   } catch (error) {
@@ -97,11 +110,17 @@ async function fetchSnapshot(teamName?: string): Promise<void> {
       if (error instanceof UserAttentionUnsupportedError) {
         queuedFull = false;
         queuedTeams.clear();
+        failedRefreshes.clear();
         // Standalone/older HTTP servers omit the route. Do not keep polling
         // a missing capability or present a retryable failure to the user.
         publish({ supported: false, snapshot: null, loading: false, error: null });
       } else {
-        publish({ loading: false, error: 'Unable to load attention status' });
+        failedRefreshes.add(teamName);
+        publish({
+          loading: false,
+          error: LOAD_ERROR,
+          snapshot: state.snapshot ? { ...state.snapshot, complete: false } : null,
+        });
       }
     }
   } finally {
@@ -200,6 +219,7 @@ export function setAttentionContext(contextId: string, contextEpoch: number): vo
   fullLoading = false;
   queuedFull = false;
   queuedTeams.clear();
+  failedRefreshes.clear();
   publish({
     contextId,
     contextEpoch,
