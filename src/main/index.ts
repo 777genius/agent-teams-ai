@@ -83,12 +83,7 @@ import {
   removeOrganizationsIpc,
 } from '@features/organizations/main';
 import * as projectFolderFeature from '@features/project-folder/main';
-import {
-  createNotificationChannelsFeature,
-  registerNotificationChannelsIpc,
-  removeNotificationChannelsIpc,
-  type NotificationChannelsFeatureFacade,
-} from '@features/notification-channels/main';
+import { createNotificationChannelsRuntime, type NotificationChannelsRuntime } from './startNotificationChannels';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -959,7 +954,7 @@ let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
-let notificationChannelsFeature: NotificationChannelsFeatureFacade | null = null;
+let notificationChannelsRuntime: NotificationChannelsRuntime | null = null;
 let teamGroupChatsFeature: TeamGroupChatsFeature;
 let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature>;
 let teamImportFeature: TeamImportFeatureFacade;
@@ -1945,16 +1940,7 @@ async function initializeServices(): Promise<void> {
     internalStorageFeature.taskCommentNotificationJournalStore
   );
   const apiKeyService = new ApiKeyService();
-  notificationChannelsFeature = createNotificationChannelsFeature({
-    storePath: join(getAppDataPath(), 'notification-channels.json'),
-    // Dedicated vault: generic apiKeys.list/lookup/delete never open this file.
-    apiKeys: new ApiKeyService(join(getAppDataPath(), 'notification-channel-credentials')),
-    canDeliver: () => {
-      const settings = configManager.getConfig().notifications;
-      return settings.enabled &&
-        (settings.snoozedUntil == null || settings.snoozedUntil <= Date.now());
-    },
-  });
+  notificationChannelsRuntime = createNotificationChannelsRuntime();
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
     composeGatewayProviderRuntime({
       ipcMain,
@@ -2924,9 +2910,7 @@ async function initializeServices(): Promise<void> {
   });
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
-  if (notificationChannelsFeature) {
-    registerNotificationChannelsIpc(ipcMain, notificationChannelsFeature);
-  }
+  notificationChannelsRuntime?.start(ipcMain, notificationManager, httpServer);
   registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
@@ -2942,23 +2926,6 @@ async function initializeServices(): Promise<void> {
   sshConnectionManager.on('state-change', (status: unknown) => {
     safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
-  });
-
-  notificationManager.on('notification-new', (notification: unknown) => {
-    httpServer.broadcast('notification:new', notification);
-  });
-  notificationManager.on('notification-delivery', (notification: unknown) => {
-    void notificationChannelsFeature?.dispatch(
-      notification as Parameters<NotificationChannelsFeatureFacade['dispatch']>[0]
-    ).catch(() => {
-      logger.warn('External notification delivery skipped.');
-    });
-  });
-  notificationManager.on('notification-updated', (data: unknown) => {
-    httpServer.broadcast('notification:updated', data);
-  });
-  notificationManager.on('notification-clicked', (data: unknown) => {
-    httpServer.broadcast('notification:clicked', data);
   });
 
   await externalAgentConnection.start();
@@ -3009,7 +2976,7 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
-        notificationChannelsFeature: notificationChannelsFeature ?? undefined,
+        notificationChannelsFeature: notificationChannelsRuntime?.feature ?? undefined,
         teamGroupChatsFeature,
         customTeamTemplatesFeature,
         organizationsFeature,
@@ -3214,7 +3181,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
-      removeNotificationChannelsIpc(ipcMain);
+      notificationChannelsRuntime?.dispose();
       customTeamTemplatesFeature?.dispose();
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       projectFolderFeature.removeProjectFolderIpc(ipcMain);
