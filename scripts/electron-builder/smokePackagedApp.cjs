@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { createPackagedSmokeOwnership } = require('./packagedSmokeOwnedProcesses.ts');
+const { prepareVendorMetadataFence } = require('../lib/finite-provider-metadata.cjs');
 
 const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 60_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
@@ -302,60 +303,6 @@ async function terminateChild(
   if (platform !== 'win32') await waitForOwnedGroupExit(child.pid, timeoutMs);
 }
 
-// These generated TEST programs answer only metadata; they are not installed vendor packages.
-function prepareVendorMetadataFence(testRoot, userDataDir) {
-  const nodeBinary = fs.realpathSync(process.execPath);
-  const ledger = path.join(testRoot, 'TEST-provider-metadata.ndjson');
-  const codexHome = path.join(testRoot, 'TEST-codex-home');
-  fs.mkdirSync(codexHome, { mode: 0o700 });
-  fs.writeFileSync(ledger, '', { flag: 'wx', mode: 0o600 });
-  const cli = {};
-  const metadataEnv = { ...process.env };
-  for (const key of Object.keys(metadataEnv))
-    if (key.toUpperCase() === 'NODE_OPTIONS' || key.toUpperCase() === 'ELECTRON_RUN_AS_NODE')
-      delete metadataEnv[key];
-  const quote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
-  for (const [provider, version] of [
-    ['codex', 'codex-cli 0.164.0'], ['claude', '2.1.0 (Claude Code)'],
-  ]) {
-    const script = path.join(testRoot, 'TEST-' + provider + '-metadata.cjs');
-    const wrapper = process.platform === 'win32' ? script.replace(/\.cjs$/u, '.cmd') : script;
-    const header = process.platform === 'win32' ? ''
-      : '#!/bin/sh\n\':\' //; exec ' + quote(nodeBinary) + ' "$0" "$@"\n';
-    fs.writeFileSync(script, header + "'use strict';\n" +
-      "const fs = require('node:fs');\n" +
-      'const args = process.argv.slice(2);\n' +
-      "const accepted = args.length === 1 && args[0] === '--version';\n" +
-      'fs.appendFileSync(' + JSON.stringify(ledger) + ', JSON.stringify({ provider: ' +
-        JSON.stringify(provider) + ", kind: accepted ? 'version' : 'refused', args }) + '\\n');\n" +
-      'if (accepted) { process.stdout.write(' + JSON.stringify(version + '\n') + ', () => process.exit(0)); }\n' +
-      'else { process.stderr.write(' + JSON.stringify('TEST ' + provider + ' refuses non-version commands\n') +
-        ', () => process.exit(77)); }\n', { flag: 'wx', mode: 0o700 });
-    if (process.platform === 'win32')
-      fs.writeFileSync(wrapper, '@echo off\r\n"' + nodeBinary + '" "' + script + '" %*\r\n', { flag: 'wx' });
-    for (const [args, status, stdout] of [
-      [['--version'], 0, version + '\n'], [['TEST-forbidden-native-command'], 77, ''],
-    ]) {
-      const observed = spawnSync(nodeBinary, [script, ...args], {
-        cwd: testRoot, env: metadataEnv, encoding: 'utf8', timeout: 5000, windowsHide: true,
-      });
-      assert.equal(observed.error, undefined); assert.equal(observed.signal, null);
-      assert.equal(observed.status, status); assert.equal(observed.stdout, stdout);
-    }
-    cli[provider] = wrapper;
-  }
-  // Codex installer status ignores CODEX_CLI_PATH. Its original first branch must
-  // select this private TEST seed before it can consider the inherited PATH.
-  const manifest = path.join(userDataDir, 'data', 'runtimes', 'codex', 'current.json');
-  fs.mkdirSync(path.dirname(manifest), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(manifest, JSON.stringify({
-    schemaVersion: 1, rootVersion: '0.164.0', platformVersion: '0.164.0',
-    platformTarget: 'TEST-' + process.platform + '-' + process.arch,
-    binaryPath: cli.codex, integrity: 'TEST-finite-metadata-only',
-    installedAt: new Date().toISOString(),
-  }), { flag: 'wx', mode: 0o600 });
-  return { CODEX_CLI_PATH: cli.codex, CLAUDE_CLI_PATH: cli.claude, CODEX_HOME: codexHome };
-}
 
 async function main() {
   const [bundlePathArg, platform] = process.argv.slice(2);

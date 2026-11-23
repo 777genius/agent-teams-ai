@@ -18,7 +18,7 @@ outer `as const` в workflow policy test уже присутствует в пр
 | Срез | Решение и проверка | Оценка |
 | --- | --- | --- |
 | Teams macOS | Существующее ожидание завершения organization Create требует закрытого editor и точной новой записи в `teamByName` перед Schedules. Исходные 45s, один click, final geometry, owner и wrong-row refusal сохраняются. Две существующие TEST files: +54/-1. Baseline 19 PASS/2 RED; candidate 36/36 PASS на pinned Node 24.21.0. Новый macOS E2E ещё необходим. | Сложность 2/10; надёжность 9/10; уверенность в причине 8/10. |
-| История #1220 | При разрешённом merge оба исходных commit должны сохраниться merge-родителем; #1220 пока не merged. Три изменения уже развиты в #1192: exact-member reveal, post-await cutoff и regression suite. Конфликты нельзя разрешать возвратом старых файлов. Текущая deadline suite: 62/62 PASS на pinned Node 24.21.0. | Три конфликтующих файла; сложность 3/10; уверенность 9/10 после source review. |
+| История #1220 | PR обновлён до `6791c558078f602780903ef73f0d47676baeadf4`, parents `f18f1648` и `bb13cc19`; оба исходных commit сохранены. Три конфликта разрешены текущими развитыми версиями #1192. Добавлены только 14 ранее проверенных исправлений original E2E, без нового main. 399/399 focused tests, два source guards, fast lint и узкие TS7 PASS; собственные original CI начались, PR пока Draft и не merged. | Отдельный допустимый путь квалификации #1220. Deadline suite сохраняет 62/62 PASS; итоговый E2E verdict ещё не получен. |
 | Совместимость main | Обычное объединение истории, включая вклад #1185/keepinmind2054. 31 конфликт распределён между backend, frontend и tooling; сохраняются обе стороны функциональности, Host admission, source identity, schedules, ReviewFlow, project routing и cleanup. Legacy source caps берутся не выше более строгого родителя. | Сложность 8/10; надёжность и уверенность требуют итогового compiler/feature/E2E результата. Новая функциональность не проектируется. |
 | Darwin OpenCode V2 | Original Resume/Review не прошли immutable preflight. Saved model probe объединяет соседние синхронные Team-проверки в одну существующую fence, сохраняя все 6 state / 4 namespace reads, порядок и новый lock в следующем call. Host build, TS7 scoped и 37/37 TEST PASS; R1/R2 пройдены. Bounded Linux fixture: 811.57 → 753.01 ms для 96 calls; это не Darwin E2E proof. | Сложность 4/10; уверенность в сохранении semantics 9/10. Достаточность для original cutoff ещё не установлена. |
 | Linux OpenCode V2 live Add | Original job 137334455234 / artifact 14777978491: Add остаётся held, model outcome unobserved. Native probe начинает работу с 56.4s из исходного 90s; первый submit приходит только на 50.88s. Bounded private decode reuse использует exact bytes после каждого fresh store read, новые opaque tokens и прежнюю single-entry memo. Все raw validators и consumers проверены на отсутствие mutation/escape; публичные проекции клонируются. Host build/test TS7, 14/14 decode checks и R1/R2 PASS. | Source delta 6 строк плюс regression tests. Один matched Linux profile: 96 guard calls 1150.845 → 880.094 ms; parsing hotspot исчез, но I/O variance исключает обещание стабильных 23.5% или E2E PASS. |
@@ -86,6 +86,24 @@ refusals. Новые actual-render/click/late-reply tests: 40/40 PASS; root не
 принял оба узких routing diff. Локальный GUI E2E не заявляется: Xvfb и зависимости
 подготовлены в user space, но пустой display probe подтверждённо отказал на
 создании AF_UNIX socket (EPERM) в managed runtime. Политика и listeners не менялись.
+После этого существующий headless retained helper запустил настоящий Electron.
+Первая попытка завершилась renderer `killed 9` до cleanup; причина не установлена.
+Один повтор с пассивным PID/birth/RSS наблюдением прошёл исходную готовность
+preload/renderer API за 45.9s, обычный Quit и полную очистку TEST процессов.
+92 observations, global `oom_kill` 239 → 239. Это startup proof, не полный E2E.
+Для original finite Create → Stop → Import сценария подготовлен узкий opt-in
+headless launch: только Linux/x64 и прежний finite import mode; настоящий
+`pnpm dev:mcp`, существующий async CDP, custody и общий startup deadline 180s
+сохраняются. Default display path остаётся прежним. Новые source guards и
+regressions проходят отдельное R1/R2 до запуска этого сценария.
+
+Последняя полная проверка canonical root TS7 7.0.2 на точном `15deedada` шла
+отдельно от Electron/сборок с Go memory budget, без изменения tsconfig/типов.
+Через 384.8s получен SIGKILL (-9), peak RSS около 4.34GiB; в последнем
+интервале global `oom_kill` вырос 239 → 240. Это сильное свидетельство давления
+памяти, но global counter сам по себе не устанавливает автора kill. Source
+оставался чистым; TS diagnostics нет, PASS не заявляется. Дальнейшие полные
+локальные повторы этого gate без новой причины не выполняются; нужен CI.
 
 Причина стоимости live V2 guard дополнительно измерена настоящей composition с
 captured configuration source: один credential current даёт 6 contexts / 66
@@ -102,21 +120,39 @@ capture, failed-preparation drain и Stop accounting уже исправлены
 условия, а Windows product fixture сохраняет PATH. При startup renderer вызывает
 fetchCodexRuntimeStatus → CodexRuntimeInstallerService.getStatus → getPathStatus;
 при наличии Codex в PATH выполняется настоящий `--version`. Отсутствие vendor
-на runner не доказано. Прямой version вызов claude-multimodel.exe в том же fixture
-принадлежит project-owned orchestrator и не выдаётся за genuine Anthropic CLI.
-Workflow, provider discovery, guards и runner environment ради обхода запрета
-не меняются. Ready #1192 и update уже Ready #1186 также запускают запрещённые
-пока genuine checks.
+на runner не доказано. Подготовлено настоящее исправление изоляции этого
+постороннего startup consumer: существующий finite metadata helper из packaged
+smoke переиспользуется только в Windows product fixture. Private Codex seed,
+CODEX_HOME и version-only peer исключают ambient PATH; calibration не считается
+startup proof, неизвестные команды/изменённые pins дают отказ и сохраняют TEST
+артефакты. Selected project orchestrator и native Windows tools продолжают
+исполняться исходным путём. Прямой version вызов claude-multimodel.exe принадлежит
+project-owned orchestrator и не выдаётся за genuine Anthropic CLI. Production
+resolver, shared native/genuine fixture и workflow conditions не изменяются.
+Оба полных профильных test files прошли 78/78: в том числе настоящий cold
+getStatus выбирает finite peer до PATH lookup, non-version/tamper/calibration-only
+отказывают. Узкий strict TS7, fast lint и синтаксис четырёх CJS/MJS files PASS;
+helper извлечён byte-identical, R1/R2 выполнены. Настоящий Windows CI ещё нужен.
+Наличие этого исправления не квалифицирует
+Ready #1192 или уже Ready #1186, где остаются самостоятельные genuine gates.
 
 Кандидат собран для отдельной ветки
 `review/provider-host-main-integration-20261123` с родителями bb13cc19 и 0ba84972.
 Такая branch-only публикация без нового PR и изменения существующих head/base
 не совпадает ни с одним из 14 push triggers в 47 проверенных workflow. Она
 сохраняет reviewable code и original CI, но не квалифицирует #1192 или #982.
-Обновление стека, Ready-переходы и вызванные ими CI исполнения ждут отдельного
-разрешения пользователя на genuine Claude/Codex в изолированных CI fixtures. Разрешённые TEST peers и pinned OpenCode с TEST-local model
-проверяются в изолированных проектах. Этот раздел — план работы, не PASS или
-утверждение о выполненном merge.
+Последующая проверка опровергла blanket запрет на любой шаг стека: исходный
+#1220 имеет другую пару веток и не включает genuine Codex-login/Stage1 jobs.
+Его 14-file candidate не затрагивает path filters Codex Runtime Smoke/Public
+Runtime Bootstrap и не содержит нового Windows workflow. Поэтому его собственное
+обновление и последующий Ready/merge проходят штатным разрешённым путём.
+На `6791c558` создано восемь original attempt-1 семейств; следующие Ready или
+source changes ждут их terminal результата, а merge в #1192 дополнительно ждёт
+original CI/packaged `bb13cc19`, чтобы не отменить их через concurrency.
+Ограничение genuine Claude/Codex сохраняется для тех следующих действий,
+которые действительно запускают эти процессы. Разрешённые TEST peers и pinned
+OpenCode с TEST-local model проверяются в изолированных проектах. Этот раздел
+не является итоговым E2E PASS или утверждением о выполненном merge PR.
 
 ## Original E2E на `06842c53`, 22 ноября
 

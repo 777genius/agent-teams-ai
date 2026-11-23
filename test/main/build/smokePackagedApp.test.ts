@@ -698,3 +698,66 @@ describe('smokePackagedApp finite vendor metadata fence', () => {
     }
   });
 });
+
+describe('Windows product incidental provider metadata', () => {
+  interface MetadataFixture {
+    environment: { CODEX_CLI_PATH: string; CODEX_HOME: string };
+    observe(): { source: string; codexVersionCalls: number; nonVersionCalls: number;
+      managedSeedAndPeerUnchanged: boolean };
+  }
+  const { prepareWindowsProductProviderMetadata } = requireFromTest(
+    '../../../scripts/e2e/windows-product-provider-metadata.cjs'
+  ) as { prepareWindowsProductProviderMetadata(root: string, userDataDir: string): MetadataFixture };
+  function fixture() {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-windows-metadata-')));
+    const userData = path.join(root, 'user-data');
+    fs.mkdirSync(userData);
+    const metadata = prepareWindowsProductProviderMetadata(root, userData);
+    const command = (...args: string[]) => spawnSync(process.execPath,
+      [path.join(root, 'TEST-codex-metadata.cjs'), ...args], {
+        cwd: root, env: { ...process.env, ...metadata.environment }, encoding: 'utf8', timeout: 5000,
+      });
+    return { root, userData, metadata, command };
+  }
+
+  it('preserves the real product runtime override and requires an actual later status probe', () => {
+    const { root, metadata, command } = fixture();
+    try {
+      const original = { CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: '/TEST/original-runtime',
+        CLAUDE_CLI_PATH: '/TEST/original-claude' };
+      expect({ ...original, ...metadata.environment }).toMatchObject(original);
+      expect(Object.keys(metadata.environment).sort()).toEqual(['CODEX_CLI_PATH', 'CODEX_HOME']);
+      expect(() => metadata.observe()).toThrow('Original startup must observe');
+      expect(command('--version').status).toBe(0);
+      expect(metadata.observe()).toEqual({ source: 'TEST-finite-codex-metadata',
+        codexVersionCalls: 1, nonVersionCalls: 0, managedSeedAndPeerUnchanged: true });
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('refuses non-version commands and retains their failure in the final observation', () => {
+    const { root, metadata, command } = fixture();
+    try {
+      expect(command('--version').status).toBe(0);
+      const forbidden = command('app-server');
+      expect(forbidden.status).toBe(77);
+      expect(forbidden.stdout).toBe('');
+      expect(() => metadata.observe()).toThrow('must not run a non-version command');
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it.each(['managed seed', 'peer bytes', 'calibration ledger'] as const)(
+    'refuses changed %s after the original successful probe', (changed) => {
+      const { root, userData, metadata, command } = fixture();
+      try {
+        expect(command('--version').status).toBe(0);
+        expect(metadata.observe().codexVersionCalls).toBe(1);
+        const selected = changed === 'managed seed'
+          ? path.join(userData, 'data', 'runtimes', 'codex', 'current.json')
+          : path.join(root, changed === 'peer bytes'
+            ? 'TEST-codex-metadata.cjs' : 'TEST-provider-metadata.ndjson');
+        fs.writeFileSync(selected, 'TEST changed bytes\n');
+        expect(() => metadata.observe()).toThrow();
+      } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    }
+  );
+});

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Real Windows Electron/teammate lifecycle. Only the model HTTP boundary is synthetic.
+// Real Windows Electron/teammate lifecycle. The model HTTP boundary and incidental
+// Codex metadata use TEST fixtures; the selected product runtime and OS tools are real.
 // No credentials, paid inference, user projects or production profiles are used.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
@@ -14,6 +15,7 @@ import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
 import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
+import { prepareWindowsProductProviderMetadata } from './windows-product-provider-metadata.cjs';
 
 assert.equal(process.platform, 'win32', 'This proof requires a Windows GUI runner');
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -77,6 +79,7 @@ let heldTool;
 let log = '';
 let phase = 'setup';
 let protocolFailure = null;
+let providerMetadata;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const literal = (value) => JSON.stringify(value);
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -660,6 +663,7 @@ async function run() {
       JSON.stringify(forceExitPidEvidence));
   const evidence = {
     schemaVersion: 1, success: true, platform: process.platform,
+    providerMetadata: providerMetadata.observe(),
     modelBoundary: 'loopback synthetic HTTP; no paid model inference',
     realElectronMainHosted: true, realProductTeammateLaunch: true,
     realProductStopConfirmed: true, nativeOsPidBound: true,
@@ -685,6 +689,9 @@ async function run() {
 }
 
 try {
+  providerMetadata = prepareWindowsProductProviderMetadata(root,
+    env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR);
+  Object.assign(env, providerMetadata.environment);
   await run();
 } catch (error) {
   // Preserve read-only original PID facts when product Stop refuses confirmation.
@@ -794,7 +801,26 @@ try {
     }
   }
   await model?.close().catch(() => { cleanupOk = false; });
-  if (cleanupOk && process.env.WINDOWS_PRODUCT_CONSOLE_KEEP !== '1') {
+  let providerMetadataOk = false;
+  try {
+    const metadataEvidence = providerMetadata?.observe();
+    assert(metadataEvidence, 'Incidental Codex metadata was not prepared');
+    const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
+    await writeFile(receiptPath, JSON.stringify({
+      ...receipt, providerMetadata: metadataEvidence,
+    }, null, 2) + '\n');
+    providerMetadataOk = true;
+  } catch {
+    process.exitCode = 1;
+    process.stderr.write('Incidental Codex metadata could not be qualified; TEST files retained.\n');
+    try {
+      const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
+      await writeFile(receiptPath, JSON.stringify({
+        ...receipt, success: false, providerMetadata: { qualified: false },
+      }, null, 2) + '\n');
+    } catch { /* Preserve the original failure if its receipt was not produced. */ }
+  }
+  if (cleanupOk && providerMetadataOk && process.env.WINDOWS_PRODUCT_CONSOLE_KEEP !== '1') {
     await rm(root, { recursive: true, force: true }).catch(() => { cleanupOk = false; });
   }
   if (!cleanupOk) {

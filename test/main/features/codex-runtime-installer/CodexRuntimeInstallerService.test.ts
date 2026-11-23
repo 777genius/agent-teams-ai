@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -916,6 +917,47 @@ describe('CodexRuntimeInstallerService resolver', () => {
         expect(JSON.stringify(managedProbeWarningMock.mock.calls)).not.toContain('secret');
       }
     );
+  });
+
+  it('uses the Windows product TEST metadata seed before any ambient PATH lookup', async () => {
+    const root = await fs.realpath(await mkdtemp(path.join(tempRoot!, 'TEST-windows-provider-')));
+    const userData = path.join(root, 'user-data');
+    await mkdir(userData);
+    const requireFixture: (id: string) => unknown = createRequire(import.meta.url);
+    const { prepareWindowsProductProviderMetadata } = requireFixture(
+      '../../../../scripts/e2e/windows-product-provider-metadata.cjs'
+    ) as { prepareWindowsProductProviderMetadata(root: string, userData: string): {
+      environment: { CODEX_CLI_PATH: string; CODEX_HOME: string };
+      observe(): { source: string; codexVersionCalls: number; nonVersionCalls: number };
+    } };
+    const metadata = prepareWindowsProductProviderMetadata(root, userData);
+    setAppDataBasePath(userData);
+    const ambient = path.join(root, 'TEST-ambient-path');
+    await mkdir(ambient);
+    process.env.PATH = ambient;
+    await writeFile(path.join(ambient, process.platform === 'win32' ? 'codex.exe' : 'codex'),
+      'TEST ambient executable must never be selected', { mode: 0o755 });
+    const actual = await vi.importActual<typeof import('@main/utils/childProcess')>(
+      '@main/utils/childProcess'
+    );
+    execCliMock.mockImplementation((binaryPath: string, args: string[], options: object) => {
+      expect(binaryPath).toBe(metadata.environment.CODEX_CLI_PATH);
+      expect(args).toEqual(['--version']);
+      return actual.execCli(binaryPath, args, {
+        ...options, env: { ...process.env, ...metadata.environment, PATH: ambient },
+      });
+    });
+    const status = await new CodexRuntimeInstallerService({
+      resolveLatestVersion: async () => '0.164.0',
+    }).getStatus();
+    expect(status).toMatchObject({ installed: true, state: 'ready', source: 'app-managed',
+      binaryPath: metadata.environment.CODEX_CLI_PATH });
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(buildMergedCliPathMock).not.toHaveBeenCalled();
+    expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+    expect(metadata.observe()).toMatchObject({ source: 'TEST-finite-codex-metadata',
+      codexVersionCalls: 1, nonVersionCalls: 0 });
+    expect(Object.keys(metadata.environment).sort()).toEqual(['CODEX_CLI_PATH', 'CODEX_HOME']);
   });
 
   it('detects a PATH Codex binary from best-effort shell env when process PATH is cold', async () => {
