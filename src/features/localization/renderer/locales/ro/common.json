@@ -952,5 +952,21 @@
       "unavailable": "Noutățile sunt disponibile în aplicația desktop.",
       "state_unavailable": "Poți citi, dar progresul nu poate fi salvat momentan. Noutățile automate sunt întrerupte."
     }
+  },
+  "attention": {
+    "title": "Necesită atenția ta",
+    "tab": "Atenție",
+    "viewAll": "Afișează tot",
+    "refresh": "Actualizează starea",
+    "loading": "Se încarcă…",
+    "loadFailed": "Nu s-a putut încărca starea",
+    "retry": "Reîncearcă",
+    "partial": "Unele echipe nu au putut fi încărcate. Numerele pot fi incomplete.",
+    "nothing": "Nimic nu necesită atenția ta momentan.",
+    "tasks": "Așteaptă decizia ta",
+    "chats": "Conversații necitite",
+    "openTask": "Deschide sarcina: {{subject}} în {{team}}",
+    "timeUnknown": "Ora necunoscută",
+    "teamAttention": "Atenție"
   }
 }
