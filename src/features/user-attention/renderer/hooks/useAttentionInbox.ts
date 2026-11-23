@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import { useStore } from '@renderer/store';
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { getReadSetSnapshot } from '@renderer/utils/teamMessageReadStorage';
+
 import { buildAttentionModel } from '../../core/domain/buildAttention';
 import {
   getAttentionStoreState,
@@ -7,10 +11,6 @@ import {
   setAttentionContext,
   subscribeAttention,
 } from './attentionSnapshotStore';
-
-import { useStore } from '@renderer/store';
-import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { getReadSetSnapshot } from '@renderer/utils/teamMessageReadStorage';
 
 import type { AttentionReads } from '../../core/domain/buildAttention';
 
