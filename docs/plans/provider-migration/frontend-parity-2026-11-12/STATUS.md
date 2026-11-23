@@ -2,6 +2,110 @@
 
 Обновлено: **23 ноября 2026**. Единственный текущий рабочий план.
 
+## Контрольная точка 23 ноября: полные types e11, исходные E2E и currentness
+
+**Canonical workspace types на точном e11: PASS.** Завершены исходный
+pretypecheck и все 12 compiler invocations на TS 7.0.2. Единственное дополнение —
+--singleThreaded; compiler options, includes и declarations не менялись.
+До и после совпали все 11 870 физических tracked файлов, конфигурации и compiler
+hashes; OOM counter остался 284. Полный результат завершён 14:26:42 UTC.
+Manifest SHA256: 82b8b456f49405fd50b30d3b54942e50a2852ac3943cd096e6c315ab1e74687a.
+Receipt SHA256: cb3deded2b2ed2cf06607dae47c1ab3969707379909d94ce278f9aebcb2c04d9.
+Все 13 журналов проверены отдельно. Исторический default-parallel exit 137
+сохранён; новый результат не переименовывает прежний исход.
+
+В существующей recovery review-ветке опубликован обычный дочерний коммит
+[a85e2641](https://github.com/777genius/agent-teams-ai/commit/a85e2641e11b0a998bb0c299fe5b5d0ac4f34a3b),
+родитель e11, tree b7bf29a6b449b7d7c1cda6ce39d6566783e75417.
+Два изменённых файла добавляют пассивную диагностику CDP: отдельные active IDs
+с пределом 8192, счётчики всех принятых request events и прежнего script subset,
+неизменяемый snapshot первого ERR_INSUFFICIENT_RESOURCES до retirement.
+History ring 256, его фильтры и subscriptions сохранены; новых CDP commands,
+renderer reads, retry, reload или timeout нет. IDs, URL и произвольные payload
+в activity evidence не сохраняются. Overflow явно делает counts неполными;
+наблюдаемые pending requests не названы process-wide Chromium loaders.
+Пять новых регрессий сначала упали на старом observer; затем прошли пять новых
+и два существующих случая. Canonical Host-scripts TS 7.0.2, lint двух файлов
+и caps 5180/141/800 прошли. Это диагностика, а не исправление или PASS GUI-сбоя.
+Точный cumulative diff bb13 → a85 содержит 43 пути; workflow/package/lock
+не изменены, genuine-native filters и специальные branch predicates для #1220
+по-прежнему не допускают запрещённые исполнения.
+
+Обычный интеграционный merge
+[81c8efec](https://github.com/777genius/agent-teams-ai/commit/81c8efec54ca3afaf713e9de76a6cd04200d5573)
+сохраняет родителей 01bc5830 и a85e2641; tree 4108e1acccebaf52542a5b682547690d006931fa.
+Конфликт единственного test import разрешён сохранением всех существующих
+headless imports/cases и добавлением нового observer import и пяти тестов.
+На этом дереве прошли 19 конечных случаев (7 module + 12 headless), canonical
+Host-scripts TS, lint и caps 5366/141/800. Это отдельная scoped квалификация;
+полные 12 workspace types выше относятся к e11.
+
+Main 04b338c7, включающий уже опубликованный upstream #1277, присоединён merge
+[f6696aaf](https://github.com/777genius/agent-teams-ai/commit/f6696aafa44520bd8cdd549c1105e2cc4e3b326f)
+с родителями 81c8efec и 04b338c7; tree 68c117552e8eb9925e4abf410f5897e8d9136f8a.
+Сохранены все прежние integration workflow bytes, включая finite profile harness,
+и ровно три upstream job-if. Полный прежний policy-test prefix сохранён;
+шесть regex в новом upstream test исправлены эквивалентными квантификаторами
+пробелов после исходных шести lint errors. Все 26 policy tests и final lint
+прошли. Код приложения этим merge не меняется.
+
+**Уточнение прежней Windows boundary:** начиная с этого source, три конкретных
+Windows console / Electron profile jobs пропускают Draft PR. Ready, подходящие
+main push и Windows manual dispatch сохраняют прежнее выполнение. Triggers,
+commands, matrices, timeouts, concurrency и permissions не изменены.
+Следовательно, утверждение ниже об обязательном Windows native запуске уже на
+Draft относится к source до upstream #1277. **Receiving #1192 всё равно HOLD:**
+retained-opencode-coexistence с настоящим историческим fork и его --version
+не изменён; отдельное исключение из genuine Claude/Codex запрета не установлено.
+Ready/native boundary также сохраняется. Actual #1192 не менялся.
+
+### Исходный e06 CI: snapshot 14:49:07 UTC
+
+Фактический #1220 остаётся Draft на e06, base bb13; все original attempts — 1.
+В [Host run](https://github.com/777genius/agent-teams-ai/actions/runs/45169325080)
+25 jobs имеют PASS с проверенными source/receipt artifacts, три — FAIL, Darwin
+Review ещё queued. Packaged Windows x64, Windows ARM64 и Darwin ARM64 прошли;
+Darwin x64 выполняется, Linux и четыре metadata runs ещё queued.
+CodeQL skipped Draft и отказ Draft full-qualification не считаются PASS.
+
+- [Cross-team](https://github.com/777genius/agent-teams-ai/actions/runs/45169325080/job/137674425101):
+  пять предыдущих subproof прошли. Затем 30 transitive script loads получили
+  ERR_INSUFFICIENT_RESOURCES, UI показал ErrorBoundary, и cold Task-card read
+  завершился вторичным timeout. Oversized-comment readback, F08 и Trash не достигнуты.
+  Ring overflow не позволяет установить конкретный ресурсный предел или OOM.
+  App exit 0/group empty подтверждены; captured Host absence в этом flow неизвестна.
+- [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/45169325080/job/137674425080):
+  credential/settings sibling прошёл, но original Add остался held. Probe дошёл
+  до маркера first-submit за 45.656s при исходном конечном бюджете 56.586s;
+  model endpoint не зафиксировал запрос. Сам маркер не доказывает native POST
+  или known-not-sent. Точный SPI reply в артефакте отсутствует; Remove/Restore/
+  Stop/cold не достигнуты, probe resource/captured Host custody не квалифицированы.
+- [Darwin Resume](https://github.com/777genius/agent-teams-ai/actions/runs/45169325080/job/137674425130):
+  исходный preflight cutoff истёк во время подготовки; последняя записанная
+  стадия — driver-open, first-submit отсутствует. Team Launch/Resume не достигнуты.
+  Attestation заняла 36.035s; в первом
+  catalog read 15.744s включают 13.307s currentness, эти интервалы не суммируются.
+  Поздний unconfirmed close появился после начала Quit и не является
+  установленной первопричиной. App/Host absence подтверждена; cold proof отсутствует.
+
+Ранее падавший Darwin quit-active теперь имеет отдельный source-qualified e06
+PASS: active/queued inputs, закрытие и освобождение native runtime, физическое
+отсутствие child/Host, cold replay 0. Он не квалифицирует setup через ordinary
+team Launch. Packaged Darwin ARM64 relaunch подтверждает distinct successor,
+writer lease и persisted Task; successor Quit unconfirmed и naturalExitQualified=false
+сохранены, native successor custody не объявлена.
+
+Дальше исследуется дорогой synchronous currentness callgraph: successful Settings
+и failed Add/saved-team preparation имеют разные входящие guards. Ни замена
+исходного probe, ни увеличение deadline, ни снятие freshness/custody checks не
+разрешены этим анализом. Новые WorkSync/network observer commits не объявлены
+исправлением native preflight. Original CI не отменяется и не повторяется;
+status/artifact discovery остаются не чаще одного чтения за 300s. Доставка
+следующего полностью reviewed source в actual #1220 ждёт terminal всего original
+cohort. #982 остаётся OPEN/Draft; merge в main, release, default activation и Stage 2
+не выполняются.
+
+
 ## Уточнение 23 ноября: retained fork в receiving CI #1192
 
 Последний аудит исходной маршрутизации нашёл более раннюю границу авторизации,
