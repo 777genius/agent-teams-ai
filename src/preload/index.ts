@@ -290,6 +290,7 @@ import {
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
 import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge';
+import { createNotificationHistoryBridge } from './notificationHistoryBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
@@ -619,61 +620,7 @@ const electronAPI: ElectronAPI = {
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => ipcRenderer.invoke('read-agent-configs', projectRoot),
 
-  // Notifications API
-  notifications: {
-    get: (options?: { limit?: number; offset?: number }) =>
-      ipcRenderer.invoke('notifications:get', options),
-    markRead: (id: string) => ipcRenderer.invoke('notifications:markRead', id),
-    markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
-    setViewedTeam: (teamName: string | null) =>
-      ipcRenderer.invoke('notifications:setViewedTeam', teamName),
-    delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
-    clear: () => ipcRenderer.invoke('notifications:clear'),
-    getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),
-    testNotification: () =>
-      ipcRenderer.invoke('notifications:testNotification') as Promise<{
-        success: boolean;
-        error?: string;
-      }>,
-    onNew: (callback: (event: unknown, error: unknown) => void): (() => void) => {
-      ipcRenderer.on(
-        'notification:new',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:new',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-    onUpdated: (
-      callback: (event: unknown, payload: { total: number; unreadCount: number }) => void
-    ): (() => void) => {
-      ipcRenderer.on(
-        'notification:updated',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:updated',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-    onClicked: (callback: (event: unknown, data: unknown) => void): (() => void) => {
-      ipcRenderer.on(
-        'notification:clicked',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:clicked',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-  },
+  ...createNotificationHistoryBridge(ipcRenderer),
 
   // Config API - uses typed helper to unwrap { success, data, error } responses
   config: {

@@ -928,11 +928,9 @@ export interface ElectronAPI
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => Promise<Record<string, AgentConfig>>;
 
-  // Notifications API
   notifications: NotificationsAPI;
   notificationChannels: NotificationChannelsApi;
 
-  // Config API
   config: ConfigAPI;
 
   // Deep link navigation

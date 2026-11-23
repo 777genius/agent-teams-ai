@@ -55,6 +55,7 @@ import {
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
+import { createHttpNotificationHistoryApi } from './notificationHistoryHttp';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -753,40 +754,12 @@ export class HttpAPIClient implements ElectronAPI {
     test: (id) => this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test', {}),
   };
 
-  notifications: NotificationsAPI = {
-    get: (options) =>
-      this.get(
-        `/api/notifications?${new URLSearchParams(
-          options
-            ? {
-                limit: String(options.limit ?? 20),
-                offset: String(options.offset ?? 0),
-              }
-            : {}
-        )}`
-      ),
-    markRead: (id) => this.post(`/api/notifications/${encodeURIComponent(id)}/read`),
-    markAllRead: () => this.post('/api/notifications/read-all'),
-    setViewedTeam: (teamName) => this.post('/api/notifications/viewed-team', { teamName }),
-    delete: (id) => this.del(`/api/notifications/${encodeURIComponent(id)}`),
-    clear: () => this.del('/api/notifications'),
-    getUnreadCount: () => this.get('/api/notifications/unread-count'),
-    testNotification: async () => ({
-      success: false,
-      error: 'Test notifications require Electron (not available in browser mode)',
-    }),
-    // IPC signature: (event: unknown, error: unknown) => void
-    onNew: (callback) =>
-      this.addEventListener('notification:new', (data: unknown) => callback(null, data)),
-    // IPC signature: (event: unknown, payload: { total; unreadCount }) => void
-    onUpdated: (callback) =>
-      this.addEventListener('notification:updated', (data: unknown) =>
-        callback(null, data as { total: number; unreadCount: number })
-      ),
-    // IPC signature: (event: unknown, data: unknown) => void
-    onClicked: (callback) =>
-      this.addEventListener('notification:clicked', (data: unknown) => callback(null, data)),
-  };
+  notifications: NotificationsAPI = createHttpNotificationHistoryApi({
+    get: <T>(path: string) => this.get<T>(path),
+    post: <T>(path: string, body?: unknown) => this.post<T>(path, body),
+    del: <T>(path: string) => this.del<T>(path),
+    listen: (channel, callback) => this.addEventListener(channel, callback),
+  });
 
   // ---------------------------------------------------------------------------
   // Config (nested API)
