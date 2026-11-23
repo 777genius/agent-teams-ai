@@ -148,6 +148,29 @@ describe('Notification Channels application', () => {
     expect(sent).toHaveBeenCalledTimes(5);
   });
 
+  it('shares a provider-request budget across overlapping events and drops excess sends', async () => {
+    await add(true);
+    const first = records[0];
+    records = Array.from({ length: 20 }, (_, i) => ({
+      ...first,
+      id: 'f97bfa8d-5f66-4cd1-a789-' + String(i).padStart(12, '0'),
+    }));
+    let release!: (value: { success: boolean }) => void;
+    const pending = new Promise<{ success: boolean }>((resolve) => { release = resolve; });
+    sent.mockImplementation(() => pending);
+
+    const running = Array.from({ length: 4 }, () => service.dispatch(event));
+    try {
+      await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(20));
+    } finally {
+      release({ success: true });
+      await Promise.all(running);
+    }
+    expect(sent).toHaveBeenCalledTimes(20);
+    await service.dispatch(event);
+    expect(sent).toHaveBeenCalledTimes(40);
+  });
+
   it('does not expose vendor secrets or throw on failed sends', async () => {
     const id = await add(true);
     sent.mockRejectedValue(new Error('token=' + TOKEN));
