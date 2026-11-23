@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const entry = path.join(repoRoot, 'dist-standalone', 'index.cjs');
 const evidenceDir = process.env.NOTIFICATION_CHANNELS_E2E_OUTPUT_DIR;
+if (evidenceDir) await mkdir(evidenceDir, { recursive: true });
 const root = evidenceDir
   ? await mkdtemp(path.join(evidenceDir, 'standalone-'))
   : await mkdtemp(path.join(os.tmpdir(), 'notification-standalone-E2E-'));
