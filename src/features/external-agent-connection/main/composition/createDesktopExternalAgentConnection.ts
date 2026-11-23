@@ -140,13 +140,24 @@ export function createDesktopExternalAgentConnection(
       if (!stopping && deps.isLocalContext() && !context.isOpen) return restoreLocalContext();
       return connection.retryConnection();
     });
+  const clearConfirmation = (): void => {
+    if (!pendingConfirmation) return;
+    pendingConfirmation = null;
+    const contents = deps.getMainContents();
+    if (!contents || contents.isDestroyed()) return;
+    try {
+      contents.send(EXTERNAL_AGENT_CONNECTION_CHANNELS.confirmation, null);
+    } catch {
+      // The window may be closing while its connection admission is revoked.
+    }
+  };
   const change = (operation: () => Promise<void> | void, rootChanged: boolean) =>
     serialize(async () => {
       if (stopping) throw new Error('App connection is shutting down');
       await deps.mcp.assertNoLiveConsumers?.();
       deps.assertNoLiveRuntimeConsumers?.();
       await context.closeAdmission();
-      pendingConfirmation = null;
+      clearConfirmation();
       if (stopping) throw new Error('App connection is shutting down');
       await deps.mcp.stop();
       if (stopping) throw new Error('App connection is shutting down');
@@ -169,7 +180,7 @@ export function createDesktopExternalAgentConnection(
     });
   const closeAdmission = (): Promise<void> => {
     stopping = true;
-    pendingConfirmation = null;
+    clearConfirmation();
     shutdownDrain ??= context.closeAdmission();
     return shutdownDrain;
   };
@@ -192,7 +203,7 @@ export function createDesktopExternalAgentConnection(
     getConnectionInfo: () => connection.getConnectionInfo(),
     getPendingConfirmation: async () => pendingConfirmation,
     dismissConfirmation: async (id) => {
-      if (pendingConfirmation?.id === id) pendingConfirmation = null;
+      if (pendingConfirmation?.id === id) clearConfirmation();
     },
     retryConnection,
     updateRoot: (applyConfig) => change(applyConfig, true),
