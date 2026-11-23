@@ -49,6 +49,24 @@ describe('User Attention read facade', () => {
     expect(filtered.teams.map((t) => t.teamName)).toEqual(['ok']);
   });
 
+  it('does not drop awaiting tasks when the message feed fails', async () => {
+    const facade = createUserAttentionFeature({
+      getContextId: () => 'root-1',
+      getTeamDataService: () => ({
+        listTeams: async () => [{ teamName: 'alpha', displayName: 'Alpha' }],
+        getUserAttentionTasks: async () => [
+          { id: 'task-1', subject: 'Decision needed', needsClarification: 'user', status: 'pending' },
+        ],
+        getMessageFeed: async () => { throw new Error('Simulated unread source failure'); },
+      } as never),
+    });
+    const snapshot = await facade.getUserAttentionSnapshot();
+    expect(snapshot.complete).toBe(false);
+    expect(snapshot.teams[0].tasks.map((task) => task.taskId)).toEqual(['task-1']);
+    expect(snapshot.teams[0].messages).toHaveLength(0);
+    expect(snapshot.teams[0].error).toBeTruthy();
+  });
+
   it('fences a root switch during in-flight reads', async () => {
     let context = 'root-1';
     let resolve!: (value: { teamName: string; feedRevision: string; messages: [] }) => void;
