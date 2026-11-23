@@ -7,6 +7,7 @@ import { createDocumentPreviewBridge } from '@features/document-preview/preload'
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
+import { createNotificationChannelsBridge } from '@features/notification-channels/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
@@ -532,6 +533,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  ...createNotificationChannelsBridge(ipcRenderer),
   reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   customTeamTemplates: createCustomTeamTemplatesBridge(),

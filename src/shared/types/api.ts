@@ -129,6 +129,7 @@ import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contract
 import type { CustomTeamTemplatesApi } from '@features/custom-team-templates/contracts';
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type {
   MemberWorkSyncMetricsRequest,
@@ -929,6 +930,7 @@ export interface ElectronAPI
 
   // Notifications API
   notifications: NotificationsAPI;
+  notificationChannels: NotificationChannelsApi;
 
   // Config API
   config: ConfigAPI;

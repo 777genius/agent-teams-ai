@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { NotificationChannelsSettings } from '@features/notification-channels/renderer';
 import { api } from '@renderer/api';
 import {
   RepositoryDropdown,
@@ -262,6 +263,8 @@ export const NotificationsSection = ({
           className="w-20"
         />
       </SettingRow>
+
+      <NotificationChannelsSettings />
 
       {/* Notification Settings */}
       <SettingsSectionHeader

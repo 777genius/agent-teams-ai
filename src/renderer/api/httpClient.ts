@@ -68,6 +68,7 @@ import type {
 } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
@@ -741,6 +742,15 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
   // Notifications (nested API)
   // ---------------------------------------------------------------------------
+
+  notificationChannels: NotificationChannelsApi = {
+    list: () => this.get('/api/notification-channels'),
+    save: (request) => this.post('/api/notification-channels', request),
+    remove: async (id) => {
+      await this.del('/api/notification-channels/' + encodeURIComponent(id));
+    },
+    test: (id) => this.post('/api/notification-channels/' + encodeURIComponent(id) + '/test'),
+  };
 
   notifications: NotificationsAPI = {
     get: (options) =>

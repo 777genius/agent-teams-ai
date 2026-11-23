@@ -19,8 +19,11 @@
 import { createCustomTeamTemplatesFeature, type CustomTeamTemplatesFeature } from '@features/custom-team-templates/main';
 import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+import { createNotificationChannelsFeature } from '@features/notification-channels/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
+import { join } from 'node:path';
+import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
@@ -146,6 +149,10 @@ async function start(): Promise<void> {
   localContext.fileWatcher.setNotificationManager(notificationManager);
 
   const userDataPath = getAppDataBasePath();
+  const notificationChannelsFeature = createNotificationChannelsFeature({
+    storePath: join(userDataPath, 'notification-channels.json'),
+    apiKeys: new ApiKeyService(),
+  });
   internalStorageFeature = createInternalStorageFeature({ userDataPath });
   await internalStorageFeature.probeBackend();
   customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
@@ -171,6 +178,9 @@ async function start(): Promise<void> {
   // Forward notification events to SSE
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
+    void notificationChannelsFeature.dispatch(
+      notification as Parameters<typeof notificationChannelsFeature.dispatch>[0]
+    ).catch(() => logger.warn('External notification delivery skipped.'));
   });
   notificationManager.on('notification-updated', (data: unknown) => {
     httpServer.broadcast('notification:updated', data);
@@ -187,6 +197,7 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
+    notificationChannelsFeature,
     customTeamTemplatesFeature,
     workspaceTrust: createWorkspaceTrustFeatures({
       getClaudeConfigDir: getClaudeBasePath,

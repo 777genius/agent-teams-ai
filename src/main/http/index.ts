@@ -13,6 +13,10 @@ import {
   registerOrganizationsHttp,
 } from '@features/organizations/main';
 import {
+  registerNotificationChannelsHttp,
+  type NotificationChannelsFeatureFacade,
+} from '@features/notification-channels/main';
+import {
   type RecentProjectsFeatureFacade,
   registerRecentProjectsHttp,
 } from '@features/recent-projects/main';
@@ -71,6 +75,7 @@ export interface HttpServices {
   chunkBuilder: ChunkBuilder;
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
+  notificationChannelsFeature?: NotificationChannelsFeatureFacade;
   teamGroupChatsFeature?: TeamGroupChatsFeature;
   customTeamTemplatesFeature?: CustomTeamTemplatesFeature;
   organizationsFeature?: OrganizationsFeatureFacade;
@@ -112,6 +117,9 @@ export function registerHttpRoutes(
   }
   if (services.crossTeam) registerCrossTeamRoutes(app, services.crossTeam);
   registerNotificationRoutes(app);
+  if (services.notificationChannelsFeature) {
+    registerNotificationChannelsHttp(app, services.notificationChannelsFeature);
+  }
   registerConfigRoutes(app, services.externalAgentConnection?.updateRoot);
   registerValidationRoutes(app);
   registerUtilityRoutes(app);
