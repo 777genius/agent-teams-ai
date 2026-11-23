@@ -430,6 +430,14 @@ class CdpClient {
   async fill(selector, value) {
     const expression = `document.querySelector(${JSON.stringify(selector)})`;
     await this.click(expression);
+    // A Radix dialog can finish restoring focus after its DOM has closed.
+    // Do not send the keyboard accelerator before a real click focuses the input.
+    const focused = `document.activeElement === ${expression}`;
+    for (let attempt = 0; attempt < 3 && !(await this.evaluate(focused)); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      await this.click(expression);
+    }
+    await this.waitFor(focused, `native focus for ${selector}`, 5_000);
     const mac = process.platform === 'darwin';
     const modifier = mac ? 4 : 2; // CDP: Meta or Control
     const modifierKey = mac ? 'Meta' : 'Control';
@@ -1245,6 +1253,32 @@ const templatePickerTrigger =
 const templatePickerRoot =
   "document.querySelector('[data-testid=create-team-template-picker]')";
 
+// A disappearing Radix dialog can leave a focus-restoration event in flight.
+// Retry real clicks only while the picker is still closed; never re-apply a template.
+async function openCreateTemplatePicker(client, label) {
+  const hitTest = `(() => {
+    const button = ${templatePickerTrigger};
+    if (!button || button.disabled) return false;
+    button.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const rect = button.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit === button || button.contains(hit);
+  })()`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await client.evaluate(`Boolean(${templatePickerRoot})`)) return;
+    await client.waitFor(hitTest, `${label}: picker trigger unobstructed`, 15_000);
+    await client.click(templatePickerTrigger);
+    try {
+      await client.waitFor(`Boolean(${templatePickerRoot})`, `${label}: picker opened`, 3_500);
+      return;
+    } catch (error) {
+      if (await client.evaluate(`Boolean(${templatePickerRoot})`)) return;
+      if (attempt === 2) throw error;
+    }
+  }
+}
+
 // The template button remains clickable while the four persisted drafts load.
 // The picker itself disables its options until all drafts have hydrated.
 // Verify the real renderer gate, then dismiss it without changing the draft.
@@ -1253,7 +1287,7 @@ async function waitForCreateTemplateHydration(client, label) {
     `${templatePickerTrigger} && !${templatePickerTrigger}.disabled`,
     `${label}: picker trigger`, 45_000
   );
-  await client.click(templatePickerTrigger);
+  await openCreateTemplatePicker(client, label);
   await client.waitFor(
     "document.querySelector('[data-testid=create-team-template-picker] [data-testid=create-template-option-none]')?.disabled === false",
     label, 45_000
@@ -1863,12 +1897,7 @@ async function main() {
       // The new template picker is a dialog, not a combobox. Cancellation of
       // the nested confirmation intentionally leaves the picker open.
       if (!(await cdp.evaluate(`Boolean(${templatePickerRoot})`))) {
-        await cdp.waitFor(
-          `${templatePickerTrigger} && !${templatePickerTrigger}.disabled`,
-          'visible enabled template picker trigger'
-        );
-        await cdp.click(templatePickerTrigger);
-        await cdp.waitFor(templatePickerRoot, 'template picker dialog opened');
+        await openCreateTemplatePicker(cdp, 'select built-in team template');
       }
       await cdp.waitFor(
         `${option} && !${option}.disabled`,
@@ -1927,10 +1956,14 @@ async function main() {
       'template applied after explicit confirmation'
     );
     await cdp.waitFor(`!${templatePickerRoot}`, 'picker dismissed after applying template');
-    await cdp.click(templatePickerTrigger);
+    await openCreateTemplatePicker(cdp, 'reopen applied team template');
     await cdp.waitFor(
-      `document.querySelector('[data-testid=create-template-option-builtin-software-product]')?.getAttribute('aria-pressed') === 'true' && document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')`,
-      'applied template reflected in reopened picker and editable prompt'
+      "document.querySelector('[data-testid=create-template-option-builtin-software-product]')?.getAttribute('aria-pressed') === 'true'",
+      'applied built-in selection in reopened picker'
+    );
+    await cdp.waitFor(
+      "document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')",
+      'applied built-in prompt retained in editable form'
     );
     await cdp.send('Input.dispatchKeyEvent', {
       type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
