@@ -2029,17 +2029,9 @@ export class TeamProvisioningMemberLifecycleController {
       throw new Error(`Team "${teamName}" project path is not available for OpenCode restart`);
     }
 
-    // The runtime lane may run inside the member worktree; isolation must be
-    // checked against the team's project checkout, not that same member cwd.
-    const workspaceBaseCwd =
-      config.projectPath?.trim() ||
-      teamMeta?.cwd?.trim() ||
-      this.readPersistedTeamProjectPath(teamName) ||
-      runtimeRun.cwd?.trim() ||
-      projectPath;
     const effectiveMembers = await this.resolveOpenCodeMemberWorkspacesForRuntime({
       teamName,
-      baseCwd: workspaceBaseCwd,
+      baseCwd: config.projectPath?.trim() || teamMeta?.cwd?.trim() || projectPath,
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
