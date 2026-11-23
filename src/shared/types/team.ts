@@ -383,6 +383,8 @@ export interface TeamTask {
   comments?: TaskComment[];
   /** Signals that the agent is blocked and needs clarification. "lead" = ask team lead, "user" = escalated to human. */
   needsClarification?: 'lead' | 'user';
+  /** Exact first transition into awaiting human response; legacy tasks may not contain it. */
+  clarificationRequestedAt?: string;
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
   /** Attachments associated with this task. Metadata only — actual files stored on disk. */
