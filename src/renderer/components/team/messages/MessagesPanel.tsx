@@ -459,6 +459,9 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   const handleAttentionOpenChat = useCallback((target: typeof scope) => {
+    // Even if this thread is already selected, its old search may hide the
+    // message requiring attention. handleOpenChat skips on an identical scope.
+    setMessagesSearchQuery('');
     // A floating composer has no thread surface. Expand the existing bottom sheet
     // before navigating so the destination is actually visible to the user.
     if (position === 'floating-composer') onPositionChange('sidebar');

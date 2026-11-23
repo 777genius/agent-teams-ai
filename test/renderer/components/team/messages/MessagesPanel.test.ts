@@ -507,6 +507,52 @@ describe('MessagesPanel idle summary invariants', () => {
     }
   });
 
+  it('clears a stale Messenger search when Attention reopens the selected thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'thread';
+    sidebarUiState.conversationScope = { kind: 'direct', participant: 'alice' };
+    sidebarUiState.messagesSearchQuery = 'search hiding the unread message';
+    sidebarUiState.messagesCollapsed = true;
+    const teamName = 'attention-already-open-direct-fixture';
+    requestAttentionChatNavigation({
+      contextId: storeState.activeContextId,
+      teamName,
+      scope: { kind: 'direct', participant: 'alice' },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    vi.mocked(setTeamMessagesSidebarUiState).mockClear();
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(MessagesPanel, {
+            teamName,
+            position: 'sidebar',
+            onPositionChange: vi.fn(),
+            members: [],
+            tasks: [],
+            timeWindow: null,
+            pendingRepliesByMember: {},
+            onPendingReplyChange: vi.fn(),
+          })
+        );
+      });
+      expect(setTeamMessagesSidebarUiState).toHaveBeenLastCalledWith(
+        JSON.stringify([storeState.activeContextId, teamName]),
+        expect.objectContaining({
+          conversationSurface: 'thread',
+          conversationScope: { kind: 'direct', participant: 'alice' },
+          messagesCollapsed: false,
+          messagesSearchQuery: '',
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('keeps a selectable cross-team draft out of the local feed fallback', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let resolveCatalog: (loaded: boolean) => void = vi.fn();
