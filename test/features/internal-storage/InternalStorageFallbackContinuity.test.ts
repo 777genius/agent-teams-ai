@@ -326,7 +326,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       reportIntents: [],
       outboxItems: [],
       metricEvents: [],
-    });
+    }, { resetPrimaryIncarnation: true });
   });
 
   it('does not complete team purge while a rejected RPC still has a retiring writer', async () => {
@@ -877,7 +877,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       reportIntents: [],
       outboxItems: [],
       metricEvents: [],
-    });
+    }, { resetPrimaryIncarnation: true });
   });
 
   it('purgeTeam prevents a same-name resume from hydrating the deleted team from stale state', async () => {

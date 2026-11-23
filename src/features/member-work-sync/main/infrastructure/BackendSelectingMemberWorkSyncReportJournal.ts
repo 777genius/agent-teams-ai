@@ -26,7 +26,10 @@ export class BackendSelectingMemberWorkSyncReportJournal implements MemberWorkSy
   ) {}
 
   read(input: MemberWorkSyncReportJournalIdentity): Promise<MemberWorkSyncReportJournalResult> {
-    return this.choose().then((journal) => journal.read(input));
+    return this.replicaFence
+      ? this.replicaFence.runReplicaFenced(input.teamName, false,
+          () => this.sqlite.read(input), () => this.json.read(input))
+      : this.choose().then((journal) => journal.read(input));
   }
 
   ensure(input: MemberWorkSyncReportJournalInput): Promise<MemberWorkSyncReportJournalResult> {

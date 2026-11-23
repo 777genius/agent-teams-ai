@@ -82,7 +82,6 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
-import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
@@ -190,6 +189,7 @@ import {
   useTmuxRuntimeReadiness,
 } from './teammateRuntimeCompatibility';
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
+import { getTeamProviderLabel as getProviderLabel } from './teamModelSummary';
 import { getNextSuggestedTeamName } from './teamNameSets';
 import { useCreateConfigSubmission } from './useCreateConfigSubmission';
 import { useCreatedTeamLaunchReadiness } from './useCreatedTeamLaunchReadiness';
@@ -225,9 +225,6 @@ import type {
 export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
-function getProviderLabel(providerId: TeamProviderId): string {
-  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
-}
 export const CreateTeamDialog = ({
   open,
   presentation = 'dialog',
@@ -1502,35 +1499,32 @@ export const CreateTeamDialog = ({
   const createContext = createdReadiness.context;
   const qualifyCreatePlan = createdReadiness.qualifyPlan;
   const runCreatePreflight = createdReadiness.runPreflight;
-  const shortLivedModelIssueReasons = useMemo(
-    () => {
-      void prepareChecks;
-      void selectedModelChecksByProviderSignature;
-      return readLaunchPrepareModelIssues({
-        context: createContext,
-        isLaunchMode: true,
-        selectedMemberProviders,
-        runtimeBackendSummaryByProvider,
-        runtimeProviderStatusById,
-        selectedModelChecksByProvider,
-        cwd: effectiveCwd,
-        limitContext: effectiveAnthropicRuntimeLimitContext,
-        invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
-      });
-    },
-    [
-      createContext,
-      effectiveAnthropicRuntimeLimitContext,
-      effectiveCwd,
-      prepareChecks,
-      prepareProviderInvalidationEpochById,
+  const shortLivedModelIssueReasons = useMemo(() => {
+    void prepareChecks;
+    void selectedModelChecksByProviderSignature;
+    return readLaunchPrepareModelIssues({
+      context: createContext,
+      isLaunchMode: true,
+      selectedMemberProviders,
       runtimeBackendSummaryByProvider,
       runtimeProviderStatusById,
       selectedModelChecksByProvider,
-      selectedModelChecksByProviderSignature,
-      selectedMemberProviders,
-    ]
-  );
+      cwd: effectiveCwd,
+      limitContext: effectiveAnthropicRuntimeLimitContext,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
+    });
+  }, [
+    createContext,
+    effectiveAnthropicRuntimeLimitContext,
+    effectiveCwd,
+    prepareChecks,
+    prepareProviderInvalidationEpochById,
+    runtimeBackendSummaryByProvider,
+    runtimeProviderStatusById,
+    selectedModelChecksByProvider,
+    selectedModelChecksByProviderSignature,
+    selectedMemberProviders,
+  ]);
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,
     runtimeProviderStatusById,

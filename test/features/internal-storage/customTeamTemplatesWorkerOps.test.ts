@@ -255,7 +255,7 @@ describe('custom team templates worker ops', () => {
       );
     raw.close();
 
-    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(7);
+    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(8);
     const upgraded = track(makeCore(dbPath));
     const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
@@ -298,7 +298,7 @@ describe('custom team templates worker ops', () => {
 
     const upgraded = track(makeCore(dbPath));
     const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
-    expect(info.schemaVersion).toBe(7);
+    expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     expect(info.integrity).toBe('ok');
     expect(upgraded.handle('customTemplate.getById', { templateId: 'template-1' })).toEqual({
       status: 'found',

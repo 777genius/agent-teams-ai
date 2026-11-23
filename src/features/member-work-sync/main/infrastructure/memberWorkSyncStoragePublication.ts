@@ -1,9 +1,16 @@
 import {
+  assertMemberWorkSyncDirtyContinuity,
   validateMemberWorkSyncAuthoritySnapshot,
   validateMemberWorkSyncPrimaryRecords,
 } from './memberWorkSyncAuthorityPreparation';
+import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
 import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
-import { recordsToSnapshot } from './memberWorkSyncSqliteMappers';
+import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
+import {
+  areSnapshotRecordSetsEquivalent,
+  recordsToSnapshot,
+  snapshotToRecords,
+} from './memberWorkSyncSqliteMappers';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
 import type { StaleIncarnationHealInput } from './memberWorkSyncStaleIncarnationHeal';
@@ -42,6 +49,63 @@ export function publishMemberWorkSyncLocal<T>(
   return admission ? admission.publish(operation) : operation();
 }
 
+/** Empty primary state needs durable ownership; legacy nonempty status proof remains valid. */
+export async function assertMemberWorkSyncDirtyPrimaryOwnership(
+  identity: { teamName: string; incarnation: string },
+  canonical: MemberWorkSyncStoreSnapshot,
+  primaryIncarnation: string | null,
+  gateway: MemberWorkSyncStorageGateway
+): Promise<void> {
+  if (
+    (primaryIncarnation !== identity.incarnation && !canonical.statuses.length) ||
+    canonical.statuses.some(
+      (status) => status.statusRevision?.incarnation !== identity.incarnation
+    ) ||
+    (await gateway.ping()).integrity !== 'ok'
+  )
+    throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+}
+
+/** Read-only authority plan, after all contributing source snapshots and ownership are validated. */
+export async function prepareMemberWorkSyncAuthorityPrimary(input: {
+  identity: { teamName: string; incarnation: string };
+  canonical: MemberWorkSyncStoreSnapshot;
+  candidate: MemberWorkSyncStoreSnapshot | null;
+  history: MemberWorkSyncStoreSnapshot;
+  primary: MemberWorkSyncTeamSnapshotRecords;
+  owner: string | null;
+  gateway: MemberWorkSyncStorageGateway;
+  replica: InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>;
+  dirty: boolean;
+  recovered: boolean;
+}): Promise<MemberWorkSyncTeamSnapshotRecords> {
+  const { identity, canonical, candidate, primary, owner, gateway, replica } = input;
+  const { teamName, incarnation } = identity;
+  if (input.dirty) {
+    if (input.recovered) throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+    await assertMemberWorkSyncDirtyPrimaryOwnership(identity, canonical, owner, gateway);
+    const bare =
+      !candidate && owner === incarnation ? await replica.readBoundPublication(teamName) : null;
+    const ownedBare = bare?.state === 'dirty' && bare.incarnation === incarnation;
+    if (
+      !ownedBare &&
+      (canonical.statuses.length ||
+        !candidate ||
+        !areSnapshotRecordSetsEquivalent(snapshotToRecords(teamName, candidate), primary))
+    )
+      assertMemberWorkSyncDirtyContinuity(identity, canonical, candidate);
+  }
+  const merged = mergeDomainSnapshots(mergeDomainSnapshots(canonical, candidate), input.history);
+  const expected = mergeMemberWorkSyncSnapshots(
+    teamName,
+    primary,
+    snapshotToRecords(teamName, merged)
+  );
+  validateMemberWorkSyncPrimaryRecords(identity, expected);
+  validateMemberWorkSyncAuthoritySnapshot(identity, recordsToSnapshot(teamName, expected));
+  return expected;
+}
+
 /** The existing replica mutex owns this entire capture, mutation and publication sequence. */
 export async function captureMemberWorkSyncReplicaPublication(
   teamName: string,
@@ -51,6 +115,9 @@ export async function captureMemberWorkSyncReplicaPublication(
 ) {
   const binding = await replica.readBoundPublication(teamName);
   const identity = binding ? { teamName, incarnation: binding.incarnation } : undefined;
+  const primaryIncarnation = await gateway.readPrimaryIncarnation(teamName);
+  if (primaryIncarnation !== null && primaryIncarnation !== identity?.incarnation)
+    throw new MemberWorkSyncSafetyJsonReadError('unavailable');
   if (identity && binding) {
     if (binding.state === 'clean')
       validateMemberWorkSyncAuthoritySnapshot(identity, binding.snapshot);
@@ -61,16 +128,18 @@ export async function captureMemberWorkSyncReplicaPublication(
     if (binding.state === 'dirty') {
       const canonical = recordsToSnapshot(teamName, records);
       validateMemberWorkSyncAuthoritySnapshot(identity, canonical);
-      // Every retained status must prove ownership; empty state provides no evidence.
-      if (
-        !canonical.statuses.length ||
-        canonical.statuses.some(
-          (status) => status.statusRevision?.incarnation !== identity.incarnation
-        )
-      ) throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+      await assertMemberWorkSyncDirtyPrimaryOwnership(
+        identity,
+        canonical,
+        primaryIncarnation,
+        gateway
+      );
     }
   }
   return {
+    binding,
+    identity,
+    primaryIncarnation,
     validateImport(
       snapshot: MemberWorkSyncStoreSnapshot,
       records: MemberWorkSyncTeamSnapshotRecords
@@ -81,6 +150,8 @@ export async function captureMemberWorkSyncReplicaPublication(
     },
     markDirty: () => replica.markDirty(teamName, identity?.incarnation),
     async writeClean(): Promise<void> {
+      if ((await gateway.readPrimaryIncarnation(teamName)) !== (identity?.incarnation ?? null))
+        throw new MemberWorkSyncSafetyJsonReadError('unavailable');
       const records = await gateway.listTeamSnapshot(teamName);
       if (identity) validateMemberWorkSyncPrimaryRecords(identity, records);
       const snapshot = recordsToSnapshot(teamName, records);

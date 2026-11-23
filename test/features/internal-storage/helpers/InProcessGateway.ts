@@ -16,6 +16,7 @@ import type {
   MemberWorkSyncOutboxEnsureRecordInput,
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncPrimaryImport,
   MemberWorkSyncReportIntentRecord,
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
@@ -216,8 +217,16 @@ export class InProcessGateway
     return this.op('mws.snapshot.list', { teamName });
   }
 
-  importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
-    return this.op('mws.importTeam', { teamName, snapshot });
+  readPrimaryIncarnation(teamName: string): Promise<string | null> {
+    return this.op('mws.primaryIncarnation.read', { teamName });
+  }
+
+  importTeam(
+    teamName: string,
+    snapshot: MemberWorkSyncTeamSnapshotRecords,
+    binding?: MemberWorkSyncPrimaryImport
+  ): Promise<void> {
+    return this.op('mws.importTeam', { teamName, snapshot, binding });
   }
 
   applicationCommandLedgerBegin<TOperation extends string>(

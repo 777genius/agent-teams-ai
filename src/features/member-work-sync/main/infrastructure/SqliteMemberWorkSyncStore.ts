@@ -1,6 +1,6 @@
 import { KeyedMutex } from '@features/internal-storage/main';
 
-import { normalizeMemberKey, toMetrics } from './JsonMemberWorkSyncStore';
+import { normalizeMemberKey, normalizeTeamKey, toMetrics } from './JsonMemberWorkSyncStore';
 import {
   outboxItemToRecord,
   recordToMetricEvent,
@@ -75,37 +75,50 @@ export class SqliteMemberWorkSyncStore
   }
 
   private async ready(teamName: string): Promise<void> {
-    await this.mutex.run(teamName, () => this.deps.importer.ensureImported(teamName));
+    await this.mutex.run(normalizeTeamKey(teamName), () => this.deps.importer.ensureImported(teamName));
   }
 
   /** Caller already owns lifecycle/replica ordering; no public store operation may race restore. */
   async invalidateCanonicalStatusPreparation(teamName: string): Promise<void> {
-    await this.mutex.run(teamName, async () => {
-      this.preparedIncarnations.delete(teamName);
+    await this.mutex.run(normalizeTeamKey(teamName), async () => {
+      this.preparedIncarnations.delete(normalizeTeamKey(teamName));
       this.deps.importer.invalidatePreparedTeam(teamName);
     });
+  }
+
+  /** Captures legacy inputs without triggering ready() or any import side effects. */
+  prepareCanonicalImport(
+    teamName: string,
+    snapshot?: Parameters<MemberWorkSyncSqliteImporter['prepareImport']>[1],
+    incarnation?: string
+  ) {
+    return this.mutex.run(normalizeTeamKey(teamName), () =>
+      this.deps.importer.prepareImport(teamName, snapshot, incarnation)
+    );
   }
 
   /** Preparation may write. The authority owner must fence and track this separately from CAS. */
   prepareCanonicalStatus(
     teamName: string,
     incarnation?: string,
-    prepared?: { records: MemberWorkSyncTeamSnapshotRecords; filesToArchive: readonly string[] }
+    prepared?: { records: MemberWorkSyncTeamSnapshotRecords; filesToArchive: readonly string[]; imported?: boolean }
   ): Promise<void> {
-    return this.mutex.run(teamName, async () => {
+    return this.mutex.run(normalizeTeamKey(teamName), async () => {
       if (incarnation !== undefined) {
         if (!incarnation || incarnation.trim() !== incarnation)
           throw new Error('Invalid work-sync incarnation');
-        if (this.preparedIncarnations.get(teamName) !== incarnation) {
+        if (this.preparedIncarnations.get(normalizeTeamKey(teamName)) !== incarnation) {
           this.deps.importer.invalidatePreparedTeam(teamName);
-          this.preparedIncarnations.set(teamName, incarnation);
+          this.preparedIncarnations.set(normalizeTeamKey(teamName), incarnation);
         }
       }
       if (prepared)
         await this.deps.importer.finalizePreparedImport(
           teamName,
           prepared.records,
-          prepared.filesToArchive
+          prepared.filesToArchive,
+          incarnation,
+          prepared.imported
         );
       else await this.deps.importer.ensureImported(teamName);
     });

@@ -59,6 +59,11 @@ export const commentJournalTeams = sqliteTable('comment_journal_teams', {
   initializedAt: text('initialized_at').notNull(),
 });
 
+export const memberWorkSyncPrimaryIncarnations = sqliteTable('member_work_sync_primary_incarnations', {
+  teamKey: text('team_key').primaryKey().notNull(),
+  incarnation: text('incarnation').notNull(),
+});
+
 export const memberWorkSyncStatus = sqliteTable(
   'member_work_sync_status',
   {

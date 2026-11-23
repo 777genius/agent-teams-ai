@@ -197,6 +197,58 @@ describe('verified team directory creation time', () => {
 });
 
 describe('targeted self-heal of status rows left by an earlier team identity', () => {
+  it.each(['clean', 'dirty'] as const)(
+    'preserves a foreign SQLite owner when a current %s replica fails before the owner check',
+    async (state) => {
+      const h = await setup('sqlite');
+      const stale = snap([mk('alice', FOREIGN)]);
+      await h.gateway.importTeam(TEAM, snapshotToRecords(TEAM, stale), { incarnation: FOREIGN });
+      await h.json.write(stale.statuses[0]);
+      await writeReplica(h, state, CURRENT, stale);
+      const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
+      const statusPath = h.paths.getMemberStatusPath(TEAM, 'alice');
+      const before = await primary(h);
+      const replicaBefore = await readFile(replicaPath, 'utf8');
+      const statusBefore = await readFile(statusPath, 'utf8');
+      const deleted = vi.spyOn(h.gateway, 'statusDeleteMatching');
+      const imported = vi.spyOn(h.gateway, 'importTeam');
+      const operation = vi.fn(async () => 'ran');
+
+      await expect(h.store.withPreparedBackend(identity, operation)).rejects.toThrow();
+
+      expect(operation).not.toHaveBeenCalled();
+      expect(deleted).not.toHaveBeenCalled();
+      expect(imported).not.toHaveBeenCalled();
+      expect(await h.gateway.readPrimaryIncarnation(TEAM)).toBe(FOREIGN);
+      expect(await primary(h)).toEqual(before);
+      expect(await readFile(replicaPath, 'utf8')).toBe(replicaBefore);
+      expect(await readFile(statusPath, 'utf8')).toBe(statusBefore);
+      expect(await quarantineFiles(h)).toEqual([]);
+      expect(h.warn).toHaveBeenCalledWith(
+        'member-work-sync stale status cleanup refused',
+        expect.objectContaining({ reason: 'primary_incarnation_mismatch' })
+      );
+    }
+  );
+
+  it('heals stale JSON statuses while preserving the matching SQLite owner and current rows', async () => {
+    const h = await setup('sqlite');
+    const current = snap([mk('bob', CURRENT)]);
+    await h.gateway.importTeam(TEAM, snapshotToRecords(TEAM, current), { incarnation: CURRENT });
+    await h.json.write(mk('alice', FOREIGN));
+    await writeReplica(h, 'clean', CURRENT, snap([mk('alice', FOREIGN), ...current.statuses]));
+    const before = await primary(h);
+    const activeBefore = await h.json.readSnapshotForImport(TEAM);
+    const retainedMetrics = snapshotToRecords(TEAM, activeBefore!).metricEvents;
+
+    await expect(prepare(h)).resolves.toBe('ran');
+
+    expect(await h.gateway.readPrimaryIncarnation(TEAM)).toBe(CURRENT);
+    expect(await primary(h)).toEqual({ ...before, metricEvents: retainedMetrics });
+    expect((await h.replica.readClean(TEAM, true))?.statuses).toEqual(current.statuses);
+    expect(await quarantineFiles(h)).toHaveLength(1);
+  });
+
   it('removes only stale status rows and keeps current rows, other domains and the token secret', async () => {
     const h = await setup('sqlite');
     const value = snap([mk('alice', FOREIGN), mk('bob', CURRENT)]);
@@ -294,6 +346,9 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
 
   it('removes only stale entries of a legacy members map', async () => {
     const h = await setup('json');
+    const owner = vi
+      .spyOn(h.gateway, 'readPrimaryIncarnation')
+      .mockRejectedValue(new Error('SQLite unavailable'));
     const legacyPath = h.paths.getLegacyStatusPath(TEAM);
     await mkdir(dirname(legacyPath), { recursive: true });
     await writeFile(
@@ -306,6 +361,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     await expect(prepare(h)).resolves.toBe('ran');
     const kept = JSON.parse(await readFile(legacyPath, 'utf8'));
     expect(Object.keys(kept.members)).toEqual(['bob']);
+    expect(owner).not.toHaveBeenCalled();
   });
 
   it('preserves legacy metrics when every legacy status is stale', async () => {

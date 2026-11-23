@@ -10,7 +10,10 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
-import { type NativeNextPromptFlag, withNativeNextPromptFlags } from '@features/native-prompt-suggestions/main';
+import {
+  type NativeNextPromptFlag,
+  withNativeNextPromptFlags,
+} from '@features/native-prompt-suggestions/main';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -20,6 +23,7 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { normalizeConfiguredClaudeRootPath } from './configuredClaudeRootPath';
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
@@ -451,38 +455,6 @@ const DEFAULT_CONFIG: AppConfig = {
   },
 };
 
-function normalizeConfiguredClaudeRootPath(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const normalized = path.normalize(trimmed);
-  if (!path.isAbsolute(normalized)) {
-    return null;
-  }
-
-  const resolved = path.resolve(normalized);
-  const root = path.parse(resolved).root;
-  if (resolved === root) {
-    return resolved;
-  }
-  let end = resolved.length;
-  while (end > root.length) {
-    const char = resolved[end - 1];
-    if (char !== '/' && char !== '\\') {
-      break;
-    }
-    end--;
-  }
-
-  return resolved.slice(0, end);
-}
-
 function normalizeCodexPreferredAuthMode(
   currentValue: unknown,
   legacyValue?: unknown,
@@ -738,24 +710,28 @@ export class ConfigManager {
         maxAttempts: Math.min(5, Math.max(1, Math.round(loadedRecovery.maxAttempts ?? 2))),
       },
       general: mergedGeneral,
-      providerConnections: withNativeNextPromptFlags({
-        anthropic: {
-          ...DEFAULT_CONFIG.providerConnections.anthropic,
-          ...(loaded.providerConnections?.anthropic ?? {}),
-          compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
-            loaded.providerConnections?.anthropic?.compatibleEndpoint
-          ),
+      providerConnections: withNativeNextPromptFlags(
+        {
+          anthropic: {
+            ...DEFAULT_CONFIG.providerConnections.anthropic,
+            ...(loaded.providerConnections?.anthropic ?? {}),
+            compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
+              loaded.providerConnections?.anthropic?.compatibleEndpoint
+            ),
+          },
+          codex: {
+            preferredAuthMode: normalizeCodexPreferredAuthMode(
+              loaded.providerConnections?.codex?.preferredAuthMode,
+              (loaded.providerConnections?.codex as { authMode?: unknown } | undefined)?.authMode
+            ),
+            customProvider: normalizeCodexCustomProviderConfig(
+              loaded.providerConnections?.codex?.customProvider
+            ),
+          },
         },
-        codex: {
-          preferredAuthMode: normalizeCodexPreferredAuthMode(
-            loaded.providerConnections?.codex?.preferredAuthMode,
-            (loaded.providerConnections?.codex as { authMode?: unknown } | undefined)?.authMode
-          ),
-          customProvider: normalizeCodexCustomProviderConfig(
-            loaded.providerConnections?.codex?.customProvider
-          ),
-        },
-      }, loaded.providerConnections, DEFAULT_CONFIG.providerConnections),
+        loaded.providerConnections,
+        DEFAULT_CONFIG.providerConnections
+      ),
       runtime: {
         providerBackends: {
           ...DEFAULT_CONFIG.runtime.providerBackends,
@@ -875,28 +851,32 @@ export class ConfigManager {
 
     if (section === 'providerConnections') {
       const connectionUpdate = data as Partial<ProviderConnectionsConfig>;
-      return withNativeNextPromptFlags({
-        ...connectionUpdate,
-        anthropic: {
-          ...this.config.providerConnections.anthropic,
-          ...(connectionUpdate.anthropic ?? {}),
-          compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
-            connectionUpdate.anthropic?.compatibleEndpoint,
-            this.config.providerConnections.anthropic.compatibleEndpoint
-          ),
+      return withNativeNextPromptFlags(
+        {
+          ...connectionUpdate,
+          anthropic: {
+            ...this.config.providerConnections.anthropic,
+            ...(connectionUpdate.anthropic ?? {}),
+            compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
+              connectionUpdate.anthropic?.compatibleEndpoint,
+              this.config.providerConnections.anthropic.compatibleEndpoint
+            ),
+          },
+          codex: {
+            preferredAuthMode: normalizeCodexPreferredAuthMode(
+              connectionUpdate.codex?.preferredAuthMode,
+              (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode,
+              this.config.providerConnections.codex.preferredAuthMode
+            ),
+            customProvider: normalizeCodexCustomProviderConfig(
+              connectionUpdate.codex?.customProvider,
+              this.config.providerConnections.codex.customProvider
+            ),
+          },
         },
-        codex: {
-          preferredAuthMode: normalizeCodexPreferredAuthMode(
-            connectionUpdate.codex?.preferredAuthMode,
-            (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode,
-            this.config.providerConnections.codex.preferredAuthMode
-          ),
-          customProvider: normalizeCodexCustomProviderConfig(
-            connectionUpdate.codex?.customProvider,
-            this.config.providerConnections.codex.customProvider
-          ),
-        },
-      }, connectionUpdate, this.config.providerConnections) as unknown as Partial<AppConfig[K]>;
+        connectionUpdate,
+        this.config.providerConnections
+      ) as unknown as Partial<AppConfig[K]>;
     }
 
     if (!Object.prototype.hasOwnProperty.call(data, 'claudeRootPath')) {

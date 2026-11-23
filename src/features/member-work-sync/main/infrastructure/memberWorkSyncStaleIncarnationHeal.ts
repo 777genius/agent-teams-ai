@@ -6,10 +6,7 @@ import {
   InternalStorageOperationInterruptedError,
   listPreSqliteArchiveGenerations,
 } from '@features/internal-storage/main';
-import {
-  atomicWriteAsync,
-  syncDirectoryDurably,
-} from '@main/utils/atomicWrite';
+import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
 
 import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
 
@@ -17,7 +14,10 @@ import {
   decodeMemberWorkSyncStoredStatus,
   MemberWorkSyncStatusDecodeError,
 } from './decodeMemberWorkSyncStoredStatus';
-import { validateMemberWorkSyncAuthoritySnapshot, validateMemberWorkSyncPrimaryRecords } from './memberWorkSyncAuthorityPreparation';
+import {
+  validateMemberWorkSyncAuthoritySnapshot,
+  validateMemberWorkSyncPrimaryRecords,
+} from './memberWorkSyncAuthorityPreparation';
 import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
 import { readIncarnationMismatch } from './memberWorkSyncPreparationDiagnostics';
 import { areSnapshotRecordSetsEquivalent, recordsToSnapshot } from './memberWorkSyncSqliteMappers';
@@ -399,9 +399,7 @@ async function corroborate(input: StaleIncarnationHealInput, plan: Plan): Promis
   }
   let birth: number | null;
   try {
-    const stats = input.readTeamRootStats
-      ? await input.readTeamRootStats(root)
-      : await lstat(root);
+    const stats = input.readTeamRootStats ? await input.readTeamRootStats(root) : await lstat(root);
     birth = getVerifiedTeamRootBirthtimeMs(stats);
   } catch {
     return 'team_root_unreadable';
@@ -495,6 +493,17 @@ export async function healStaleIncarnationStatuses(
   try {
     // Snapshot the state only after any interrupted worker can no longer write to it.
     await input.gateway.waitForSettling?.();
+    if (input.backend === 'sqlite') {
+      const owner = await input.gateway.readPrimaryIncarnation(input.teamName);
+      if (owner !== null && owner !== input.incarnation) {
+        input.logger?.warn('member-work-sync stale status cleanup refused', {
+          teamName: input.teamName,
+          incarnation: input.incarnation,
+          reason: 'primary_incarnation_mismatch',
+        });
+        return 'refused';
+      }
+    }
     await planReplica(input, plan);
     if (input.backend === 'sqlite') await planPrimary(input, plan);
     await planFiles(input, plan);
