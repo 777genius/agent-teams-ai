@@ -9,6 +9,7 @@ export type UserAttentionFeatureFacade = UserAttentionApi;
 /** Main composition root; no domain policy or transport-specific behavior. */
 export function createUserAttentionFeature(deps: {
   getContextId(): string;
+  listGroupNames?: (teamName: string) => Promise<Record<string, string>>;
   getTeamDataService(): Pick<TeamDataService,
     'listTeams' | 'getUserAttentionTasks' | 'getMessageFeed'>;
 }): UserAttentionFeatureFacade {
