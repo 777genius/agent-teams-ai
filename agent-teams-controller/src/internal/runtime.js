@@ -347,14 +347,27 @@ async function showConnectionConfirmation(context, flags = {}) {
   if (flags.cdpVerified !== undefined && typeof flags.cdpVerified !== 'boolean') {
     throw new Error('Invalid CDP verification flag');
   }
-  return requestJson(resolveControlBaseUrls(context)[0], '/api/app/connection/confirmation', {
-    method: 'POST',
-    body: {
-      agentName: flags.agentName.trim(),
-      expectedContext: flags.expectedContext,
-      ...(flags.cdpVerified !== undefined ? { cdpVerified: flags.cdpVerified } : {}),
-    },
-  });
+  return requestJsonWithFallback(
+    resolveControlBaseUrls(context),
+    '/api/app/connection/confirmation',
+    {
+      method: 'POST',
+      body: {
+        agentName: flags.agentName.trim(),
+        expectedContext: flags.expectedContext,
+        ...(flags.cdpVerified !== undefined ? { cdpVerified: flags.cdpVerified } : {}),
+      },
+      // An absent route or an unestablished connection cannot have accepted the POST.
+      // Do not retry timeouts, ambiguous transport failures, or server refusals.
+      fallbackOnTimeout: false,
+      shouldFallback: (error) =>
+        (error.retryableKind === 'status' && error.statusCode === 404) ||
+        (error.retryableKind === 'network' &&
+          ['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH'].includes(
+            error.cause?.cause?.code
+          )),
+    }
+  );
 }
 
 async function getTeam(context, flags = {}) {
