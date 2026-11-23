@@ -777,6 +777,75 @@ test.each(['complete', 'read-failed', 'current-lost'] as const)(
   }
 );
 
+test.each(['first-pass', 'absent-provider', 'absent-model', 'both-absent', 'hard-invalid'] as const)(
+  'catalog repeat preserves the first missing selection pair for %s', async shape => {
+    let baseline: unknown;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' };
+      const observations: { phase: string; detail?: unknown }[] = [];
+      let reads = 0, checks = 0;
+      const result = attestOpenCodeV2ModelSelection({ readCatalog: async () => {
+        reads++;
+        const first = reads === 1;
+        return {
+          provider: first && (shape === 'absent-provider' || shape === 'both-absent') ? null
+            : { id: selection.providerID, activation: shape === 'hard-invalid' ? 'disabled' : 'enabled' },
+          defaultModel: { providerId: selection.providerID, modelId: selection.id },
+          models: first && (shape === 'absent-model' || shape === 'both-absent') ? []
+            : [{ id: selection.id, enabled: true, variants: [] }],
+        };
+      } }, selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+        isCurrent: () => { checks++; return true; } }, sink === 'absent' ? undefined : (phase, detail?: unknown) => {
+        observations.push({ phase, ...(detail === undefined ? {} : { detail }) });
+        if (sink === 'throws') throw Error('TEST diagnostic failure');
+      });
+      if (shape === 'hard-invalid') await expect(result).rejects.toMatchObject({ code: 'invalid' });
+      else await expect(result).resolves.toBeUndefined();
+      baseline ??= { reads, checks }; expect({ reads, checks }).toEqual(baseline);
+      const repeats = shape !== 'first-pass' && shape !== 'hard-invalid';
+      expect({ reads, checks }).toEqual(repeats ? { reads: 2, checks: 4 } : { reads: 1, checks: 2 });
+      expect(observations.filter(row => row.phase === 'catalog-repeat')).toEqual(sink === 'absent' || !repeats ? [] : [{
+        phase: 'catalog-repeat', detail: {
+          catalogProviderPresent: shape === 'absent-model', catalogModelPresent: shape === 'absent-provider',
+        },
+      }]);
+      expect(observations.filter(row => row.phase !== 'catalog-repeat').every(row => row.detail === undefined)).toBe(true);
+    }
+  }
+);
+
+test.each(['accessor', 'proxy'] as const)(
+  'catalog repeat projection adds no reads or reflection through a %s catalog', async shape => {
+    let baseline: string[] | undefined;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' }, trace: string[] = [];
+      const complete = { provider: { id: selection.providerID, activation: 'enabled' },
+        defaultModel: { providerId: selection.providerID, modelId: selection.id },
+        models: [{ id: selection.id, enabled: true, variants: [] }] };
+      const missing = { ...complete, provider: null };
+      const catalog = shape === 'accessor' ? Object.defineProperty(missing, 'provider', {
+        get() { trace.push('provider getter'); return null; },
+      }) : new Proxy(missing, {
+        get(target, key, receiver) { trace.push('get ' + String(key)); return Reflect.get(target, key, receiver); },
+        getOwnPropertyDescriptor() { trace.push('forbidden descriptor'); throw Error('TEST diagnostic reflection'); },
+        ownKeys() { trace.push('forbidden keys'); throw Error('TEST diagnostic reflection'); },
+      });
+      let reads = 0;
+      const observations: { phase: string; detail?: unknown }[] = [];
+      await expect(attestOpenCodeV2ModelSelection({ readCatalog: async () => ++reads === 1 ? catalog : complete },
+        selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+          isCurrent: () => { trace.push('current'); return true; } }, sink === 'absent' ? undefined : (phase, detail?: unknown) => {
+          observations.push({ phase, ...(detail === undefined ? {} : { detail }) });
+          if (sink === 'throws') throw Error('TEST diagnostic failure');
+        })).resolves.toBeUndefined();
+      baseline ??= trace; expect(trace).toEqual(baseline);
+      expect(trace.some(value => value.startsWith('forbidden'))).toBe(false);
+      expect(observations.filter(row => row.phase === 'catalog-repeat')).toEqual(sink === 'absent' ? [] : [{ phase: 'catalog-repeat' }]);
+      expect(reads).toBe(2);
+    }
+  }
+);
+
 test('phase sink failure preserves the original probe HTTP, single run and physical cleanup', async () => {
   const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
   let baseline: ReturnType<Awaited<ReturnType<typeof fixture>>['counts']> | undefined;

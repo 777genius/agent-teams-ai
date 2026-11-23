@@ -94,6 +94,8 @@ export interface OpenCodeProbeDiagnostic {
   readonly submitStatus?: 'ok' | 'refused' | 'unclassified';
   readonly submitCode?: string | null;
   readonly submitDelivery?: 'known-not-sent' | 'unobserved';
+  readonly catalogProviderPresent?: boolean;
+  readonly catalogModelPresent?: boolean;
 }
 interface OpenCodeMetadataIdentity {
   readonly profileHash: string;
@@ -271,9 +273,11 @@ export function decodeClaudeCloseDiagnostics(
         const value: unknown = JSON.parse(text.slice(probePrefix.length));
         const keys = ['profileHash', 'commandHash', 'probeDigest', 'phase', 'sequence', 'elapsedMs'];
         if (!exact(value, keys) && !exact(value, [...keys, 'currentCalls', 'currentElapsedMs']) &&
-            !exact(value, [...keys, 'submitStatus', 'submitCode', 'submitDelivery'])) return;
+            !exact(value, [...keys, 'submitStatus', 'submitCode', 'submitDelivery']) &&
+            !exact(value, [...keys, 'catalogProviderPresent', 'catalogModelPresent'])) return;
         const summary = typeof value.phase === 'string' && currentnessPhases.has(value.phase);
         const submitted = value.phase === 'first-submit-returned';
+        const catalogRepeat = Object.hasOwn(value, 'catalogProviderPresent');
         if (summary !== Object.hasOwn(value, 'currentCalls') || submitted !== Object.hasOwn(value, 'submitStatus') ||
             !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
             typeof value.phase !== 'string' || !(probePhases.has(value.phase) || summary) ||
@@ -289,6 +293,8 @@ export function decodeClaudeCloseDiagnostics(
             !(value.submitCode === null || typeof value.submitCode === 'string' && submitFailureCodes.has(value.submitCode)) ||
             !(value.submitDelivery === 'known-not-sent' || value.submitDelivery === 'unobserved') ||
             value.submitStatus !== 'refused' && (value.submitCode !== null || value.submitDelivery !== 'unobserved'))) return;
+        if (catalogRepeat && (value.phase !== 'catalog-repeat' || typeof value.catalogProviderPresent !== 'boolean' ||
+            typeof value.catalogModelPresent !== 'boolean' || (value.catalogProviderPresent && value.catalogModelPresent))) return;
         const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({
           profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
           phase: value.phase, sequence: value.sequence, elapsedMs: value.elapsedMs,
@@ -296,6 +302,8 @@ export function decodeClaudeCloseDiagnostics(
           ...(submitted ? { submitStatus: value.submitStatus as OpenCodeProbeDiagnostic['submitStatus'],
             submitCode: value.submitCode as string | null,
             submitDelivery: value.submitDelivery as OpenCodeProbeDiagnostic['submitDelivery'] } : {}),
+          ...(catalogRepeat ? { catalogProviderPresent: value.catalogProviderPresent as boolean,
+            catalogModelPresent: value.catalogModelPresent as boolean } : {}),
         });
         void Promise.resolve(retainProbe(diagnostic)).catch(() => {
           /* Missing observations cannot settle the original probe or its cleanup. */
