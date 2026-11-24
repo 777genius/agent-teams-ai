@@ -1,5 +1,5 @@
-import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
 import { editorBridge } from '@renderer/utils/editorBridge';
+import { getLanguageFromFileName } from '@renderer/utils/fileLanguageName';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { getBasename, normalizePathForComparison } from '@shared/utils/platformPath';
 
