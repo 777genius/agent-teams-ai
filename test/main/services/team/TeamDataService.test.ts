@@ -1279,7 +1279,7 @@ function createTaskCommentForwardingService(options: {
     ensureFile: ReturnType<typeof vi.fn>;
     withEntries: ReturnType<typeof vi.fn>;
   };
-  members?: Array<{ name: string; role?: string }>;
+  members?: Array<{ name: string; role?: string; agentType?: 'team-lead' }>;
 }) {
   const inboxWriter = options.inboxWriter ?? {
     sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg-1' })),
@@ -5561,7 +5561,7 @@ describe('TeamDataService', () => {
 
   it('routes a bound user answer to the actual lead name rather than the team-lead alias', async () => {
     const { service, inboxWriter } = createTaskCommentForwardingService({
-      members: [{ name: 'renamed-lead', role: 'Lead' }],
+      members: [{ name: 'renamed-lead', agentType: 'team-lead', role: 'Lead' }],
       tasks: [{
         id: 'lead-answer', subject: 'Choose DB', status: 'pending', owner: 'team-lead',
         comments: [{
