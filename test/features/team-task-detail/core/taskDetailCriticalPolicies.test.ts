@@ -14,6 +14,7 @@ import {
   completeTaskDetailSubmit,
   createTaskDetailReadEntry,
   EMPTY_TASK_DETAIL_SESSION,
+  hydrateTaskDetailDraft,
   failTaskDetailSave,
   ignoreTaskDetailPendingAttachment,
   releaseTaskDetailOwner,
@@ -54,6 +55,78 @@ const fullTask = (taskId: string, suffix: string): TeamTaskWithKanban => ({
   kanbanColumn: 'approved',
   reviewer: `reviewer-${suffix}`,
   changePresence: 'has_changes',
+});
+
+describe('task detail clarification draft hydration', () => {
+  const cycleA = 'ecb07f08-2585-463b-9d3e-6dcd9b3a1d19';
+  const cycleB = 'fe8c7444-4c32-4c08-a7fa-eb1a854e981b';
+
+  it('rejects late cycle A draft after reply or attachment starts cycle B', () => {
+    for (const startPart of ['reply', 'pendingAttachments'] as const) {
+      const session: TaskDetailSession = {
+        ...EMPTY_TASK_DETAIL_SESSION,
+        answerClarificationRequestId: cycleB,
+        reply: startPart === 'reply'
+          ? { taskId: '1', author: 'bob', text: 'Question B' } : null,
+        pendingAttachments: startPart === 'pendingAttachments'
+          ? [{
+              id: 'file-b', filename: 'decision.txt', mimeType: 'text/plain',
+              base64Data: 'Yg==', previewUrl: 'data:text/plain;base64,Yg==', size: 1,
+            }] : [],
+        partRevisions: {
+          ...EMPTY_TASK_DETAIL_SESSION.partRevisions,
+          [startPart]: 1,
+        },
+      };
+      const result = hydrateTaskDetailDraft(session, {
+        text: 'Answer intended for A',
+        commentChips: [],
+        answerClarificationRequestId: cycleA,
+      });
+      expect(result).toBe(session);
+      expect(result.commentText).toBe('');
+      expect(result.answerClarificationRequestId).toBe(cycleB);
+    }
+  });
+
+  it('hydrates content and ID together when no composer was started', () => {
+    const restored = hydrateTaskDetailDraft(EMPTY_TASK_DETAIL_SESSION, {
+      text: 'Answer A',
+      commentChips: [],
+      answerClarificationRequestId: cycleA,
+    });
+    expect(restored.commentText).toBe('Answer A');
+    expect(restored.answerClarificationRequestId).toBe(cycleA);
+  });
+
+  it('does not resurrect a cleared composer from late disk hydration', () => {
+    const session: TaskDetailSession = {
+      ...EMPTY_TASK_DETAIL_SESSION,
+      partRevisions: { ...EMPTY_TASK_DETAIL_SESSION.partRevisions, commentText: 2 },
+    };
+    const result = hydrateTaskDetailDraft(session, {
+      text: 'Obsolete answer',
+      commentChips: [],
+      answerClarificationRequestId: cycleA,
+    });
+    expect(result).toBe(session);
+  });
+
+  it('retains same-cycle draft hydration for an unrelated, unmodified field', () => {
+    const session: TaskDetailSession = {
+      ...EMPTY_TASK_DETAIL_SESSION,
+      answerClarificationRequestId: cycleA,
+      reply: { taskId: '1', author: 'bob', text: 'same clarification' },
+      partRevisions: { ...EMPTY_TASK_DETAIL_SESSION.partRevisions, reply: 1 },
+    };
+    const restored = hydrateTaskDetailDraft(session, {
+      text: 'Answer intended for A',
+      commentChips: [],
+      answerClarificationRequestId: cycleA,
+    });
+    expect(restored.commentText).toBe('Answer intended for A');
+    expect(restored.answerClarificationRequestId).toBe(cycleA);
+  });
 });
 
 describe('task detail critical read policies', () => {

@@ -94,6 +94,21 @@ export function hydrateTaskDetailDraft(
     answerClarificationRequestId?: string | null;
   }
 ): TaskDetailSession {
+  // A draft is a single snapshot (content + clarification generation).
+  // Never mix a late-hydrated A snapshot with an already-started B composer:
+  // that could submit A's answer with B's ID and erroneously clear B.
+  const localCompositionStarted =
+    session.answerClarificationRequestId !== undefined ||
+    session.partRevisions.commentText > 0 ||
+    session.partRevisions.commentChips > 0 ||
+    session.partRevisions.pendingAttachments > 0 ||
+    session.partRevisions.reply > 0;
+  if (localCompositionStarted &&
+      (session.answerClarificationRequestId ?? null) !==
+        (draft.answerClarificationRequestId ?? null)) {
+    return session;
+  }
+
   let next = session;
   if (draft.text && next.partRevisions.commentText === 0 && next.commentText === '') {
     next = updateTaskDetailPart(next, 'commentText', draft.text);
