@@ -390,12 +390,22 @@ export function createOpenCodeV2ModelProbe(
             withClient(probeSignal, async (client) => {
               // Independent native reads keep their original custody/currentness gates.
               // Await all before comparing so no check is silently skipped.
-              const [observed, permissionsEmpty, pluginsOnly, mcp] = await Promise.all([
+              const [session, permissions, plugins, mcpResult] = await Promise.allSettled([
                 client.readSession(),
                 client.savedPermissionsEmpty(),
                 client.builtinPluginsOnly(),
                 client.readMcp(),
               ]);
+              // Settle every native request/lease before owner-client dispose, even
+              // if an earlier request failed.
+              if (session.status === 'rejected') throw session.reason;
+              if (permissions.status === 'rejected') throw permissions.reason;
+              if (plugins.status === 'rejected') throw plugins.reason;
+              if (mcpResult.status === 'rejected') throw mcpResult.reason;
+              const observed = session.value;
+              const permissionsEmpty = permissions.value;
+              const pluginsOnly = plugins.value;
+              const mcp = mcpResult.value;
               return (
                 managementDigest({
                   agent: observed.agent,
