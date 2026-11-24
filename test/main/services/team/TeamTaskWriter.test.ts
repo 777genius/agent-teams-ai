@@ -95,6 +95,24 @@ describe('TeamTaskWriter', () => {
     expect(persisted.blockedBy).toEqual([]);
   });
 
+  it('generates a unique human clarification cycle and never reuses it after clearing', async () => {
+    await writer.createTask('my-team', {
+      id: 'clarification', subject: 'Choose database', status: 'pending',
+      needsClarification: 'user',
+    });
+    const file = '/mock/tasks/my-team/clarification.json';
+    const get = () => JSON.parse(hoisted.files.get(file) ?? '{}') as Record<string, unknown>;
+    const firstId = get().clarificationRequestId;
+    expect(firstId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-/i);
+    await writer.setNeedsClarification('my-team', 'clarification', 'user');
+    expect(get().clarificationRequestId).toBe(firstId);
+    await writer.setNeedsClarification('my-team', 'clarification', null);
+    expect(get().clarificationRequestId).toBeUndefined();
+    expect(get().clarificationRequestedAt).toBeUndefined();
+    await writer.setNeedsClarification('my-team', 'clarification', 'user');
+    expect(get().clarificationRequestId).not.toBe(firstId);
+  });
+
   it('createTask preserves provided description, blocks, blockedBy', async () => {
     await writer.createTask('my-team', {
       id: '6',

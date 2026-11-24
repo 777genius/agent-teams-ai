@@ -4526,6 +4526,12 @@ async function handleAddTaskComment(
   if (!validatedTaskRefs.valid) {
     return { success: false, error: validatedTaskRefs.error };
   }
+  const answerId = payload.answerClarificationRequestId;
+  if (answerId !== undefined &&
+      (typeof answerId !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(answerId))) {
+    return { success: false, error: 'Invalid clarification request identity' };
+  }
 
   const rawAttachments = Array.isArray(payload.attachments) ? payload.attachments : [];
   if (rawAttachments.length > MAX_AGENT_IPC_ATTACHMENTS) {
@@ -4575,7 +4581,8 @@ async function handleAddTaskComment(
       vTask.value!,
       text.trim(),
       savedAttachments,
-      validatedTaskRefs.value
+      validatedTaskRefs.value,
+      answerId
     );
   });
 }

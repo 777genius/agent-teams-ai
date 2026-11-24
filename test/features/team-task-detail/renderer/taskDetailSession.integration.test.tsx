@@ -162,6 +162,38 @@ describe('task session surface and origin integration', () => {
     vi.unstubAllGlobals();
   });
 
+  it('binds a task-scoped user answer to its exact clarification cycle', async () => {
+    const requestId = 'cb1a6074-c19f-49f8-8f3f-aa7e2b93515a';
+    apiMock.teams.addTaskComment.mockResolvedValue({
+      id: 'reply', author: 'user', text: 'Use PostgreSQL',
+      createdAt: '2026-11-24T16:00:00Z', type: 'regular',
+    } as TaskComment);
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      useStore.setState((state) => ({
+        taskDetailById: {
+          ...state.taskDetailById,
+          [key]: {
+            ...state.taskDetailById[key],
+            full: { ...task, needsClarification: 'user',
+              clarificationRequestId: requestId },
+          },
+        },
+      }));
+      mount('dialog', (value) => { controller = value; });
+    });
+    expect(controller.isOwner).toBe(true);
+    await act(async () => { controller.setCommentText('Use PostgreSQL'); });
+    await act(async () => { await controller.submitComment(); });
+    expect(apiMock.teams.addTaskComment).toHaveBeenCalledWith(
+      identity.teamName, identity.taskId,
+      expect.objectContaining({
+        text: 'Use PostgreSQL',
+        answerClarificationRequestId: requestId,
+      })
+    );
+  });
+
   it('refreshes same-ID tasks across teams once per identity from root interest', async () => {
     const other = { ...identity, teamName: 'TEST-other-team' };
     const otherKey = taskDetailKey(other);

@@ -387,9 +387,88 @@ async function checkDesktop() {
   const repeated = (await getSnapshot()).teams.find((t) => t.teamName === first)
     .tasks.find((t) => t.taskId === '2');
   assert.equal(repeated.requestedAt, added.requestedAt, 'same-value setter keeps request age');
-  await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', null)`);
-  await until(async () => (await getSnapshot()).teams.find((t) => t.teamName === first)
-    ?.tasks.every((t) => t.taskId !== '2'), 'cleared clarification removed');
+
+  // Real Task Detail comment UI must submit the bound request generation through
+  // the normal Electron IPC path. No second Mark Resolved click is permitted.
+  const requestBeforeAnswer = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert.match(requestBeforeAnswer.clarificationRequestId,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  const oldRequestId = requestBeforeAnswer.clarificationRequestId;
+  await cdp.evaluate(`(() => {
+    const panel = [...document.querySelectorAll('[data-testid=user-attention-inbox]')]
+      .find((element) => element.getClientRects().length > 0);
+    const button = [...(panel?.querySelectorAll('button') ?? [])].find((element) =>
+      element.getAttribute('aria-label')?.includes('Filler task 2'));
+    if (!button) throw new Error('Expected task answer deep link');
+    button.click();
+  })()`);
+  await cdp.waitFor(
+    'Array.from(document.querySelectorAll("textarea[id^=task-comment-input-]")).some((node) => node.getClientRects().length > 0)',
+    'task-scoped answer editor');
+  await cdp.evaluate(`(() => {
+    const field = [...document.querySelectorAll('textarea[id^="task-comment-input-"]')]
+      .find((node) => node.getClientRects().length > 0);
+    if (!field) throw new Error('Task answer editor unavailable');
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+    setter.call(field, 'Use PostgreSQL for this task');
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await cdp.waitFor(`(() => [...document.querySelectorAll('button.message-composer-send-button')]
+    .some((button) => button.getClientRects().length > 0 && !button.disabled &&
+      button.textContent.toLowerCase().includes('comment')))()`,
+    'task answer submit enabled');
+  await cdp.evaluate(`(() => {
+    const button = [...document.querySelectorAll('button.message-composer-send-button')]
+      .find((row) => row.getClientRects().length > 0 && !row.disabled &&
+        row.textContent.toLowerCase().includes('comment'));
+    if (!button) throw new Error('Task answer submit missing');
+    button.click();
+  })()`);
+  await until(async () => {
+    const task = await cdp.evaluate(
+      `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+    return task.needsClarification === undefined &&
+      task.clarificationRequestId === undefined &&
+      task.status === 'pending' &&
+      task.comments?.some((comment) => comment.id === 'clarification-answer-' + oldRequestId &&
+        comment.text === 'Use PostgreSQL for this task');
+  }, 'task comment and clarification cleared in same persisted task', 60_000);
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',
+    'answered task disappears without manually marking resolved', 30_000);
+  const firstAnswer = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  await cdp.evaluate(`window.electronAPI.teams.addTaskComment(
+    ${JSON.stringify(first)}, '2', {
+      text: 'Use PostgreSQL for this task',
+      answerClarificationRequestId: ${JSON.stringify(oldRequestId)}
+    })`);
+  const afterRetry = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert.deepEqual(afterRetry.comments, firstAnswer.comments,
+    'uncertain duplicate submission does not append a comment');
+  await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', 'user')`);
+  const newCycle = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert(newCycle.clarificationRequestId && newCycle.clarificationRequestId !== oldRequestId,
+    'fresh question gets an independent generation');
+  const staleOutcome = await cdp.evaluate(`window.electronAPI.teams.addTaskComment(
+    ${JSON.stringify(first)}, '2', {
+      text: 'Use PostgreSQL for this task',
+      answerClarificationRequestId: ${JSON.stringify(oldRequestId)}
+    }).then(() => 'accepted', () => 'rejected')`);
+  assert.equal(staleOutcome, 'rejected', 'old response cannot clear new request');
+  const freshAfterStale = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert.equal(freshAfterStale.clarificationRequestId, newCycle.clarificationRequestId);
+  assert.equal(freshAfterStale.needsClarification, 'user');
+  evidence.checks.push('real Task Detail user answer, atomic handoff, retry and stale-cycle E2E');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2")',
+    'new clarification returns to live Dashboard', 30_000);
+
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',
     'live Dashboard removes resolved clarification without reload', 30_000);

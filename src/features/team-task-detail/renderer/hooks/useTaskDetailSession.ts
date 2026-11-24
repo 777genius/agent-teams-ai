@@ -398,12 +398,18 @@ export function useTaskDetailSession({
             base64Data: attachment.base64Data,
           }))
         : undefined;
+    const activeTask = state.taskDetailById[identityKey]?.full;
+    // Task-scoped user input is a decision handoff, not a generic Messenger
+    // reply. A stale generation is rejected atomically by the task controller.
+    const answerClarificationRequestId =
+      activeTask?.needsClarification === 'user' ? activeTask.clarificationRequestId : undefined;
     const revision = state.beginTaskDetailSubmitSession(identity);
     try {
       await state.addTaskComment(identity.teamName, identity.taskId, {
         text,
         attachments,
         taskRefs,
+        ...(answerClarificationRequestId ? { answerClarificationRequestId } : {}),
       });
       if (!isOriginCurrent()) return;
       const before = useStore.getState().taskDetailSessionById[identityKey];

@@ -2613,7 +2613,8 @@ export class TeamDataService {
     taskId: string,
     text: string,
     attachments?: TaskAttachmentMeta[],
-    taskRefs?: TaskRef[]
+    taskRefs?: TaskRef[],
+    answerClarificationRequestId?: string
   ): Promise<TaskComment> {
     const taskBoard = this.getTaskBoard(teamName);
     const addResult = taskBoard.addTaskComment(taskId, {
@@ -2621,6 +2622,7 @@ export class TeamDataService {
       text,
       attachments,
       taskRefs,
+      ...(answerClarificationRequestId ? { answerClarificationRequestId } : {}),
     }) as { task?: TeamTask; comment?: TaskComment };
     this.invalidateGlobalTaskProjectionCache();
     const comment =

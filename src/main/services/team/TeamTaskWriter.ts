@@ -76,6 +76,7 @@ export class TeamTaskWriter {
         createdAt,
         clarificationRequestedAt:
           task.needsClarification === 'user' ? (task.clarificationRequestedAt ?? createdAt) : undefined,
+        clarificationRequestId: task.needsClarification === 'user' ? randomUUID() : undefined,
         workIntervals:
           task.status === 'in_progress'
             ? // Start the first work interval on creation when task starts immediately.
@@ -539,8 +540,10 @@ export class TeamTaskWriter {
       }
       if (value === 'user' && !wasAwaitingUser) {
         task.clarificationRequestedAt = new Date().toISOString();
+        task.clarificationRequestId = randomUUID();
       } else if (value !== 'user') {
         delete task.clarificationRequestedAt;
+        delete task.clarificationRequestId;
       }
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
     });
