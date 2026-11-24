@@ -69,7 +69,17 @@ jobs:
       - name: Ensure Electron binary
         id: electron-install
         continue-on-error: true
-        run: node ./scripts/ensure-electron-install.cjs --strict
+        shell: bash
+        run: |
+          set -euo pipefail
+          node ./scripts/ensure-electron-install.cjs --strict
+          # GitHub-hosted Ubuntu restricts unprivileged user namespaces.
+          # Configure the installed Chromium helper rather than disable sandboxing.
+          helper="$(node -p "require('node:path').join(require('node:path').dirname(require('electron')), 'chrome-sandbox')")"
+          test -f "$helper"
+          sudo chown root:root "$helper"
+          sudo chmod 4755 "$helper"
+          test "$(stat -c '%u:%g:%a' "$helper")" = '0:0:4755'
       - name: Exercise real local delivery through Electron
         id: electron-e2e
         if: steps.linux-display.outcome == 'success' && steps.electron-install.outcome == 'success'
