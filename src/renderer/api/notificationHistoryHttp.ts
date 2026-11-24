@@ -22,7 +22,7 @@ export function createHttpNotificationHistoryApi(
                   offset: String(options.offset ?? 0),
                 }
               : {}
-          )
+          ).toString()
       ),
     markRead: (id) => transport.post('/api/notifications/' + encodeURIComponent(id) + '/read'),
     markAllRead: () => transport.post('/api/notifications/read-all'),

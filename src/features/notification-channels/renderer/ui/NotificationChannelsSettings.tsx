@@ -33,7 +33,9 @@ function displayTest(status?: ChannelTestStatus): string {
   return descriptions[status.code ?? 'delivery_failed'];
 }
 
-export function NotificationChannelsSettings({ autoDeliveryPaused = false }: { autoDeliveryPaused?: boolean }): React.JSX.Element {
+export function NotificationChannelsSettings({
+  autoDeliveryPaused = false,
+}: Readonly<{ autoDeliveryPaused?: boolean }>): React.JSX.Element {
   const {
     channels, draft, loading, busy, deletePending, error, localSettingsUrl, remoteSettingsUnavailable,
     save, edit, toggle, remove, test, providerChanged, credentialMissing, updateDraft, toggleEvent, start, cancel,

@@ -10,13 +10,16 @@ export function isLocalNotificationChannelsRead(request: FastifyRequest): boolea
   const origin = request.headers.origin;
   const site = request.headers['sec-fetch-site'];
   if (!/^(127\.0\.0\.1|localhost):[0-9]{1,5}$/.test(host)) return false;
+  // eslint-disable-next-line sonarjs/no-hardcoded-ip -- exact loopback allowlist, never a remote destination
   if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.ip)) return false;
+  // eslint-disable-next-line sonarjs/no-clear-text-protocols -- compare the exact local HTTP origin, no outbound request
   if (origin && origin !== 'http://' + host) return false;
   return site === undefined || site === 'same-origin' || site === 'none';
 }
 
 export function isLocalNotificationChannelsMutation(request: FastifyRequest): boolean {
   return isLocalNotificationChannelsRead(request) &&
+    // eslint-disable-next-line sonarjs/no-clear-text-protocols -- only the validated loopback HTTP origin may mutate settings
     request.headers.origin === 'http://' + request.headers.host;
 }
 
