@@ -119,7 +119,12 @@ async function setup() {
       from: team === first ? 'alice' : 'bob',
       to: 'user', text: 'ATTENTION_E2E_DIRECT_' + team,
       timestamp: team === first ? stamp : nowIso(), read: false, messageId: 'attention-dm-' + team,
-    }, ...(team === first ? Array.from({ length: 60 }, (_, index) => ({
+      ...(team === second ? { source: 'runtime_delivery', relayOfMessageId: 'attention-bob-delivery' } : {}),
+    }, ...(team === second ? [{
+      from: 'bob', to: 'user', text: ' ATTENTION_E2E_DIRECT_' + team + ' ',
+      source: 'runtime_delivery', relayOfMessageId: 'attention-bob-delivery',
+      timestamp: stamp, read: false, messageId: 'attention-dm-copy-' + team,
+    }] : []), ...(team === first ? Array.from({ length: 60 }, (_, index) => ({
       from: 'alice', to: 'user', text: 'Newer already read ' + index,
       timestamp: new Date(Date.now() - (60 - index) * 1000).toISOString(),
       read: true, messageId: 'attention-read-filler-' + index,
@@ -212,7 +217,9 @@ async function checkDesktop() {
   assert.equal(oldest.tasks[0].requestedAt, null, 'legacy timestamp not fabricated');
   assert(oldest.messages.some((message) => message.messageId === 'attention-dm-' + first),
     'old unread message survives 60 newer messages');
-  assert.equal(snap.teams.find((t) => t.teamName === second).messages.length, 1);
+  const relayTeam = snap.teams.find((t) => t.teamName === second);
+  assert.deepEqual(relayTeam.messages.map((message) => message.messageId), ['attention-dm-' + second],
+    'duplicate runtime relay retains only the canonical Messenger read identity');
   evidence.checks.push('two teams + full task scan + old unread beyond first 50 messages');
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
