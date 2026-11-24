@@ -146,6 +146,7 @@ describe('configValidation', () => {
   it.each([
     { desktopDisabledEvents: 'user_inbox' },
     { desktopDisabledEvents: ['untrusted_event'] },
+    { desktopDisabledEvents: ['usage_budget_warning'] },
     { desktopDisabledEvents: ['user_inbox', 123] },
   ])('rejects unsafe desktop destination configuration %j', (update) => {
     const result = validateConfigUpdatePayload('notifications', update);

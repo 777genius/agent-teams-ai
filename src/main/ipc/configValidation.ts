@@ -4,7 +4,7 @@
  */
 
 import { isAppLocalePreference } from '@features/localization';
-import { NOTIFICATION_DELIVERY_EVENTS } from '@features/notification-channels/contracts';
+import { NOTIFICATION_DESKTOP_ROUTABLE_EVENTS } from '@features/notification-channels/contracts';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as path from 'path';
 
@@ -243,8 +243,8 @@ function validateNotificationsSection(
       case 'desktopDisabledEvents':
         if (
           !isStringArray(value) ||
-          value.length > NOTIFICATION_DELIVERY_EVENTS.length ||
-          value.some((event) => !(NOTIFICATION_DELIVERY_EVENTS as readonly string[]).includes(event))
+          value.length > NOTIFICATION_DESKTOP_ROUTABLE_EVENTS.length ||
+          value.some((event) => !(NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event))
         ) {
           return { valid: false, error: 'notifications.desktopDisabledEvents contains unsupported events' };
         }

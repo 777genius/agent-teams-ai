@@ -29,6 +29,10 @@ export const NOTIFICATION_DELIVERY_EVENTS = [
   'usage_budget_exceeded',
 ] as const satisfies readonly TeamEventType[];
 
+export const NOTIFICATION_DESKTOP_ROUTABLE_EVENTS = NOTIFICATION_DELIVERY_EVENTS.filter(
+  (event) => event !== 'usage_budget_warning' && event !== 'usage_budget_exceeded'
+);
+
 export type DeliveryEvent = (typeof NOTIFICATION_DELIVERY_EVENTS)[number];
 export type DeliveryProvider = 'telegram' | 'discord' | 'slack' | 'ms-teams' | 'google-chat';
 

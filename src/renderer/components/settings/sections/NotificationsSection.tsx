@@ -416,7 +416,7 @@ export const NotificationsSection = ({
             backgroundColor: 'var(--color-surface-raised)',
           }}
         >
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.usageBudgets.enabled.label')}
             description={t('notifications.usageBudgets.enabled.description')}
             icon={<BellRing className="size-4" />}
@@ -453,7 +453,7 @@ export const NotificationsSection = ({
         }}
       >
         <div className="grid grid-cols-1 gap-x-6">
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.leadInbox.label')}
             description={t('notifications.team.leadInbox.description')}
             icon={<Inbox className="size-4" />}
@@ -465,7 +465,7 @@ export const NotificationsSection = ({
             />
               {destinations(['lead_inbox'], safeConfig.notifications.notifyOnLeadInbox)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.userInbox.label')}
             description={t('notifications.team.userInbox.description')}
             icon={<Mail className="size-4" />}
@@ -477,7 +477,7 @@ export const NotificationsSection = ({
             />
               {destinations(['user_inbox'], safeConfig.notifications.notifyOnUserInbox)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.clarifications.label')}
             description={t('notifications.team.clarifications.description')}
             icon={<HelpCircle className="size-4" />}
@@ -489,7 +489,7 @@ export const NotificationsSection = ({
             />
               {destinations(['task_clarification', 'task_blocked'], safeConfig.notifications.notifyOnClarifications)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.taskComments.label')}
             description={t('notifications.team.taskComments.description')}
             icon={<MessageSquare className="size-4" />}
@@ -501,7 +501,7 @@ export const NotificationsSection = ({
             />
               {destinations(['task_comment', 'task_review_requested'], safeConfig.notifications.notifyOnTaskComments)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.taskCreated.label')}
             description={t('notifications.team.taskCreated.description')}
             icon={<CirclePlus className="size-4" />}
@@ -513,7 +513,7 @@ export const NotificationsSection = ({
             />
               {destinations(['task_created'], safeConfig.notifications.notifyOnTaskCreated)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.allTasksCompleted.label')}
             description={t('notifications.team.allTasksCompleted.description')}
             icon={<CheckCircle2 className="size-4" />}
@@ -525,7 +525,7 @@ export const NotificationsSection = ({
             />
               {destinations(['all_tasks_completed'], safeConfig.notifications.notifyOnAllTasksCompleted)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.crossTeamMessage.label')}
             description={t('notifications.team.crossTeamMessage.description')}
             icon={<GitBranch className="size-4" />}
@@ -537,7 +537,7 @@ export const NotificationsSection = ({
             />
               {destinations(['cross_team_message'], safeConfig.notifications.notifyOnCrossTeamMessage)}
           </SettingRow>
-          <SettingRow
+          <SettingRow wrapControls
             label={t('notifications.team.teamLaunched.label')}
             description={t('notifications.team.teamLaunched.description')}
             icon={<Rocket className="size-4" />}
@@ -565,7 +565,7 @@ export const NotificationsSection = ({
           </SettingRow>
           {/* Task Status Change Notifications — nested within team card */}
           <div className="*:last:border-b-0 lg:col-span-2">
-            <SettingRow
+            <SettingRow wrapControls
               label={t('notifications.team.statusChange.label')}
               description={t('notifications.team.statusChange.description')}
               icon={<ArrowRightLeft className="size-4" />}

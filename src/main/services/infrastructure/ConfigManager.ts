@@ -10,7 +10,8 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
-import { NOTIFICATION_DELIVERY_EVENTS } from '@features/notification-channels/contracts';
+import { NOTIFICATION_DESKTOP_ROUTABLE_EVENTS } from '@features/notification-channels/contracts';
+import { DEFAULT_TEAM_RUNTIME_RECOVERY_CONFIG } from '@features/team-runtime-recovery/contracts';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -384,12 +385,7 @@ const DEFAULT_CONFIG: AppConfig = {
     statusChangeStatuses: ['in_progress', 'completed'],
     triggers: DEFAULT_TRIGGERS,
   },
-  teamRuntimeRecovery: {
-    transientErrorsEnabled: false,
-    rateLimitsEnabled: false,
-    initialDelaySeconds: 60,
-    maxAttempts: 2,
-  },
+  teamRuntimeRecovery: { ...DEFAULT_TEAM_RUNTIME_RECOVERY_CONFIG },
   general: {
     launchAtLogin: false,
     showDockIcon: true,
@@ -662,7 +658,7 @@ export class ConfigManager {
         soundEnabled: loadedNotifications.soundEnabled ?? DEFAULT_CONFIG.notifications.soundEnabled,
         desktopDisabledEvents: Array.isArray(loadedNotifications.desktopDisabledEvents)
           ? [...new Set(loadedNotifications.desktopDisabledEvents.filter((event) =>
-              (NOTIFICATION_DELIVERY_EVENTS as readonly string[]).includes(event)
+              (NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event)
             ))]
           : [],
         ignoredRegex: loadedNotifications.ignoredRegex ?? DEFAULT_CONFIG.notifications.ignoredRegex,

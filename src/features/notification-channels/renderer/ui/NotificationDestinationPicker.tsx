@@ -45,7 +45,13 @@ export function NotificationDestinationPicker({
       : active.length === 1
         ? active[0].name
         : `${active.length} channels`;
-  const canDisableDesktop = active.length > 0;
+  // Never strand half of a grouped event row without any active route.
+  const canDisableDesktop = events.every((event) =>
+    channels.some(
+      (channel) =>
+        channel.enabled && channel.hasCredential && channel.events.includes(event)
+    )
+  );
   const disabledControl = busy || disabled;
 
   return (
