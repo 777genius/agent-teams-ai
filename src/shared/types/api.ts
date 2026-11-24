@@ -130,7 +130,6 @@ import type { CustomTeamTemplatesApi } from '@features/custom-team-templates/con
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
-import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type {
   MemberWorkSyncMetricsRequest,
   MemberWorkSyncReportRequest,
@@ -139,6 +138,7 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';

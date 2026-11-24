@@ -1,8 +1,8 @@
 import {
   DELIVERY_EVENT_LABELS,
-  NOTIFICATION_DELIVERY_EVENTS,
   type DeliveryEvent,
   type DeliveryProvider,
+  NOTIFICATION_DELIVERY_EVENTS,
   type SaveDeliveryChannelRequest,
 } from '../../contracts';
 

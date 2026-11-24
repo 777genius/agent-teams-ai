@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
+
 import { isDeliveryEvent } from '../../core/domain/routing';
 
 import type {

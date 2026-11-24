@@ -290,9 +290,9 @@ import {
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
 import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge';
-import { createNotificationHistoryBridge } from './notificationHistoryBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
+import { createNotificationHistoryBridge } from './notificationHistoryBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
 
 import type {

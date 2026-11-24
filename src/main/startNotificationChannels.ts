@@ -2,9 +2,9 @@ import { join } from 'node:path';
 
 import {
   createNotificationChannelsFeature,
+  type NotificationChannelsFeatureFacade,
   registerNotificationChannelsIpc,
   removeNotificationChannelsIpc,
-  type NotificationChannelsFeatureFacade,
 } from '@features/notification-channels/main';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';

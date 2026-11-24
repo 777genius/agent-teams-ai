@@ -24,8 +24,8 @@ import { createNotificationChannelsFeature } from '@features/notification-channe
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
-import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
 
+import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
   getAppDataBasePath,

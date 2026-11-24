@@ -9,8 +9,8 @@ import {
   registerCustomTeamTemplatesHttp,
 } from '@features/custom-team-templates/main';
 import {
-  registerNotificationChannelsHttp,
   type NotificationChannelsFeatureFacade,
+  registerNotificationChannelsHttp,
 } from '@features/notification-channels/main';
 import {
   type OrganizationsFeatureFacade,
