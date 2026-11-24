@@ -139,6 +139,7 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
@@ -904,10 +905,9 @@ export interface ElectronAPI
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => Promise<Record<string, AgentConfig>>;
 
-  // Notifications API
   notifications: NotificationsAPI;
+  notificationChannels: NotificationChannelsApi;
 
-  // Config API
   config: ConfigAPI;
 
   // Deep link navigation

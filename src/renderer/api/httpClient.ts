@@ -5,12 +5,16 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-import { createHttpCustomTeamTemplatesApi, type CustomTeamTemplatesApi } from '@features/custom-team-templates';
+import {
+  createHttpCustomTeamTemplatesApi,
+  type CustomTeamTemplatesApi,
+} from '@features/custom-team-templates';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
+import { NOTIFICATION_CHANNELS_HTTP } from '@features/notification-channels/contracts';
 import {
   type AssignOrganizationTeamRequest,
   type CreateOrganizationRequest,
@@ -60,6 +64,7 @@ import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
 import { buildTokenUsageSnapshotRoute } from './tokenUsageSnapshotRoute';
+import { createHttpNotificationHistoryApi } from './notificationHistoryHttp';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -73,6 +78,7 @@ import type {
 } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
@@ -736,40 +742,22 @@ export class HttpAPIClient implements ElectronAPI {
   // Notifications (nested API)
   // ---------------------------------------------------------------------------
 
-  notifications: NotificationsAPI = {
-    get: (options) =>
-      this.get(
-        `/api/notifications?${new URLSearchParams(
-          options
-            ? {
-                limit: String(options.limit ?? 20),
-                offset: String(options.offset ?? 0),
-              }
-            : {}
-        )}`
-      ),
-    markRead: (id) => this.post(`/api/notifications/${encodeURIComponent(id)}/read`),
-    markAllRead: () => this.post('/api/notifications/read-all'),
-    setViewedTeam: (teamName) => this.post('/api/notifications/viewed-team', { teamName }),
-    delete: (id) => this.del(`/api/notifications/${encodeURIComponent(id)}`),
-    clear: () => this.del('/api/notifications'),
-    getUnreadCount: () => this.get('/api/notifications/unread-count'),
-    testNotification: async () => ({
-      success: false,
-      error: 'Test notifications require Electron (not available in browser mode)',
-    }),
-    // IPC signature: (event: unknown, error: unknown) => void
-    onNew: (callback) =>
-      this.addEventListener('notification:new', (data: unknown) => callback(null, data)),
-    // IPC signature: (event: unknown, payload: { total; unreadCount }) => void
-    onUpdated: (callback) =>
-      this.addEventListener('notification:updated', (data: unknown) =>
-        callback(null, data as { total: number; unreadCount: number })
-      ),
-    // IPC signature: (event: unknown, data: unknown) => void
-    onClicked: (callback) =>
-      this.addEventListener('notification:clicked', (data: unknown) => callback(null, data)),
+  notificationChannels: NotificationChannelsApi = {
+    list: () => this.get(NOTIFICATION_CHANNELS_HTTP),
+    save: (request) => this.post(NOTIFICATION_CHANNELS_HTTP, request),
+    remove: async (id) => {
+      await this.del(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id), {});
+    },
+    test: (id) =>
+      this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test', {}),
   };
+
+  notifications: NotificationsAPI = createHttpNotificationHistoryApi({
+    get: <T>(path: string) => this.get<T>(path),
+    post: <T>(path: string, body?: unknown) => this.post<T>(path, body),
+    del: <T>(path: string) => this.del<T>(path),
+    listen: (channel, callback) => this.addEventListener(channel, callback),
+  });
 
   // ---------------------------------------------------------------------------
   // Config (nested API)

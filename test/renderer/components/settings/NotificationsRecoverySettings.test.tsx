@@ -13,7 +13,11 @@ vi.mock('@features/localization/renderer', () => ({
 }));
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: () => true,
   api: {
+    notificationChannels: {
+      list: vi.fn(async () => []),
+    },
     config: {
       getClaudeRootInfo: vi.fn(),
       update: vi.fn(),

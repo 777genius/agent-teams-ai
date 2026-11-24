@@ -8,6 +8,7 @@ import { createExternalAgentConnectionBridge } from '@features/external-agent-co
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
+import { createNotificationChannelsBridge } from '@features/notification-channels/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
@@ -293,6 +294,7 @@ import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { unwrapIpcResult } from './ipcResult';
+import { createNotificationHistoryBridge } from './notificationHistoryBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
 
 import type {
@@ -528,6 +530,7 @@ const electronAPI: ElectronAPI = {
   }),
   ...createRecentProjectsBridge(),
   ...createUserAttentionBridge(),
+  ...createNotificationChannelsBridge(ipcRenderer),
   reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   customTeamTemplates: createCustomTeamTemplatesBridge(),
@@ -613,61 +616,7 @@ const electronAPI: ElectronAPI = {
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => ipcRenderer.invoke('read-agent-configs', projectRoot),
 
-  // Notifications API
-  notifications: {
-    get: (options?: { limit?: number; offset?: number }) =>
-      ipcRenderer.invoke('notifications:get', options),
-    markRead: (id: string) => ipcRenderer.invoke('notifications:markRead', id),
-    markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
-    setViewedTeam: (teamName: string | null) =>
-      ipcRenderer.invoke('notifications:setViewedTeam', teamName),
-    delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
-    clear: () => ipcRenderer.invoke('notifications:clear'),
-    getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),
-    testNotification: () =>
-      ipcRenderer.invoke('notifications:testNotification') as Promise<{
-        success: boolean;
-        error?: string;
-      }>,
-    onNew: (callback: (event: unknown, error: unknown) => void): (() => void) => {
-      ipcRenderer.on(
-        'notification:new',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:new',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-    onUpdated: (
-      callback: (event: unknown, payload: { total: number; unreadCount: number }) => void
-    ): (() => void) => {
-      ipcRenderer.on(
-        'notification:updated',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:updated',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-    onClicked: (callback: (event: unknown, data: unknown) => void): (() => void) => {
-      ipcRenderer.on(
-        'notification:clicked',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:clicked',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-  },
+  ...createNotificationHistoryBridge(ipcRenderer),
 
   // Config API - uses typed helper to unwrap { success, data, error } responses
   config: {
