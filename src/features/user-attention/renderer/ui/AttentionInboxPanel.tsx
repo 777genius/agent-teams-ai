@@ -130,9 +130,12 @@ export function AttentionInboxPanel({
       {variant === 'full' && searchQuery.trim() && tasks.length === 0 && chats.length === 0 && model?.complete &&
         <p className="py-4 text-xs text-text-secondary">{t('search.noResults')}</p>}
 
-      <div className="flex flex-col gap-5">
+      <div data-testid="attention-sections"
+        className={tasks.length > 0 && chats.length > 0
+          ? 'grid grid-cols-1 gap-5 xl:grid-cols-2 xl:gap-6'
+          : 'flex flex-col gap-5'}>
         {tasks.length > 0 && (
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-2 flex items-center gap-2 text-xs font-medium text-text-secondary">
               <AlertCircle size={14} aria-hidden="true" />
               {t('attention.tasks')} · {tasks.length}
@@ -167,7 +170,7 @@ export function AttentionInboxPanel({
         )}
 
         {chats.length > 0 && (
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-2 flex items-center gap-2 text-xs font-medium text-text-secondary">
               <MessageCircle size={14} aria-hidden="true" />
               {t('attention.chats')} · {chats.length}

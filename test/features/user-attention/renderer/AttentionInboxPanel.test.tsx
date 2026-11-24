@@ -92,6 +92,9 @@ describe('AttentionInboxPanel renderer', () => {
     expect(rootEl.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(8);
     expect(rootEl.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(8);
     expect(rootEl.querySelector('.overflow-y-auto')).toBeNull();
+    const sections = rootEl.querySelector('[data-testid="attention-sections"]');
+    expect(sections?.className).toContain('grid-cols-1');
+    expect(sections?.className).toContain('xl:grid-cols-2');
     const taskMore = rootEl.querySelector('[data-testid="attention-tasks-more"]') as HTMLButtonElement;
     const chatMore = rootEl.querySelector('[data-testid="attention-chats-more"]') as HTMLButtonElement;
     expect(taskMore).not.toBeNull();
@@ -140,12 +143,16 @@ describe('AttentionInboxPanel renderer', () => {
     });
     expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(1);
     expect(host.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(0);
+    expect(host.querySelector('[data-testid="attention-sections"]')?.className)
+      .toContain('flex flex-col');
     await act(async () => {
       valueSetter?.call(input, 'design team');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(1);
     expect(host.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(1);
+    expect(host.querySelector('[data-testid="attention-sections"]')?.className)
+      .toContain('xl:grid-cols-2');
     await act(async () => root.unmount());
   });
 

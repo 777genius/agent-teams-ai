@@ -233,6 +233,36 @@ async function checkDesktop() {
     'document.querySelector("button[aria-label=\\"Needs your attention\\"]") !== null');
   assert(toolbar, 'separate header attention button exists');
   evidence.checks.push('dashboard + header');
+
+  // Prove responsive layout in the real Electron renderer at both viewport widths.
+  // Restore the original viewport before the navigation tests continue.
+  try {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440, height: 900, deviceScaleFactor: 1, mobile: false,
+    });
+    await cdp.waitFor(`(() => {
+      const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+        .find((node) => node.getClientRects().length > 0);
+      const columns = panel?.querySelector('[data-testid=attention-sections]');
+      const style = columns && getComputedStyle(columns);
+      return style?.display === 'grid' &&
+        style.gridTemplateColumns.trim().split(' ').filter(Boolean).length === 2;
+    })()`, 'wide Attention has two columns');
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 800, height: 900, deviceScaleFactor: 1, mobile: false,
+    });
+    await cdp.waitFor(`(() => {
+      const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+        .find((node) => node.getClientRects().length > 0);
+      const columns = panel?.querySelector('[data-testid=attention-sections]');
+      const style = columns && getComputedStyle(columns);
+      return style?.display === 'grid' &&
+        style.gridTemplateColumns.trim().split(' ').filter(Boolean).length === 1;
+    })()`, 'narrow Attention has one column');
+    evidence.checks.push('responsive Attention: 2 columns wide, 1 column narrow');
+  } finally {
+    await cdp.send('Emulation.clearDeviceMetricsOverride');
+  }
   const clickedAttention = await cdp.evaluate('(() => { const button = document.querySelector("button[aria-label=\\\"Needs your attention\\\"]"); if (!button) return false; button.click(); return true; })()');
   assert(clickedAttention, 'attention header icon opens the tab');
   await cdp.waitFor(
