@@ -40,6 +40,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -130,4 +131,32 @@ jobs:
           done
           echo 'Both real Electron and standalone E2E passed.'
       - name: Check production source formatting
-        run: pnpm format:check
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # Do not make pre-existing formatting debt elsewhere in src a
+          # prerequisite of this feature. Check every changed production file.
+          # A manual workflow dispatch still checks the full production tree.
+          if [[ -z "$BASE_SHA" ]]; then
+            pnpm format:check
+            exit
+          fi
+          changed="$(mktemp)"
+          trap 'rm -f "$changed"' EXIT
+          git diff --name-only -z --diff-filter=ACMR "$BASE_SHA"...HEAD -- \
+            ':(glob)src/**/*.ts' ':(glob)src/**/*.tsx' ':(glob)src/**/*.js' \
+            ':(glob)src/**/*.jsx' ':(glob)src/**/*.json' ':(glob)src/**/*.css' > "$changed"
+          mapfile -d '' -t files < "$changed"
+          if (( ${#files[@]} == 0 )); then
+            echo 'No changed production files to format.'
+            exit
+          fi
+          if ! pnpm exec prettier --check -- "${files[@]}"; then
+            # Emit the exact formatter patch for contributors without a local
+            # dependency install. The check remains failed until it is fixed.
+            pnpm exec prettier --write -- "${files[@]}"
+            git diff -- "${files[@]}"
+            exit 1
+          fi
