@@ -43,9 +43,9 @@ export function useNotificationChannelsSettings() {
   const [busy, setBusy] = useState(false);
   const [deletePending, setDeletePending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Serialize rapid edits from this UI; the service also rejects stale writes
+  // Serialize rapid edits and toggles from this UI; the service rejects stale writes
   // coming from another window or the local API.
-  const routeQueue = useRef<Promise<void>>(Promise.resolve());
+  const mutationQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (localSettingsUrl || remoteSettingsUnavailable) {
@@ -90,8 +90,15 @@ export function useNotificationChannelsSettings() {
   const save = (): void => {
     if (!draft) return;
     void run(async () => {
+      // Credentials may be edited while another window changes destinations.
+      // Preserve current subscriptions instead of overwriting with stale draft.events.
+      const current = draft.id
+        ? (await api.notificationChannels.list()).find((item) => item.id === draft.id)
+        : null;
+      if (draft.id && !current) throw new Error('Channel unavailable');
       await api.notificationChannels.save({
         ...draft,
+        ...(current ? { events: current.events, expectedEvents: current.events } : {}),
         secret: draft.secret?.trim() || undefined,
       });
       setDraft(null);
@@ -112,16 +119,19 @@ export function useNotificationChannelsSettings() {
   };
 
   const toggle = (channel: DeliveryChannelDto, enabled: boolean): void => {
-    void run(async () => {
+    mutationQueue.current = mutationQueue.current.then(() => run(async () => {
+      const current = (await api.notificationChannels.list()).find((item) => item.id === channel.id);
+      if (!current) throw new Error('Channel unavailable');
       await api.notificationChannels.save({
-        id: channel.id,
-        name: channel.name,
-        provider: channel.provider,
+        id: current.id,
+        name: current.name,
+        provider: current.provider,
         enabled,
-        events: channel.events,
-        chatId: channel.chatId,
+        events: current.events,
+        expectedEvents: current.events,
+        chatId: current.chatId,
       });
-    });
+    }));
   };
 
   const remove = (id: string): void => {
@@ -160,7 +170,7 @@ export function useNotificationChannelsSettings() {
     checked: boolean
   ): void => {
     if (!channel.enabled || !channel.hasCredential) return;
-    routeQueue.current = routeQueue.current.then(() => run(async () => {
+    mutationQueue.current = mutationQueue.current.then(() => run(async () => {
       // Read the current membership before writing. A previous save may have
       // succeeded even if refreshing its UI snapshot failed afterward.
       const fresh = (await api.notificationChannels.list()).find((item) => item.id === channel.id);

@@ -110,6 +110,36 @@ describe('Event-side destination routing', () => {
     expect(mockApi.save).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps new subscriptions when a channel is edited from an older UI snapshot', async () => {
+    await act(async () => root.render(<Probe />));
+    await vi.waitFor(() => expect(current?.channels).toHaveLength(2));
+    const old = current!.channels[0];
+    await act(async () => current!.edit(old));
+    await act(async () => current!.updateDraft({ name: 'Renamed Telegram' }));
+    await mockApi.save({
+      id: old.id, name: old.name, provider: old.provider, enabled: true,
+      events: ['user_inbox'], chatId: old.chatId,
+    });
+    await act(async () => current!.save());
+    await vi.waitFor(() => expect(current?.channels[0].name).toBe('Renamed Telegram'));
+    expect(current?.channels[0].events).toEqual(['user_inbox']);
+    expect(mockApi.save.mock.lastCall?.[0].expectedEvents).toEqual(['user_inbox']);
+  });
+
+  it('keeps new subscriptions when toggling a channel from a stale snapshot', async () => {
+    await act(async () => root.render(<Probe />));
+    await vi.waitFor(() => expect(current?.channels).toHaveLength(2));
+    const old = current!.channels[0];
+    await mockApi.save({
+      id: old.id, name: old.name, provider: old.provider, enabled: true,
+      events: ['task_comment'], chatId: old.chatId,
+    });
+    await act(async () => current!.toggle(old, false));
+    await vi.waitFor(() => expect(current?.channels[0].enabled).toBe(false));
+    expect(current?.channels[0].events).toEqual(['task_comment']);
+    expect(mockApi.save.mock.lastCall?.[0].expectedEvents).toEqual(['task_comment']);
+  });
+
   it('refuses unavailable or disabled provider routes without mutating credentials', async () => {
     mockApi.list.mockResolvedValue([
       { ...channels[0], enabled: false },
