@@ -356,7 +356,8 @@
         "discord": "ในช่อง Discord ปลายทาง เปิด Edit Channel → Integrations → Webhooks สร้างเว็บฮุกและคัดลอก URL ทั้งหมด",
         "slack": "สร้างแอป Slack เปิด Incoming Webhooks ติดตั้งในเวิร์กสเปซ แล้วคัดลอก URL",
         "ms-teams": "ใช้ Teams Workflows → Send webhook alerts to a channel สำหรับทริกเกอร์ที่สร้างเองให้เลือก Anyone และเก็บ URL เป็นความลับ",
-        "google-chat": "ในพื้นที่ Google Chat เลือก Apps & integrations → Add webhooks สร้างเว็บฮุกแล้วคัดลอก URL ทั้งหมด"
+        "google-chat": "ในพื้นที่ Google Chat เลือก Apps & integrations → Add webhooks สร้างเว็บฮุกแล้วคัดลอก URL ทั้งหมด",
+        "webhook": "สร้าง HTTPS webhook สาธารณะ (เช่น ใน n8n) คัดลอก URL ที่ลงลายเซ็นครบถ้วนแล้วทดสอบ URL ภายในถูกบล็อก"
       }
     },
     "recovery": {

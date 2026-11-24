@@ -213,6 +213,7 @@ export function useNotificationChannelsSettings() {
     toggle,
     remove,
     test,
+    refresh,
     providerChanged,
     credentialMissing,
     updateDraft,

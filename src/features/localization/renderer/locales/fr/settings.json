@@ -356,7 +356,8 @@
         "discord": "Dans le canal Discord, ouvrez Modifier le salon → Intégrations → Webhooks, créez un webhook et copiez son URL complète.",
         "slack": "Créez une application Slack, activez Incoming Webhooks, installez-la dans l’espace de travail et copiez l’URL.",
         "ms-teams": "Utilisez Teams Workflows → Send webhook alerts to a channel. Pour un déclencheur personnalisé, choisissez Anyone et gardez l’URL secrète.",
-        "google-chat": "Dans l’espace Google Chat, ouvrez Applications et intégrations → Ajouter des webhooks, créez-en un et copiez l’URL complète."
+        "google-chat": "Dans l’espace Google Chat, ouvrez Applications et intégrations → Ajouter des webhooks, créez-en un et copiez l’URL complète.",
+        "webhook": "Créez un webhook HTTPS public (par exemple dans n8n), copiez l’URL signée complète et testez-la. Les URL locales sont bloquées."
       }
     },
     "recovery": {

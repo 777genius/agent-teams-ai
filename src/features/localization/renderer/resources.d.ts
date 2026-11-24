@@ -3024,7 +3024,8 @@ export default interface Resources {
           "google-chat": "In the Google Chat space choose Apps & integrations → Add webhooks, create a webhook and copy the complete URL.",
           "ms-teams": "Use Teams Workflows → Send webhook alerts to a channel. For a custom trigger choose Anyone; keep the URL secret.",
           "slack": "Create a Slack app, enable Incoming Webhooks, install it to the workspace, then copy the generated URL.",
-          "telegram": "Create a bot with @BotFather (/newbot), start a chat with it, then enter the token and Chat ID or @channelname."
+          "telegram": "Create a bot with @BotFather (/newbot), start a chat with it, then enter the token and Chat ID or @channelname.",
+          "webhook": "Create a public HTTPS webhook (for example in n8n), copy the complete signed URL and test it. Local/private URLs are blocked."
         },
         "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default."
       },

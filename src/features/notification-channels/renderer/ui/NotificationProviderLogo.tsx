@@ -4,9 +4,11 @@ import teamsLogo from '../assets/provider-logos/ms-teams.svg';
 import slackLogo from '../assets/provider-logos/slack.svg';
 import telegramLogo from '../assets/provider-logos/telegram.svg';
 
+import { Webhook } from 'lucide-react';
+
 import type { DeliveryProvider } from '../../contracts';
 
-const logoUrls: Record<DeliveryProvider, string> = {
+const logoUrls: Record<Exclude<DeliveryProvider, 'webhook'>, string> = {
   telegram: telegramLogo,
   discord: discordLogo,
   slack: slackLogo,
@@ -22,6 +24,15 @@ export function NotificationProviderLogo({
   provider: DeliveryProvider;
   className?: string;
 }>): React.JSX.Element {
+  if (provider === 'webhook') {
+    return (
+      <Webhook
+        aria-hidden="true"
+        data-notification-provider-logo="webhook"
+        className={`shrink-0 ${className}`}
+      />
+    );
+  }
   return (
     <img
       src={logoUrls[provider]}

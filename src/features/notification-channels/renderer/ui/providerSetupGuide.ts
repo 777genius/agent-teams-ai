@@ -29,4 +29,8 @@ export const PROVIDER_SETUP_GUIDES: Record<DeliveryProvider, ProviderSetupGuide>
     example: 'https://chat.googleapis.com/v1/spaces/<space>/messages?key=<key>&token=<token>',
     officialUrl: 'https://developers.google.com/workspace/chat/quickstart/webhooks',
   },
+  webhook: {
+    example: 'https://your-service.com/webhooks/<signed-secret>',
+    officialUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST',
+  },
 };

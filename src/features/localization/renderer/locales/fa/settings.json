@@ -356,7 +356,8 @@
         "discord": "در کانال Discord مقصد، Edit Channel → Integrations → Webhooks را باز کنید، وب‌هوک بسازید و URL کامل را کپی کنید.",
         "slack": "یک برنامهٔ Slack بسازید، Incoming Webhooks را فعال و در فضای کاری نصب کنید، سپس URL را کپی کنید.",
         "ms-teams": "از Teams Workflows → Send webhook alerts to a channel استفاده کنید. برای تریگر سفارشی Anyone را انتخاب کنید و URL را محرمانه نگه دارید.",
-        "google-chat": "در فضای Google Chat از Apps & integrations → Add webhooks وب‌هوک بسازید و URL کامل را کپی کنید."
+        "google-chat": "در فضای Google Chat از Apps & integrations → Add webhooks وب‌هوک بسازید و URL کامل را کپی کنید.",
+        "webhook": "یک وب‌هوک HTTPS عمومی (مثلاً در n8n) بسازید، نشانی امضاشده را کامل کپی و آزمایش کنید. نشانی‌های محلی مسدودند."
       }
     },
     "recovery": {

@@ -2,7 +2,9 @@ import { Chat, ConnectorError } from '@thinwrap/notifications';
 
 import { validateProviderCredential } from '../../../core/domain/routing';
 
-import type { DeliveryFailureCode, DeliveryProvider } from '../../../contracts';
+import { sendSafeWebhook } from './SafeWebhookSender';
+
+import type { DeliveryEvent, DeliveryFailureCode, DeliveryProvider } from '../../../contracts';
 import type {
   DeliverySender,
   StoredDeliveryChannel,
@@ -64,6 +66,8 @@ function classifyFailure(error: unknown): DeliveryFailureCode {
         return 'rate_limited';
       case 'provider_unavailable':
         return 'network_error';
+      case 'invalid_request':
+        return 'invalid_request';
       default:
         return 'delivery_failed';
     }
@@ -76,11 +80,15 @@ export class ThinwrapDeliverySender implements DeliverySender {
   async send(
     channel: StoredDeliveryChannel,
     secret: string,
-    message: string
+    message: string,
+    event?: DeliveryEvent | 'test'
   ): Promise<{
     success: boolean;
     code?: DeliveryFailureCode;
   }> {
+    if (channel.provider === 'webhook') {
+      return sendSafeWebhook(secret, event ?? 'test', message);
+    }
     let acceptedByGoogleChat = false;
     try {
       validateProviderCredential(channel.provider, secret);

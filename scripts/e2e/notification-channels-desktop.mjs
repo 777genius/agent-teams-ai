@@ -26,6 +26,8 @@ const home = path.join(root, 'home');
 const claude = path.join(home, '.claude');
 const userData = path.join(root, 'user-data');
 const fakeFetchAudit = path.join(root, 'vendor-fetch.ndjson');
+const customWebhookAudit = path.join(root, 'custom-webhook.ndjson');
+const CUSTOM_WEBHOOK = 'https://hooks.agentteams-e2e.org/notify?sig=e2e-secret';
 const evidence = {
   suite: 'notification-channels-desktop',
   root,
@@ -49,6 +51,11 @@ async function until(predicate, label, limitMs = 45_000) {
 
 async function readAudit() {
   const data = await readFile(fakeFetchAudit, 'utf8');
+  return data.trim() ? data.trim().split('\n').map((line) => JSON.parse(line)) : [];
+}
+
+async function readCustomWebhookAudit() {
+  const data = await readFile(customWebhookAudit, 'utf8');
   return data.trim() ? data.trim().split('\n').map((line) => JSON.parse(line)) : [];
 }
 
@@ -92,6 +99,27 @@ async function launch() {
   const fixture = [
     "if (process.type === 'browser') {",
     "const orig = globalThis.fetch;",
+    "const webhookDns = require('node:dns/promises');",
+    "const originalLookup = webhookDns.lookup;",
+    "webhookDns.lookup = async (name, options) => name === 'hooks.agentteams-e2e.org' ? [{address:'8.8.8.8',family:4}] : originalLookup(name,options);",
+    "const https = require('node:https');",
+    "const originalHttpsRequest = https.request;",
+    "const Emitter = require('node:events').EventEmitter;",
+    "https.request = (url, options, callback) => {",
+    "  if (new URL(String(url)).hostname !== 'hooks.agentteams-e2e.org') return originalHttpsRequest(url,options,callback);",
+    "  const req = new Emitter();",
+    "  req.end = (body) => {",
+    "    options.lookup('hooks.agentteams-e2e.org',{all:true},(err, addresses) => {",
+    "      if (err) { req.emit('error',err); return; }",
+    "      require('node:fs').appendFileSync(" + JSON.stringify(customWebhookAudit) +
+        ", JSON.stringify({host:'hooks.agentteams-e2e.org',addresses,body:JSON.parse(String(body))})+'\\n');",
+    "      queueMicrotask(() => { callback({statusCode:202,destroy(){}}); req.emit('close'); });",
+    "    });",
+    "  };",
+    "  req.destroy = (error) => { if (error) req.emit('error',error); req.emit('close'); };",
+    "  return req;",
+    "};",
+    "require('node:module').syncBuiltinESMExports();",
     "globalThis.fetch = async (url, options) => {",
     "  const target = new URL(String(url));",
     "  if (target.hostname === 'api.telegram.org') {",
@@ -180,6 +208,7 @@ async function run() {
   await Promise.all([home, claude, userData].map((p) => mkdir(p, { recursive: true })));
   await mkdir(path.join(claude, 'projects'), { recursive: true });
   await writeFile(fakeFetchAudit, '');
+  await writeFile(customWebhookAudit, '');
   await writeFile(path.join(claude, 'agent-teams-config.json'), JSON.stringify({
     general: { appLocale: 'en', theme: 'dark', defaultTab: 'dashboard' },
     notifications: { enabled: true, notifyOnUserInbox: true, soundEnabled: false },
@@ -350,6 +379,78 @@ async function run() {
   assert.equal(JSON.parse(await readFile(vaultPath, 'utf8')).length, 0,
     'Deleted channel must remove its encrypted secret');
   evidence.checks.push('Delete removes destination and does not expose credential');
+
+  // Same real Electron renderer -> IPC -> encrypted vault -> pinned HTTPS adapter.
+  // Patch only the mock public hostname in the main process; no vendor request.
+  await click(button('Add channel'));
+  await setInput('input[placeholder="My Telegram"]', 'TEST Custom Webhook');
+  await click("document.querySelector('section[aria-label=\"Delivery channels\"] [aria-label=\"Delivery provider\"]')");
+  await cdp.waitFor(
+    "Array.from(document.querySelectorAll('[role=option]')).find(x=>x.textContent?.includes('Custom Webhook'))",
+    'custom webhook provider option'
+  );
+  await click("Array.from(document.querySelectorAll('[role=option]')).find(x=>x.textContent?.includes('Custom Webhook'))");
+  await setInput('section[aria-label="Delivery channels"] input[type="password"]', CUSTOM_WEBHOOK);
+  await click(button('Save channel'));
+  await until(async () => {
+    const items = await rendererCall('window.electronAPI.notificationChannels.list()');
+    return items.length === 1 && items[0].provider === 'webhook';
+  }, 'custom webhook saved');
+  const webhookChannels = await rendererCall('window.electronAPI.notificationChannels.list()');
+  assert(!JSON.stringify(webhookChannels).includes('e2e-secret'));
+  assert(!(await readFile(metadataPath, 'utf8')).includes('e2e-secret'));
+  assert(!(await readFile(vaultPath, 'utf8')).includes('e2e-secret'));
+
+  await click(button('Test'));
+  await until(async () => (await readCustomWebhookAudit()).length === 1,
+    'custom HTTPS adapter Test request');
+  const webhookTest = (await readCustomWebhookAudit())[0];
+  assert.deepEqual(webhookTest.addresses, [{address:'8.8.8.8',family:4}]);
+  assert.equal(webhookTest.body.source, 'agent-teams');
+  assert.equal(webhookTest.body.event, 'test');
+  assert.match(webhookTest.body.message, /Test notification/);
+  assert(!JSON.stringify(webhookTest).includes('e2e-secret'));
+  await until(async () => {
+    const items = await rendererCall('window.electronAPI.notificationChannels.list()');
+    return items[0]?.lastTest?.success === true;
+  }, 'webhook test persisted');
+  evidence.checks.push('Custom HTTPS Test → guarded DNS + pinned request → accepted response');
+
+  await click("document.querySelector('section[aria-label=\"Delivery channels\"] [aria-label=\"Enable TEST Custom Webhook\"]')");
+  await until(async () => (await rendererCall(
+    'window.electronAPI.notificationChannels.list()'))[0]?.enabled === true,
+    'webhook enabled');
+  await click(routeButton);
+  await cdp.waitFor(
+    "document.querySelector('[aria-label=\"Deliver Message for you to TEST Custom Webhook\"]')",
+    'webhook in event destinations'
+  );
+  await click("document.querySelector('[aria-label=\"Deliver Message for you to TEST Custom Webhook\"]')");
+  await until(async () => (await rendererCall(
+    'window.electronAPI.notificationChannels.list()'))[0]?.events.includes('user_inbox'),
+    'webhook subscribed');
+  await rendererCall('window.electronAPI.teams.showMessageNotification(' +
+    JSON.stringify({...secretPayload, dedupeKey:'webhook-' + randomUUID()}) + ')');
+  await until(async () => (await readCustomWebhookAudit()).length === 2,
+    'automatic custom HTTPS delivery');
+  const webhookAutomatic = (await readCustomWebhookAudit())[1];
+  assert.equal(webhookAutomatic.body.event, 'user_inbox');
+  assert.equal(webhookAutomatic.body.message, 'Agent Teams: Message for you.');
+  assert(!JSON.stringify(webhookAutomatic).includes('password'));
+  await until(async () => (await rendererCall(
+    'window.electronAPI.notificationChannels.list()'))[0]?.lastDelivery?.success === true,
+    'automatic delivery status');
+  await click(button('Refresh status'));
+  await until(async () => Boolean(await evaluate(
+    'document.body.textContent?.includes("Automatic: Accepted by endpoint")'
+  )), 'visible automatic diagnostic');
+  evidence.checks.push('Automatic webhook event → fixed safe JSON + session status');
+
+  await click(button('Delete'));
+  await click(button('Confirm delete'));
+  await until(async () => (await rendererCall(
+    'window.electronAPI.notificationChannels.list()')).length === 0, 'webhook deleted');
+  assert.deepEqual(JSON.parse(await readFile(vaultPath, 'utf8')), []);
   evidence.passed = true;
 }
 

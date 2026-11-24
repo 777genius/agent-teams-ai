@@ -356,7 +356,8 @@
         "discord": "Discord の対象チャンネルで「チャンネルを編集 → 連携サービス → Webhooks」を開き、Webhook を作成して完全な URL をコピーします。",
         "slack": "Slack アプリを作成して Incoming Webhooks を有効にし、ワークスペースにインストールして URL をコピーします。",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel を使用します。独自のトリガーでは Anyone を選択し、URL を秘密にしてください。",
-        "google-chat": "Google Chat のスペースで「アプリと統合 → Webhook を追加」を選び、作成して完全な URL をコピーします。"
+        "google-chat": "Google Chat のスペースで「アプリと統合 → Webhook を追加」を選び、作成して完全な URL をコピーします。",
+        "webhook": "公開 HTTPS Webhook（例: n8n）を作成し、署名付き URL 全体をコピーしてテストしてください。ローカル URL は許可されません。"
       }
     },
     "recovery": {

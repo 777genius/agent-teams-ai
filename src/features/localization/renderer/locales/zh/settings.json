@@ -356,7 +356,8 @@
         "discord": "在目标 Discord 频道中打开“编辑频道 → 集成 → Webhooks”，创建 Webhook 并复制完整 URL。",
         "slack": "创建 Slack 应用，启用 Incoming Webhooks，安装到工作区并复制生成的 URL。",
         "ms-teams": "使用 Teams Workflows → Send webhook alerts to a channel。自定义触发器请选择 Anyone，并妥善保管 URL。",
-        "google-chat": "在 Google Chat 聊天室中选择“应用和集成 → 添加 Webhooks”，创建后复制完整 URL。"
+        "google-chat": "在 Google Chat 聊天室中选择“应用和集成 → 添加 Webhooks”，创建后复制完整 URL。",
+        "webhook": "创建公开的 HTTPS Webhook（例如在 n8n 中），复制完整的签名 URL 并测试。局域网 URL 不允许使用。"
       }
     },
     "recovery": {

@@ -56,6 +56,25 @@ describe('Notification Channels domain', () => {
     expect(() => validateProviderCredential('telegram', base.secret)).not.toThrow();
   });
 
+  it('allows public HTTPS custom destinations and rejects unsafe URL shapes', () => {
+    expect(() => validateProviderCredential('webhook',
+      'https://hooks.example.org/events?signature=private')).not.toThrow();
+    for (const target of [
+      'http://hooks.example.org/events',
+      'https://127.0.0.1/events',
+      'https://localhost/events',
+      'https://server.internal/events',
+      'https://test.local/events',
+      'https://hooks.example.org:444/events',
+      'https://hooks.example.org/events#fragment',
+      'https://user:pass@hooks.example.org/events',
+      'https://192.168.1.1/events',
+      'https://[::1]/events',
+    ]) {
+      expect(() => validateProviderCredential('webhook', target)).toThrow();
+    }
+  });
+
   it('strips raw message content and team/private identifiers', () => {
     const notification = {
       category: 'team',

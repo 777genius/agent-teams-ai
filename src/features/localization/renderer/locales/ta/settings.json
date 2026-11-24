@@ -371,7 +371,8 @@
         "discord": "Discord சேனலில் Edit Channel → Integrations → Webhooks திறந்து webhook உருவாக்கி முழு URL-ஐ நகலெடுக்கவும்.",
         "slack": "Slack செயலியை உருவாக்கி Incoming Webhooks-ஐ இயக்கி workspace-இல் நிறுவி URL-ஐ நகலெடுக்கவும்.",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel பயன்படுத்தவும். தனிப்பயன் trigger-க்கு Anyone தேர்வு செய்து URL-ஐ ரகசியமாக வைக்கவும்.",
-        "google-chat": "Google Chat இடத்தில் Apps & integrations → Add webhooks மூலம் webhook உருவாக்கி முழு URL-ஐ நகலெடுக்கவும்."
+        "google-chat": "Google Chat இடத்தில் Apps & integrations → Add webhooks மூலம் webhook உருவாக்கி முழு URL-ஐ நகலெடுக்கவும்.",
+        "webhook": "பொது HTTPS வெப்ஹுக் (எ.கா. n8n-இல்) உருவாக்கி, முழு கையொப்பமிட்ட URL-ஐ நகலெடுத்து சோதிக்கவும். உள்ளக URL-கள் தடுக்கப்படும்."
       }
     },
     "recovery": {

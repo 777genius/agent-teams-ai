@@ -446,7 +446,8 @@
         "discord": "В нужном канале Discord откройте Edit Channel → Integrations → Webhooks, создайте вебхук и скопируйте полный URL.",
         "slack": "Создайте Slack App, включите Incoming Webhooks, установите приложение в рабочую область и скопируйте URL.",
         "ms-teams": "Используйте Teams Workflows → Send webhook alerts to a channel. Для собственного триггера выберите Anyone; не разглашайте URL.",
-        "google-chat": "В пространстве Google Chat выберите Apps & integrations → Add webhooks, создайте вебхук и скопируйте полный URL."
+        "google-chat": "В пространстве Google Chat выберите Apps & integrations → Add webhooks, создайте вебхук и скопируйте полный URL.",
+        "webhook": "Создайте публичный HTTPS-вебхук (например, в n8n), скопируйте полную подписанную ссылку и нажмите Test. Локальные и частные адреса заблокированы."
       }
     },
     "recovery": {

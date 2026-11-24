@@ -371,7 +371,8 @@
         "discord": "Discord ఛానల్‌లో Edit Channel → Integrations → Webhooks తెరిచి వెబ్‌హుక్ సృష్టించి పూర్తి URL కాపీ చేయండి.",
         "slack": "Slack యాప్ సృష్టించి Incoming Webhooks ప్రారంభించి వర్క్‌స్పేస్‌లో ఇన్‌స్టాల్ చేసి URL కాపీ చేయండి.",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel వాడండి. మీ స్వంత ట్రిగ్గర్‌కు Anyone ఎంచుకుని URL రహస్యంగా ఉంచండి.",
-        "google-chat": "Google Chat స్పేస్‌లో Apps & integrations → Add webhooks ద్వారా వెబ్‌హుక్ సృష్టించి పూర్తి URL కాపీ చేయండి."
+        "google-chat": "Google Chat స్పేస్‌లో Apps & integrations → Add webhooks ద్వారా వెబ్‌హుక్ సృష్టించి పూర్తి URL కాపీ చేయండి.",
+        "webhook": "పబ్లిక్ HTTPS వెబ్‌హుక్‌ను (ఉదా. n8nలో) సృష్టించి, పూర్తి సంతకం చేసిన URLను కాపీ చేసి పరీక్షించండి. స్థానిక URLలు నిరోధించబడతాయి."
       }
     },
     "recovery": {
