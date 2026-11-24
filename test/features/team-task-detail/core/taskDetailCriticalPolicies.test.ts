@@ -23,7 +23,7 @@ import {
   updateTaskDetailPart,
 } from '../../../../src/features/team-task-detail/core/domain';
 
-import type { TaskDetailSaveRevision } from '../../../../src/features/team-task-detail/contracts';
+import type { TaskDetailSaveRevision, TaskDetailSession } from '../../../../src/features/team-task-detail/contracts';
 import type { TeamTaskWithKanban } from '../../../../src/shared/types';
 
 function deferred<T>() {
@@ -428,7 +428,7 @@ describe('task detail critical read policies', () => {
 
   it('releases the submitted clarification identity when a changed part leaves an empty composer', () => {
     const requestId = 'ac3e9e75-af82-4526-82f3-723da8e2bde8';
-    let session = {
+    let session: TaskDetailSession = {
       ...EMPTY_TASK_DETAIL_SESSION,
       commentText: 'Decision A',
       reply: { taskId: '1', author: 'lead', text: 'Original question' },
@@ -447,7 +447,7 @@ describe('task detail critical read policies', () => {
 
   it('preserves the request identity if real draft content was edited during a send', () => {
     const requestId = 'd11ee7df-c41d-4e39-a08f-1a2a3187da7d';
-    let session = {
+    let session: TaskDetailSession = {
       ...EMPTY_TASK_DETAIL_SESSION,
       commentText: 'Decision A',
       answerClarificationRequestId: requestId,
