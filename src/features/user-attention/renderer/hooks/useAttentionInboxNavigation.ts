@@ -34,8 +34,10 @@ export function useAttentionInboxNavigation() {
     // tab can mount it. Otherwise initial hydration may persist the old
     // collapsed view after the one-shot navigation intent was consumed.
     const sidebarKey = JSON.stringify([contextId, chat.teamName]);
+    const previous = getTeamMessagesSidebarUiState(sidebarKey);
     setTeamMessagesSidebarUiState(sidebarKey, {
-      ...getTeamMessagesSidebarUiState(sidebarKey),
+      ...previous,
+      messagesFilter: { ...previous.messagesFilter, from: new Set(), to: new Set() },
       messagesCollapsed: false,
       messagesSearchQuery: '',
       conversationSurface: 'thread',

@@ -122,6 +122,8 @@ describe('User Attention read facade', () => {
 
   it('fences a root switch during in-flight reads', async () => {
     let context = 'root-1';
+    let markStarted!: () => void;
+    const started = new Promise<void>((done) => { markStarted = done; });
     let resolve!: (value: { teamName: string; feedRevision: string; messages: [] }) => void;
     const pending = new Promise<{ teamName: string; feedRevision: string; messages: [] }>((done) => {
       resolve = done;
@@ -131,11 +133,11 @@ describe('User Attention read facade', () => {
       getTeamDataService: () => ({
         listTeams: async () => [{ teamName: 'x', displayName: 'X' }],
         getUserAttentionTasks: async () => [],
-        getMessageFeed: () => pending,
+        getMessageFeed: () => { markStarted(); return pending; },
       } as never),
     });
     const request = facade.getUserAttentionSnapshot();
-    await Promise.resolve();
+    await started;
     context = 'root-2';
     resolve({ teamName: 'x', feedRevision: '1', messages: [] });
     await expect(request).rejects.toThrow('context changed');

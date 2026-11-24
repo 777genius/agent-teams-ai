@@ -244,8 +244,9 @@ async function checkDesktop() {
   })()`);
   assert(opened, 'awaiting task button can be clicked');
   await cdp.waitFor(
-    'window.__agentTeamsDevStore.getState().globalTaskDetail?.taskId === "1"',
-    'task detail routed by canonical task ID');
+    `(() => { const detail = window.__agentTeamsDevStore.getState().globalTaskDetail;
+      return detail?.teamName === ${JSON.stringify(first)} && detail.taskId === "1"; })()`,
+    'task detail routed by canonical team and task ID');
   evidence.checks.push('task deep link');
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()');
@@ -279,6 +280,16 @@ async function checkDesktop() {
   })()`), 'alice disappears after reading while bob stays unread');
   evidence.checks.push('same Messenger read storage updates the exact chat row');
 
+  await cdp.evaluate(`(async () => {
+    const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
+    const state = window.__agentTeamsDevStore.getState();
+    const key = JSON.stringify([state.activeContextId, ${JSON.stringify(second)}]);
+    const previous = ui.getTeamMessagesSidebarUiState(key);
+    ui.setTeamMessagesSidebarUiState(key, {
+      ...previous,
+      messagesFilter: { ...previous.messagesFilter, from: new Set(['alice']), to: new Set(['other']) },
+    });
+  })()`);
   const clickedChat = await cdp.evaluate(`(() => {
     const panel = document.querySelector('[data-testid=user-attention-inbox]');
     const button = [...panel.querySelectorAll('button')].find((b) =>
@@ -294,11 +305,13 @@ async function checkDesktop() {
     'exact second team tab opened for chat');
   await until(async () => cdp.evaluate(`(async () => {
     const ui = await import('/components/team/sidebar/teamSidebarUiState.ts');
-    const scope = ui.getTeamMessagesSidebarUiState(
+    const chat = ui.getTeamMessagesSidebarUiState(
       JSON.stringify(['local', ${JSON.stringify(second)}])
-    ).conversationScope;
-    return scope?.kind === 'direct' && scope.participant === 'bob';
-  })()`), 'exact bob thread opened', 60000);
+    );
+    return chat.conversationScope?.kind === 'direct' && chat.conversationScope.participant === 'bob' &&
+      chat.messagesFilter.from.size === 0 && chat.messagesFilter.to.size === 0 &&
+      document.body.innerText.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + second)});
+  })()`), 'exact bob thread and unread message visible despite stale participant filters', 60000);
   evidence.checks.push('cross-team Messenger conversation navigation');
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');

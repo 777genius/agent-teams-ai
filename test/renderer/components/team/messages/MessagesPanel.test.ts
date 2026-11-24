@@ -507,18 +507,14 @@ describe('MessagesPanel idle summary invariants', () => {
     }
   });
 
-  it('clears a stale Messenger search when Attention reopens the selected thread', async () => {
+  it('clears stale Messenger search and participant filters when Attention reopens the selected thread', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     sidebarUiState.conversationSurface = 'thread';
     sidebarUiState.conversationScope = { kind: 'direct', participant: 'alice' };
     sidebarUiState.messagesSearchQuery = 'search hiding the unread message';
+    sidebarUiState.messagesFilter = { from: new Set(['bob']), to: new Set(['other']), showNoise: true };
     sidebarUiState.messagesCollapsed = true;
     const teamName = 'attention-already-open-direct-fixture';
-    requestAttentionChatNavigation({
-      contextId: storeState.activeContextId,
-      teamName,
-      scope: { kind: 'direct', participant: 'alice' },
-    });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -539,6 +535,13 @@ describe('MessagesPanel idle summary invariants', () => {
           })
         );
       });
+      await act(async () => {
+        requestAttentionChatNavigation({
+          contextId: storeState.activeContextId,
+          teamName,
+          scope: { kind: 'direct', participant: 'alice' },
+        });
+      });
       expect(setTeamMessagesSidebarUiState).toHaveBeenLastCalledWith(
         JSON.stringify([storeState.activeContextId, teamName]),
         expect.objectContaining({
@@ -546,6 +549,7 @@ describe('MessagesPanel idle summary invariants', () => {
           conversationScope: { kind: 'direct', participant: 'alice' },
           messagesCollapsed: false,
           messagesSearchQuery: '',
+          messagesFilter: { from: new Set(), to: new Set(), showNoise: true },
         })
       );
     } finally {

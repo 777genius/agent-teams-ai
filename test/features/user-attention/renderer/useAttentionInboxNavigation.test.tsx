@@ -63,7 +63,10 @@ describe('Attention logical-to-physical sidebar navigation', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const contextKey = JSON.stringify([state.activeContextId, physicalName]);
     const otherKey = JSON.stringify(['other-root', physicalName]);
-    const old = getTeamMessagesSidebarUiState(contextKey);
+    const old = {
+      ...getTeamMessagesSidebarUiState(contextKey),
+      messagesFilter: { from: new Set(['bob']), to: new Set(['other']), showNoise: true },
+    };
     setTeamMessagesSidebarUiState(contextKey, {
       ...old,
       messagesCollapsed: true,
@@ -92,11 +95,13 @@ describe('Attention logical-to-physical sidebar navigation', () => {
       expect(beforeTabSwitch).toHaveReturnedWith(expect.objectContaining({
         messagesCollapsed: false,
         messagesSearchQuery: '',
+        messagesFilter: { from: new Set(), to: new Set(), showNoise: true },
         conversationSurface: 'thread',
         conversationScope: scope,
       }));
       expect(getTeamMessagesSidebarUiState(otherKey).messagesCollapsed).toBe(true);
       expect(getTeamMessagesSidebarUiState(otherKey).conversationSurface).toBe('list');
+      expect(getTeamMessagesSidebarUiState(otherKey).messagesFilter).toEqual(old.messagesFilter);
 
       const opened = vi.fn();
       function MountedLater(): React.JSX.Element {
