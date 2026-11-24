@@ -165,14 +165,22 @@ export function completeTaskDetailSubmit(
   );
   const nextPartRevisions = { ...session.partRevisions };
   for (const part of clearParts) nextPartRevisions[part] += 1;
+  const commentText = clearParts.has('commentText') ? '' : session.commentText;
+  const commentChips = clearParts.has('commentChips') ? [] : session.commentChips;
+  const pendingAttachments = clearParts.has('pendingAttachments') ? [] : session.pendingAttachments;
+  const reply = clearParts.has('reply') ? null : session.reply;
+  // A changed part can still end up empty (e.g. the user removed an attachment
+  // while sending). Do not retain a consumed request ID on an empty composer.
+  const hasRemainingDraft = Boolean(commentText.trim() || commentChips.length ||
+    pendingAttachments.length || reply);
   return {
     ...session,
-    commentText: clearParts.has('commentText') ? '' : session.commentText,
-    commentChips: clearParts.has('commentChips') ? [] : session.commentChips,
-    pendingAttachments: clearParts.has('pendingAttachments') ? [] : session.pendingAttachments,
-    reply: clearParts.has('reply') ? null : session.reply,
+    commentText,
+    commentChips,
+    pendingAttachments,
+    reply,
     answerClarificationRequestId:
-      clearParts.size === parts.length ? undefined : session.answerClarificationRequestId,
+      hasRemainingDraft ? session.answerClarificationRequestId : undefined,
     partRevisions: nextPartRevisions,
     editRevision: session.editRevision + (clearParts.size > 0 ? 1 : 0),
     submittedPartRevisions: null,
