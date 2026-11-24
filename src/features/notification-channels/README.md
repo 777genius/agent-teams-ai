@@ -11,6 +11,18 @@ Outbound notification routing. Not the Attention Inbox and not two-way messaging
   same-origin HTTP mutation guard, and IPC handlers.
 - Renderer: portable React settings UI through the shared api abstraction.
 
+Custom Webhook accepts a public HTTPS DNS name on port 443 only. The main-process
+transport validates each resolved IPv4/IPv6 address, pins validated addresses
+for TLS, rejects local/private/reserved networks and redirects, and sends
+only `{source, event, message}` (fixed safe labels, no team content).
+A signed URL can provide endpoint authentication. Custom headers and private
+network access are intentionally unsupported. Configuration uses the existing
+isolated encrypted channel credential vault.
+
+Manual Test status is persisted as before. The most recent automatic delivery
+result is shown in Settings for the current application session only; it is not
+written for each incoming event and is reset on restart.
+
 External delivery is opt-in. No offline queue or background daemon; when the host
 process stops, external delivery stops. OS toasts and notification history are not
 changed. Failed deliveries are not retried, avoiding unsolicited duplicates.

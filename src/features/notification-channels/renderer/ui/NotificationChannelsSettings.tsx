@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { BellPlus, CheckCircle2, ExternalLink, Send, Trash2 } from 'lucide-react';
+import { BellPlus, CheckCircle2, ExternalLink, RefreshCw, Send, Trash2 } from 'lucide-react';
 
 import { DELIVERY_PROVIDERS } from '../../contracts';
 
@@ -23,14 +23,17 @@ import type { ChannelTestStatus, DeliveryProvider } from '../../contracts';
 
 function displayTest(status?: ChannelTestStatus): string {
   if (!status) return 'Not tested';
-  if (status.success) return 'Provider accepted test message';
+  if (status.success) return 'Accepted by endpoint (receipt not guaranteed)';
   const descriptions: Record<string, string> = {
     credentials_missing: 'Saved credential is missing',
     authentication_failed: 'Check the bot token or webhook URL',
     invalid_recipient: 'Check recipient permissions or chat ID',
     rate_limited: 'Provider rate limit; try later',
-    network_error: 'Network or provider unavailable',
-    delivery_failed: 'Provider rejected the test or request failed',
+    network_error: 'Connection timed out or endpoint unavailable',
+    invalid_request: 'Endpoint rejected the request format',
+    redirect_rejected: 'Endpoint redirected; redirects are blocked',
+    unsafe_endpoint: 'Blocked unsafe or private network destination',
+    delivery_failed: 'Endpoint rejected the request',
   };
   return descriptions[status.code ?? 'delivery_failed'];
 }
@@ -58,6 +61,7 @@ export function NotificationChannelsSettings({
     toggle,
     remove,
     test,
+    refresh,
     providerChanged,
     credentialMissing,
     updateDraft,
@@ -105,7 +109,7 @@ export function NotificationChannelsSettings({
             <BellPlus className="size-4" /> Delivery Channels
           </h3>
           <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Telegram, Discord, Slack, Teams, and Google Chat. Configure each destination once,
+            Telegram, Discord, Slack, Teams, Google Chat, and Custom Webhook. Configure once,
             then select it beside notification types below. Only safe event labels are sent.
           </p>
           {autoDeliveryPauseReason && channels.length > 0 && (
@@ -120,15 +124,20 @@ export function NotificationChannelsSettings({
             </p>
           )}
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={busy || draft !== null || channels.length >= 20}
-          onClick={start}
-        >
-          Add channel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void refresh()}>
+            <RefreshCw className="size-3.5" /> Refresh status
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy || draft !== null || channels.length >= 20}
+            onClick={start}
+          >
+            Add channel
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -165,6 +174,12 @@ export function NotificationChannelsSettings({
                     ? 'Choose notification types below'
                     : `${channel.events.length} event type${channel.events.length === 1 ? '' : 's'} selected`}
               </div>
+              {channel.lastDelivery && (
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]" role="status">
+                  Automatic: {displayTest(channel.lastDelivery)} ·{' '}
+                  {new Date(channel.lastDelivery.at).toLocaleTimeString()}
+                </p>
+              )}
             </div>
             <label className="flex items-center gap-2 text-xs">
               <Checkbox
@@ -297,17 +312,34 @@ export function NotificationChannelsSettings({
                 disabled={busy}
                 onChange={(event) => updateDraft({ chatId: event.target.value })}
               />
+              <span className="block text-[var(--color-text-muted)]">
+                Private: open your bot and send /start before testing. Public channel: add the bot
+                as an administrator and enter @channelname. Groups and private chats need their
+                numeric chat ID; do not reset an existing bot webhook to discover it.
+              </span>
             </label>
           )}
           <label className="block space-y-1 text-xs">
-            <span>{draft.provider === 'telegram' ? 'Bot token from @BotFather' : 'Incoming webhook URL from the provider'}</span>
+            <span>
+              {draft.provider === 'telegram'
+                ? 'Bot token from @BotFather'
+                : draft.provider === 'webhook'
+                  ? 'Public HTTPS webhook URL (signed URLs supported)'
+                  : 'Incoming webhook URL from the provider'}
+            </span>
             <Input
               type="password"
               autoComplete="new-password"
               disabled={busy}
               value={draft.secret ?? ''}
               onChange={(event) => updateDraft({ secret: event.target.value })}
-              placeholder={draft.id ? 'Leave blank to keep current credential' : 'Paste the complete secret URL or bot token'}
+              placeholder={
+                draft.id
+                  ? 'Leave blank to keep current credential'
+                  : draft.provider === 'webhook'
+                    ? 'https://your-service.com/hooks/secret'
+                    : 'Paste the complete secret URL or bot token'
+              }
             />
           </label>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>

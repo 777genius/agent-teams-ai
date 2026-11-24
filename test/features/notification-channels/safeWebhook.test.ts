@@ -8,8 +8,8 @@ import {
 const url = 'https://workflow.example.org/hooks/secret-token?sig=private-key';
 
 function stubNetwork(addresses: { address: string; family: number }[], status = 202) {
-  const resolve = vi.fn(async () => addresses);
-  const post = vi.fn(async () => status);
+  const resolve = vi.fn(async (_hostname: string) => addresses);
+  const post = vi.fn(async (_url: URL, _body: string, _addresses: readonly { address: string; family: number }[]) => status);
   return { resolve, post };
 }
 
