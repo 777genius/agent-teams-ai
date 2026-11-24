@@ -29,6 +29,40 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.19.0 (Preparing draft)
+
+Target branch: `main`. Includes published Agent Teams runtime `0.0.161` and Terminal Platform `0.3.4`. Runtime source and public delivery gates passed; exact-head product CI, live mixed-provider E2E, five-platform application builds, signatures, notarization, updater verification and public installation remain pending. The notes below are a draft: append the verified versioned download links after the installer inventory is available, then synchronize the exact body with the GitHub release before publication.
+
+<!-- RELEASE_BODY_START v2.19.0 -->
+
+Manage requests from all your teams in one place, route notifications to your preferred channels, and keep work organized by project. Create reusable teams and connect external AI agents to the desktop app.
+
+### What's New
+
+- Keep tasks and conversations separate for each project while using the same team.
+- See unread messages and tasks needing your attention in a cross-team inbox.
+- Choose notification destinations for each event, including Telegram and custom HTTPS webhooks.
+- Create, edit, import, and export reusable team templates.
+- Choose human approval or lead sign-off as part of your task review flow.
+- Connect external AI agents to the running desktop app using guided setup.
+
+### Improvements
+
+- Answer task clarifications directly from Attention to return the task to the agent.
+- Edit project-team settings and schedule runs without losing the separation between projects.
+- Use the app in Traditional Chinese (Taiwan).
+
+### Fixes
+
+- Prevent unwanted console windows when Windows teammates run commands.
+- Fix Linux startup failures when launching managed OpenCode teammates.
+- Avoid duplicate unread counts for OpenCode replies already read in Messenger.
+- Prevent Settings crashes while provider model statuses refresh.
+- Reuse only the correct Git worktree when restarting a teammate.
+- Recover interrupted project-team launches with clearer retry guidance.
+
+<!-- RELEASE_BODY_END v2.19.0 -->
+
 ## v2.18.7 (Published 2026-11-11)
 
 Target branch: `main`. Includes the verified published runtime `0.0.160`. Live team checks passed core scenarios on macOS and Linux with documented limitations; a complete successful live Windows team run remains unconfirmed. All release artifact, signing, notarization, and updater gates still apply.
