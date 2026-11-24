@@ -4,13 +4,14 @@
  * Reads focused pane data from root store selectors (auto-synced via syncRootState).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useAttentionInbox } from '@features/user-attention/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { Bell, Loader2, PanelRight } from 'lucide-react';
+import { AlertCircle, Bell, Inbox, Loader2, MessageCircle, PanelRight } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MoreMenu } from './MoreMenu';
@@ -23,6 +24,8 @@ function formatDiscordMemberCount(count: number): string {
 
 export const TabBarActions = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const { model: attentionModel, supported: attentionSupported } = useAttentionInbox();
+  const attentionCountDescriptionId = useId();
   const {
     unreadCount,
     openNotificationsTab,
@@ -165,6 +168,57 @@ export const TabBarActions = (): React.JSX.Element => {
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('notifications.title')}</TooltipContent>
       </Tooltip>
+
+      {/* Human attention is distinct from ordinary notification history. */}
+      {attentionSupported && (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" aria-label={t('attention.title')}
+            aria-describedby={attentionModel ? attentionCountDescriptionId : undefined}
+            className="relative inline-flex items-center gap-1 rounded-md px-2 py-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
+            onClick={() => {
+              const state = useStore.getState();
+              const focused = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
+              const existing = focused?.tabs.find((tab) => tab.type === 'attention');
+              if (existing) state.setActiveTab(existing.id);
+              else state.openTab({ type: 'attention', label: t('attention.tab') });
+            }}>
+            <Inbox className="size-4" aria-hidden="true" />
+            {attentionModel && (
+              <span id={attentionCountDescriptionId} className="sr-only">
+                {`${t('attention.tasks')}: ${attentionModel.taskCount}; ${t('attention.chats')}: ${attentionModel.chatCount}`}
+              </span>
+            )}
+            {attentionModel && (attentionModel.taskCount > 0 || attentionModel.chatCount > 0) && (
+              <span data-testid="attention-toolbar-counts"
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-red-400 tabular-nums"
+                aria-hidden="true">
+                {attentionModel.taskCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <AlertCircle size={10} />
+                    {attentionModel.taskCount > 99 ? '99+' : attentionModel.taskCount}
+                  </span>
+                )}
+                {attentionModel.chatCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <MessageCircle size={10} />
+                    {attentionModel.chatCount > 99 ? '99+' : attentionModel.chatCount}
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          {t('attention.title')}
+          {attentionModel && (
+            <span className="block text-xs">
+              {t('attention.tasks')}: {attentionModel.taskCount} · {t('attention.chats')}: {attentionModel.chatCount}
+            </span>
+          )}
+        </TooltipContent>
+      </Tooltip>
+      )}
 
       {/* GitHub link */}
       <Tooltip>

@@ -79,7 +79,10 @@ export function isPathWithinRoot(
   const target = normalizeForCompare(targetPath, isWindows);
   const root = normalizeForCompare(rootPath, isWindows);
   const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  // Reject a first segment made only of dots and spaces ('..', '.. ', '...'), as before.
+  // Names such as '..data' are inside the root.
+  const firstSegment = relative.split(path.sep)[0];
+  return relative === '' || (!/^\.\.[. ]*$/.test(firstSegment) && !path.isAbsolute(relative));
 }
 
 /** Use for real paths when distinct directory casing can name distinct files. */

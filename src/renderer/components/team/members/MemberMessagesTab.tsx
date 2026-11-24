@@ -85,7 +85,7 @@ export const MemberMessagesTab = ({
     },
     [isCurrentOwner, onCreateTask, teamName]
   );
-  const { readSet } = useTeamMessagesRead(teamName, messages);
+  const { readSet } = useTeamMessagesRead(teamName, messages, false, contextId);
   const taskMap = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const messageContext = useMemo(() => buildMessageContext(members), [members]);
 

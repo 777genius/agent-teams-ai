@@ -43,7 +43,6 @@ import {
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
   TOKEN_USAGE_BUDGET_STATUS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
-  TOKEN_USAGE_SNAPSHOT_ROUTE,
   type TokenUsageAnalyticsSnapshotDto,
   type TokenUsageBudgetSettingsDto,
   type TokenUsageBudgetSettingsUpdateRequestDto,
@@ -52,6 +51,11 @@ import {
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
 import {
+  type AttentionSnapshot,
+  USER_ATTENTION_HTTP_ROUTE,
+  UserAttentionUnsupportedError,
+} from '@features/user-attention/contracts';
+import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
   WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
   type WorkspaceTrustElectronApi,
@@ -59,6 +63,7 @@ import {
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
+import { buildTokenUsageSnapshotRoute } from './tokenUsageSnapshotRoute';
 import { createHttpNotificationHistoryApi } from './notificationHistoryHttp';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
@@ -171,25 +176,6 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
-  const query = new URLSearchParams();
-  if (request?.teamIds !== undefined) {
-    for (const teamId of request.teamIds) query.append('teamIds', teamId);
-  } else {
-    if (request?.teamName) query.set('teamName', request.teamName);
-    for (const teamName of request?.teamNames ?? []) query.append('teamNames', teamName);
-  }
-  if (request?.agentId) query.set('agentId', request.agentId);
-  if (request?.commandId) query.set('commandId', request.commandId);
-  if (request?.commandInvocationId) {
-    query.set('commandInvocationId', request.commandInvocationId);
-  }
-  if (request?.nativeSessionId) query.set('nativeSessionId', request.nativeSessionId);
-  if (request?.from) query.set('from', request.from);
-  if (request?.to) query.set('to', request.to);
-  const suffix = query.toString();
-  return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
-}
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -379,11 +365,12 @@ export class HttpAPIClient implements ElectronAPI {
     ) as T;
   }
 
-  private async get<T>(path: string, reviveDates = true): Promise<T> {
+  private async get<T>(path: string, reviveDates = true, missingRouteError?: Error): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, { signal: controller.signal });
+      if (res.status === 404 && missingRouteError) throw missingRouteError;
       return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
@@ -479,6 +466,13 @@ export class HttpAPIClient implements ElectronAPI {
 
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
+
+  getUserAttentionSnapshot = (teamName?: string): Promise<AttentionSnapshot> =>
+    this.get(
+      USER_ATTENTION_HTTP_ROUTE + (teamName ? '?teamName=' + encodeURIComponent(teamName) : ''),
+      false,
+      new UserAttentionUnsupportedError()
+    );
 
   workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
     getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),
@@ -848,7 +842,9 @@ export class HttpAPIClient implements ElectronAPI {
       const config = await this.config.get();
       const fallbackPath = config.general.claudeRootPath ?? '~/.claude';
       return {
-        defaultPath: fallbackPath,
+        // Browser transport has no auto-detection API; do not label an explicit
+        // custom root as the default, or workspace-scoped reads would collide.
+        defaultPath: '~/.claude',
         resolvedPath: fallbackPath,
         customPath: config.general.claudeRootPath,
       };

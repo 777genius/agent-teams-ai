@@ -20,6 +20,7 @@ vi.mock('@renderer/store', () => ({
 }));
 vi.mock('@features/recent-projects/renderer', () => ({ RecentProjectsSection: () => null }));
 vi.mock('@features/running-teams/renderer', () => ({ RunningTeamsSection: () => null }));
+vi.mock('@features/user-attention/renderer', () => ({ AttentionInboxView: () => <div data-testid="attention-inbox" /> }));
 vi.mock('./DashboardProviderSummary', () => ({
   DashboardProviderSummary: () => <div data-testid="providers" />,
 }));
@@ -49,8 +50,11 @@ describe('dashboard agent connection', () => {
       'button[aria-label="general.externalAgentConnection.connectButton"]'
     );
     const providers = host.querySelector('[data-testid="providers"]');
+    const attention = host.querySelector('[data-testid="attention-inbox"]');
     expect(button).not.toBeNull();
     expect(providers).not.toBeNull();
+    expect(attention).not.toBeNull();
+    expect(attention!.compareDocumentPosition(providers!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       button!.compareDocumentPosition(providers!) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();

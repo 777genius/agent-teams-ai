@@ -25,6 +25,7 @@ import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/prelo
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
+import { createUserAttentionBridge } from '@features/user-attention/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import {
   WINDOW_SET_ZOOM_FACTOR_CHANNEL,
@@ -292,6 +293,7 @@ import {
 import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
+import { unwrapIpcResult } from './ipcResult';
 import { createNotificationHistoryBridge } from './notificationHistoryBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
 
@@ -479,13 +481,6 @@ interface IpcFileChangePayload {
   isSubagent: boolean;
 }
 
-function unwrapIpcResult<T>(result: IpcResult<T>): T {
-  if (!result.success) {
-    throw Object.assign(new Error(result.error ?? 'Unknown error'), { failure: result.failure });
-  }
-  return result.data as T;
-}
-
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
   return unwrapIpcResult((await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>);
 }
@@ -534,6 +529,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  ...createUserAttentionBridge(),
   ...createNotificationChannelsBridge(ipcRenderer),
   reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),

@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "Erfordert Ihre Aufmerksamkeit",
+    "tab": "Aufmerksamkeit",
+    "viewAll": "Alle anzeigen",
+    "refresh": "Aufmerksamkeitsstatus aktualisieren",
+    "loading": "Wird geladen…",
+    "loadFailed": "Aufmerksamkeitsstatus konnte nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "partial": "Einige Teams konnten nicht geladen werden. Die Zähler sind möglicherweise unvollständig.",
+    "nothing": "Zurzeit ist keine Aktion erforderlich.",
+    "tasks": "Wartet auf Ihre Entscheidung",
+    "chats": "Ungelesene Chats",
+    "openTask": "Aufgabe öffnen: {{subject}} in {{team}}",
+    "timeUnknown": "Zeit unbekannt",
+    "teamAttention": "Aufmerksamkeit"
   }
 }
