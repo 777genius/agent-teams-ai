@@ -2991,6 +2991,43 @@ export default interface Resources {
       }
     },
     "notifications": {
+      "delivery": {
+        "additionalEvents": "Additional delivery events",
+        "agentGuide": "Agent Teams step-by-step guide",
+        "desktopOnly": "Desktop only",
+        "exampleFormat": "Example format (not a real credential):",
+        "eventLabels": {
+          "all_tasks_completed": "All tasks completed",
+          "cross_team_message": "Cross-team message",
+          "lead_inbox": "Team lead inbox message",
+          "runtime_recovery": "Runtime recovery",
+          "schedule_completed": "Scheduled run completed",
+          "schedule_failed": "Scheduled run failed",
+          "task_blocked": "Task blocked",
+          "task_clarification": "Clarification needed",
+          "task_comment": "New task comment",
+          "task_created": "Task created",
+          "task_review_requested": "Review requested",
+          "task_status_change": "Task status changed",
+          "team_launch_incomplete": "Team launch needs attention",
+          "team_launched": "Team launched",
+          "usage_budget_exceeded": "Usage budget exceeded",
+          "usage_budget_warning": "Usage budget warning",
+          "user_inbox": "Message for you"
+        },
+        "officialGuide": "Official provider instructions",
+        "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Enable system notifications to resume. Manual Test still works.",
+        "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+        "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+        "providerSetup": {
+          "discord": "In the target Discord channel choose Edit Channel → Integrations → Webhooks, create a webhook and copy its complete URL.",
+          "google-chat": "In the Google Chat space choose Apps & integrations → Add webhooks, create a webhook and copy the complete URL.",
+          "ms-teams": "Use Teams Workflows → Send webhook alerts to a channel. For a custom trigger choose Anyone; keep the URL secret.",
+          "slack": "Create a Slack app, enable Incoming Webhooks, install it to the workspace, then copy the generated URL.",
+          "telegram": "Create a bot with @BotFather (/newbot), start a chat with it, then enter the token and Chat ID or @channelname."
+        },
+        "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default."
+      },
       "dev": {
         "descriptionPrefix": "Notifications may not work in development mode. macOS identifies the app as \"Electron\" (bundle ID",
         "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",

@@ -322,6 +322,43 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "स्वयंचलित वितरण थांबले आहे: प्रणाली सूचना बंद आहेत. वितरण पुन्हा सुरू करण्यासाठी त्या चालू करा. मॅन्युअल चाचणी उपलब्ध आहे.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams ची टप्प्याटप्प्याने मार्गदर्शिका",
+      "exampleFormat": "स्वरूपाचे उदाहरण (खरे क्रेडेन्शियल नाही):",
+      "officialGuide": "प्रदात्याच्या अधिकृत सूचना",
+      "providerSetup": {
+        "telegram": "@BotFather वर /newbot वापरून बॉट तयार करा, चॅट सुरू करा आणि टोकन व Chat ID किंवा @चॅनेल_नाव भरा.",
+        "discord": "Discord च्या निवडलेल्या चॅनेलमध्ये Edit Channel → Integrations → Webhooks उघडा, वेबहुक तयार करा आणि संपूर्ण URL कॉपी करा.",
+        "slack": "Slack ॲप तयार करा, Incoming Webhooks सक्षम करा, वर्कस्पेसमध्ये इन्स्टॉल करा आणि URL कॉपी करा.",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel वापरा. स्वतःच्या ट्रिगरसाठी Anyone निवडा आणि URL गुप्त ठेवा.",
+        "google-chat": "Google Chat स्पेसमध्ये Apps & integrations → Add webhooks मधून वेबहुक तयार करा आणि संपूर्ण URL कॉपी करा."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {

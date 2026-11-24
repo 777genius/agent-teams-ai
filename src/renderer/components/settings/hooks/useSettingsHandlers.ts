@@ -39,6 +39,7 @@ interface SettingsHandlers {
 
   // Notification handlers
   handleNotificationToggle: (key: keyof AppConfig['notifications'], value: boolean) => void;
+  handleDesktopDestinationsChange: (events: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>) => void;
   handleTeamRuntimeRecoveryUpdate: (update: Partial<AppConfig['teamRuntimeRecovery']>) => void;
   handleStatusChangeStatusesUpdate: (statuses: string[]) => void;
   handleSnooze: (minutes: number) => Promise<void>;
@@ -119,6 +120,13 @@ export function useSettingsHandlers({
   const handleNotificationToggle = useCallback(
     (key: keyof AppConfig['notifications'], value: boolean) => {
       fireAndForgetConfigUpdate('notifications', { [key]: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleDesktopDestinationsChange = useCallback(
+    (events: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>) => {
+      fireAndForgetConfigUpdate('notifications', { desktopDisabledEvents: events });
     },
     [fireAndForgetConfigUpdate]
   );
@@ -315,6 +323,7 @@ export function useSettingsHandlers({
         notifications: {
           enabled: true,
           soundEnabled: true,
+          desktopDisabledEvents: [],
           ignoredRegex: defaultIgnoredRegex,
           ignoredRepositories: [],
           snoozedUntil: null,
@@ -509,6 +518,7 @@ export function useSettingsHandlers({
     handleAppLocaleChange,
     handleDefaultTabChange,
     handleNotificationToggle,
+    handleDesktopDestinationsChange,
     handleTeamRuntimeRecoveryUpdate,
     handleStatusChangeStatusesUpdate,
     handleSnooze,

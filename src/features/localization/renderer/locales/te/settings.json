@@ -337,6 +337,43 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "ఆటోమేటిక్ డెలివరీ నిలిపివేయబడింది: సిస్టమ్ నోటిఫికేషన్‌లు ఆఫ్‌లో ఉన్నాయి. తిరిగి ప్రారంభించడానికి వాటిని ఆన్ చేయండి. మాన్యువల్ టెస్ట్ అందుబాటులో ఉంది.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams దశలవారీ సెటప్ గైడ్",
+      "exampleFormat": "ఫార్మాట్ ఉదాహరణ (నిజమైన ఆధారాలు కావు):",
+      "officialGuide": "ప్రొవైడర్ అధికారిక సూచనలు",
+      "providerSetup": {
+        "telegram": "@BotFather వద్ద /newbot తో బాట్ సృష్టించి చాట్ మొదలుపెట్టండి; టోకెన్ మరియు Chat ID లేదా @ఛానల్_పేరు నమోదు చేయండి.",
+        "discord": "Discord ఛానల్‌లో Edit Channel → Integrations → Webhooks తెరిచి వెబ్‌హుక్ సృష్టించి పూర్తి URL కాపీ చేయండి.",
+        "slack": "Slack యాప్ సృష్టించి Incoming Webhooks ప్రారంభించి వర్క్‌స్పేస్‌లో ఇన్‌స్టాల్ చేసి URL కాపీ చేయండి.",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel వాడండి. మీ స్వంత ట్రిగ్గర్‌కు Anyone ఎంచుకుని URL రహస్యంగా ఉంచండి.",
+        "google-chat": "Google Chat స్పేస్‌లో Apps & integrations → Add webhooks ద్వారా వెబ్‌హుక్ సృష్టించి పూర్తి URL కాపీ చేయండి."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {

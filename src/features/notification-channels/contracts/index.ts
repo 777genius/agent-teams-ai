@@ -10,8 +10,16 @@ export const NOTIFICATION_CHANNELS_IPC = {
 export const NOTIFICATION_CHANNELS_HTTP = '/api/notification-channels';
 
 export const NOTIFICATION_DELIVERY_EVENTS = [
+  'lead_inbox',
   'user_inbox',
   'task_clarification',
+  'task_status_change',
+  'task_comment',
+  'task_created',
+  'cross_team_message',
+  'team_launched',
+  'schedule_completed',
+  'usage_budget_warning',
   'task_review_requested',
   'task_blocked',
   'all_tasks_completed',
@@ -20,6 +28,10 @@ export const NOTIFICATION_DELIVERY_EVENTS = [
   'schedule_failed',
   'usage_budget_exceeded',
 ] as const satisfies readonly TeamEventType[];
+
+export const NOTIFICATION_DESKTOP_ROUTABLE_EVENTS = NOTIFICATION_DELIVERY_EVENTS.filter(
+  (event) => event !== 'usage_budget_warning' && event !== 'usage_budget_exceeded'
+);
 
 export type DeliveryEvent = (typeof NOTIFICATION_DELIVERY_EVENTS)[number];
 export type DeliveryProvider = 'telegram' | 'discord' | 'slack' | 'ms-teams' | 'google-chat';
@@ -34,7 +46,15 @@ export const DELIVERY_PROVIDERS: readonly { id: DeliveryProvider; label: string;
   ];
 
 export const DELIVERY_EVENT_LABELS: Record<DeliveryEvent, string> = {
+  lead_inbox: 'Team lead inbox message',
   user_inbox: 'Message for you',
+  task_status_change: 'Task status changed',
+  task_comment: 'New task comment',
+  task_created: 'Task created',
+  cross_team_message: 'Cross-team message',
+  team_launched: 'Team launched',
+  schedule_completed: 'Scheduled run completed',
+  usage_budget_warning: 'Usage budget warning',
   task_clarification: 'Clarification needed',
   task_review_requested: 'Review requested',
   task_blocked: 'Task blocked',
@@ -76,6 +96,10 @@ export interface SaveDeliveryChannelRequest {
   provider: DeliveryProvider;
   enabled: boolean;
   events: DeliveryEvent[];
+  /** Route-edit guard: prevents concurrent saves from silently losing subscriptions. */
+  expectedEvents?: DeliveryEvent[];
+  /** Avoid re-enabling a channel changed concurrently by another writer. */
+  expectedEnabled?: boolean;
   /** New credential. Omit on edits to retain the existing secret. Never returned to clients. */
   secret?: string;
   chatId?: string;

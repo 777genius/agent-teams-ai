@@ -111,6 +111,17 @@ export class NotificationChannelsService {
       const existing = await this.deps.repository.read();
       const previous = input.id ? existing.find((ch) => ch.id === input.id) : undefined;
       if (input.id && !previous) throw new Error('Channel not found');
+      if (previous && input.expectedEnabled !== undefined && previous.enabled !== input.expectedEnabled) {
+        throw new Error('Channel enabled state changed. Refresh and try again.');
+      }
+      if (
+        previous &&
+        input.expectedEvents !== undefined &&
+        (previous.events.length !== input.expectedEvents.length ||
+          previous.events.some((event) => !input.expectedEvents?.includes(event)))
+      ) {
+        throw new Error('Channel subscriptions changed. Refresh and try again.');
+      }
       if (previous && previous.provider !== input.provider && !input.secret) {
         throw new Error('A new credential is required when changing provider');
       }

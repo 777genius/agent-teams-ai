@@ -322,6 +322,43 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "자동 전송이 일시 중지되었습니다. 시스템 알림이 꺼져 있습니다. 알림을 켜면 전송이 재개되며 수동 테스트는 계속 사용할 수 있습니다.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams 단계별 설정 안내",
+      "exampleFormat": "형식 예시(실제 인증 정보 아님):",
+      "officialGuide": "공급자 공식 설정 안내",
+      "providerSetup": {
+        "telegram": "@BotFather에서 /newbot으로 봇을 만들고 채팅을 시작한 후 토큰과 Chat ID 또는 @채널이름을 입력하세요.",
+        "discord": "Discord 대상 채널의 채널 편집 → 연동 → Webhooks에서 웹훅을 만들고 전체 URL을 복사하세요.",
+        "slack": "Slack 앱을 만들고 Incoming Webhooks를 활성화해 워크스페이스에 설치한 후 URL을 복사하세요.",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel을 사용하세요. 직접 만든 트리거는 Anyone으로 설정하고 URL을 비밀로 유지하세요.",
+        "google-chat": "Google Chat 스페이스의 앱 및 통합 → 웹훅 추가에서 웹훅을 만들고 전체 URL을 복사하세요."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {

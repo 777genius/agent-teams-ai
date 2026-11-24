@@ -366,6 +366,43 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "自動傳送已暫停：系統通知已關閉。開啟系統通知即可恢復；手動測試仍可使用。",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams 逐步設定指南",
+      "exampleFormat": "格式範例（非真實憑證）：",
+      "officialGuide": "服務供應商官方說明",
+      "providerSetup": {
+        "telegram": "透過 @BotFather（/newbot）建立機器人，開始與機器人聊天，然後填入權杖和 Chat ID 或 @頻道名稱。",
+        "discord": "在目標 Discord 頻道開啟「編輯頻道 → 整合 → Webhooks」，建立 Webhook 並複製完整網址。",
+        "slack": "建立 Slack 應用程式，啟用 Incoming Webhooks，安裝至工作區並複製產生的網址。",
+        "ms-teams": "使用 Teams Workflows → Send webhook alerts to a channel。自訂觸發程序請選擇 Anyone，並妥善保管網址。",
+        "google-chat": "在 Google Chat 聊天室選擇「應用程式與整合 → 新增 Webhooks」，建立後複製完整網址。"
+      }
+    },
     "recovery": {
       "title": "自動代理恢復",
       "transient": {

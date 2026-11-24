@@ -108,6 +108,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
     notifications: {
       enabled: false,
       soundEnabled: false,
+      desktopDisabledEvents: [],
       ignoredRegex: [],
       ignoredRepositories: [],
       snoozedUntil: null,
@@ -209,6 +210,7 @@ describe('NotificationsSection recovery settings', () => {
           ignoredRepositoryItems={[]}
           excludedRepositoryIds={[]}
           onNotificationToggle={vi.fn()}
+          onDesktopDestinationsChange={vi.fn()}
           onTeamRuntimeRecoveryUpdate={onTeamRuntimeRecoveryUpdate}
           onStatusChangeStatusesUpdate={vi.fn()}
           onSnooze={vi.fn()}

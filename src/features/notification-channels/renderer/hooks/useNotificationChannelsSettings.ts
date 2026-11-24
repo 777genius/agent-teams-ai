@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
@@ -14,7 +14,7 @@ const NEW_CHANNEL: SaveDeliveryChannelRequest = {
   name: '',
   provider: 'telegram',
   enabled: false,
-  events: ['user_inbox', 'task_clarification', 'task_review_requested', 'task_blocked'],
+  events: [],
   chatId: '',
   secret: '',
 };
@@ -43,6 +43,9 @@ export function useNotificationChannelsSettings() {
   const [busy, setBusy] = useState(false);
   const [deletePending, setDeletePending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Serialize rapid edits and toggles from this UI; the service rejects stale writes
+  // coming from another window or the local API.
+  const mutationQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (localSettingsUrl || remoteSettingsUnavailable) {
@@ -87,8 +90,17 @@ export function useNotificationChannelsSettings() {
   const save = (): void => {
     if (!draft) return;
     void run(async () => {
+      // Credentials may be edited while another window changes destinations.
+      // Preserve current subscriptions instead of overwriting with stale draft.events.
+      const current = draft.id
+        ? (await api.notificationChannels.list()).find((item) => item.id === draft.id)
+        : null;
+      if (draft.id && !current) throw new Error('Channel unavailable');
       await api.notificationChannels.save({
         ...draft,
+        ...(current
+          ? { events: current.events, expectedEvents: current.events, expectedEnabled: current.enabled }
+          : {}),
         secret: draft.secret?.trim() || undefined,
       });
       setDraft(null);
@@ -109,16 +121,20 @@ export function useNotificationChannelsSettings() {
   };
 
   const toggle = (channel: DeliveryChannelDto, enabled: boolean): void => {
-    void run(async () => {
+    mutationQueue.current = mutationQueue.current.then(() => run(async () => {
+      const current = (await api.notificationChannels.list()).find((item) => item.id === channel.id);
+      if (!current) throw new Error('Channel unavailable');
       await api.notificationChannels.save({
-        id: channel.id,
-        name: channel.name,
-        provider: channel.provider,
+        id: current.id,
+        name: current.name,
+        provider: current.provider,
         enabled,
-        events: channel.events,
-        chatId: channel.chatId,
+        events: current.events,
+        expectedEvents: current.events,
+        expectedEnabled: current.enabled,
+        chatId: current.chatId,
       });
-    });
+    }));
   };
 
   const remove = (id: string): void => {
@@ -150,13 +166,34 @@ export function useNotificationChannelsSettings() {
     setDraft((prev) => (prev ? { ...prev, ...changes } : prev));
   };
 
-  const toggleEvent = (event: DeliveryEvent, checked: boolean): void => {
-    if (!draft) return;
-    updateDraft({
-      events: checked
-        ? [...new Set([...draft.events, event])]
-        : draft.events.filter((item) => item !== event),
-    });
+  /** The row selector owns event subscriptions; credentials and provider stay unchanged. */
+  const route = (
+    channel: DeliveryChannelDto,
+    events: readonly DeliveryEvent[],
+    checked: boolean
+  ): void => {
+    if (!channel.enabled || !channel.hasCredential) return;
+    mutationQueue.current = mutationQueue.current.then(() => run(async () => {
+      // Read the current membership before writing. A previous save may have
+      // succeeded even if refreshing its UI snapshot failed afterward.
+      const fresh = (await api.notificationChannels.list()).find((item) => item.id === channel.id);
+      if (!fresh?.enabled || !fresh.hasCredential) {
+        throw new Error('Channel unavailable');
+      }
+      const updated = checked
+        ? [...new Set([...fresh.events, ...events])]
+        : fresh.events.filter((event) => !events.includes(event));
+      await api.notificationChannels.save({
+        id: fresh.id,
+        name: fresh.name,
+        provider: fresh.provider,
+        enabled: fresh.enabled,
+        events: updated,
+        expectedEvents: fresh.events,
+        expectedEnabled: fresh.enabled,
+        chatId: fresh.chatId,
+      });
+    }));
   };
 
   const start = (): void => setDraft(newChannel());
@@ -179,7 +216,7 @@ export function useNotificationChannelsSettings() {
     providerChanged,
     credentialMissing,
     updateDraft,
-    toggleEvent,
+    route,
     start,
     cancel,
   };

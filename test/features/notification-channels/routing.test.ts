@@ -27,6 +27,21 @@ describe('Notification Channels domain', () => {
     expect(isDeliveryEvent('tool_result')).toBe(false);
   });
 
+  it('rejects invalid or orphaned expected-event guards', () => {
+    expect(() => normalizeChannelInput({ ...base, expectedEvents: ['task_comment'] })).toThrow();
+    expect(() => normalizeChannelInput({
+      ...base, id: 'f97bfa8d-5f66-4cd1-a789-12bda1097e28', expectedEvents: ['invalid_event'],
+    })).toThrow();
+  });
+
+  it('requires a valid existing channel guard for an expected enabled state', () => {
+    expect(() => normalizeChannelInput({ ...base, expectedEnabled: false })).toThrow();
+    expect(() => normalizeChannelInput({
+      ...base, id: 'f97bfa8d-5f66-4cd1-a789-12bda1097e28',
+      expectedEnabled: 'false' as never,
+    })).toThrow();
+  });
+
   it('validates only official HTTPS destinations (SSRF protection)', () => {
     expect(() => validateProviderCredential('discord',
       'https://127.0.0.1/api/webhooks/123/secret')).toThrow();
@@ -55,6 +70,10 @@ describe('Notification Channels domain', () => {
     });
     expect(toOutboundNotification({ ...notification, isRead: true })).toBeNull();
     expect(toOutboundNotification({ ...notification, category: 'error' })).toBeNull();
-    expect(toOutboundNotification({ ...notification, teamEventType: 'lead_inbox' })).toBeNull();
+    expect(toOutboundNotification({ ...notification, teamEventType: 'lead_inbox' })).toEqual({
+      event: 'lead_inbox',
+      message: 'Agent Teams: Team lead inbox message.',
+    });
+    expect(toOutboundNotification({ ...notification, teamEventType: 'api_error' })).toBeNull();
   });
 });

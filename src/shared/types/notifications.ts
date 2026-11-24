@@ -294,6 +294,8 @@ export interface AppConfig {
     enabled: boolean;
     /** Whether to play sound with notifications */
     soundEnabled: boolean;
+    /** Event types whose native desktop toast is disabled; defaults to none. */
+    desktopDisabledEvents?: TeamEventType[];
     /** Regex patterns for errors to ignore */
     ignoredRegex: string[];
     /** Repository group IDs to ignore for notifications */

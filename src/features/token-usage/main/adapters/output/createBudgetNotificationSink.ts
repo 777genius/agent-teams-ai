@@ -35,6 +35,7 @@ export function createBudgetNotificationSink(manager: {
         dedupeKey: event.dedupeKey,
         target: { kind: 'token_usage', focus: 'budgets' },
         suppressToast: event.suppressToast,
+        permitExternalDeliveryWhenToastSuppressed: true,
       });
     },
   };

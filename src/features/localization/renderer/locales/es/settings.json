@@ -322,6 +322,43 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "La entrega automática está en pausa: las notificaciones del sistema están desactivadas. Actívalas para reanudarla. La prueba manual sigue disponible.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Guía paso a paso de Agent Teams",
+      "exampleFormat": "Ejemplo de formato (credenciales ficticias):",
+      "officialGuide": "Instrucciones oficiales del proveedor",
+      "providerSetup": {
+        "telegram": "Crea un bot con @BotFather (/newbot), inicia un chat y escribe el token y el ID del chat o @nombre_del_canal.",
+        "discord": "En el canal de Discord abre Editar canal → Integraciones → Webhooks, crea uno y copia la URL completa.",
+        "slack": "Crea una aplicación de Slack, activa Incoming Webhooks, instálala en tu espacio de trabajo y copia la URL.",
+        "ms-teams": "Usa Teams Workflows → Send webhook alerts to a channel. Para un desencadenador propio elige Anyone y mantén la URL en secreto.",
+        "google-chat": "En el espacio de Google Chat abre Apps e integraciones → Añadir webhooks, crea uno y copia la URL completa."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {

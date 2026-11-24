@@ -34,6 +34,18 @@ export function normalizeChannelInput(value: unknown): SaveDeliveryChannelReques
   ) {
     throw new Error('Invalid notification events');
   }
+  if (
+    input.expectedEvents !== undefined &&
+    (!input.id ||
+      !Array.isArray(input.expectedEvents) ||
+      input.expectedEvents.length > NOTIFICATION_DELIVERY_EVENTS.length ||
+      input.expectedEvents.some((event) => !isDeliveryEvent(event)))
+  ) {
+    throw new Error('Invalid expected notification events');
+  }
+  if (input.expectedEnabled !== undefined && (!input.id || typeof input.expectedEnabled !== 'boolean')) {
+    throw new Error('Invalid expected channel enabled state');
+  }
   const chatId = typeof input.chatId === 'string' ? input.chatId.trim() : '';
   if (provider === 'telegram' && !/^(-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,})$/.test(chatId)) {
     throw new Error('Telegram requires a valid chat ID or channel username');
@@ -53,6 +65,8 @@ export function normalizeChannelInput(value: unknown): SaveDeliveryChannelReques
     provider: provider as DeliveryProvider,
     enabled: input.enabled,
     events: [...new Set(input.events)],
+    expectedEvents: input.expectedEvents ? [...new Set(input.expectedEvents)] : undefined,
+    expectedEnabled: input.expectedEnabled,
     chatId: provider === 'telegram' ? chatId : undefined,
     secret: input.secret?.trim() || undefined,
   };

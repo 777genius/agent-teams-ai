@@ -130,6 +130,33 @@ async function run() {
     'ConfigManager must read the overridden CLAUDE_ROOT profile');
   assertions.push('Standalone ConfigManager resolves CLAUDE_ROOT after overrides');
 
+  // The browser's event-side Desktop selector uses the existing config HTTP API.
+  const desktopUpdate = await fetch(baseUrl + '/api/config/update', {
+    method: 'POST',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      section: 'notifications',
+      data: { desktopDisabledEvents: ['user_inbox'] },
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const desktopUpdateJson = await desktopUpdate.json();
+  assert.equal(desktopUpdate.status, 200);
+  assert.equal(desktopUpdateJson.success, true);
+  assert.deepEqual(desktopUpdateJson.data.notifications.desktopDisabledEvents, ['user_inbox']);
+  const invalidDesktop = await fetch(baseUrl + '/api/config/update', {
+    method: 'POST',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      section: 'notifications',
+      data: { desktopDisabledEvents: ['invalid_untrusted_event'] },
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal((await invalidDesktop.json()).success, false);
+  assertions.push('Standalone config HTTP persists Desktop routing and rejects unsupported events');
+
+
   const invalidOrigin = await request(baseUrl, 'POST', '', {}, 'https://evil.example');
   assert.equal(invalidOrigin.status, 403, 'Untrusted origins must not write settings');
   const readWithWrongOrigin = await request(baseUrl, 'GET', '', undefined, 'https://evil.example');
