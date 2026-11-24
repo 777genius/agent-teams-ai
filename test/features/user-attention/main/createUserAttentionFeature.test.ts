@@ -138,18 +138,22 @@ describe('User Attention read facade', () => {
           { ...message, messageId: 'distinct', text: text + ' other' },
           { ...message, messageId: 'another-delivery', relayOfMessageId: 'delivery-2',
             text: text + ' answer' },
+          { ...message, messageId: 'relay-of-original', relayOfMessageId: 'original',
+            text: 'Same visible original' },
+          { ...message, messageId: 'original', relayOfMessageId: undefined,
+            text: 'Same visible original' },
         ] }),
       } as never),
     });
     const snapshot = await facade.getUserAttentionSnapshot();
     expect(snapshot.teams[0].messages.map((item) => item.messageId)).toEqual([
-      'canonical', 'distinct', 'another-delivery',
+      'canonical', 'distinct', 'another-delivery', 'original',
     ]);
     const build = (direct: string[]) => buildAttentionModel(snapshot, () => ({
       direct: new Set(direct), group: new Set(),
     }), (item) => item.messageId ?? '');
-    expect(build([]).unreadMessageCount).toBe(3);
-    expect(build(['canonical', 'distinct', 'another-delivery']).unreadMessageCount).toBe(0);
+    expect(build([]).unreadMessageCount).toBe(4);
+    expect(build(['canonical', 'distinct', 'another-delivery', 'original']).unreadMessageCount).toBe(0);
   });
 
   it('fences a root switch during in-flight reads', async () => {
