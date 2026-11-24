@@ -242,7 +242,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         await assert.rejects(original, { code });
         assert.equal(prepared.prepare(config, owner), original, 'refusal cannot retry native preparation');
       }
-      const catalog = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+      // The pinned SDK awaits native model activation before reading the provider snapshot.
+      const catalog = ['GET /api/model', 'GET /api/provider', 'GET /api/model/default'];
       const selection = explicit ? catalog : [...catalog, ...catalog, 'GET /api/integration'];
       const keyRead = 'GET /api/integration/' + integrationId;
       assert.deepEqual(requests, [...selection,
@@ -395,8 +396,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         const result = await original; assert.ok(result);
         assert.equal(result.credentialId, 'cred_TEST'); assert.equal(result.scopeDigest, prepared.fileProof()?.scopeDigest);
       }
-      const selectionCalls = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default',
-        'GET /api/provider', 'GET /api/model', 'GET /api/model/default', 'GET /api/integration'];
+      const selectionCalls = ['GET /api/model', 'GET /api/provider', 'GET /api/model/default',
+        'GET /api/model', 'GET /api/provider', 'GET /api/model/default', 'GET /api/integration'];
       const keyRead = 'GET /api/integration/TEST-provider';
       assert.deepEqual(requests, [...selectionCalls, keyRead, 'POST /api/integration/TEST-provider/connect/key', ...(success ? [keyRead] : [])]);
       assert.equal(materializations, 1); assert.equal(connected, true); assert.deepEqual(failures, []);
@@ -568,7 +569,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
                 : mode === 'form' ? 'native_key_existing_or_unsupported' : 'held' });
           }
           const before = ['GET /api/info', 'GET /api/plugin', 'GET /api/permission/saved', 'GET /api/mcp',
-            'GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+            'GET /api/model', 'GET /api/provider', 'GET /api/model/default'];
           const directory = malformed ? before : [...before, 'GET /api/integration'];
           const keyRead = 'GET /api/integration/' + integrationId;
           assert.deepEqual(requests.slice(start), [...directory, ...(kind === 'key' && accepted
