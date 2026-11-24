@@ -1,3 +1,5 @@
+import { getRuntimeDeliveryRelayDuplicateKey } from '@shared/utils/runtimeDeliveryRelayIdentity';
+
 import { projectAttentionMessage, projectAttentionTasks } from '../domain/projectAttention';
 
 import type {
@@ -20,11 +22,18 @@ export class GetAttentionSnapshot implements UserAttentionApi {
     ]);
     const unique = new Map<string, NonNullable<ReturnType<typeof projectAttentionMessage>>>();
     if (messagesResult.status === 'fulfilled') {
+      // The feed uses the same newest-first order as Messenger. Keep its canonical
+      // relay identity before preview truncation so reading that ID clears Attention.
+      const seenRuntimeRelays = new Set<string>();
       for (const message of messagesResult.value) {
+        const relayKey = getRuntimeDeliveryRelayDuplicateKey(message);
+        if (relayKey && seenRuntimeRelays.has(relayKey)) continue;
         const candidate = projectAttentionMessage(message);
         if (!candidate) continue;
         const key = candidate.messageId ?? `${candidate.timestamp}:${candidate.from}`;
-        if (!unique.has(key)) unique.set(key, candidate);
+        if (unique.has(key)) continue;
+        unique.set(key, candidate);
+        if (relayKey) seenRuntimeRelays.add(relayKey);
       }
     }
     // Group names come from the existing group catalog, only when needed.
