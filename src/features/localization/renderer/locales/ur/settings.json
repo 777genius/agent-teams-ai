@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "خودکار ترسیل موقوف ہے: سسٹم اطلاعات بند ہیں۔ ترسیل بحال کرنے کے لیے انہیں فعال کریں۔ دستی ٹیسٹ دستیاب ہے۔",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams کی مرحلہ وار رہنمائی",
+      "exampleFormat": "فارمیٹ کی مثال (حقیقی اسناد نہیں):",
+      "officialGuide": "فراہم کنندہ کی سرکاری ہدایات",
+      "providerSetup": {
+        "telegram": "@BotFather میں /newbot سے بوٹ بنائیں، گفتگو شروع کریں، پھر ٹوکن اور Chat ID یا @چینل_نام درج کریں۔",
+        "discord": "مطلوبہ Discord چینل میں Edit Channel → Integrations → Webhooks کھولیں، ویب ہک بنائیں اور مکمل URL کاپی کریں۔",
+        "slack": "Slack ایپ بنائیں، Incoming Webhooks فعال کریں، ورک اسپیس میں انسٹال کریں اور URL کاپی کریں۔",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel استعمال کریں۔ اپنی ٹرگر ترتیب میں Anyone منتخب کریں اور URL خفیہ رکھیں۔",
+        "google-chat": "Google Chat اسپیس میں Apps & integrations → Add webhooks سے ویب ہک بنائیں اور مکمل URL کاپی کریں۔"
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

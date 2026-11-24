@@ -76,6 +76,21 @@ describe('Notification Channels application', () => {
     expect(sent).toHaveBeenCalledOnce();
   });
 
+  it('rejects competing edits with stale subscriptions instead of dropping the first edit', async () => {
+    const id = await add(true);
+    const first = service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: true,
+      events: ['user_inbox', 'task_comment'], expectedEvents: ['user_inbox'], chatId: '123456',
+    });
+    const stale = service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: true,
+      events: ['user_inbox', 'task_created'], expectedEvents: ['user_inbox'], chatId: '123456',
+    });
+    await expect(first).resolves.toMatchObject({ events: ['user_inbox', 'task_comment'] });
+    await expect(stale).rejects.toThrow('Channel subscriptions changed');
+    expect((await service.list())[0].events).toEqual(['user_inbox', 'task_comment']);
+  });
+
   it('does not send unless explicitly enabled and selected', async () => {
     const id = await add();
     await service.dispatch(event);

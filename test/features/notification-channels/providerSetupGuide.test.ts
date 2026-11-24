@@ -12,10 +12,7 @@ describe('Notification provider onboarding', () => {
     expect(Object.keys(PROVIDER_SETUP_GUIDES).sort()).toEqual([...names].sort());
     for (const id of names) {
       const guide = PROVIDER_SETUP_GUIDES[id];
-      expect(guide.instruction.length).toBeGreaterThan(25);
-      expect(guide.instructionRu.length).toBeGreaterThan(25);
       expect(guide.example.length).toBeGreaterThan(20);
-      expect(guide.officialLabel.length).toBeGreaterThan(10);
       expect(new URL(guide.officialUrl).protocol).toBe('https:');
       expect(guide.example).not.toContain('123456789:abcdefghijklmnopqrstuvwxyz_0123456789');
     }

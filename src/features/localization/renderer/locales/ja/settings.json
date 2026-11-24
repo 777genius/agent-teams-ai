@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "自動配信を一時停止しています。システム通知が無効です。有効にすると再開できます。手動テストは引き続き使用できます。",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams の設定手順",
+      "exampleFormat": "形式の例（実際の認証情報ではありません）：",
+      "officialGuide": "プロバイダーの公式手順",
+      "providerSetup": {
+        "telegram": "@BotFather の /newbot でボットを作成し、チャットを開始してトークンと Chat ID または @チャンネル名を入力します。",
+        "discord": "Discord の対象チャンネルで「チャンネルを編集 → 連携サービス → Webhooks」を開き、Webhook を作成して完全な URL をコピーします。",
+        "slack": "Slack アプリを作成して Incoming Webhooks を有効にし、ワークスペースにインストールして URL をコピーします。",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel を使用します。独自のトリガーでは Anyone を選択し、URL を秘密にしてください。",
+        "google-chat": "Google Chat のスペースで「アプリと統合 → Webhook を追加」を選び、作成して完全な URL をコピーします。"
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

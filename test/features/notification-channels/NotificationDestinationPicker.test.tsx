@@ -39,7 +39,8 @@ const partialChannel: DeliveryChannelDto = {
 
 async function renderPicker(
   channels: readonly DeliveryChannelDto[],
-  allowDesktopOffWithoutExternal: boolean
+  allowDesktopOffWithoutExternal: boolean,
+  desktopEnabled: boolean | 'indeterminate' = true
 ) {
   const onDesktopChange = vi.fn();
   await act(async () =>
@@ -48,7 +49,7 @@ async function renderPicker(
         label="Usage budget"
         events={['usage_budget_warning', 'usage_budget_exceeded']}
         channels={channels}
-        desktopEnabled={true}
+        desktopEnabled={desktopEnabled}
         allowDesktopOffWithoutExternal={allowDesktopOffWithoutExternal}
         busy={false}
         onDesktopChange={onDesktopChange}
@@ -74,6 +75,13 @@ describe('Notification destination coverage', () => {
   it('does not treat one destination as coverage for two separate event types', async () => {
     const { checkbox } = await renderPicker([partialChannel], false);
     expect(checkbox.disabled).toBe(true);
+  });
+
+  it('allows restoring Desktop from a partially disabled grouped row', async () => {
+    const { checkbox, onDesktopChange } = await renderPicker([partialChannel], false, 'indeterminate');
+    expect(checkbox.disabled).toBe(false);
+    await act(async () => checkbox.click());
+    expect(onDesktopChange).toHaveBeenCalledWith(true);
   });
 
   it('blocks edits when the parent config is saving even if the popover is already open', async () => {

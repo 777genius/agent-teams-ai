@@ -41,7 +41,7 @@ description: Как подключить внешние уведомления A
 
 **Используйте Workflows.** Microsoft прекратила поддержку старых Office 365 Incoming Webhooks в мае 2026 года. [Официальная инструкция Microsoft](https://learn.microsoft.com/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook).
 
-В Teams откройте меню канала **… → Workflows**, выберите **Send webhook alerts to a channel** либо триггер **When a Teams webhook request is received**. Сохраните workflow и скопируйте выданную URL-ссылку. Вставьте её в Agent Teams → **Microsoft Teams → Official webhook URL**, сохраните и протестируйте. Thinwrap формирует Adaptive Card автоматически.
+В Teams откройте меню канала **… → Workflows**, выберите **Send webhook alerts to a channel** либо триггер **When a Teams webhook request is received**. При создании своего триггера установите **Who can trigger the flow? → Anyone**: Agent Teams не передаёт OAuth-токен, поэтому режимы с ограничением по организации не работают. Сохраните workflow и скопируйте выданную URL-ссылку. **Храните её в секрете** — ссылка даёт право отправлять сообщения. Вставьте её в Agent Teams → **Microsoft Teams → Official webhook URL**, сохраните и протестируйте. Thinwrap формирует Adaptive Card автоматически.
 
 Пример формы: `https://prod-00.<region>.logic.azure.com/workflows/<id>/triggers/manual/paths/invoke?...&sig=<secret>`. Используйте полный URL, который сгенерировал Teams.
 

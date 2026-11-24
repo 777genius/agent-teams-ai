@@ -44,7 +44,7 @@ Expected shape: `https://hooks.slack.com/services/<workspace>/<channel>/<secret>
 Microsoft retired the legacy Office 365 connector-based Incoming Webhooks in May 2026. **Use Teams Workflows**, not an old connector URL. [Official Microsoft guide](https://learn.microsoft.com/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook).
 
 1. In Teams, open the channel's **… → Workflows** and choose **Send webhook alerts to a channel**, or create a workflow triggered by **When a Teams webhook request is received**.
-2. Configure the destination and save. Copy the **workflow trigger URL** (not a link to a Teams channel).
+2. For a custom trigger, set **Who can trigger the flow? → Anyone**. Agent Teams sends no OAuth token; tenant-only modes reject its requests. Configure the destination, save, and copy the **workflow trigger URL** (not a Teams channel link). Treat this URL as a secret.
 3. Select **Microsoft Teams** in Agent Teams, paste that URL, save and **Test**. The Thinwrap connector creates the required Adaptive Card envelope automatically.
 
 Typical shape: `https://prod-00.<region>.logic.azure.com/workflows/<id>/triggers/manual/paths/invoke?...&sig=<secret>`. The actual hostname and query vary; copy the exact generated URL.

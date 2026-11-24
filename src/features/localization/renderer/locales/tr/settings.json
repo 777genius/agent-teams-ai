@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "Otomatik gönderim duraklatıldı: sistem bildirimleri kapalı. Devam etmek için etkinleştirin. Manuel test kullanılabilir.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams adım adım kurulum rehberi",
+      "exampleFormat": "Biçim örneği (gerçek kimlik bilgileri değil):",
+      "officialGuide": "Sağlayıcının resmi yönergeleri",
+      "providerSetup": {
+        "telegram": "@BotFather üzerinden /newbot ile bot oluşturun, sohbeti başlatın, ardından token ve Chat ID veya @kanal_adı girin.",
+        "discord": "Discord kanalında Kanalı Düzenle → Entegrasyonlar → Webhooks bölümünden webhook oluşturup tam URL'yi kopyalayın.",
+        "slack": "Slack uygulaması oluşturun, Incoming Webhooks'u etkinleştirip çalışma alanına yükleyin ve URL'yi kopyalayın.",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel kullanın. Özel tetikleyicide Anyone seçin; URL'yi gizli tutun.",
+        "google-chat": "Google Chat alanında Uygulamalar ve entegrasyonlar → Webhook ekle bölümünden webhook oluşturup tam URL'yi kopyalayın."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
@@ -43,6 +43,9 @@ export function useNotificationChannelsSettings() {
   const [busy, setBusy] = useState(false);
   const [deletePending, setDeletePending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Serialize rapid edits from this UI; the service also rejects stale writes
+  // coming from another window or the local API.
+  const routeQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (localSettingsUrl || remoteSettingsUnavailable) {
@@ -157,7 +160,7 @@ export function useNotificationChannelsSettings() {
     checked: boolean
   ): void => {
     if (!channel.enabled || !channel.hasCredential) return;
-    void run(async () => {
+    routeQueue.current = routeQueue.current.then(() => run(async () => {
       // Read the current membership before writing. A previous save may have
       // succeeded even if refreshing its UI snapshot failed afterward.
       const fresh = (await api.notificationChannels.list()).find((item) => item.id === channel.id);
@@ -173,9 +176,10 @@ export function useNotificationChannelsSettings() {
         provider: fresh.provider,
         enabled: fresh.enabled,
         events: updated,
+        expectedEvents: fresh.events,
         chatId: fresh.chatId,
       });
-    });
+    }));
   };
 
   const start = (): void => setDraft(newChannel());

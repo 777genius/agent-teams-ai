@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "หยุดส่งอัตโนมัติชั่วคราว: ปิดการแจ้งเตือนของระบบอยู่ เปิดการแจ้งเตือนเพื่อกลับมาส่งต่อได้ การทดสอบด้วยตนเองยังใช้ได้",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "คู่มือตั้งค่า Agent Teams ทีละขั้นตอน",
+      "exampleFormat": "ตัวอย่างรูปแบบ (ไม่ใช่ข้อมูลรับรองจริง):",
+      "officialGuide": "คำแนะนำอย่างเป็นทางการของผู้ให้บริการ",
+      "providerSetup": {
+        "telegram": "สร้างบอตด้วย @BotFather (/newbot) เริ่มแชต แล้วกรอกโทเคนและ Chat ID หรือ @ชื่อช่อง",
+        "discord": "ในช่อง Discord ปลายทาง เปิด Edit Channel → Integrations → Webhooks สร้างเว็บฮุกและคัดลอก URL ทั้งหมด",
+        "slack": "สร้างแอป Slack เปิด Incoming Webhooks ติดตั้งในเวิร์กสเปซ แล้วคัดลอก URL",
+        "ms-teams": "ใช้ Teams Workflows → Send webhook alerts to a channel สำหรับทริกเกอร์ที่สร้างเองให้เลือก Anyone และเก็บ URL เป็นความลับ",
+        "google-chat": "ในพื้นที่ Google Chat เลือก Apps & integrations → Add webhooks สร้างเว็บฮุกแล้วคัดลอก URL ทั้งหมด"
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

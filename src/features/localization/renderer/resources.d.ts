@@ -2993,7 +2993,9 @@ export default interface Resources {
     "notifications": {
       "delivery": {
         "additionalEvents": "Additional delivery events",
+        "agentGuide": "Agent Teams step-by-step guide",
         "desktopOnly": "Desktop only",
+        "exampleFormat": "Example format (not a real credential):",
         "eventLabels": {
           "all_tasks_completed": "All tasks completed",
           "cross_team_message": "Cross-team message",
@@ -3013,9 +3015,17 @@ export default interface Resources {
           "usage_budget_warning": "Usage budget warning",
           "user_inbox": "Message for you"
         },
-        "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+        "officialGuide": "Official provider instructions",
+        "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Enable system notifications to resume. Manual Test still works.",
         "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
         "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+        "providerSetup": {
+          "discord": "In the target Discord channel choose Edit Channel → Integrations → Webhooks, create a webhook and copy its complete URL.",
+          "google-chat": "In the Google Chat space choose Apps & integrations → Add webhooks, create a webhook and copy the complete URL.",
+          "ms-teams": "Use Teams Workflows → Send webhook alerts to a channel. For a custom trigger choose Anyone; keep the URL secret.",
+          "slack": "Create a Slack app, enable Incoming Webhooks, install it to the workspace, then copy the generated URL.",
+          "telegram": "Create a bot with @BotFather (/newbot), start a chat with it, then enter the token and Chat ID or @channelname."
+        },
         "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default."
       },
       "dev": {

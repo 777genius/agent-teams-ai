@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "تم إيقاف التسليم التلقائي مؤقتًا لأن إشعارات النظام معطّلة. فعّل إشعارات النظام لاستئناف التسليم. يظل الاختبار اليدوي متاحًا.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "دليل إعداد Agent Teams خطوة بخطوة",
+      "exampleFormat": "مثال على التنسيق (ليس بيانات اعتماد حقيقية):",
+      "officialGuide": "التعليمات الرسمية لمزوّد الخدمة",
+      "providerSetup": {
+        "telegram": "أنشئ روبوتًا عبر @BotFather باستخدام /newbot، وابدأ محادثة معه، ثم أدخل الرمز وChat ID أو @اسم_القناة.",
+        "discord": "في قناة Discord المطلوبة افتح تعديل القناة ← التكاملات ← Webhooks، وأنشئ ويب هوك وانسخ الرابط الكامل.",
+        "slack": "أنشئ تطبيق Slack، وفعّل Incoming Webhooks، وثبّته في مساحة العمل ثم انسخ الرابط.",
+        "ms-teams": "استخدم Teams Workflows → Send webhook alerts to a channel. للمشغّل المخصص اختر Anyone واحتفظ بالرابط سرّيًا.",
+        "google-chat": "في مساحة Google Chat افتح التطبيقات وعمليات التكامل ← إضافة Webhooks، ثم أنشئ ويب هوك وانسخ الرابط الكامل."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

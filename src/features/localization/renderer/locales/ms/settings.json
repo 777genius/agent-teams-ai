@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "Penghantaran automatik dijeda: pemberitahuan sistem dimatikan. Hidupkannya untuk menyambung. Ujian manual masih tersedia.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Panduan langkah demi langkah Agent Teams",
+      "exampleFormat": "Contoh format (bukan kelayakan sebenar):",
+      "officialGuide": "Arahan rasmi penyedia",
+      "providerSetup": {
+        "telegram": "Cipta bot melalui @BotFather (/newbot), mulakan sembang, kemudian masukkan token dan Chat ID atau @namasaluran.",
+        "discord": "Dalam saluran Discord sasaran, buka Edit Channel → Integrations → Webhooks, cipta webhook dan salin URL penuh.",
+        "slack": "Cipta aplikasi Slack, dayakan Incoming Webhooks, pasang ke ruang kerja dan salin URL.",
+        "ms-teams": "Gunakan Teams Workflows → Send webhook alerts to a channel. Untuk pencetus tersuai, pilih Anyone dan rahsiakan URL.",
+        "google-chat": "Dalam ruang Google Chat, pilih Apps & integrations → Add webhooks, cipta webhook dan salin URL penuh."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

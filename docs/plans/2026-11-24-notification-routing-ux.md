@@ -37,3 +37,12 @@ Settings → Notifications: manage named providers in one block. Next to the exi
 ## Estimate
 
 ~700–1100 LOC changed, ~12–17 files. Complexity 7/10, target reliability 8/10, confidence 8/10 pending real E2E. No new packages, no background service, no arbitrary webhooks or provider-specific redesign.
+
+## Review 3 — concurrency and partial selection (2026-11-24)
+
+- **Risk:** Two rapid edits or concurrent windows can replace the same `channel.events` membership with stale data. **Decision:** Serialize route edits within the renderer and add optional `expectedEvents` compare-and-swap validation inside the existing service mutation lock. A stale request fails safely instead of silently losing another subscription; full-form saves retain their established replacement semantics. No new endpoint or package.
+- **Risk:** An indeterminate Desktop checkbox becomes impossible to restore if only one of several events has an external destination. **Decision:** Require complete external coverage only when disabling a fully enabled Desktop route.
+- **Onboarding:** Localize provider-specific instructions and links through settings catalogs, guide Microsoft Teams Workflows users to its **Anyone** mode for unauthenticated external posts, and remove directional guidance that points to the wrong switch.
+- **Acceptance additions:** concurrent route-save regression, invalid guard validation, partial Desktop restore, EN/RU documentation, and localized catalog parity for all 30 supported locales. Existing real Electron E2E remains required, along with actual workflow PASS and independent review. Do not count queued, cancelled or skipped as PASS.
+
+Actual scope is broader than the initial estimate because of localization catalogs and generated typing; keep provider transports and credential security logic unchanged. No arbitrary webhook until a separately reviewed SSRF/DNS-rebinding design is approved.

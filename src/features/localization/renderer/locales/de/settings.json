@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "Automatische Zustellung pausiert: Systembenachrichtigungen sind deaktiviert. Aktiviere sie, um fortzufahren. Manuelle Tests funktionieren weiterhin.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Schritt-für-Schritt-Anleitung für Agent Teams",
+      "exampleFormat": "Beispielformat (keine echten Zugangsdaten):",
+      "officialGuide": "Offizielle Anleitung des Anbieters",
+      "providerSetup": {
+        "telegram": "Erstelle mit @BotFather (/newbot) einen Bot, starte einen Chat und gib Token sowie Chat-ID oder @Kanalname ein.",
+        "discord": "Öffne im Discord-Kanal Kanal bearbeiten → Integrationen → Webhooks, erstelle einen Webhook und kopiere die vollständige URL.",
+        "slack": "Erstelle eine Slack-App, aktiviere Incoming Webhooks, installiere sie im Workspace und kopiere die URL.",
+        "ms-teams": "Verwende Teams Workflows → Send webhook alerts to a channel. Wähle bei einem eigenen Trigger Anyone und halte die URL geheim.",
+        "google-chat": "Öffne in Google Chat Apps & integrations → Add webhooks, erstelle einen Webhook und kopiere die vollständige URL."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

@@ -360,9 +360,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "Livrarea automată este întreruptă: notificările de sistem sunt dezactivate. Activează-le pentru reluare. Testul manual rămâne disponibil.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Ghid pas cu pas Agent Teams",
+      "exampleFormat": "Exemplu de format (date de autentificare fictive):",
+      "officialGuide": "Instrucțiuni oficiale ale furnizorului",
+      "providerSetup": {
+        "telegram": "Creează un bot cu @BotFather (/newbot), începe o conversație, apoi introdu tokenul și ID-ul chatului sau @numele_canalului.",
+        "discord": "În canalul Discord deschide Edit Channel → Integrations → Webhooks, creează un webhook și copiază URL-ul complet.",
+        "slack": "Creează o aplicație Slack, activează Incoming Webhooks, instaleaz-o în spațiul de lucru și copiază URL-ul.",
+        "ms-teams": "Folosește Teams Workflows → Send webhook alerts to a channel. Pentru un trigger propriu alege Anyone și păstrează URL-ul secret.",
+        "google-chat": "În spațiul Google Chat deschide Apps & integrations → Add webhooks, creează un webhook și copiază URL-ul complet."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

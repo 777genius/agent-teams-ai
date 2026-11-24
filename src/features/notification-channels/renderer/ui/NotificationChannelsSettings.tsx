@@ -259,23 +259,23 @@ export function NotificationChannelsSettings({
             </p>
             {providerGuide && (
               <div className="mt-2 space-y-2 rounded-md border p-3 text-xs" style={{ borderColor: 'var(--color-border-subtle)' }}>
-                <p>{isRussian ? providerGuide.instructionRu : providerGuide.instruction}</p>
+                <p>{t(`notifications.delivery.providerSetup.${draft.provider}`)}</p>
                 <p className="text-[var(--color-text-muted)]">
-                  {isRussian ? 'Пример формата (нерабочие данные):' : 'Example format (not a real credential):'}
+                  {t('notifications.delivery.exampleFormat')}
                 </p>
                 <code className="block break-all rounded bg-[var(--color-surface)] p-2 text-[11px]">
                   {providerGuide.example}
                 </code>
                 <div className="flex flex-wrap items-center gap-4">
                   <a href={providerGuide.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
-                    {providerGuide.officialLabel} <ExternalLink className="size-3" />
+                    {t('notifications.delivery.officialGuide')} <ExternalLink className="size-3" />
                   </a>
                   <a href={(isRussian
                       ? CHANNEL_SETUP_DOCS_URL.replace('/guide/', '/ru/guide/')
                       : CHANNEL_SETUP_DOCS_URL) +
                       '#' +
                       (draft.provider === 'ms-teams' ? 'microsoft-teams-workflows' : draft.provider)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
-                    {isRussian ? 'Пошаговая инструкция Agent Teams' : 'Step-by-step setup guide'} <ExternalLink className="size-3" />
+                    {t('notifications.delivery.agentGuide')} <ExternalLink className="size-3" />
                   </a>
                 </div>
               </div>

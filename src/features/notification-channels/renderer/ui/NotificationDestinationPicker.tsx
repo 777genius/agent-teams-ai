@@ -80,7 +80,7 @@ export function NotificationDestinationPicker({
             checked={desktopEnabled}
             disabled={
               disabledControl ||
-              (!allowDesktopOffWithoutExternal && !canDisableDesktop && desktopEnabled !== false)
+              (!allowDesktopOffWithoutExternal && !canDisableDesktop && desktopEnabled === true)
             }
             onCheckedChange={(value) => onDesktopChange(value === true)}
           />

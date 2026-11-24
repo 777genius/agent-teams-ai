@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "Naka-pause ang awtomatikong pagpapadala: naka-off ang mga system notification. I-on ito para magpatuloy. Gumagana pa rin ang manual Test.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Hakbang-hakbang na gabay ng Agent Teams",
+      "exampleFormat": "Halimbawang format (hindi totoong credential):",
+      "officialGuide": "Opisyal na tagubilin ng provider",
+      "providerSetup": {
+        "telegram": "Gumawa ng bot gamit ang @BotFather (/newbot), magsimula ng chat at ilagay ang token at Chat ID o @pangalan_ng_channel.",
+        "discord": "Sa target na Discord channel, buksan ang Edit Channel → Integrations → Webhooks, gumawa ng webhook at kopyahin ang buong URL.",
+        "slack": "Gumawa ng Slack app, i-enable ang Incoming Webhooks, i-install ito sa workspace at kopyahin ang URL.",
+        "ms-teams": "Gamitin ang Teams Workflows → Send webhook alerts to a channel. Para sa custom trigger, piliin ang Anyone at panatilihing lihim ang URL.",
+        "google-chat": "Sa Google Chat space, piliin ang Apps & integrations → Add webhooks, gumawa ng webhook at kopyahin ang buong URL."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

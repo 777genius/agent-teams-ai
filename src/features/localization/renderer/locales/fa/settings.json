@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "ارسال خودکار متوقف شده است: اعلان‌های سیستم خاموش‌اند. برای ادامه آن‌ها را فعال کنید. آزمایش دستی همچنان در دسترس است.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "راهنمای گام‌به‌گام Agent Teams",
+      "exampleFormat": "نمونهٔ قالب (اطلاعات محرمانهٔ واقعی نیست):",
+      "officialGuide": "دستورالعمل رسمی ارائه‌دهنده",
+      "providerSetup": {
+        "telegram": "با @BotFather و دستور /newbot ربات بسازید، گفت‌وگو را شروع کنید و توکن و Chat ID یا @نام_کانال را وارد کنید.",
+        "discord": "در کانال Discord مقصد، Edit Channel → Integrations → Webhooks را باز کنید، وب‌هوک بسازید و URL کامل را کپی کنید.",
+        "slack": "یک برنامهٔ Slack بسازید، Incoming Webhooks را فعال و در فضای کاری نصب کنید، سپس URL را کپی کنید.",
+        "ms-teams": "از Teams Workflows → Send webhook alerts to a channel استفاده کنید. برای تریگر سفارشی Anyone را انتخاب کنید و URL را محرمانه نگه دارید.",
+        "google-chat": "در فضای Google Chat از Apps & integrations → Add webhooks وب‌هوک بسازید و URL کامل را کپی کنید."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

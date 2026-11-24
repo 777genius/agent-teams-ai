@@ -345,9 +345,19 @@
       "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
       "desktopOnly": "Desktop only",
       "additionalEvents": "Additional delivery events",
-      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+      "pausedDisabled": "Invio automatico in pausa: le notifiche di sistema sono disattivate. Attivale per riprendere. Il test manuale è ancora disponibile.",
       "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
-      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works."
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Guida passo passo di Agent Teams",
+      "exampleFormat": "Esempio di formato (credenziali non reali):",
+      "officialGuide": "Istruzioni ufficiali del provider",
+      "providerSetup": {
+        "telegram": "Crea un bot con @BotFather (/newbot), avvia una chat e inserisci token e ID chat o @nome_canale.",
+        "discord": "Nel canale Discord apri Modifica canale → Integrazioni → Webhook, creane uno e copia l’URL completo.",
+        "slack": "Crea un’app Slack, abilita Incoming Webhooks, installala nell’area di lavoro e copia l’URL.",
+        "ms-teams": "Usa Teams Workflows → Send webhook alerts to a channel. Per un trigger personalizzato scegli Anyone e mantieni segreto l’URL.",
+        "google-chat": "Nello spazio Google Chat apri App e integrazioni → Aggiungi webhook, creane uno e copia l’URL completo."
+      }
     },
     "recovery": {
       "title": "Automatic agent recovery",

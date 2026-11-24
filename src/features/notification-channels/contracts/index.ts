@@ -96,6 +96,8 @@ export interface SaveDeliveryChannelRequest {
   provider: DeliveryProvider;
   enabled: boolean;
   events: DeliveryEvent[];
+  /** Route-edit guard: prevents concurrent saves from silently losing subscriptions. */
+  expectedEvents?: DeliveryEvent[];
   /** New credential. Omit on edits to retain the existing secret. Never returned to clients. */
   secret?: string;
   chatId?: string;
