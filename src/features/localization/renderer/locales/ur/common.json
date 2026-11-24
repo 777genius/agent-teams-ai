@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "آپ کی توجہ درکار ہے",
+    "tab": "توجہ",
+    "viewAll": "سب دکھائیں",
+    "refresh": "حالت تازہ کریں",
+    "loading": "لوڈ ہو رہا ہے…",
+    "loadFailed": "حالت لوڈ نہیں ہو سکی",
+    "retry": "دوبارہ کوشش کریں",
+    "partial": "کچھ ٹیمیں لوڈ نہیں ہو سکیں۔ تعداد نامکمل ہو سکتی ہے۔",
+    "nothing": "فی الحال کوئی چیز آپ کی توجہ کی محتاج نہیں۔",
+    "tasks": "آپ کے فیصلے کی منتظر",
+    "chats": "غیر پڑھی چیٹس",
+    "openTask": "کام کھولیں: {{subject}} — {{team}}",
+    "timeUnknown": "وقت نامعلوم",
+    "teamAttention": "توجہ"
   }
 }

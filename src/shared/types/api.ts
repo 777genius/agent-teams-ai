@@ -7,6 +7,7 @@
  * Shared between preload and renderer processes.
  */
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
+import type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
@@ -153,6 +154,7 @@ import type {
 } from '@features/team-read-recovery/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
+import type { UserAttentionApi } from '@features/user-attention/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
 import type {
   ConversationGroup,
@@ -168,6 +170,7 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
+export type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -292,33 +295,6 @@ export interface ConfigAPI {
   addCustomProjectPath: (projectPath: string) => Promise<void>;
   /** Remove a custom project path */
   removeCustomProjectPath: (projectPath: string) => Promise<void>;
-}
-
-export interface ClaudeRootInfo {
-  /** Auto-detected default Claude root path for this machine */
-  defaultPath: string;
-  /** Effective path currently used by local context */
-  resolvedPath: string;
-  /** Custom override path from settings (null means auto-detect) */
-  customPath: string | null;
-}
-
-export interface ClaudeRootFolderSelection {
-  /** Selected directory absolute path */
-  path: string;
-  /** Whether the selected folder name is exactly ".claude" */
-  isClaudeDirName: boolean;
-  /** Whether selected folder contains a "projects" directory */
-  hasProjectsDir: boolean;
-}
-
-export interface WslClaudeRootCandidate {
-  /** WSL distribution name (e.g. Ubuntu) */
-  distro: string;
-  /** Candidate Claude root path in UNC format */
-  path: string;
-  /** True if this root contains "projects" directory */
-  hasProjectsDir: boolean;
 }
 
 // =============================================================================
@@ -852,6 +828,7 @@ export interface ReviewAPI {
 export interface ElectronAPI
   extends
     RecentProjectsElectronApi,
+    UserAttentionApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     ProjectFolderElectronApi {

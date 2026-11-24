@@ -91,6 +91,7 @@ export interface Tab {
     | 'session'
     | 'dashboard'
     | 'notifications'
+    | 'attention'
     | 'settings'
     | 'teams'
     | 'organizations'

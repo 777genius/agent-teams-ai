@@ -402,6 +402,68 @@ async function verifyNative(f: Fixture) {
   }
 }
 
+/** Attention must target the owned execution history, not just the logical tab.
+ * Both fixtures have an Alice, so a participant-only assertion is insufficient.
+ */
+async function verifyAttentionProjectNavigation(f: Fixture) {
+  assert(cdp);
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => { const s = window.__agentTeamsDevStore.getState();' +
+    's.setMessagesPanelMode("sidebar"); s.openDashboard(); })()');
+
+  const targets = [
+    { alias: f.nativeB, other: f.nativeA, project: f.projectB, projectId: 'project-b', marker: 'PROJECT_B_CHAT_ONLY' },
+    { alias: f.nativeA, other: f.nativeB, project: f.projectA, projectId: 'project-a', marker: 'PROJECT_A_CHAT_ONLY' },
+  ];
+  await waitFor('(async () => { const snapshot = await window.electronAPI.getUserAttentionSnapshot();' +
+    'return ' + JSON.stringify(targets) + '.every(target => snapshot.teams.some(team =>' +
+    'team.teamName === target.alias && team.logicalTeamName === ' + JSON.stringify(f.logical) +
+    ' && team.projectPath === target.project && team.messages.some(message => message.text === target.marker))); })()',
+    'Attention snapshot preserves both verified execution histories');
+
+  const visiblePanel = 'Array.from(document.querySelectorAll("[data-testid=user-attention-inbox]"))' +
+    '.find(panel => panel.getClientRects().length > 0 && getComputedStyle(panel).visibility !== "hidden")';
+  const rowFor = (marker: string) =>
+    'Array.from(panel.querySelectorAll("button")).find(row => row.textContent.includes(' +
+    JSON.stringify(marker) + '))';
+  await waitFor('(() => { const panel = ' + visiblePanel + '; return !!panel && !!' +
+    rowFor(targets[0].marker) + ' && !!' + rowFor(targets[1].marker) + '; })()',
+    'both project-specific Attention conversations');
+
+  for (const target of targets) {
+    await waitFor('(() => { const panel = ' + visiblePanel + '; if (!panel) return false;' +
+      'const row = ' + rowFor(target.marker) + '; if (!row) return false; row.click(); return true; })()',
+      'open Attention conversation in ' + target.projectId);
+    await waitFor('(() => { const s = window.__agentTeamsDevStore.getState();' +
+      'const tab = s.getAllPaneTabs().find(t => t.id === s.activeTabId);' +
+      'return tab?.type === "team" && tab.teamName === ' + JSON.stringify(f.logical) +
+      ' && s.selectedProjectId === ' + JSON.stringify(target.projectId) + '; })()',
+      'Attention selects the logical tab and exact project');
+    await waitFor(hasVisibleTeam(target.alias), 'Attention selects the owned execution team');
+    assert.equal(await cdp.evaluate(hasVisibleTeam(target.other)), false,
+      'Attention opened the other project history');
+    const readSidebarState = '(async () => { const ui = await import("/components/team/sidebar/teamSidebarUiState.ts");' +
+      'const s = window.__agentTeamsDevStore.getState();' +
+      'const chat = ui.getTeamMessagesSidebarUiState(JSON.stringify([s.activeContextId, ' +
+      JSON.stringify(target.alias) + ']));' +
+      'return { conversationSurface: chat.conversationSurface, conversationScope: chat.conversationScope,' +
+      ' messagesCollapsed: chat.messagesCollapsed, messagesSearchQuery: chat.messagesSearchQuery }; })()';
+    try {
+      await waitFor('(async () => { const chat = await (' + readSidebarState + ');' +
+        'return chat.conversationSurface === "thread" && chat.conversationScope.kind === "direct"' +
+        ' && chat.conversationScope.participant === "alice" && !chat.messagesCollapsed; })()',
+        'Attention opens the exact Messenger thread on the physical alias');
+    } catch (error) {
+      const actual = await cdp.evaluate(readSidebarState);
+      throw new Error(String(error) + '; sidebar=' + JSON.stringify(actual) + '; project=' + target.projectId);
+    }
+    await waitFor('document.body.innerText.includes(' + JSON.stringify(target.marker) + ')',
+      'visible native message in the selected project');
+    await cdp.screenshot(path.join(f.screenshots, 'attention-' + target.projectId + '.png'));
+    await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
+  }
+}
+
 async function verifyUi(f: Fixture) {
   assert(cdp);
   await selectProject(f, 'project-a');
@@ -1841,11 +1903,10 @@ async function run() {
   let success = false;
   try {
     await start(f);
-    // On Windows the same real Electron renderer startup can exceed 60 s:
-    // the separate creation-page E2E reaches its first interaction after
-    // ~75 s on GitHub-hosted Windows. Do not misclassify a slow startup as
-    // a project-history regression. Keep one bounded, observed readiness gate.
-    const rendererStartupBudgetMs = process.platform === 'win32' ? 180_000 : 60_000;
+    // On hosted Windows and macOS, the real renderer can exceed 60 s.
+    // macOS failure evidence showed the workspace splash still preparing at
+    // 55 s. Keep the existing bounded readiness gate and all scenario assertions.
+    const rendererStartupBudgetMs = process.platform === 'linux' ? 60_000 : 180_000;
     await waitFor(
       'window.electronAPI?.teams && window.__agentTeamsDevStore',
       'renderer bridge',
@@ -1860,6 +1921,7 @@ async function run() {
     await verifyNative(f);
     assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
       'Read-only project navigation mutated durable context mapping');
+    await verifyAttentionProjectNavigation(f);
     await verifyUi(f);
     await verifyAliasRedirect(f);
     await verifyDefinitionEdit(f);
@@ -1929,7 +1991,7 @@ async function run() {
         args.slice(0, 2).map((token) => /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / member settings of a per-project team / one review flow of a per-project team, its project boards and a new copy / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team / MCP board tools of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / Attention Inbox project B-A direct navigation / A-B-A / renderer reload / edit the per-project team definition / member settings of a per-project team / one review flow of a per-project team, its project boards and a new copy / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team / MCP board tools of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
       httpLaunch, mcpBoard,

@@ -952,5 +952,21 @@
       "unavailable": "Habari zinapatikana katika programu ya kompyuta.",
       "state_unavailable": "Unaweza kusoma, lakini maendeleo yako hayawezi kuhifadhiwa sasa. Habari za kiotomatiki zimesitishwa."
     }
+  },
+  "attention": {
+    "title": "Inahitaji umakini wako",
+    "tab": "Umakini",
+    "viewAll": "Tazama yote",
+    "refresh": "Sasisha hali",
+    "loading": "Inapakia…",
+    "loadFailed": "Imeshindwa kupakia hali",
+    "retry": "Jaribu tena",
+    "partial": "Baadhi ya timu hazikupakiwa. Idadi inaweza kuwa si kamili.",
+    "nothing": "Hakuna kinachohitaji umakini wako sasa.",
+    "tasks": "Inasubiri uamuzi wako",
+    "chats": "Mazungumzo ambayo hayajasomwa",
+    "openTask": "Fungua kazi: {{subject}} katika {{team}}",
+    "timeUnknown": "Wakati haujulikani",
+    "teamAttention": "Umakini"
   }
 }

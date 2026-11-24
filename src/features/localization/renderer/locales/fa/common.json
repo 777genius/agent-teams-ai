@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "نیازمند توجه شما",
+    "tab": "توجه",
+    "viewAll": "نمایش همه",
+    "refresh": "به‌روزرسانی وضعیت",
+    "loading": "در حال بارگذاری…",
+    "loadFailed": "بارگذاری وضعیت توجه ناموفق بود",
+    "retry": "تلاش دوباره",
+    "partial": "برخی تیم‌ها بارگذاری نشدند. شمارش‌ها ممکن است ناقص باشند.",
+    "nothing": "در حال حاضر موردی نیازمند توجه شما نیست.",
+    "tasks": "در انتظار تصمیم شما",
+    "chats": "گفت‌وگوهای خوانده‌نشده",
+    "openTask": "باز کردن کار: {{subject}} در {{team}}",
+    "timeUnknown": "زمان نامشخص",
+    "teamAttention": "توجه"
   }
 }

@@ -1009,5 +1009,21 @@
     "resetDescription": "Remove all folder organization. Tasks, pins, archives and task names are preserved.",
     "organizationDescription": "Organize tasks without changing their team, project or status.",
     "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable"
+  },
+  "attention": {
+    "title": "Needs your attention",
+    "tab": "Attention",
+    "viewAll": "View all",
+    "refresh": "Refresh attention status",
+    "loading": "Loading attention status…",
+    "loadFailed": "Unable to load attention status",
+    "retry": "Retry",
+    "partial": "Some teams could not be loaded. Counts may be incomplete.",
+    "nothing": "Nothing needs your attention right now.",
+    "tasks": "Awaiting your decision",
+    "chats": "Unread chats",
+    "openTask": "Open task: {{subject}} in {{team}}",
+    "timeUnknown": "Time unknown",
+    "teamAttention": "Attention"
   }
 }

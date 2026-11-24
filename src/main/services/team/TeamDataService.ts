@@ -83,6 +83,7 @@ import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
+import { mapLimitLocal } from './teamSnapshotReadConcurrency';
 import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
@@ -307,30 +308,6 @@ interface GlobalTaskTeamInfo {
   displayName: string;
   projectPath?: string;
   deletedAt?: string;
-}
-
-async function mapLimitLocal<T, R>(
-  items: readonly T[],
-  limit: number,
-  mapper: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(Math.max(1, limit), items.length);
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (true) {
-        const index = nextIndex++;
-        if (index >= items.length) {
-          return;
-        }
-        results[index] = await mapper(items[index]);
-      }
-    })
-  );
-
-  return results;
 }
 
 function readConfigForUiSnapshot(
@@ -1179,6 +1156,14 @@ export class TeamDataService {
     }
 
     return alive.sort((left, right) => left.localeCompare(right));
+  }
+
+  /** Source-backed attention selection, independent of the 500-row global task export. */
+  async getUserAttentionTasks(teamName: string): Promise<readonly TeamTask[]> {
+    const tasks = await this.readTasksForUiSnapshot(teamName);
+    return tasks.filter((task) =>
+      task.needsClarification === 'user' && task.status !== 'deleted' && !task.deletedAt
+    );
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {
