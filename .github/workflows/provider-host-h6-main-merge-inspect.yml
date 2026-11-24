@@ -1,0 +1,52 @@
+name: H6 integration - inspect exact main merge conflicts
+run-name: Inspect merge of H6 integration and pinned main (non-mutating)
+on:
+  push:
+    branches:
+      - review/provider-host-h6-main-merge-conflicts-20261124
+permissions:
+  contents: read
+concurrency:
+  group: h6-main-merge-inspection-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  inspect:
+    name: Git-native merge-tree conflict inventory (no provider execution)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent-teams-ai
+          ref: '17e7a17970724f0d2e9173face4b1b8a648049e6'
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Inspect Git-native merge only, preserving both immutable source refs
+        shell: bash
+        env:
+          PINNED_MAIN: '0ccfe7726d96e8bad11f58119cde63804c64d952'
+          PINNED_INTEGRATION: '17e7a17970724f0d2e9173face4b1b8a648049e6'
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PINNED_INTEGRATION"
+          git cat-file -e "$PINNED_MAIN^{commit}"
+          mkdir -p "$RUNNER_TEMP/merge-inspection"
+          git merge-base "$PINNED_INTEGRATION" "$PINNED_MAIN" > "$RUNNER_TEMP/merge-inspection/merge-base.txt"
+          set +e
+          git merge-tree --write-tree "$PINNED_INTEGRATION" "$PINNED_MAIN" > "$RUNNER_TEMP/merge-inspection/merge-tree.txt" 2>&1
+          merge_code=$?
+          set -e
+          # 0=clean merge, 1=conflicts; anything else is an infrastructure/command error.
+          test "$merge_code" -eq 0 -o "$merge_code" -eq 1
+          printf 'integration=%s\nmain=%s\nmerge-tree-exit=%s\n' "$PINNED_INTEGRATION" "$PINNED_MAIN" "$merge_code" > "$RUNNER_TEMP/merge-inspection/summary.txt"
+          grep '^CONFLICT ' "$RUNNER_TEMP/merge-inspection/merge-tree.txt" | sort -u > "$RUNNER_TEMP/merge-inspection/conflict-messages.txt" || :
+          wc -l "$RUNNER_TEMP/merge-inspection/conflict-messages.txt" >> "$RUNNER_TEMP/merge-inspection/summary.txt"
+          cat "$RUNNER_TEMP/merge-inspection/summary.txt"
+      - name: Upload precise conflict evidence, not a merge qualification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h6-main-merge-conflict-analysis-${{ github.run_id }}
+          path: ${{ runner.temp }}/merge-inspection
+          if-no-files-found: warn
+          retention-days: 7
