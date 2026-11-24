@@ -5637,6 +5637,36 @@ describe('TeamDataService', () => {
     }
   });
 
+  it('keeps the answer notification pending when inbox delivery returns false', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    try {
+      const id = 'clarification-answer-ec6c813f-8715-4638-9362-629c2f5e4dd2';
+      const journal = createForwardingJournalStore();
+      const inboxWriter = {
+        sendMessage: vi.fn()
+          .mockResolvedValueOnce({ deliveredToInbox: false, messageId: 'uncommitted' })
+          .mockResolvedValue({ deliveredToInbox: true, messageId: 'committed' }),
+      };
+      const { service } = createTaskCommentForwardingService({
+        journal: journal.journal, inboxWriter,
+        tasks: [{
+          id: 'reply-task', subject: 'Decision', status: 'pending', owner: 'bob',
+          comments: [{ id, author: 'user', text: 'Yes, proceed', type: 'regular',
+            createdAt: '2026-11-24T16:20:00Z' }],
+        }],
+      });
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'reply-task');
+      expect(journal.journalEntries[0]).toMatchObject({ state: 'pending_send' });
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'reply-task');
+      expect(journal.journalEntries[0]).toMatchObject({ state: 'sent' });
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
   it('does not forward user-authored, lead-authored, mirrored, or non-regular comments', async () => {
     const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
     process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';

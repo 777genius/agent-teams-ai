@@ -18,6 +18,7 @@ const zeroPartRevisions = (): TaskDetailPartRevisions => ({
 
 export const EMPTY_TASK_DETAIL_SESSION: TaskDetailSession = {
   commentText: '',
+  answerClarificationRequestId: undefined,
   commentChips: [],
   pendingAttachments: [],
   reply: null,
@@ -87,7 +88,11 @@ export function updateTaskDetailPart(
 
 export function hydrateTaskDetailDraft(
   session: TaskDetailSession,
-  draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
+  draft: {
+    text?: string;
+    commentChips?: TaskDetailSession['commentChips'];
+    answerClarificationRequestId?: string | null;
+  }
 ): TaskDetailSession {
   let next = session;
   if (draft.text && next.partRevisions.commentText === 0 && next.commentText === '') {
@@ -100,6 +105,14 @@ export function hydrateTaskDetailDraft(
     next.commentChips.length === 0
   ) {
     next = updateTaskDetailPart(next, 'commentChips', draft.commentChips);
+  }
+  // Existing text/chips belong to the original draft, never silently
+  // rebind to whatever clarification happens to be current after hydration.
+  if (next !== session && session.answerClarificationRequestId === undefined) {
+    next = {
+      ...next,
+      answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
+    };
   }
   return next;
 }
@@ -158,6 +171,8 @@ export function completeTaskDetailSubmit(
     commentChips: clearParts.has('commentChips') ? [] : session.commentChips,
     pendingAttachments: clearParts.has('pendingAttachments') ? [] : session.pendingAttachments,
     reply: clearParts.has('reply') ? null : session.reply,
+    answerClarificationRequestId:
+      clearParts.size === parts.length ? undefined : session.answerClarificationRequestId,
     partRevisions: nextPartRevisions,
     editRevision: session.editRevision + (clearParts.size > 0 ? 1 : 0),
     submittedPartRevisions: null,

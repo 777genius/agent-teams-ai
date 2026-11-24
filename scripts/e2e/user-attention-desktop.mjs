@@ -468,6 +468,8 @@ async function checkDesktop() {
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2")',
     'new clarification returns to live Dashboard', 30_000);
+  // Test-only cleanup after asserting that the stale answer cannot clear B.
+  await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', null)`);
 
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',

@@ -194,7 +194,51 @@ describe('task session surface and origin integration', () => {
     );
   });
 
-  it('refreshes same-ID tasks across teams once per identity from root interest', async () => {
+  it('keeps a draft bound to clarification A after B appears, without posting or losing text', async () => {
+    const cycleA = 'f6282305-a901-4bd9-8760-d49e855bac54';
+    const cycleB = '26a92089-0505-42d4-9f1c-4ab9b30c8b8f';
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      useStore.setState((state) => ({
+        taskDetailById: { ...state.taskDetailById, [key]: {
+          ...state.taskDetailById[key],
+          full: { ...task, needsClarification: 'user', clarificationRequestId: cycleA },
+        } },
+      }));
+      mount('dialog', (value) => { controller = value; });
+    });
+    await act(async () => { controller.setCommentText('TEST answer meant for A'); });
+    expect(useStore.getState().taskDetailSessionById[key]).toMatchObject({
+      commentText: 'TEST answer meant for A',
+      answerClarificationRequestId: cycleA,
+    });
+    await act(async () => {
+      useStore.setState((state) => ({
+        taskDetailById: { ...state.taskDetailById, [key]: {
+          ...state.taskDetailById[key],
+          full: { ...task, needsClarification: 'user', clarificationRequestId: cycleB },
+        } },
+      }));
+    });
+    await act(async () => { await controller.submitComment(); });
+    expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
+    expect(useStore.getState().taskDetailSessionById[key]).toMatchObject({
+      commentText: 'TEST answer meant for A',
+      answerClarificationRequestId: cycleA,
+      submitPending: false,
+    });
+    expect(useStore.getState().taskDetailSessionById[key]?.submitError).toContain('clarification changed');
+
+    // Explicitly removing the old text resets the draft identity. Typing a
+    // fresh answer captures B; no automatic rebinding of the original text.
+    await act(async () => { controller.setCommentText(''); });
+    expect(useStore.getState().taskDetailSessionById[key].answerClarificationRequestId)
+      .toBeUndefined();
+    await act(async () => { controller.setCommentText('TEST new answer for B'); });
+    expect(useStore.getState().taskDetailSessionById[key].answerClarificationRequestId).toBe(cycleB);
+  });
+
+  it('refreshes same-ID tasks across teams once per identity from root interest', async () {
     const other = { ...identity, teamName: 'TEST-other-team' };
     const otherKey = taskDetailKey(other);
     const tails = new Map([

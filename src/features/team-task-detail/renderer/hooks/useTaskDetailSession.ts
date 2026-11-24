@@ -196,6 +196,7 @@ export function useTaskDetailSession({
       useStore.getState().hydrateTaskDetailSessionDraft(identity, {
         text: hydration.text ?? undefined,
         commentChips: hydration.commentChips ?? undefined,
+        answerClarificationRequestId: hydration.answerClarificationRequestId,
       });
       if (
         identity.contextId === 'local' &&
@@ -207,6 +208,7 @@ export function useTaskDetailSession({
           {
             text: next?.commentText ?? hydration.legacyText ?? '',
             commentChips: next?.commentChips ?? hydration.legacyCommentChips ?? [],
+            answerClarificationRequestId: next?.answerClarificationRequestId ?? null,
           },
           { migrateLegacy: true }
         );
@@ -239,8 +241,12 @@ export function useTaskDetailSession({
   const persistDraft = useCallback(
     (value: { text?: string; commentChips?: InlineChip[] }) => {
       setIsDraftSaved(false);
+      // Keep the original question's identity next to its text/chips; a later
+      // task refresh must not silently bind this draft to another question.
+      const answerClarificationRequestId =
+        useStore.getState().taskDetailSessionById[identityKey]?.answerClarificationRequestId;
       void taskDraftStorage
-        .save(identity, value)
+        .save(identity, { ...value, answerClarificationRequestId })
         .then(() => {
           if (isOriginCurrent()) setIsDraftSaved(true);
         })
@@ -248,7 +254,7 @@ export function useTaskDetailSession({
           if (isOriginCurrent()) setIsDraftSaved(false);
         });
     },
-    [identity, isOriginCurrent, setIsDraftSaved]
+    [identity, identityKey, isOriginCurrent, setIsDraftSaved]
   );
 
   const setCommentText = useCallback(
@@ -399,11 +405,20 @@ export function useTaskDetailSession({
           }))
         : undefined;
     const activeTask = state.taskDetailById[identityKey]?.full;
-    // Task-scoped user input is a decision handoff, not a generic Messenger
-    // reply. A stale generation is rejected atomically by the task controller.
-    const answerClarificationRequestId =
+    // The bound generation is captured when the draft was FIRST composed,
+    // not at send time. A late task refresh must never rebind A's text to B.
+    const boundCycle = current.answerClarificationRequestId;
+    const activeCycle =
       activeTask?.needsClarification === 'user' ? activeTask.clarificationRequestId : undefined;
     const revision = state.beginTaskDetailSubmitSession(identity);
+    if (activeCycle && boundCycle !== activeCycle) {
+      useStore.getState().failTaskDetailSubmitSession(
+        identity, revision,
+        'The clarification changed while this answer was drafted. Copy your text and start a fresh answer.'
+      );
+      return;
+    }
+    const answerClarificationRequestId = typeof boundCycle === 'string' ? boundCycle : undefined;
     try {
       await state.addTaskComment(identity.teamName, identity.taskId, {
         text,

@@ -3330,7 +3330,7 @@ export class TeamDataService {
       for (const notification of pending) {
         const claimKey = this.buildTaskCommentNotificationClaimKey(teamName, notification.key);
         try {
-          await this.inboxWriter.sendMessage(teamName, {
+          const delivery = await this.inboxWriter.sendMessage(teamName, {
             member: notification.recipientName,
             from: notification.comment.author,
             text: notification.text,
@@ -3343,6 +3343,11 @@ export class TeamDataService {
             taskRefs: [notification.taskRef],
             messageId: notification.messageId,
           });
+          if (!delivery.deliveredToInbox) {
+            // A failed/declined write is not evidence of delivery. Keep the
+            // existing pending_send journal entry for startup/event recovery.
+            throw new Error('Task answer notification was not persisted');
+          }
           inboxMessageIdsByRecipient.get(notification.recipientName)?.add(notification.messageId);
           logger.info(
             `[TeamDataService] Forwarded task comment notification to lead for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
