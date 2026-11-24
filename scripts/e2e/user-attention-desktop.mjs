@@ -254,7 +254,8 @@ async function checkDesktop() {
 
   // Prove the two unread conversations before opening one (opening may mark it read).
   await until(async () => cdp.evaluate(`(() => {
-    const panel = document.querySelector('[data-testid=user-attention-inbox]');
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
     if (!panel) return false;
     const labels = [...panel.querySelectorAll('button[aria-label]')]
       .map((button) => button.getAttribute('aria-label') || '');
@@ -271,7 +272,8 @@ async function checkDesktop() {
     reads.markRead(reads.getTeamMessageReadStorageKey(${JSON.stringify(first)}, scope), ${JSON.stringify('attention-dm-' + first)});
   })()`);
   await until(async () => cdp.evaluate(`(() => {
-    const panel = document.querySelector('[data-testid=user-attention-inbox]');
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
     if (!panel) return false;
     const labels = [...panel.querySelectorAll('button[aria-label]')]
       .map((button) => button.getAttribute('aria-label') || '');
@@ -290,15 +292,19 @@ async function checkDesktop() {
       messagesFilter: { ...previous.messagesFilter, from: new Set(['alice']), to: new Set(['other']) },
     });
   })()`);
-  const clickedChat = await cdp.evaluate(`(() => {
-    const panel = document.querySelector('[data-testid=user-attention-inbox]');
-    const button = [...panel.querySelectorAll('button')].find((b) =>
-      b.getAttribute('aria-label')?.includes('bob'));
-    if (!button) return false;
+  // Both the full Attention tab and Dashboard can remain mounted. Locate and
+  // click the exact unread row in the visible panel in the same poll, after
+  // the read-state update and sidebar fixture have settled.
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const button = Array.from(panel?.querySelectorAll('button') ?? []).find((b) =>
+      b.getClientRects().length > 0 && b.getAttribute('aria-label')?.includes('bob') &&
+      b.textContent.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + second)}));
+    if (!button || button.disabled) return false;
     button.click();
     return true;
-  })()`);
-  assert(clickedChat, 'unread bob chat is clickable');
+  })()`), 'unread bob chat is clickable in the visible Attention panel');
   await cdp.waitFor(
     `window.__agentTeamsDevStore.getState().openTabs.some((tab) =>
       tab.type === "team" && tab.teamName === ${JSON.stringify(second)})`,
