@@ -1,0 +1,384 @@
+name: Main review canonical types (strict index control)
+run-name: Canonical types for 17e7a179 with strict index contract
+
+on:
+  push:
+    branches:
+      - 'review/provider-host-h6-merged-finite-types-17e7a179'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-review-canonical-types-index-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  canonical-types:
+    name: Twelve canonical TS7 configurations
+    runs-on: ubuntu-latest
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      GIT_OPTIONAL_LOCKS: '0'
+    steps:
+      - name: Check out the exact published source
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent-teams-ai
+          ref: '17e7a17970724f0d2e9173face4b1b8a648049e6'
+          persist-credentials: false
+      - name: Set up the pinned pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - name: Set up the pinned Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Install and run original canonical type checks
+        shell: bash
+        run: |
+          set -o noclobber
+          cat > "$RUNNER_TEMP/main-finite-types-index-driver.py" <<'PY'
+          """Control-branch CI: qualify one literal published source without running providers."""
+          from pathlib import Path
+          import datetime
+          import hashlib
+          import json
+          import os
+          import resource
+          import re
+          import shlex
+          import shutil
+          import signal
+          import subprocess
+          import sys
+          import time
+          
+          TARGET_SHA = '17e7a17970724f0d2e9173face4b1b8a648049e6'
+          TARGET_TREE = '17a54110ac72edef6737825cb6424fe747461377'
+          TARGET_PARENTS = ['048d12870a38781fb3b893c4b127b25c537e8cbf', '311ea4d9329734a888f0c308fbcf75affcab5beb']
+          CONTROL_REF = 'refs/heads/review/provider-host-h6-merged-finite-types-17e7a179'
+          ROOT = Path(os.environ['GITHUB_WORKSPACE']).resolve()
+          OUT = Path(os.environ['RUNNER_TEMP']) / 'main-finite-types-index-evidence'
+          DRIVER = Path(__file__).resolve()
+          NODE_VERSION = '26.12.1'
+          PACKAGE_MANAGER = 'pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621'
+          ROOT_CHECKS = [
+              ['node', './node_modules/@typescript/native/bin/tsc', '--noEmit'],
+              *[['node', './node_modules/@typescript/native/bin/tsc', '--noEmit', '-p',
+                 'scripts/tsconfig/tsconfig.' + suffix + '.json'] for suffix in (
+                  'updater-e2e', 'release-tooling', 'sentry-e2e', 'sentry-sdk-e2e',
+                  'sentry-sdk-preload', 'sentry-sdk-renderer', 'desktop-e2e')],
+          ]
+          EXTRA_CHECKS = [
+              ('.', 'typecheck:legacy-host-scripts', ['node', 'node_modules/@typescript/native/bin/tsc',
+                '--project', 'tsconfig.legacy-agent-host-scripts.json']),
+              ('packages/legacy-agent-host', 'typecheck:test', ['node', 'node_modules/@typescript/native/bin/tsc',
+                '-p', 'tsconfig.test.json']),
+              ('mcp-server', 'typecheck', ['node', 'node_modules/@typescript/native/bin/tsc', '--noEmit']),
+              ('mcp-server', 'typecheck:test', ['node', 'node_modules/@typescript/native/bin/tsc',
+                '--noEmit', '-p', 'tsconfig.test.json']),
+          ]
+          ENV = os.environ.copy()
+          ENV['GIT_OPTIONAL_LOCKS'] = '0'
+          
+          
+          def now():
+              return datetime.datetime.now(datetime.timezone.utc).isoformat()
+          
+          
+          def git(*args):
+              return subprocess.check_output(['git', '-C', str(ROOT), *args], env=ENV)
+          
+          
+          def file_pin(path):
+              path = Path(path)
+              data = os.readlink(path).encode() if path.is_symlink() else path.read_bytes()
+              return {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(),
+                      'gitBlob': hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest(),
+                      'symlink': path.is_symlink()}
+          
+          
+          def write_once(name, value):
+              with (OUT / name).open('x') as stream:
+                  stream.write(json.dumps(value, indent=2) + '\n')
+          
+          
+          def index_entry_flags(debug, expected_paths):
+              # --debug is not a stable serialization contract. Parse its entire current
+              # record shape, expected NUL-delimited paths and full integer flags; any
+              # unknown shape fails closed. Stat-cache values are deliberately not hashed.
+              record = re.compile(
+                  rb'  ctime: [0-9]+:[0-9]+\n'
+                  rb'  mtime: [0-9]+:[0-9]+\n'
+                  rb'  dev: [0-9]+\tino: [0-9]+\n'
+                  rb'  uid: [0-9]+\tgid: [0-9]+\n'
+                  rb'  size: [0-9]+\tflags: ([0-9a-fA-F]+)\n')
+              cursor, normalized = 0, bytearray()
+              for path in expected_paths:
+                  prefix = path + b'\0'
+                  assert debug[cursor:cursor + len(prefix)] == prefix, 'Unknown index debug path/order'
+                  cursor += len(prefix)
+                  match = record.match(debug, cursor)
+                  assert match is not None, 'Unknown index debug record format'
+                  flags = int(match.group(1), 16)
+                  assert flags <= 0xffffffff, 'Unknown index flag width'
+                  # No flag mask: assume-valid, skip-worktree, intent-to-add and every
+                  # other emitted bit must remain unchanged. Stages are checked separately.
+                  normalized.extend(prefix + format(flags, 'x').encode() + b'\0')
+                  cursor = match.end()
+              assert cursor == len(debug), 'Unexpected index debug trailing records'
+              return hashlib.sha256(normalized).hexdigest()
+          
+          
+          def source_contract(snapshot):
+              fields = {'head', 'tree', 'tracked', 'untracked', 'indexEntriesSha256',
+                        'indexEntryFlagsSha256', 'resolveUndoSha256', 'mergeHead', 'ordinaryIndex'}
+              assert set(snapshot) == fields, 'Unknown source snapshot fields'
+              # Raw index serialization includes mutable Git stat/cache data. It remains
+              # archived diagnostic evidence; content, stages and full flags stay strict.
+              return {key: snapshot[key] for key in sorted(fields - {'ordinaryIndex'})}
+          
+          
+          def archive_ordinary_index(name, expected=None):
+              directory = Path(git('rev-parse', '--absolute-git-dir').decode().strip())
+              source = directory / 'index'
+              assert source.is_file() and not source.is_symlink(), 'Ordinary index is not a regular file'
+              data = source.read_bytes()
+              target = OUT / name
+              with target.open('xb') as stream:
+                  stream.write(data)
+              archived = file_pin(target)
+              if expected is not None:
+                  assert archived == expected, 'Index changed before its exact archive'
+              return archived
+          
+          
+          def source_snapshot():
+              git_dir = Path(git('rev-parse', '--absolute-git-dir').decode().strip())
+              index_path = git_dir / 'index'
+              assert index_path.is_file() and not index_path.is_symlink(), 'Ordinary index is not a regular file'
+              index_before = file_pin(index_path)
+              head = git('rev-parse', 'HEAD').decode().strip()
+              tree = git('rev-parse', 'HEAD^{tree}').decode().strip()
+              assert head == TARGET_SHA and tree == TARGET_TREE, (head, tree)
+              entries = git('ls-files', '--stage', '-z')
+              tracked, raw_paths = {}, []
+              for entry in entries.split(b'\0'):
+                  if not entry:
+                      continue
+                  metadata, raw_path = entry.split(b'\t', 1)
+                  mode, blob, stage = metadata.decode().split()
+                  raw_paths.append(raw_path)
+                  path = raw_path.decode()
+                  assert stage == '0' and mode in ('100644', '100755', '120000'), path
+                  pin = file_pin(ROOT / path)
+                  assert pin['gitBlob'] == blob, 'Physical bytes differ from original index: ' + path
+                  assert pin['symlink'] == (mode == '120000'), path
+                  tracked[path] = {'mode': mode, **pin}
+              assert not git('diff', '--name-only')
+              assert not git('diff', '--cached', '--name-only', TARGET_SHA)
+              untracked = {}
+              for raw_path in git('ls-files', '--others', '--exclude-standard', '-z').split(b'\0'):
+                  if raw_path:
+                      path = raw_path.decode()
+                      untracked[path] = file_pin(ROOT / path)
+              flags = index_entry_flags(git('ls-files', '--debug', '-z'), raw_paths)
+              resolve_undo = git('ls-files', '--resolve-undo', '-z')
+              merge_head = git_dir / 'MERGE_HEAD'
+              index_after = file_pin(index_path)
+              assert index_after['symlink'] == index_before['symlink'], 'Index path changed during source snapshot'
+              return {'head': head, 'tree': tree, 'tracked': tracked, 'untracked': untracked,
+                      'indexEntriesSha256': hashlib.sha256(entries).hexdigest(),
+                      'indexEntryFlagsSha256': flags,
+                      'resolveUndoSha256': hashlib.sha256(resolve_undo).hexdigest(),
+                      'mergeHead': file_pin(merge_head) if merge_head.exists() else None,
+                      'ordinaryIndex': index_after}
+          
+          
+          def resources():
+              values = {'childMaxRssKiB': resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss,
+                        'diskFreeBytes': shutil.disk_usage(ROOT).free, 'cpuCount': os.cpu_count()}
+              for name in ('/proc/meminfo', '/proc/self/cgroup', '/sys/fs/cgroup/memory.max',
+                           '/sys/fs/cgroup/memory.current', '/sys/fs/cgroup/memory.high',
+                           '/sys/fs/cgroup/memory.events'):
+                  path = Path(name)
+                  if path.is_file():
+                      values[name] = path.read_text()
+              vmstat = Path('/proc/vmstat')
+              if vmstat.is_file():
+                  for line in vmstat.read_text().splitlines():
+                      if line.startswith('oom_kill '):
+                          values['systemOomKillCounter'] = int(line.split()[1])
+              return values
+          
+          
+          def toolchain_snapshot():
+              result = {'selectors': {}, 'files': {}}
+              for workspace in ('.', 'packages/legacy-agent-host', 'packages/task-change-ledger', 'mcp-server'):
+                  logical = ROOT / workspace / 'node_modules/@typescript/native'
+                  physical = logical.resolve(strict=True)
+                  assert json.loads((physical / 'package.json').read_text())['version'] == '7.0.2'
+                  result['selectors'][workspace] = str(physical)
+                  binary = physical.parent / '@typescript/typescript-linux-x64'
+                  for path in (physical / 'package.json', physical / 'bin/tsc', physical / 'lib/tsc.js',
+                               physical / 'lib/getExePath.js', binary / 'package.json', binary / 'lib/tsc'):
+                      result['files'][str(path)] = file_pin(path)
+              for executable in ('node', 'pnpm'):
+                  selected = shutil.which(executable)
+                  assert selected is not None, executable
+                  physical = Path(selected).resolve(strict=True)
+                  result['selectors'][executable] = {'logical': selected, 'physical': str(physical)}
+                  result['files'][str(physical)] = file_pin(physical)
+              return result
+          
+          
+          def execute(number, label, argv, cwd):
+              detail = {'number': number, 'label': label, 'argv': argv, 'cwd': str(cwd),
+                        'startedAt': now(), 'resourcesBefore': resources()}
+              write_once(f'step-{number:02d}-started.json', detail)
+              log = OUT / f'step-{number:02d}.log'
+              process = None
+              began = time.monotonic()
+              print(now(), 'START', number, label, flush=True)
+              try:
+                  with log.open('xb') as stream:
+                      process = subprocess.Popen(argv, cwd=cwd, env=ENV, stdout=stream,
+                          stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+                      detail['exitCode'] = process.wait()
+                  assert detail['exitCode'] == 0, (label, detail['exitCode'])
+                  detail['status'] = 'PASS'
+              except BaseException as error:
+                  detail.update(status='FAIL', error=type(error).__name__ + ': ' + str(error))
+                  if process is not None and process.poll() is None:
+                      os.killpg(process.pid, signal.SIGTERM)
+                      try:
+                          process.wait(timeout=10)
+                      except subprocess.TimeoutExpired:
+                          os.killpg(process.pid, signal.SIGKILL)
+                          process.wait()
+                      detail['exitCode'] = process.returncode
+                  raise
+              finally:
+                  detail.update(finishedAt=now(), durationSeconds=round(time.monotonic() - began, 3),
+                                resourcesAfter=resources(), log=file_pin(log) if log.exists() else None)
+                  write_once(f'step-{number:02d}-result.json', detail)
+                  print(now(), 'END', number, detail.get('status'), detail.get('exitCode'), flush=True)
+              return detail
+          
+          
+          def interrupted(signum, frame):
+              raise KeyboardInterrupt('Interrupted by signal ' + str(signum))
+          
+          
+          OUT.mkdir(mode=0o700)
+          with (OUT / 'executed-driver.py').open('xb') as stream:
+              stream.write(DRIVER.read_bytes())
+          assert file_pin(OUT / 'executed-driver.py') == file_pin(DRIVER)
+          record = {'startedAt': now(), 'status': 'PREFLIGHT', 'targetCommit': TARGET_SHA,
+                    'targetTree': TARGET_TREE, 'targetParent': TARGET_PARENT,
+                    'controlCommit': os.environ['GITHUB_SHA'],
+                    'controlRef': os.environ['GITHUB_REF'], 'eventName': os.environ['GITHUB_EVENT_NAME'],
+                    'driver': {'path': str(DRIVER), **file_pin(DRIVER)},
+                    'archivedDriver': {'path': str(OUT / 'executed-driver.py'), **file_pin(OUT / 'executed-driver.py')},
+                    'runId': os.environ['GITHUB_RUN_ID'], 'runAttempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                    'scope': 'Original pretypecheck and all twelve canonical TS7 configurations; only --singleThreaded added.',
+                    'isActualPrRequiredCheck': False, 'nativeE2eClaim': False,
+                    'genuineProviderExecutionRequested': False, 'steps': [], 'resourcesBefore': resources()}
+          write_once('started.json', record)
+          before = None
+          toolchain = None
+          signal.signal(signal.SIGINT, interrupted)
+          signal.signal(signal.SIGTERM, interrupted)
+          try:
+              assert os.environ.get('AGENT_TEAMS_INSTALL_PROFILE') == 'node-ci'
+              assert os.environ.get('ELECTRON_SKIP_BINARY_DOWNLOAD') == '1'
+              assert os.environ['GITHUB_RUN_ATTEMPT'] == '1', 'Only the original control attempt is admitted'
+              assert os.environ['GITHUB_EVENT_NAME'] == 'push'
+              assert os.environ['GITHUB_REF'] == CONTROL_REF
+              assert re.fullmatch(r'[a-f0-9]{40}', os.environ['GITHUB_SHA'])
+              assert os.environ['GITHUB_SHA'] != TARGET_SHA
+              # Read the raw commit object: shallow checkout does not erase its parent headers.
+              commit_headers = git('cat-file', '-p', 'HEAD').decode().split('\n\n', 1)[0].splitlines()
+              source_parents = [line.removeprefix('parent ') for line in commit_headers if line.startswith('parent ')]
+              assert source_parents == TARGET_PARENTS, source_parents
+              record['observedSourceParents'] = source_parents
+              assert len(TARGET_SHA) == 40 and all(c in '0123456789abcdef' for c in TARGET_SHA)
+              for variable in ('GIT_INDEX_FILE', 'GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR'):
+                  assert not os.environ.get(variable), variable
+              root_package = json.loads((ROOT / 'package.json').read_text())
+              assert root_package['packageManager'] == PACKAGE_MANAGER
+              assert (ROOT / '.node-version').read_text().strip() == NODE_VERSION
+              assert subprocess.check_output(['node', '--version'], env=ENV).decode().strip() == 'v' + NODE_VERSION
+              assert subprocess.check_output(['pnpm', '--version'], env=ENV).decode().strip() == '11.22.0'
+              assert root_package['scripts']['pretypecheck'] == 'pnpm --filter @agent-teams/legacy-agent-host build'
+              assert [shlex.split(part) for part in root_package['scripts']['typecheck'].split(' && ')] == ROOT_CHECKS
+              for workspace, script, command in EXTRA_CHECKS:
+                  package = json.loads((ROOT / workspace / 'package.json').read_text())
+                  assert shlex.split(package['scripts'][script]) == command, (workspace, script)
+              for workspace in ('packages/legacy-agent-host', 'packages/task-change-ledger'):
+                  package = json.loads((ROOT / workspace / 'package.json').read_text())
+                  assert package['scripts']['build'] == 'node node_modules/@typescript/native/bin/tsc -p tsconfig.json'
+              host = json.loads((ROOT / 'packages/legacy-agent-host/package.json').read_text())
+              assert host['scripts']['prebuild'] == 'pnpm --filter @agent-teams/task-change-ledger build'
+              before = source_snapshot()
+              write_once('source-before.json', before)
+              record['sourceBefore'] = file_pin(OUT / 'source-before.json')
+              record['ordinaryIndexBefore'] = archive_ordinary_index('ordinary-index-before.bin', before['ordinaryIndex'])
+              record['steps'].append(execute(1, 'canonical-node-ci-install',
+                                           ['node', 'scripts/ci/install-dependencies-with-retry.mjs'], ROOT))
+              assert source_contract(source_snapshot()) == source_contract(before), 'Installation changed source/staged content/index flags/untracked inputs'
+              toolchain = toolchain_snapshot()
+              write_once('toolchain-before.json', toolchain)
+              record['toolchainBefore'] = file_pin(OUT / 'toolchain-before.json')
+              record['steps'].append(execute(2, 'canonical-pretypecheck', ['pnpm', 'run', 'pretypecheck'], ROOT))
+              commands = [('.', command) for command in ROOT_CHECKS]
+              commands.extend((workspace, command) for workspace, script, command in EXTRA_CHECKS)
+              assert len(commands) == 12
+              for number, (workspace, command) in enumerate(commands, start=3):
+                  assert source_contract(source_snapshot()) == source_contract(before), 'Source/staged content/index flags changed before compiler'
+                  assert toolchain_snapshot() == toolchain, 'Pinned compiler/runtime changed'
+                  record['steps'].append(execute(number, 'canonical-types-' + str(number - 2),
+                                               command + ['--singleThreaded'], ROOT / workspace))
+              record['status'] = 'PASS'
+          except BaseException as error:
+              record.update(status='FAIL', error=type(error).__name__ + ': ' + str(error))
+          finally:
+              try:
+                  if before is not None:
+                      record['ordinaryIndexAfter'] = archive_ordinary_index('ordinary-index-after.bin')
+                      after = source_snapshot()
+                      assert record['ordinaryIndexAfter'] == after['ordinaryIndex'], 'Index changed after its exact archive'
+                      write_once('source-after.json', after)
+                      record['sourceAfter'] = file_pin(OUT / 'source-after.json')
+                      unchanged = source_contract(after) == source_contract(before)
+                      record['sourceContentStagesFlagsAndUntrackedUnchanged'] = unchanged
+                      record['ordinaryIndexBytesUnchanged'] = after['ordinaryIndex'] == before['ordinaryIndex']
+                      record['rawIndexDifferenceIsDiagnosticOnly'] = unchanged and not record['ordinaryIndexBytesUnchanged']
+                      if not unchanged:
+                          record['status'] = 'FAIL'
+                  if toolchain is not None:
+                      after_toolchain = toolchain_snapshot()
+                      write_once('toolchain-after.json', after_toolchain)
+                      record['toolchainAfter'] = file_pin(OUT / 'toolchain-after.json')
+                      record['compilerAndRuntimeUnchanged'] = after_toolchain == toolchain
+                      if after_toolchain != toolchain:
+                          record['status'] = 'FAIL'
+              except BaseException as error:
+                  record.update(status='FAIL', finalInvariantError=type(error).__name__ + ': ' + str(error))
+              record.update(finishedAt=now(), resourcesAfter=resources())
+              write_once('result.json', record)
+          print(now(), 'FINAL', record['status'], flush=True)
+          raise SystemExit(0 if record['status'] == 'PASS' else 1)
+          PY
+          python3 "$RUNNER_TEMP/main-finite-types-index-driver.py"
+      - name: Preserve original type-check evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-review-canonical-types-index-${{ github.run_id }}
+          path: ${{ runner.temp }}/main-finite-types-index-evidence
+          if-no-files-found: warn
+          retention-days: 7
