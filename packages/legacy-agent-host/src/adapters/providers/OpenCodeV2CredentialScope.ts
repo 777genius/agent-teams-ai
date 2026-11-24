@@ -233,8 +233,11 @@ export class OpenCodeV2CredentialScope {
     const isCurrent = () => {
       try {
         if (!auth.isCurrent()) return false;
-        if (file && (selected.apiKeyFile === undefined ||
-            this.managedFile(origin, selected.apiKeyFile).digest !== file.digest)) return false;
+        // No intervening file observation: the same captured auth source is
+        // already fresh. Recheck it after the separate file read only.
+        if (!file) return true;
+        if (selected.apiKeyFile === undefined ||
+            this.managedFile(origin, selected.apiKeyFile).digest !== file.digest) return false;
         return auth.isCurrent();
       } catch { return false; }
     };
