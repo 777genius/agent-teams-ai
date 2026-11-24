@@ -20,6 +20,7 @@ const controlled = vi.hoisted(() => ({
   create: (_options: unknown): unknown => { throw new Error('TEST native factory unset'); },
   spawn: vi.fn(() => { throw new Error('TEST unexpected native spawn'); }),
   driverFactory: undefined as ((_options: unknown) => unknown) | undefined,
+  observeClient: undefined as ((client: unknown) => void) | undefined,
 }));
 vi.mock('node:child_process', async importOriginal => ({
   ...await importOriginal<typeof import('node:child_process')>(), spawn: controlled.spawn,
@@ -29,7 +30,13 @@ vi.mock('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2Em
 vi.mock('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js',
   async importOriginal => {
     const original = await importOriginal<typeof import('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js')>();
-    return { ...original, createOpenCodeV2DriverFactory: (options: Parameters<typeof original.createOpenCodeV2DriverFactory>[0]) =>
+    return { ...original,
+      createOpenCodeV2OwnedSessionClient: (...args: Parameters<typeof original.createOpenCodeV2OwnedSessionClient>) => {
+        const client = original.createOpenCodeV2OwnedSessionClient(...args);
+        controlled.observeClient?.(client);
+        return client;
+      },
+      createOpenCodeV2DriverFactory: (options: Parameters<typeof original.createOpenCodeV2DriverFactory>[0]) =>
       controlled.driverFactory ? controlled.driverFactory(options) : original.createOpenCodeV2DriverFactory(options) };
   });
 
@@ -52,6 +59,7 @@ import type { OpenCodeProbeCloseDiagnostic, OpenCodeProbeDiagnostic } from '../.
 afterEach(() => {
   controlled.create = () => { throw new Error('TEST native factory unset'); };
   controlled.driverFactory = undefined;
+  controlled.observeClient = undefined;
   expect(controlled.spawn).not.toHaveBeenCalled();
   controlled.spawn.mockClear();
 });
@@ -70,7 +78,7 @@ async function within<T>(work: Promise<T>, label: string): Promise<T> {
  * Production ModelProbe, its private configuration, both D clients and global fetch
  * remain real. These checks do not qualify an actual native process or credential.
  */
-async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' = 'http', startFailure?: unknown,
+async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' | 'open-read-failed' = 'http', startFailure?: unknown,
   isCurrent: () => boolean = () => true) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-lifecycle-')));
   const pid = 48101, startIdentity = 'TEST-original-start-identity', password = 'TEST-loopback-only';
@@ -93,6 +101,9 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
   let finalArmed = false, finalCustodyCalls = 0, finalCustodyReturns = 0, messageReads = 0;
   let cutFailureCount = 0, driverFailureCount = 0, nativeInput: { id: string; text: string } | undefined;
   const parent = new AbortController();
+  const openEntered = Promise.withResolvers<void>();
+  const openResponses = new Map<'session' | 'mcp', ServerResponse>();
+  const openCancelled: string[] = [];
   const location = { directory: root };
   const json = (res: ServerResponse, value: unknown) => {
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -105,6 +116,12 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
       finalDisconnected[index].resolve();
     });
     finalHttp[index].resolve();
+  };
+  const holdOpenResponse = (kind: 'session' | 'mcp', res: ServerResponse) => {
+    assert.equal(openResponses.has(kind), false, 'one original driver-open read per route');
+    openResponses.set(kind, res);
+    res.once('close', () => { if (!res.writableFinished) openCancelled.push(kind); });
+    if (openResponses.size === 2) openEntered.resolve();
   };
   const serve = async (req: IncomingMessage, res: ServerResponse) => {
     assert.ok(++requests <= 64, 'finite original HTTP requests');
@@ -135,6 +152,7 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
       return json(res, { data: session });
     }
     if (req.method === 'GET' && url.pathname === '/api/session/' + sessionId) {
+      if (mode === 'open-read-failed') return holdOpenResponse('session', res);
       if (mode === 'final-cut' && finalArmed) return holdFinalResponse(1, res);
       assert.ok(session); return json(res, { data: session });
     }
@@ -153,6 +171,8 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     }
     if (req.method === 'GET' && url.pathname === '/api/permission/saved')
       return json(res, { data: [] });
+    if (mode === 'open-read-failed' && req.method === 'GET' && url.pathname === '/api/mcp')
+      return holdOpenResponse('mcp', res);
     if (req.method === 'GET' && (url.pathname === '/api/plugin' || url.pathname === '/api/mcp'))
       return json(res, { location, data: [] });
     if (req.method === 'GET' && url.pathname === '/api/experimental/session/' + sessionId + '/log') {
@@ -283,6 +303,15 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     probe, parent, disconnected: disconnected.promise, custodyReturned: custodyReturned.promise,
     releaseCustody: () => returnCustody.resolve(),
     heldSignal: () => heldSignal,
+    openRead: {
+      entered: openEntered.promise,
+      cancelled: openCancelled,
+      failSession() {
+        const response = openResponses.get('session'); assert.ok(response);
+        response.writeHead(500, { 'content-type': 'application/json' }); response.end('{}');
+      },
+      releaseSibling() { const response = openResponses.get('mcp'); assert.ok(response); json(response, { location, data: [] }); },
+    },
     finalCut: {
       entered: finalEntered.promise, http: finalHttp.map(value => value.promise),
       disconnected: finalDisconnected.map(value => value.promise), failed: cutFailed.promise,
@@ -312,6 +341,8 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     async dispose() {
       const close = probe.close(); returnCustody.resolve();
       for (const gate of finalGates) gate.resolve();
+      for (const response of openResponses.values())
+        if (!response.destroyed && !response.writableEnded) json(response, { location, data: [] });
       try { await close; if (run) await run.catch(() => {}); }
       finally {
         diagnostic.unsubscribe(observe);
@@ -323,6 +354,47 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     },
   };
 }
+
+test('driver-open rejected read retains its real sibling HTTP until settlement before owner cleanup', async () => {
+  type OwnerClient = ReturnType<typeof import('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js').createOpenCodeV2OwnedSessionClient>;
+  const failedRead = Promise.withResolvers<unknown>(), siblingReturned = Promise.withResolvers<void>();
+  const disposals: number[] = [];
+  let owners = 0, siblingSettled = false, runSettled = false;
+  controlled.observeClient = raw => {
+    const client = raw as OwnerClient, owner = ++owners;
+    const dispose = client.dispose.bind(client);
+    vi.spyOn(client, 'dispose').mockImplementation(async () => { disposals.push(owner); await dispose(); });
+    if (owner !== 2) return;
+    const readSession = client.readSession.bind(client), readMcp = client.readMcp.bind(client);
+    vi.spyOn(client, 'readSession').mockImplementation(async () => {
+      try { return await readSession(); }
+      catch (error) { failedRead.resolve(error); throw error; }
+    });
+    vi.spyOn(client, 'readMcp').mockImplementation(async () => {
+      try { return await readMcp(); }
+      finally { siblingSettled = true; siblingReturned.resolve(); }
+    });
+  };
+  const f = await fixture('open-read-failed');
+  try {
+    const running = f.start(); void running.then(() => { runSettled = true; }, () => { runSettled = true; });
+    await within(f.openRead.entered, 'original session and MCP HTTP');
+    expect(owners).toBe(2); expect(disposals).toEqual([1]);
+    f.openRead.failSession();
+    await expect(within(failedRead.promise, 'original failed session read')).resolves.toMatchObject({ code: 'invalid_response' });
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(disposals, 'owner disposal must not cancel its still-pending sibling').toEqual([1]);
+    expect(siblingSettled).toBe(false); expect(runSettled).toBe(false);
+    expect(f.openRead.cancelled).toEqual([]); expect(f.counts().physicalStops).toBe(0);
+    const before = f.counts();
+    f.openRead.releaseSibling(); await within(siblingReturned.promise, 'original MCP body settlement');
+    await expect(within(running, 'failed driver-open settlement')).rejects.toThrow('opencode.driver.dependency-unavailable');
+    expect(disposals).toEqual([1, 2]); expect(f.openRead.cancelled).toEqual([]);
+    await expect(f.probe.close()).resolves.toBe(true);
+    expect(f.counts().requests).toBe(before.requests); expect(f.counts().passwordReads).toBe(before.passwordReads);
+    f.assertClosed({ logReads: 0, promptPosts: 0 }); expect(f.observations).toEqual([]);
+  } finally { await f.dispose(); controlled.observeClient = undefined; }
+});
 
 test.each(['close', 'parent-signal'] as const)(
   'original ModelProbe %s aborts admitted driver HTTP before waiting for its lease',
