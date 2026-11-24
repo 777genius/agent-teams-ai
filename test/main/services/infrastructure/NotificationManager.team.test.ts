@@ -163,6 +163,35 @@ describe('NotificationManager.addTeamNotification', () => {
     expect(delivery).toHaveBeenCalledOnce();
   });
 
+  it('suppresses Desktop without suppressing an explicitly routed external event', async () => {
+    const getConfig = ConfigManager.getInstance().getConfig as ReturnType<typeof vi.fn>;
+    getConfig.mockReturnValue({
+      ...defaultConfig,
+      notifications: { ...defaultConfig.notifications, desktopDisabledEvents: ['user_inbox'] },
+    });
+    const external = vi.fn();
+    manager.on('notification-delivery', external);
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'telegram-only-route' }));
+    expect(external).toHaveBeenCalledOnce();
+    expect(mockNotificationShow).not.toHaveBeenCalled();
+  });
+
+  it('keeps hidden source notifications private and permits only explicit budget-only routing', async () => {
+    const external = vi.fn();
+    manager.on('notification-delivery', external);
+    await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'budget-hidden', teamEventType: 'usage_budget_exceeded',
+        suppressToast: true })
+    );
+    expect(external).not.toHaveBeenCalled();
+    await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'budget-external', teamEventType: 'usage_budget_exceeded',
+        suppressToast: true, permitExternalDeliveryWhenToastSuppressed: true })
+    );
+    expect(external).toHaveBeenCalledOnce();
+    expect(mockNotificationShow).not.toHaveBeenCalled();
+  });
+
   it('stores team notification and returns StoredNotification', async () => {
     const result = await manager.addTeamNotification(makeTeamPayload());
 

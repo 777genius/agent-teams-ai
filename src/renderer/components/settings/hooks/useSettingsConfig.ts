@@ -53,6 +53,7 @@ export interface SafeConfig {
   notifications: {
     enabled: boolean;
     soundEnabled: boolean;
+    desktopDisabledEvents: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>;
     ignoredRegex: string[];
     ignoredRepositories: string[];
     snoozedUntil: number | null;
@@ -217,6 +218,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
       notifications: {
         enabled: displayConfig?.notifications?.enabled ?? true,
         soundEnabled: displayConfig?.notifications?.soundEnabled ?? true,
+        desktopDisabledEvents: displayConfig?.notifications?.desktopDisabledEvents ?? [],
         ignoredRegex: displayConfig?.notifications?.ignoredRegex ?? [],
         ignoredRepositories: displayConfig?.notifications?.ignoredRepositories ?? [],
         snoozedUntil: displayConfig?.notifications?.snoozedUntil ?? null,

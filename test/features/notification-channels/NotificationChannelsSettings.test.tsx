@@ -48,6 +48,7 @@ async function renderChannel(enabled: boolean, hasCredential: boolean) {
     deletePending: null,
     error: null,
     localSettingsUrl: null,
+    remoteSettingsUnavailable: false,
     save: vi.fn(),
     edit: vi.fn(),
     toggle,
@@ -56,12 +57,12 @@ async function renderChannel(enabled: boolean, hasCredential: boolean) {
     providerChanged: false,
     credentialMissing: !hasCredential,
     updateDraft: vi.fn(),
-    toggleEvent: vi.fn(),
+    route: vi.fn(),
     start: vi.fn(),
     cancel: vi.fn(),
   });
 
-  await act(async () => root.render(<NotificationChannelsSettings />));
+  await act(async () => root.render(<NotificationChannelsSettings settings={mockUseSettings()} />));
   const control = container.querySelector<HTMLButtonElement>(
     '[role="checkbox"][aria-label="Enable Private destination"]'
   );

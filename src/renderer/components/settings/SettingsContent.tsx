@@ -221,6 +221,7 @@ export const SettingsContent = ({
               ignoredRepositoryItems={ignoredRepositoryItems}
               excludedRepositoryIds={excludedRepositoryIds}
               onNotificationToggle={handlers.handleNotificationToggle}
+              onDesktopDestinationsChange={handlers.handleDesktopDestinationsChange}
               onTeamRuntimeRecoveryUpdate={handlers.handleTeamRuntimeRecoveryUpdate}
               onSnooze={handlers.handleSnooze}
               onClearSnooze={handlers.handleClearSnooze}

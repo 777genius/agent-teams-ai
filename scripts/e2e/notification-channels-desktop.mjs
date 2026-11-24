@@ -214,6 +214,7 @@ async function run() {
   }, 'saved real IPC channel');
   const channels = await rendererCall('window.electronAPI.notificationChannels.list()');
   assert.equal(channels[0].enabled, false, 'Outbound delivery must be opt-in');
+  assert.deepEqual(channels[0].events, [], 'New provider must not subscribe silently');
   assert.equal(channels[0].name, 'TEST Telegram');
   assert.equal(channels[0].hasCredential, true);
   assert(!JSON.stringify(channels).includes(TOKEN));
@@ -256,6 +257,31 @@ async function run() {
     const list = await rendererCall('window.electronAPI.notificationChannels.list()');
     return list[0]?.enabled === true;
   }, 'opt-in enabled');
+
+  // User-centric route editor: select a provider beside the existing event switch.
+  const routeButton = "document.querySelector('button[data-delivery-events=\\\"user_inbox\\\"]')";
+  await cdp.waitFor(routeButton, 'destination picker');
+  assert.match(await evaluate(routeButton + '.textContent'), /Desktop/,
+    'Existing desktop route must remain selected by default');
+  await click(routeButton);
+  await cdp.waitFor("document.querySelector('[aria-label=\\\"Deliver Message for you to TEST Telegram\\\"]')",
+    'provider in destination picker');
+  await click("document.querySelector('[aria-label=\\\"Deliver Message for you to TEST Telegram\\\"]')");
+  await until(async () => {
+    const list = await rendererCall('window.electronAPI.notificationChannels.list()');
+    return list[0]?.events.includes('user_inbox');
+  }, 'selected provider subscription persisted');
+  const metadataRouted = await readFile(metadataPath, 'utf8');
+  assert(metadataRouted.includes('user_inbox'));
+  assert(!metadataRouted.includes(TOKEN), 'Routing must not write provider secrets in metadata');
+
+  // External-only: uncheck Desktop without disabling the event or the provider.
+  await click("document.querySelector('[aria-label=\\\"Desktop for Message for you\\\"]')");
+  await until(async () => {
+    const config = await rendererCall('window.electronAPI.config.get()');
+    return config.notifications.desktopDisabledEvents?.includes('user_inbox');
+  }, 'desktop exclusion persisted');
+  evidence.checks.push('Settings event route → channel.events + native Desktop exclusion');
 
   const secretPayload = {
     teamName: 'TEST-notification-channels',

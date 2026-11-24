@@ -10,12 +10,9 @@ import {
 } from '@renderer/components/ui/select';
 import { BellPlus, CheckCircle2, Send, Trash2 } from 'lucide-react';
 
-import {
-  DELIVERY_EVENT_LABELS,
-  DELIVERY_PROVIDERS,
-  NOTIFICATION_DELIVERY_EVENTS,
-} from '../../contracts';
-import { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
+import { DELIVERY_PROVIDERS } from '../../contracts';
+
+import type { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
 
 import type { ChannelTestStatus, DeliveryProvider } from '../../contracts';
 
@@ -35,7 +32,11 @@ function displayTest(status?: ChannelTestStatus): string {
 
 export function NotificationChannelsSettings({
   autoDeliveryPaused = false,
-}: Readonly<{ autoDeliveryPaused?: boolean }>): React.JSX.Element {
+  settings,
+}: Readonly<{
+  autoDeliveryPaused?: boolean;
+  settings: ReturnType<typeof useNotificationChannelsSettings>;
+}>): React.JSX.Element {
   const {
     channels,
     draft,
@@ -53,10 +54,9 @@ export function NotificationChannelsSettings({
     providerChanged,
     credentialMissing,
     updateDraft,
-    toggleEvent,
     start,
     cancel,
-  } = useNotificationChannelsSettings();
+  } = settings;
   if (localSettingsUrl || remoteSettingsUnavailable) {
     return (
       <section
@@ -145,7 +145,7 @@ export function NotificationChannelsSettings({
                 {channel.hasCredential
                   ? displayTest(channel.lastTest)
                   : 'Credential unavailable: edit to re-enter'}{' '}
-                · {channel.events.length} event types
+                · {channel.events.length} routed event types
               </div>
             </div>
             <label className="flex items-center gap-2 text-xs">
@@ -266,21 +266,9 @@ export function NotificationChannelsSettings({
               placeholder={draft.id ? 'Leave blank to keep current credential' : 'Required'}
             />
           </label>
-          <div className="space-y-2">
-            <p className="text-xs font-medium">Send these events</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {NOTIFICATION_DELIVERY_EVENTS.map((event) => (
-                <label key={event} className="flex items-center gap-2 text-xs">
-                  <Checkbox
-                    checked={draft.events.includes(event)}
-                    disabled={busy}
-                    onCheckedChange={(checked) => toggleEvent(event, checked === true)}
-                  />
-                  {DELIVERY_EVENT_LABELS[event]}
-                </label>
-              ))}
-            </div>
-          </div>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            Select destinations beside each notification type below after saving.
+          </p>
           <label className="flex items-center gap-2 text-xs">
             <Checkbox
               checked={draft.enabled}
@@ -309,7 +297,7 @@ export function NotificationChannelsSettings({
             </Button>
           </div>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            After saving, click Test to verify delivery. Secrets are encrypted locally.
+            After saving, click Test, enable the channel, then select its notification types below. Secrets are encrypted locally.
           </p>
         </div>
       )}

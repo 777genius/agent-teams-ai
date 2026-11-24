@@ -55,6 +55,10 @@ describe('Notification Channels domain', () => {
     });
     expect(toOutboundNotification({ ...notification, isRead: true })).toBeNull();
     expect(toOutboundNotification({ ...notification, category: 'error' })).toBeNull();
-    expect(toOutboundNotification({ ...notification, teamEventType: 'lead_inbox' })).toBeNull();
+    expect(toOutboundNotification({ ...notification, teamEventType: 'lead_inbox' })).toEqual({
+      event: 'lead_inbox',
+      message: 'Agent Teams: Team lead inbox message.',
+    });
+    expect(toOutboundNotification({ ...notification, teamEventType: 'api_error' })).toBeNull();
   });
 });

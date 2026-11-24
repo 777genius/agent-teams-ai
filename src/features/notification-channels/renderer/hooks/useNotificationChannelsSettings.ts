@@ -14,7 +14,7 @@ const NEW_CHANNEL: SaveDeliveryChannelRequest = {
   name: '',
   provider: 'telegram',
   enabled: false,
-  events: ['user_inbox', 'task_clarification', 'task_review_requested', 'task_blocked'],
+  events: [],
   chatId: '',
   secret: '',
 };
@@ -150,12 +150,25 @@ export function useNotificationChannelsSettings() {
     setDraft((prev) => (prev ? { ...prev, ...changes } : prev));
   };
 
-  const toggleEvent = (event: DeliveryEvent, checked: boolean): void => {
-    if (!draft) return;
-    updateDraft({
-      events: checked
-        ? [...new Set([...draft.events, event])]
-        : draft.events.filter((item) => item !== event),
+  /** The row selector owns event subscriptions; credentials and provider stay unchanged. */
+  const route = (
+    channel: DeliveryChannelDto,
+    events: readonly DeliveryEvent[],
+    checked: boolean
+  ): void => {
+    if (!channel.enabled || !channel.hasCredential) return;
+    void run(async () => {
+      const updated = checked
+        ? [...new Set([...channel.events, ...events])]
+        : channel.events.filter((event) => !events.includes(event));
+      await api.notificationChannels.save({
+        id: channel.id,
+        name: channel.name,
+        provider: channel.provider,
+        enabled: channel.enabled,
+        events: updated,
+        chatId: channel.chatId,
+      });
     });
   };
 
@@ -179,7 +192,7 @@ export function useNotificationChannelsSettings() {
     providerChanged,
     credentialMissing,
     updateDraft,
-    toggleEvent,
+    route,
     start,
     cancel,
   };
