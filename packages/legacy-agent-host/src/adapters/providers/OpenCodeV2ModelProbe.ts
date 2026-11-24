@@ -388,7 +388,14 @@ export function createOpenCodeV2ModelProbe(
           },
           probe: async (probeSignal) =>
             withClient(probeSignal, async (client) => {
-              const observed = await client.readSession();
+              // Independent native reads keep their original custody/currentness gates.
+              // Await all before comparing so no check is silently skipped.
+              const [observed, permissionsEmpty, pluginsOnly, mcp] = await Promise.all([
+                client.readSession(),
+                client.savedPermissionsEmpty(),
+                client.builtinPluginsOnly(),
+                client.readMcp(),
+              ]);
               return (
                 managementDigest({
                   agent: observed.agent,
@@ -396,13 +403,10 @@ export function createOpenCodeV2ModelProbe(
                   permissions: observed.permissions,
                   ...(observed.credential ? { credential: observed.credential } : {}),
                 }) === managementDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
-                (await client.savedPermissionsEmpty()) &&
-                (await client.builtinPluginsOnly()) &&
-                await (async () => {
-                  const mcp = await client.readMcp();
-                  return coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
-                    mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0;
-                })()
+                permissionsEmpty &&
+                pluginsOnly &&
+                (coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
+                  mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0)
               );
             }),
           confirmStopped: () => server!.stopOwned(),
