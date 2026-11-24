@@ -1,0 +1,166 @@
+name: OpenCode local provider native E2E
+run-name: Local provider native E2E at ${{ github.event.pull_request.head.sha || github.sha }}
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - '.github/workflows/opencode-local-provider-app-launch.yml'
+      - 'test/main/services/team/OpenCodeLocalProviderAppLaunch.live.test.ts'
+      - 'test/main/services/team/openCodeLiveTestHarness.ts'
+      - 'test/main/services/team/memberWorkSyncLiveHarness.ts'
+      - 'test/workflows/runSupersession.mts'
+      - 'src/main/services/team/provisioning/**'
+      - 'src/main/services/team/runtime/OpenCode*.ts'
+      - 'src/main/services/team/opencode/**'
+      - 'agent-teams-controller/**'
+      - 'mcp-server/**'
+      - '.node-version'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Canonical run supersession; manual runs retain independent evidence.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  local-provider:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    name: Native local provider app lifecycle (darwin-x64)
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      EXPECTED_APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SDK_SHA: '5841f978fa0c03345eb8c1fd05ed94530d8ed612'
+      TEST_EVIDENCE: ${{ runner.temp }}/TEST-opencode-local-provider-evidence
+      TEST_TMP: ${{ runner.temp }}/TEST-opencode-local-provider-tmp
+      TEST_NATIVE: ${{ runner.temp }}/TEST-opencode-local-provider-native
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      pnpm_config_package_import_method: copy
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: ${{ env.SDK_SHA }}
+          path: TEST-local-provider-sdk
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Verify exact sources and resolve qualified native pins
+        id: pins
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_APP_SHA"
+          test "$(git -C TEST-local-provider-sdk rev-parse HEAD)" = "$SDK_SHA"
+          mkdir -m 700 "$TEST_EVIDENCE" "$TEST_TMP" "$TEST_NATIVE"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const read = (file) => JSON.parse(readFileSync(`TEST-local-provider-sdk/${file}`, 'utf8'));
+          assert.equal(`${process.platform}-${process.arch}`, 'darwin-x64');
+          const pins = read('scripts/runtime-bun-pins.json');
+          const bun = pins.assets['darwin-x64'].version ?? pins.version;
+          const qualified = read('src/services/opencode/compatibility/opencode-v2-qualifications.json');
+          const native = qualified.versions.filter((row) => row.scope === 'team-launch' && row.platforms.includes('darwin-x64'));
+          assert.deepEqual(native.map((row) => row.version), ['2.1.4']);
+          assert.equal(bun, '1.4.4');
+          appendFileSync(process.env.GITHUB_OUTPUT, `bun=${bun}\nopencode=${native[0].version}\n`);
+          NODE
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.pins.outputs.bun }}
+      - name: Install frozen SDK source dependencies
+        working-directory: TEST-local-provider-sdk
+        run: bun install --frozen-lockfile --linker hoisted --backend=copyfile
+      - name: Install application dependencies and build controller and MCP
+        run: |
+          node scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+      - name: Install exact native OpenCode package without install scripts
+        env:
+          OPENCODE_PIN: ${{ steps.pins.outputs.opencode }}
+        run: |
+          printf '{"name":"test-opencode-local-provider","private":true,"version":"1.0.0"}\n' > "$TEST_NATIVE/package.json"
+          pnpm --dir "$TEST_NATIVE" add --ignore-scripts --save-exact "@opencode/cli-darwin-x64@$OPENCODE_PIN"
+      - name: Run the three real local provider app lifecycle cases
+        env:
+          TMPDIR: ${{ env.TEST_TMP }}
+          OPENCODE_E2E: '1'
+          OPENCODE_E2E_LOCAL_PROVIDER_APP_LAUNCH: '1'
+          OPENCODE_E2E_KEEP_TEMP: '1'
+          CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: ${{ github.workspace }}/TEST-local-provider-sdk/cli-source
+          CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: ${{ env.TEST_NATIVE }}/node_modules/@opencode/cli-darwin-x64/bin/opencode
+          EXPECTED_BUN: ${{ steps.pins.outputs.bun }}
+          EXPECTED_OPENCODE: ${{ steps.pins.outputs.opencode }}
+        run: |
+          set -euo pipefail
+          git diff --exit-code HEAD
+          git -C TEST-local-provider-sdk diff --exit-code HEAD
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          const binary = realpathSync(process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH);
+          const bun = execFileSync('bun', ['--version'], { encoding: 'utf8', timeout: 15_000 }).trim();
+          const opencode = execFileSync(binary, ['--version'], { encoding: 'utf8', timeout: 15_000 }).trim();
+          assert.equal(bun, process.env.EXPECTED_BUN);
+          assert.equal(opencode.replace(/^opencode v?/, ''), process.env.EXPECTED_OPENCODE);
+          const receipt = { appSha: process.env.EXPECTED_APP_SHA, sdkSha: process.env.SDK_SHA,
+            platform: `${process.platform}-${process.arch}`, node: process.version, bun, opencode,
+            binary, binarySha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
+            model: 'local-lab/qwen-test:0.5b', runtimeMode: 'cli-source' };
+          writeFileSync(`${process.env.TEST_EVIDENCE}/source-receipt.json`, JSON.stringify(receipt, null, 2));
+          console.log(JSON.stringify(receipt));
+          NODE
+          pnpm exec vitest run --maxWorkers=1 \
+            test/main/services/team/OpenCodeLocalProviderAppLaunch.live.test.ts \
+            --reporter=default --reporter=json --outputFile="$TEST_EVIDENCE/vitest.json" \
+            2>&1 | tee "$TEST_EVIDENCE/fixture.log"
+      - name: Require three native cases and every fixture case to pass
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const result = JSON.parse(readFileSync(`${process.env.TEST_EVIDENCE}/vitest.json`, 'utf8'));
+          assert.equal(result.success, true);
+          assert.equal(result.numTotalTests, result.numPassedTests);
+          assert.equal(result.numFailedTests, 0);
+          assert.equal(result.numPendingTests, 0);
+          const cases = result.testResults.flatMap((file) => file.assertionResults);
+          assert.equal(cases.length, result.numTotalTests);
+          assert(cases.every((test) => test.status === 'passed'));
+          const liveCases = cases.filter((test) => test.ancestorTitles.includes('OpenCode local provider app launch live e2e'));
+          assert.equal(liveCases.length, 3);
+          assert(liveCases.every((test) => test.status === 'passed'));
+          console.log('PASS: all 3 native local-provider app lifecycle cases executed.');
+          NODE
+      - name: Preserve exact-source evidence and owned test state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-local-provider-darwin-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ env.TEST_EVIDENCE }}/
+            ${{ env.TEST_TMP }}/opencode-local-provider-app-launch-*/
