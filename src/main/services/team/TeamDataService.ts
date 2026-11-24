@@ -3345,7 +3345,17 @@ export class TeamDataService {
             messageKind: 'task_comment_notification',
             ...(notification.recipientName === notification.leadName &&
               notification.leadSessionId ? { leadSessionId: notification.leadSessionId } : {}),
-            taskRefs: [notification.taskRef],
+            // Keep the primary task link and all exact cross-team mentions
+            // from the accepted user answer. The previous immediate notifier
+            // forwarded comment.taskRefs; replacing it must not drop them.
+            taskRefs: notification.isUserAnswer
+              ? [notification.taskRef, ...(notification.comment.taskRefs ?? [])].filter(
+                  (ref, index, refs) => refs.findIndex(
+                    (candidate) => candidate.teamName === ref.teamName &&
+                      candidate.taskId === ref.taskId
+                  ) === index
+                )
+              : [notification.taskRef],
             messageId: notification.messageId,
           });
           if (!delivery.deliveredToInbox) {

@@ -5575,6 +5575,11 @@ describe('TeamDataService', () => {
       const answer = {
         id, author: 'user', text: 'Use PostgreSQL', type: 'regular' as const,
         createdAt: '2026-11-24T16:00:00Z',
+        taskRefs: [
+          { teamName: 'my-team', taskId: 'answer-task', displayId: 'choose-db' },
+          { teamName: 'other-team', taskId: 'different-canonical-id', displayId: 'same-label' },
+          { teamName: 'second-other-team', taskId: 'different-canonical-id', displayId: 'same-label' },
+        ],
       };
       const journal = createForwardingJournalStore();
       const inboxWriter = {
@@ -5600,6 +5605,11 @@ describe('TeamDataService', () => {
           member: 'bob', from: 'user', commentId: id,
           messageKind: 'task_comment_notification',
           messageId: 'task-comment-forward:my-team:answer-task:' + id,
+          taskRefs: [
+            { teamName: 'my-team', taskId: 'answer-task', displayId: 'choose-db' },
+            { teamName: 'other-team', taskId: 'different-canonical-id', displayId: 'same-label' },
+            { teamName: 'second-other-team', taskId: 'different-canonical-id', displayId: 'same-label' },
+          ],
         }));
       expect(journal.journalEntries).toHaveLength(1);
       expect(journal.journalEntries[0]).toMatchObject({ state: 'pending_send', commentId: id });
