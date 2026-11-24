@@ -52,9 +52,13 @@ const network: WebhookNetwork = {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(body),
         },
-        lookup: (_hostname, options, callback) => {
+        lookup: (hostname, options, callback) => {
+          if (hostname !== url.hostname) {
+            callback(new Error('Untrusted webhook DNS lookup host'));
+            return;
+          }
           if (options.all) {
-            callback(null, addresses);
+            callback(null, [...addresses]);
             return;
           }
           const address = addresses.find((item) => !options.family || item.family === options.family);
