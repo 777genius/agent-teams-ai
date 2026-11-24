@@ -763,6 +763,45 @@ describe('team provisioning stop flow', () => {
     expect(runs.has(currentRun.runId)).toBe(false);
   });
 
+  it('keeps failed primary Stop pending until secondary lane cleanup settles', async () => {
+    const teamName = 'opencode-team-stop-drain';
+    const currentRun = makeRun('aggregate-stop-drain', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const ports = makePorts(teamName, runs, new Map(), new Map([[teamName, currentRun.runId]]));
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+    const failure = new Error('primary Stop failed');
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockRejectedValue(failure);
+    let releaseSecondary!: () => void;
+    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockReturnValue(
+      new Promise<void>((resolve) => {
+        releaseSecondary = resolve;
+      })
+    );
+    let settled = false;
+    const stopping = stopTeamFlow(teamName, ports).then(
+      () => {
+        settled = true;
+        return { status: 'fulfilled' as const };
+      },
+      (reason: unknown) => {
+        settled = true;
+        return { status: 'rejected' as const, reason };
+      }
+    );
+    try {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+      expect(ports.cleanupRun).not.toHaveBeenCalled();
+    } finally {
+      releaseSecondary();
+    }
+    expect(await stopping).toEqual({ status: 'rejected', reason: failure });
+  });
+
   it('retries aggregate lane cleanup when the tracked run was already marked stopped', async () => {
     const teamName = 'opencode-team-retry';
     const currentRun = makeRun('aggregate-run-retry', teamName);

@@ -201,9 +201,33 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   async stopTeam(teamName: string): Promise<void> {
     const teamKey = teamName.trim().toLowerCase();
     this.stopTeamGenerationByTeam.set(teamKey, this.getStopTeamGeneration(teamName) + 1);
-    await this.stopCleanupServiceHost.withTeamLock(teamName, () =>
-      this.stopFlowBoundary.stopTeam(teamName)
-    );
+    await this.stopCleanupServiceHost.withTeamLock(teamName, async () => {
+      const service = this.stopCleanupServiceHost;
+      const runId = service.runTracking.getTrackedRunId(teamName);
+      const run = runId ? service.runs.get(runId) : undefined;
+      if (!run) return this.stopFlowBoundary.stopTeam(teamName);
+      if (run.teamStopPromise) return run.teamStopPromise;
+
+      // Publish ownership before synchronous progress callbacks can reenter Stop.
+      // Only active lock owners are visible: joining a queued Stop would deadlock a launch.
+      let startStop!: () => void;
+      const stopPromise = new Promise<void>((resolve, reject) => {
+        startStop = () => {
+          try {
+            resolve(this.stopFlowBoundary.stopTeam(teamName));
+          } catch (error) {
+            reject(error);
+          }
+        };
+      });
+      run.teamStopPromise = stopPromise;
+      startStop();
+      try {
+        await stopPromise;
+      } finally {
+        if (run.teamStopPromise === stopPromise) delete run.teamStopPromise;
+      }
+    });
   }
 
   /**
