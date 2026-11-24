@@ -20,7 +20,7 @@ export function normalizeChannelInput(value: unknown): SaveDeliveryChannelReques
   const provider = input.provider;
   if (
     typeof provider !== 'string' ||
-    !['telegram', 'discord', 'slack', 'ms-teams', 'google-chat'].includes(provider)
+    !['telegram', 'discord', 'slack', 'ms-teams', 'google-chat', 'webhook'].includes(provider)
   ) {
     throw new Error('Unsupported delivery provider');
   }
@@ -137,6 +137,23 @@ export function validateProviderCredential(provider: DeliveryProvider, credentia
         throw new Error('Invalid Google Chat webhook URL');
       }
       break;
+    case 'webhook': {
+      // Public DNS names only; address resolution is checked and pinned by the
+      // main-process HTTPS adapter on every send (including DNS rebinding).
+      const labels = host.split('.');
+      const reserved = ['localhost', 'local', 'internal', 'test', 'invalid', 'example', 'onion'];
+      if (
+        host.length > 253 ||
+        labels.length < 2 ||
+        reserved.includes(labels[labels.length - 1] ?? '') ||
+        host.endsWith('.home.arpa') ||
+        /^\d+(?:\.\d+){3}$/.test(host) ||
+        labels.some((part) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(part))
+      ) {
+        throw new Error('Custom webhook requires a public DNS hostname');
+      }
+      break;
+    }
     default:
       throw new Error('Unsupported delivery provider');
   }
