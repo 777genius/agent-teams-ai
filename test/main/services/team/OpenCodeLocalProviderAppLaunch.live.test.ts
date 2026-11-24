@@ -432,6 +432,50 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
   }, 720_000);
 });
 
+describe('OpenCode local provider fixture', () => {
+  it.each([false, true])('echoes each fresh launch challenge (stream=%s)', async (stream) => {
+    const server = await startFakeOpenAiCompatibleServer();
+    try {
+      const messages: { role: string; content: string }[] = [];
+      for (const expected of [
+        'STRICT_LAUNCH_8121c44a-d9f1-49bc-ad7a-1e4f2b0f133b',
+        'STRICT_LAUNCH_d8ce926a-7b29-47d8-a921-08d5ea7a6626',
+        'PONG',
+      ]) {
+        messages.push({
+          role: 'user',
+          content:
+            expected === 'PONG'
+              ? 'Output only the single word PONG.'
+              : `Output only this exact token: ${expected}`,
+        });
+        const response = await fetch(`${server.baseUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model: 'qwen-test:0.5b',
+            stream,
+            messages,
+          }),
+        });
+        expect(response.status).toBe(200);
+        const text = await response.text();
+        const completion = JSON.parse(
+          stream ? text.split('\n')[0].slice('data: '.length) : text
+        ) as {
+          choices: { delta?: { content?: string }; message?: { content?: string } }[];
+        };
+        expect(
+          stream ? completion.choices[0].delta?.content : completion.choices[0].message?.content
+        ).toBe(expected);
+        messages.push({ role: 'assistant', content: expected });
+      }
+    } finally {
+      await server.close();
+    }
+  });
+});
+
 interface FakeOpenAiCompatibleServer {
   baseUrl: string;
   port: number;
@@ -548,6 +592,11 @@ async function startFakeOpenAiCompatibleServer(port = 0): Promise<FakeOpenAiComp
         });
         return;
       }
+      const prompt = JSON.stringify(
+        body.messages?.findLast((message) => message.role === 'user')?.content ?? ''
+      );
+      const content =
+        /Output only this exact token: (STRICT_LAUNCH_[A-Za-z0-9_-]+)/.exec(prompt)?.[1] ?? 'PONG';
       if (body.stream) {
         const created = Math.floor(Date.now() / 1000);
         response.writeHead(200, {
@@ -563,7 +612,7 @@ async function startFakeOpenAiCompatibleServer(port = 0): Promise<FakeOpenAiComp
             choices: [
               {
                 index: 0,
-                delta: { role: 'assistant', content: 'PONG' },
+                delta: { role: 'assistant', content },
                 finish_reason: null,
               },
             ],
@@ -589,7 +638,7 @@ async function startFakeOpenAiCompatibleServer(port = 0): Promise<FakeOpenAiComp
         choices: [
           {
             index: 0,
-            message: { role: 'assistant', content: 'PONG' },
+            message: { role: 'assistant', content },
             finish_reason: 'stop',
           },
         ],
