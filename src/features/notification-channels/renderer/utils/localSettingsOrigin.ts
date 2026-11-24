@@ -17,8 +17,9 @@ export function isLocalSettingsOrigin(pageOrigin: string, electronMode: boolean)
   if (electronMode) return true;
   try {
     const page = new URL(pageOrigin);
-    return page.protocol === 'http:' &&
-      (page.hostname === 'localhost' || page.hostname === '127.0.0.1');
+    return (
+      page.protocol === 'http:' && (page.hostname === 'localhost' || page.hostname === '127.0.0.1')
+    );
   } catch {
     return false;
   }

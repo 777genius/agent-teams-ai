@@ -2,9 +2,9 @@ import { NOTIFICATION_CHANNELS_IPC, type NotificationChannelsApi } from '../cont
 
 import type { IpcRenderer } from 'electron';
 
-export function createNotificationChannelsBridge(
-  ipc: Pick<IpcRenderer, 'invoke'>
-): { notificationChannels: NotificationChannelsApi } {
+export function createNotificationChannelsBridge(ipc: Pick<IpcRenderer, 'invoke'>): {
+  notificationChannels: NotificationChannelsApi;
+} {
   return {
     notificationChannels: {
       list: () => ipc.invoke(NOTIFICATION_CHANNELS_IPC.list),

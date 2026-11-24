@@ -83,7 +83,10 @@ import {
   removeOrganizationsIpc,
 } from '@features/organizations/main';
 import * as projectFolderFeature from '@features/project-folder/main';
-import { createNotificationChannelsRuntime, type NotificationChannelsRuntime } from './startNotificationChannels';
+import {
+  createNotificationChannelsRuntime,
+  type NotificationChannelsRuntime,
+} from './startNotificationChannels';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,

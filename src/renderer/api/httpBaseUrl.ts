@@ -14,9 +14,11 @@ export function resolveHttpBaseUrl(pageOrigin: string, pageSearch: string): stri
 
   const target = `http://127.0.0.1:${port}`;
   const page = new URL(pageOrigin);
-  if (page.protocol === 'http:' &&
+  if (
+    page.protocol === 'http:' &&
     (page.hostname === 'localhost' || page.hostname === '127.0.0.1') &&
-    (page.port === String(port) || (port === 80 && page.port === ''))) {
+    (page.port === String(port) || (port === 80 && page.port === ''))
+  ) {
     return page.origin;
   }
   return target;

@@ -37,7 +37,11 @@ export interface DeliveryCredentials {
 }
 
 export interface DeliverySender {
-  send(channel: StoredDeliveryChannel, secret: string, message: string): Promise<{
+  send(
+    channel: StoredDeliveryChannel,
+    secret: string,
+    message: string
+  ): Promise<{
     success: boolean;
     code?: DeliveryFailureCode;
   }>;
@@ -79,7 +83,9 @@ export class NotificationChannelsService {
   private async locked<T>(work: () => Promise<T>): Promise<T> {
     const previous = this.transaction;
     let release!: () => void;
-    this.transaction = new Promise<void>((resolve) => { release = resolve; });
+    this.transaction = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await previous;
     try {
       return await work();
@@ -90,11 +96,13 @@ export class NotificationChannelsService {
 
   async list(): Promise<DeliveryChannelDto[]> {
     const channels = await this.deps.repository.read();
-    return Promise.all(channels.map(async (channel) => ({
-      ...toDto(channel),
-      // OS-keyring credentials may be unavailable after switching runtimes.
-      hasCredential: Boolean(await this.readSecret(channel.credentialId)),
-    })));
+    return Promise.all(
+      channels.map(async (channel) => ({
+        ...toDto(channel),
+        // OS-keyring credentials may be unavailable after switching runtimes.
+        hasCredential: Boolean(await this.readSecret(channel.credentialId)),
+      }))
+    );
   }
 
   async save(raw: SaveDeliveryChannelRequest): Promise<DeliveryChannelDto> {
@@ -113,8 +121,7 @@ export class NotificationChannelsService {
       // Enabling a previously configured destination requires a currently
       // readable credential. UI checks cannot protect the local HTTP/IPC APIs.
       // Disabling a destination must remain possible after OS vault loss.
-      if (input.enabled && previous && !secret &&
-        !(await this.readSecret(previous.credentialId))) {
+      if (input.enabled && previous && !secret && !(await this.readSecret(previous.credentialId))) {
         throw new Error('Restore the channel credential before enabling');
       }
       let credentialId = previous?.credentialId;
@@ -130,9 +137,10 @@ export class NotificationChannelsService {
         events: input.events,
         chatId: input.chatId,
         credentialId,
-        lastTest: secret || previous?.chatId !== input.chatId || previous?.provider !== input.provider
-          ? undefined
-          : previous?.lastTest,
+        lastTest:
+          secret || previous?.chatId !== input.chatId || previous?.provider !== input.provider
+            ? undefined
+            : previous?.lastTest,
       };
       try {
         await this.deps.repository.write([
@@ -155,7 +163,8 @@ export class NotificationChannelsService {
   }
 
   async remove(id: string): Promise<void> {
-    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid channel ID');
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id))
+      throw new Error('Invalid channel ID');
     return this.locked(async () => {
       const current = await this.deps.repository.read();
       const channel = current.find((item) => item.id === id);
@@ -167,23 +176,28 @@ export class NotificationChannelsService {
   }
 
   async test(id: string): Promise<ChannelTestStatus> {
-    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid channel ID');
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id))
+      throw new Error('Invalid channel ID');
     return this.locked(async () => {
       const current = await this.deps.repository.read();
       const channel = current.find((item) => item.id === id);
       if (!channel) throw new Error('Channel not found');
       const secret = await this.readSecret(channel.credentialId);
       const result = secret
-        ? await this.safeSend(channel, secret, 'Agent Teams: Test notification. No agent content is included.')
+        ? await this.safeSend(
+            channel,
+            secret,
+            'Agent Teams: Test notification. No agent content is included.'
+          )
         : { success: false, code: 'credentials_missing' as DeliveryFailureCode };
       const status: ChannelTestStatus = {
         at: this.deps.now(),
         success: result.success,
         ...(result.code ? { code: result.code } : {}),
       };
-      await this.deps.repository.write(current.map((item) =>
-        item.id === id ? { ...item, lastTest: status } : item
-      ));
+      await this.deps.repository.write(
+        current.map((item) => (item.id === id ? { ...item, lastTest: status } : item))
+      );
       return status;
     });
   }
@@ -191,28 +205,36 @@ export class NotificationChannelsService {
   async dispatch(notification: DetectedError): Promise<void> {
     if (this.deps.canDeliver && !this.deps.canDeliver()) return;
     const outbound = toOutboundNotification(notification);
-    if (!outbound || this.activeDispatches >= NotificationChannelsService.MAX_CONCURRENT_DISPATCHES) {
+    if (
+      !outbound ||
+      this.activeDispatches >= NotificationChannelsService.MAX_CONCURRENT_DISPATCHES
+    ) {
       return;
     }
     this.activeDispatches++;
     try {
-      const channels = (await this.deps.repository.read()).filter((channel) =>
-        channel.enabled && channel.events.includes(outbound.event)
+      const channels = (await this.deps.repository.read()).filter(
+        (channel) => channel.enabled && channel.events.includes(outbound.event)
       );
       // Overlapping dispatches share one provider-request budget. Drop excess
       // automatic sends rather than queueing stale notifications. Manual Test
       // remains independently available (serialized by the mutation lock).
-      await Promise.allSettled(channels.map(async (channel) => {
-        const secret = await this.readSecret(channel.credentialId);
-        if (!secret || this.activeAutomaticSends >=
-          NotificationChannelsService.MAX_CONCURRENT_AUTOMATIC_SENDS) return;
-        this.activeAutomaticSends++;
-        try {
-          await this.safeSend(channel, secret, outbound.message);
-        } finally {
-          this.activeAutomaticSends--;
-        }
-      }));
+      await Promise.allSettled(
+        channels.map(async (channel) => {
+          const secret = await this.readSecret(channel.credentialId);
+          if (
+            !secret ||
+            this.activeAutomaticSends >= NotificationChannelsService.MAX_CONCURRENT_AUTOMATIC_SENDS
+          )
+            return;
+          this.activeAutomaticSends++;
+          try {
+            await this.safeSend(channel, secret, outbound.message);
+          } finally {
+            this.activeAutomaticSends--;
+          }
+        })
+      );
     } finally {
       this.activeDispatches--;
     }
@@ -228,7 +250,11 @@ export class NotificationChannelsService {
     }
   }
 
-  private async safeSend(channel: StoredDeliveryChannel, secret: string, message: string): Promise<{
+  private async safeSend(
+    channel: StoredDeliveryChannel,
+    secret: string,
+    message: string
+  ): Promise<{
     success: boolean;
     code?: DeliveryFailureCode;
   }> {

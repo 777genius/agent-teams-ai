@@ -24,13 +24,14 @@ export const NOTIFICATION_DELIVERY_EVENTS = [
 export type DeliveryEvent = (typeof NOTIFICATION_DELIVERY_EVENTS)[number];
 export type DeliveryProvider = 'telegram' | 'discord' | 'slack' | 'ms-teams' | 'google-chat';
 
-export const DELIVERY_PROVIDERS: readonly { id: DeliveryProvider; label: string; hint: string }[] = [
-  { id: 'telegram', label: 'Telegram', hint: 'Bot token from @BotFather and chat ID' },
-  { id: 'discord', label: 'Discord', hint: 'Incoming webhook URL' },
-  { id: 'slack', label: 'Slack', hint: 'Incoming webhook URL' },
-  { id: 'ms-teams', label: 'Microsoft Teams', hint: 'Workflows webhook URL' },
-  { id: 'google-chat', label: 'Google Chat', hint: 'Incoming webhook URL' },
-];
+export const DELIVERY_PROVIDERS: readonly { id: DeliveryProvider; label: string; hint: string }[] =
+  [
+    { id: 'telegram', label: 'Telegram', hint: 'Bot token from @BotFather and chat ID' },
+    { id: 'discord', label: 'Discord', hint: 'Incoming webhook URL' },
+    { id: 'slack', label: 'Slack', hint: 'Incoming webhook URL' },
+    { id: 'ms-teams', label: 'Microsoft Teams', hint: 'Workflows webhook URL' },
+    { id: 'google-chat', label: 'Google Chat', hint: 'Incoming webhook URL' },
+  ];
 
 export const DELIVERY_EVENT_LABELS: Record<DeliveryEvent, string> = {
   user_inbox: 'Message for you',

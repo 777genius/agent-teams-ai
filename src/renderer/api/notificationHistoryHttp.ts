@@ -34,8 +34,7 @@ export function createHttpNotificationHistoryApi(
       success: false,
       error: 'Test notifications require Electron (not available in browser mode)',
     }),
-    onNew: (callback) =>
-      transport.listen('notification:new', (data) => callback(null, data)),
+    onNew: (callback) => transport.listen('notification:new', (data) => callback(null, data)),
     onUpdated: (callback) =>
       transport.listen('notification:updated', (data) =>
         callback(null, data as { total: number; unreadCount: number })

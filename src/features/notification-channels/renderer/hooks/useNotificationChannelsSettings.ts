@@ -4,7 +4,11 @@ import { api, isElectronMode } from '@renderer/api';
 
 import { isLocalSettingsOrigin, resolveLocalSettingsUrl } from '../utils/localSettingsOrigin';
 
-import type { DeliveryChannelDto, DeliveryEvent, SaveDeliveryChannelRequest } from '../../contracts';
+import type {
+  DeliveryChannelDto,
+  DeliveryEvent,
+  SaveDeliveryChannelRequest,
+} from '../../contracts';
 
 const NEW_CHANNEL: SaveDeliveryChannelRequest = {
   name: '',
@@ -22,11 +26,16 @@ function newChannel(): SaveDeliveryChannelRequest {
 export function useNotificationChannelsSettings() {
   const [localSettingsUrl] = useState(() => {
     if (typeof window === 'undefined') return null;
-    return resolveLocalSettingsUrl(window.location.origin, window.location.search, isElectronMode());
+    return resolveLocalSettingsUrl(
+      window.location.origin,
+      window.location.search,
+      isElectronMode()
+    );
   });
-  const [remoteSettingsUnavailable] = useState(() =>
-    typeof window !== 'undefined' &&
-    !isLocalSettingsOrigin(window.location.origin, isElectronMode())
+  const [remoteSettingsUnavailable] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      !isLocalSettingsOrigin(window.location.origin, isElectronMode())
   );
   const [channels, setChannels] = useState<DeliveryChannelDto[]>([]);
   const [draft, setDraft] = useState<SaveDeliveryChannelRequest | null>(null);
@@ -41,11 +50,20 @@ export function useNotificationChannelsSettings() {
       return;
     }
     let active = true;
-    api.notificationChannels.list()
-      .then((items) => { if (active) setChannels(items); })
-      .catch(() => { if (active) setError('Could not load notification destinations.'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    api.notificationChannels
+      .list()
+      .then((items) => {
+        if (active) setChannels(items);
+      })
+      .catch(() => {
+        if (active) setError('Could not load notification destinations.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [localSettingsUrl, remoteSettingsUnavailable]);
 
   const refresh = async (): Promise<void> => {
@@ -121,13 +139,15 @@ export function useNotificationChannelsSettings() {
     });
   };
 
-  const providerChanged = Boolean(draft?.id &&
-    channels.find((item) => item.id === draft.id)?.provider !== draft.provider);
-  const credentialMissing = Boolean(draft?.id &&
-    channels.find((item) => item.id === draft.id)?.hasCredential === false);
+  const providerChanged = Boolean(
+    draft?.id && channels.find((item) => item.id === draft.id)?.provider !== draft.provider
+  );
+  const credentialMissing = Boolean(
+    draft?.id && channels.find((item) => item.id === draft.id)?.hasCredential === false
+  );
 
   const updateDraft = (changes: Partial<SaveDeliveryChannelRequest>): void => {
-    setDraft((prev) => prev ? { ...prev, ...changes } : prev);
+    setDraft((prev) => (prev ? { ...prev, ...changes } : prev));
   };
 
   const toggleEvent = (event: DeliveryEvent, checked: boolean): void => {
@@ -139,12 +159,28 @@ export function useNotificationChannelsSettings() {
     });
   };
 
-
   const start = (): void => setDraft(newChannel());
   const cancel = (): void => setDraft(null);
 
   return {
-    channels, draft, loading, busy, deletePending, error, localSettingsUrl, remoteSettingsUnavailable,
-    save, edit, toggle, remove, test, providerChanged, credentialMissing, updateDraft, toggleEvent, start, cancel,
+    channels,
+    draft,
+    loading,
+    busy,
+    deletePending,
+    error,
+    localSettingsUrl,
+    remoteSettingsUnavailable,
+    save,
+    edit,
+    toggle,
+    remove,
+    test,
+    providerChanged,
+    credentialMissing,
+    updateDraft,
+    toggleEvent,
+    start,
+    cancel,
   };
 }

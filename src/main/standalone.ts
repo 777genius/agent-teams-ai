@@ -18,7 +18,10 @@
 
 import { join } from 'node:path';
 
-import { createCustomTeamTemplatesFeature, type CustomTeamTemplatesFeature } from '@features/custom-team-templates/main';
+import {
+  createCustomTeamTemplatesFeature,
+  type CustomTeamTemplatesFeature,
+} from '@features/custom-team-templates/main';
 import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createNotificationChannelsFeature } from '@features/notification-channels/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
@@ -158,8 +161,9 @@ async function start(): Promise<void> {
     apiKeys: new ApiKeyService(join(getAppDataPath(), 'notification-channel-credentials')),
     canDeliver: () => {
       const settings = ConfigManager.getInstance().getConfig().notifications;
-      return settings.enabled &&
-        (settings.snoozedUntil == null || settings.snoozedUntil <= Date.now());
+      return (
+        settings.enabled && (settings.snoozedUntil == null || settings.snoozedUntil <= Date.now())
+      );
     },
   });
   internalStorageFeature = createInternalStorageFeature({ userDataPath });
@@ -189,9 +193,9 @@ async function start(): Promise<void> {
     httpServer.broadcast('notification:new', notification);
   });
   notificationManager.on('notification-delivery', (notification: unknown) => {
-    void notificationChannelsFeature.dispatch(
-      notification as Parameters<typeof notificationChannelsFeature.dispatch>[0]
-    ).catch(() => logger.warn('External notification delivery skipped.'));
+    void notificationChannelsFeature
+      .dispatch(notification as Parameters<typeof notificationChannelsFeature.dispatch>[0])
+      .catch(() => logger.warn('External notification delivery skipped.'));
   });
   notificationManager.on('notification-updated', (data: unknown) => {
     httpServer.broadcast('notification:updated', data);

@@ -18,9 +18,11 @@ export function isLocalNotificationChannelsRead(request: FastifyRequest): boolea
 }
 
 export function isLocalNotificationChannelsMutation(request: FastifyRequest): boolean {
-  return isLocalNotificationChannelsRead(request) &&
+  return (
+    isLocalNotificationChannelsRead(request) &&
     // eslint-disable-next-line sonarjs/no-clear-text-protocols -- only the validated loopback HTTP origin may mutate settings
-    request.headers.origin === 'http://' + request.headers.host;
+    request.headers.origin === 'http://' + request.headers.host
+  );
 }
 
 export function registerNotificationChannelsHttp(
@@ -41,12 +43,15 @@ export function registerNotificationChannelsHttp(
     try {
       return await feature.save(request.body as Parameters<typeof feature.save>[0]);
     } catch {
-      return reply.code(400).send({ error: 'Invalid channel settings or secure storage unavailable' });
+      return reply
+        .code(400)
+        .send({ error: 'Invalid channel settings or secure storage unavailable' });
     }
   });
 
   app.post<{ Params: { id: string } }>(
-    NOTIFICATION_CHANNELS_HTTP + '/:id/test', async (request, reply) => {
+    NOTIFICATION_CHANNELS_HTTP + '/:id/test',
+    async (request, reply) => {
       if (!isLocalNotificationChannelsMutation(request)) {
         return reply.code(403).send({ error: 'Cross-origin modification denied' });
       }
@@ -59,7 +64,8 @@ export function registerNotificationChannelsHttp(
   );
 
   app.delete<{ Params: { id: string } }>(
-    NOTIFICATION_CHANNELS_HTTP + '/:id', async (request, reply) => {
+    NOTIFICATION_CHANNELS_HTTP + '/:id',
+    async (request, reply) => {
       if (!isLocalNotificationChannelsMutation(request)) {
         return reply.code(403).send({ error: 'Cross-origin modification denied' });
       }

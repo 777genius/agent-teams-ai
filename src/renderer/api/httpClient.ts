@@ -5,7 +5,10 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-import { createHttpCustomTeamTemplatesApi, type CustomTeamTemplatesApi } from '@features/custom-team-templates';
+import {
+  createHttpCustomTeamTemplatesApi,
+  type CustomTeamTemplatesApi,
+} from '@features/custom-team-templates';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -751,7 +754,8 @@ export class HttpAPIClient implements ElectronAPI {
     remove: async (id) => {
       await this.del(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id), {});
     },
-    test: (id) => this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test', {}),
+    test: (id) =>
+      this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test', {}),
   };
 
   notifications: NotificationsAPI = createHttpNotificationHistoryApi({
