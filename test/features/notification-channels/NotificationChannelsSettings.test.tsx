@@ -12,6 +12,21 @@ vi.mock('@features/notification-channels/renderer/hooks/useNotificationChannelsS
   useNotificationChannelsSettings: () => mockUseSettings(),
 }));
 
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({
+    resolvedLanguage: 'en',
+    t: (key: string) =>
+      ({
+        'notifications.delivery.pausedDisabled':
+          'Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.',
+        'notifications.delivery.pausedSnoozed':
+          'Automatic delivery is snoozed until 10:00. Click Clear Snooze above to resume. Manual Test still works.',
+        'notifications.delivery.pausedSnoozedUnknown':
+          'Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.',
+      })[key] ?? key,
+  }),
+}));
+
 let container: HTMLDivElement;
 let root: Root;
 
@@ -29,7 +44,11 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function renderChannel(enabled: boolean, hasCredential: boolean) {
+async function renderChannel(
+  enabled: boolean,
+  hasCredential: boolean,
+  pauseReason: 'notifications_off' | 'snoozed' | null = null
+) {
   const toggle = vi.fn();
   const channel: DeliveryChannelDto = {
     id: 'ab84b487-0c13-4bd8-9b4a-57c9947efcd0',
@@ -62,7 +81,15 @@ async function renderChannel(enabled: boolean, hasCredential: boolean) {
     cancel: vi.fn(),
   });
 
-  await act(async () => root.render(<NotificationChannelsSettings settings={mockUseSettings()} />));
+  await act(async () =>
+    root.render(
+      <NotificationChannelsSettings
+        settings={mockUseSettings()}
+        autoDeliveryPauseReason={pauseReason}
+        snoozedUntil={Date.now() + 60_000}
+      />
+    )
+  );
   const control = container.querySelector<HTMLButtonElement>(
     '[role="checkbox"][aria-label="Enable Private destination"]'
   );
@@ -90,5 +117,33 @@ describe('Notification Channels settings: unavailable credentials', () => {
     expect(control.disabled).toBe(false);
     await act(async () => control.click());
     expect(toggle).toHaveBeenCalledWith(channel, true);
+  });
+});
+
+describe('Notification Channels pause explanation', () => {
+  it('identifies the disabled master switch rather than Dev Mode or Snooze', async () => {
+    await renderChannel(true, true, 'notifications_off');
+    expect(container.textContent).toContain('Enable System Notifications is OFF');
+    expect(container.textContent).not.toContain('snoozed');
+  });
+
+  it('identifies Snooze and tells the user where to resume', async () => {
+    await renderChannel(true, true, 'snoozed');
+    expect(container.textContent).toContain('Automatic delivery is snoozed');
+    expect(container.textContent).toContain('Clear Snooze');
+  });
+
+  it('does not warn about a paused external delivery when no channel exists', async () => {
+    await renderChannel(true, true, 'notifications_off');
+    mockUseSettings.mockReturnValue({ ...mockUseSettings(), channels: [] });
+    await act(async () =>
+      root.render(
+        <NotificationChannelsSettings
+          settings={mockUseSettings()}
+          autoDeliveryPauseReason="notifications_off"
+        />
+      )
+    );
+    expect(container.textContent).not.toContain('Automatic delivery is paused');
   });
 });

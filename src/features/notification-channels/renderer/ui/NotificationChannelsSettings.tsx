@@ -1,3 +1,5 @@
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
@@ -8,9 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { BellPlus, CheckCircle2, Send, Trash2 } from 'lucide-react';
+import { BellPlus, CheckCircle2, ExternalLink, Send, Trash2 } from 'lucide-react';
 
 import { DELIVERY_PROVIDERS } from '../../contracts';
+
+import { CHANNEL_SETUP_DOCS_URL, PROVIDER_SETUP_GUIDES } from './providerSetupGuide';
 
 import type { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
 
@@ -31,10 +35,12 @@ function displayTest(status?: ChannelTestStatus): string {
 }
 
 export function NotificationChannelsSettings({
-  autoDeliveryPaused = false,
+  autoDeliveryPauseReason = null,
+  snoozedUntil = null,
   settings,
 }: Readonly<{
-  autoDeliveryPaused?: boolean;
+  autoDeliveryPauseReason?: 'notifications_off' | 'snoozed' | null;
+  snoozedUntil?: number | null;
   settings: ReturnType<typeof useNotificationChannelsSettings>;
 }>): React.JSX.Element {
   const {
@@ -57,6 +63,9 @@ export function NotificationChannelsSettings({
     start,
     cancel,
   } = settings;
+  const { t, resolvedLanguage } = useAppTranslation('settings');
+  const isRussian = resolvedLanguage?.toLowerCase().startsWith('ru') ?? false;
+  const providerGuide = draft ? PROVIDER_SETUP_GUIDES[draft.provider] : null;
   if (localSettingsUrl || remoteSettingsUnavailable) {
     return (
       <section
@@ -95,13 +104,18 @@ export function NotificationChannelsSettings({
             <BellPlus className="size-4" /> Delivery Channels
           </h3>
           <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Optional Telegram, Discord, Slack and other destinations. Desktop alerts stay unchanged.
-            Only the event type is sent, never agent messages.
+            Telegram, Discord, Slack, Teams, and Google Chat. Configure each destination once,
+            then select it beside notification types below. Only safe event labels are sent.
           </p>
-          {autoDeliveryPaused && (
+          {autoDeliveryPauseReason && channels.length > 0 && (
             <p className="mt-2 text-xs text-amber-500" role="status">
-              Automatic external delivery is paused by global notifications or snooze. You can still
-              test a destination manually.
+              {autoDeliveryPauseReason === 'notifications_off'
+                ? t('notifications.delivery.pausedDisabled')
+                : snoozedUntil
+                  ? t('notifications.delivery.pausedSnoozed', {
+                      time: new Date(snoozedUntil).toLocaleTimeString(),
+                    })
+                  : t('notifications.delivery.pausedSnoozedUnknown')}
             </p>
           )}
         </div>
@@ -243,6 +257,29 @@ export function NotificationChannelsSettings({
             <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {DELIVERY_PROVIDERS.find((item) => item.id === draft.provider)?.hint}
             </p>
+            {providerGuide && (
+              <div className="mt-2 space-y-2 rounded-md border p-3 text-xs" style={{ borderColor: 'var(--color-border-subtle)' }}>
+                <p>{isRussian ? providerGuide.instructionRu : providerGuide.instruction}</p>
+                <p className="text-[var(--color-text-muted)]">
+                  {isRussian ? 'Пример формата (нерабочие данные):' : 'Example format (not a real credential):'}
+                </p>
+                <code className="block break-all rounded bg-[var(--color-surface)] p-2 text-[11px]">
+                  {providerGuide.example}
+                </code>
+                <div className="flex flex-wrap items-center gap-4">
+                  <a href={providerGuide.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+                    {providerGuide.officialLabel} <ExternalLink className="size-3" />
+                  </a>
+                  <a href={(isRussian
+                      ? CHANNEL_SETUP_DOCS_URL.replace('/guide/', '/ru/guide/')
+                      : CHANNEL_SETUP_DOCS_URL) +
+                      '#' +
+                      (draft.provider === 'ms-teams' ? 'microsoft-teams-workflows' : draft.provider)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+                    {isRussian ? 'Пошаговая инструкция Agent Teams' : 'Step-by-step setup guide'} <ExternalLink className="size-3" />
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
           {draft.provider === 'telegram' && (
             <label className="block space-y-1 text-xs">
@@ -256,14 +293,14 @@ export function NotificationChannelsSettings({
             </label>
           )}
           <label className="block space-y-1 text-xs">
-            <span>{draft.provider === 'telegram' ? 'Bot token' : 'Official webhook URL'}</span>
+            <span>{draft.provider === 'telegram' ? 'Bot token from @BotFather' : 'Incoming webhook URL from the provider'}</span>
             <Input
               type="password"
               autoComplete="new-password"
               disabled={busy}
               value={draft.secret ?? ''}
               onChange={(event) => updateDraft({ secret: event.target.value })}
-              placeholder={draft.id ? 'Leave blank to keep current credential' : 'Required'}
+              placeholder={draft.id ? 'Leave blank to keep current credential' : 'Paste the complete secret URL or bot token'}
             />
           </label>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -297,7 +334,7 @@ export function NotificationChannelsSettings({
             </Button>
           </div>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            After saving, click Test, enable the channel, then select its notification types below. Secrets are encrypted locally.
+            Next: save → click Test → enable the channel → select notification destinations below. Secrets are encrypted locally and never displayed again.
           </p>
         </div>
       )}

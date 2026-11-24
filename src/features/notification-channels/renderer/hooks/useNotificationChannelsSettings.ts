@@ -158,16 +158,22 @@ export function useNotificationChannelsSettings() {
   ): void => {
     if (!channel.enabled || !channel.hasCredential) return;
     void run(async () => {
+      // Read the current membership before writing. A previous save may have
+      // succeeded even if refreshing its UI snapshot failed afterward.
+      const fresh = (await api.notificationChannels.list()).find((item) => item.id === channel.id);
+      if (!fresh?.enabled || !fresh.hasCredential) {
+        throw new Error('Channel unavailable');
+      }
       const updated = checked
-        ? [...new Set([...channel.events, ...events])]
-        : channel.events.filter((event) => !events.includes(event));
+        ? [...new Set([...fresh.events, ...events])]
+        : fresh.events.filter((event) => !events.includes(event));
       await api.notificationChannels.save({
-        id: channel.id,
-        name: channel.name,
-        provider: channel.provider,
-        enabled: channel.enabled,
+        id: fresh.id,
+        name: fresh.name,
+        provider: fresh.provider,
+        enabled: fresh.enabled,
         events: updated,
-        chatId: channel.chatId,
+        chatId: fresh.chatId,
       });
     });
   };

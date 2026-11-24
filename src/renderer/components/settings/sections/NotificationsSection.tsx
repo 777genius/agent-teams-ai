@@ -390,12 +390,14 @@ export const NotificationsSection = ({
 
       <NotificationChannelsSettings
         settings={deliverySettings}
-        autoDeliveryPaused={!safeConfig.notifications.enabled || isSnoozed}
+        autoDeliveryPauseReason={
+          !safeConfig.notifications.enabled ? 'notifications_off' : isSnoozed ? 'snoozed' : null
+        }
+        snoozedUntil={safeConfig.notifications.snoozedUntil}
       />
 
       <p className="mb-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-        Choose delivery destinations beside each notification type. Turning a type off still
-        disables its notifications everywhere; Desktop is the default destination.
+        {t('notifications.delivery.routingHint')}
       </p>
 
       <div id="usage-budget-notifications" className="scroll-mt-6">
@@ -560,7 +562,7 @@ export const NotificationsSection = ({
               disabled={saving || !safeConfig.notifications.enabled}
             />
             <span className="ml-2 text-xs text-[var(--color-text-muted)]">
-              Desktop only
+              {t('notifications.delivery.desktopOnly')}
             </span>
           </SettingRow>
           {/* Task Status Change Notifications — nested within team card */}
@@ -628,7 +630,7 @@ export const NotificationsSection = ({
       </div>
 
       <div className="mb-4 rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
-        <p className="mb-2 text-xs font-medium">Additional delivery events</p>
+        <p className="mb-2 text-xs font-medium">{t('notifications.delivery.additionalEvents')}</p>
         {(['runtime_recovery', 'schedule_completed', 'schedule_failed'] as const).map((event) => (
           <SettingRow key={event} wrapControls label={DELIVERY_EVENT_LABELS[event]}>
             {destinations([event], true)}

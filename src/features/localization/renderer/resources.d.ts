@@ -2991,6 +2991,14 @@ export default interface Resources {
       }
     },
     "notifications": {
+      "delivery": {
+        "additionalEvents": "Additional delivery events",
+        "desktopOnly": "Desktop only",
+        "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Turn it on below to resume. Manual Test still works.",
+        "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+        "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+        "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default."
+      },
       "dev": {
         "descriptionPrefix": "Notifications may not work in development mode. macOS identifies the app as \"Electron\" (bundle ID",
         "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",

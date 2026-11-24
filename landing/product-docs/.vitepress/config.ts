@@ -49,6 +49,7 @@ const rootGuide: DefaultTheme.SidebarItem[] = [
     items: [
       { text: "Create your first team", link: "/guide/create-first-team" },
       { text: "Run and monitor work", link: "/guide/run-and-monitor-work" },
+      { text: "Notification channels", link: "/guide/notification-channels" },
       { text: "Review and approve", link: "/guide/review-and-approve" },
       { text: "Team configuration", link: "/guide/create-team" },
       { text: "Agent workflow", link: "/guide/agent-workflow" },
@@ -97,6 +98,7 @@ const ruGuide: DefaultTheme.SidebarItem[] = [
     items: [
       { text: "Создать первую команду", link: "/ru/guide/create-first-team" },
       { text: "Запуск и мониторинг", link: "/ru/guide/run-and-monitor-work" },
+      { text: "Каналы уведомлений", link: "/ru/guide/notification-channels" },
       { text: "Проверка и approval", link: "/ru/guide/review-and-approve" },
       { text: "Настройка команды", link: "/ru/guide/create-team" },
       { text: "Работа агентов", link: "/ru/guide/agent-workflow" },

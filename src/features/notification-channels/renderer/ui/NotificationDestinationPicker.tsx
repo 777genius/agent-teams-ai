@@ -76,7 +76,7 @@ export function NotificationDestinationPicker({
           <Checkbox
             aria-label={`Desktop for ${label}`}
             checked={desktopEnabled}
-            disabled={busy || (!canDisableDesktop && desktopEnabled !== false)}
+            disabled={disabledControl || (!canDisableDesktop && desktopEnabled !== false)}
             onCheckedChange={(value) => onDesktopChange(value === true)}
           />
           <Monitor className="size-3.5" />
@@ -93,7 +93,7 @@ export function NotificationDestinationPicker({
               <Checkbox
                 aria-label={`Deliver ${label} to ${channel.name}`}
                 checked={checked}
-                disabled={busy || !available}
+                disabled={disabledControl || !available}
                 onCheckedChange={(value) => onChannelChange(channel, events, value === true)}
               />
               <span className="min-w-0">
