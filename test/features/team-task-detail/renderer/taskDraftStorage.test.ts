@@ -82,6 +82,38 @@ describe('task draft persistence races', () => {
     });
   });
 
+  it('does not combine old saved text with a newer request ID after a failed clear', async () => {
+    const repo = repository();
+    const storage = createTaskDraftStorage(repo);
+    const cycleA = 'c762b0b0-ff77-4248-9860-4a70a8a14cf4';
+    const cycleB = 'ac790b2d-5811-4d80-a16d-acf7c7b5c002';
+    await storage.save(identity, {
+      text: 'Answer for A', commentChips: [], answerClarificationRequestId: cycleA,
+    });
+    let failed = false;
+    const storageWithFailure = createTaskDraftStorage({
+      ...repo,
+      async saveDraft(key, value) {
+        if (!failed && key.includes('task-comment-bundle')) {
+          failed = true;
+          throw new Error('disk error on clear');
+        }
+        await repo.saveDraft(key, value);
+      },
+    });
+    await expect(storageWithFailure.save(identity, {
+      text: '', commentChips: [], answerClarificationRequestId: null,
+    })).rejects.toThrow('disk error on clear');
+    // A newly composed B draft is sent as a full session snapshot, including
+    // the explicitly empty text, so the failed clear cannot resurrect A.
+    await storageWithFailure.save(identity, {
+      text: '', commentChips: [chip], answerClarificationRequestId: cycleB,
+    });
+    expect(await createTaskDraftStorage(repo).hydrate(identity)).toMatchObject({
+      text: '', commentChips: [chip], answerClarificationRequestId: cycleB,
+    });
+  });
+
   it('preserves text and rich chips from successive partial writes', async () => {
     const storage = createTaskDraftStorage(repository());
     await Promise.all([

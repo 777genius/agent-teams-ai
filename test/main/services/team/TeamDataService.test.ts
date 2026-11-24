@@ -5559,6 +5559,27 @@ describe('TeamDataService', () => {
     }
   });
 
+  it('routes a bound user answer to the actual lead name rather than the team-lead alias', async () => {
+    const { service, inboxWriter } = createTaskCommentForwardingService({
+      members: [{ name: 'renamed-lead', role: 'Lead' }],
+      tasks: [{
+        id: 'lead-answer', subject: 'Choose DB', status: 'pending', owner: 'team-lead',
+        comments: [{
+          id: 'clarification-answer-7fdfca67-8b58-4d12-9ed6-5c5aaeecced1',
+          text: 'Use PostgreSQL', author: 'user',
+          type: 'regular', createdAt: '2026-11-24T15:00:00Z',
+        }],
+      }],
+    });
+    await service.notifyLeadOnTeammateTaskComment('my-team', 'lead-answer');
+    expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
+      expect.objectContaining({ member: 'renamed-lead', from: 'user' }));
+    const notice = (inboxWriter.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(notice.text).toContain('Re-read the task');
+    expect(notice.text).toContain('If a newer user clarification is pending');
+    expect(notice.text).not.toContain('Continue the task, or request');
+  });
+
   it('never clears an unowned profile task when a bound answer cannot be delivered', async () => {
     const service = new TeamDataService();
     await expect(service.addTaskComment(

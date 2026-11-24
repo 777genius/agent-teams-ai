@@ -239,14 +239,19 @@ export function useTaskDetailSession({
   }, [identity, identityKey, isOriginCurrent, scope, session.ownerRevision, surfaceId]);
 
   const persistDraft = useCallback(
-    (value: { text?: string; commentChips?: InlineChip[] }) => {
+    () => {
+      const draft = useStore.getState().taskDetailSessionById[identityKey];
+      if (!draft) return;
       setIsDraftSaved(false);
-      // Keep the original question's identity next to its text/chips; a later
-      // task refresh must not silently bind this draft to another question.
-      const answerClarificationRequestId =
-        useStore.getState().taskDetailSessionById[identityKey]?.answerClarificationRequestId;
+      // Capture a COMPLETE same-revision snapshot. Persisting only one changed
+      // field could pair stale on-disk text with a new request identity if an
+      // earlier save failed. Never merge the generation with unrelated content.
       void taskDraftStorage
-        .save(identity, { ...value, answerClarificationRequestId })
+        .save(identity, {
+          text: draft.commentText,
+          commentChips: draft.commentChips,
+          answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
+        })
         .then(() => {
           if (isOriginCurrent()) setIsDraftSaved(true);
         })
@@ -261,7 +266,7 @@ export function useTaskDetailSession({
     (text: string) => {
       if (!requireOwner()) return;
       useStore.getState().updateTaskDetailSessionPart(identity, 'commentText', text);
-      persistDraft({ text });
+      persistDraft();
     },
     [identity, persistDraft, requireOwner]
   );
@@ -270,7 +275,7 @@ export function useTaskDetailSession({
     (chips: InlineChip[]) => {
       if (!requireOwner()) return;
       useStore.getState().updateTaskDetailSessionPart(identity, 'commentChips', chips);
-      persistDraft({ commentChips: chips });
+      persistDraft();
     },
     [identity, persistDraft, requireOwner]
   );
@@ -435,7 +440,7 @@ export function useTaskDetailSession({
         if (after.commentText === '' && after.commentChips.length === 0) {
           void taskDraftStorage.clear(identity);
         } else {
-          persistDraft({ text: after.commentText, commentChips: after.commentChips });
+          persistDraft();
         }
       }
     } catch (error) {

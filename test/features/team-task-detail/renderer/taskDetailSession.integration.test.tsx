@@ -238,7 +238,7 @@ describe('task session surface and origin integration', () => {
     expect(useStore.getState().taskDetailSessionById[key].answerClarificationRequestId).toBe(cycleB);
   });
 
-  it('refreshes same-ID tasks across teams once per identity from root interest', async () {
+  it('refreshes same-ID tasks across teams once per identity from root interest', async () => {
     const other = { ...identity, teamName: 'TEST-other-team' };
     const otherKey = taskDetailKey(other);
     const tails = new Map([
