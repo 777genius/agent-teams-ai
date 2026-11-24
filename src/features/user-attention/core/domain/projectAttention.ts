@@ -8,6 +8,7 @@ import {
   isTaskStallRemediationMessage,
 } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
+import { deduplicateVisibleRelayMessages } from '@shared/utils/teamMessageRelayDeduplication';
 
 import type { AttentionTaskCandidate } from '../../contracts';
 import type { InboxMessage, TeamTask } from '@shared/types/team';
@@ -20,25 +21,22 @@ function messageIdentity(message: InboxMessage): string {
     : `${message.timestamp}-${message.from}-${message.text.slice(0, 80)}`;
 }
 
-/** Project just the human-facing candidate, never internal agent traffic. */
-export function projectAttentionMessage(message: InboxMessage): InboxMessage | null {
+function isAttentionVisibleMessage(message: InboxMessage): boolean {
+  return message.messageKind !== 'task_comment_notification' &&
+    !isInboxNoiseMessage(message.text) &&
+    !isTeamInternalControlMessageEnvelope(message) &&
+    !isMemberWorkSyncNudgeMessage(message) &&
+    !isRuntimeRecoveryNudgeMessage(message) &&
+    !isReviewPickupEscalationMessage(message) &&
+    !isTaskStallRemediationMessage(message) &&
+    (!message.groupChatId || Boolean(message.groupMessageId && message.groupMessageId === message.messageId));
+}
+
+function projectVisibleAttentionMessage(message: InboxMessage): InboxMessage | null {
   // Decide attention from the complete human-visible text, not hidden agent
   // blocks and not the 240-character preview (mentions may occur later).
   const sanitized = stripAgentBlocks(message.text).trim();
-  if (!isUserAttentionMessage({ ...message, text: sanitized }) ||
-      message.messageKind === 'task_comment_notification' ||
-      isInboxNoiseMessage(message.text) ||
-      isTeamInternalControlMessageEnvelope(message) ||
-      isMemberWorkSyncNudgeMessage(message) ||
-      isRuntimeRecoveryNudgeMessage(message) ||
-      isReviewPickupEscalationMessage(message) ||
-      isTaskStallRemediationMessage(message)) {
-    return null;
-  }
-  if (message.groupChatId &&
-      (!message.groupMessageId || message.groupMessageId !== message.messageId)) {
-    return null;
-  }
+  if (!isUserAttentionMessage({ ...message, text: sanitized })) return null;
 
   // Capture the existing read identity before truncating user-visible preview.
   const messageId = messageIdentity(message);
@@ -58,6 +56,23 @@ export function projectAttentionMessage(message: InboxMessage): InboxMessage | n
     groupChatId: message.groupChatId,
     groupMessageId: message.groupMessageId,
   };
+}
+
+/** Project just the human-facing candidate, never internal agent traffic. */
+export function projectAttentionMessage(message: InboxMessage): InboxMessage | null {
+  return isAttentionVisibleMessage(message) ? projectVisibleAttentionMessage(message) : null;
+}
+
+/** Canonicalize the same visible relay messages as Messenger before projecting previews. */
+export function projectAttentionMessages(
+  messages: readonly InboxMessage[],
+  leadNames: Iterable<string>
+): InboxMessage[] {
+  const visible = deduplicateVisibleRelayMessages(messages.filter(isAttentionVisibleMessage), leadNames);
+  return visible.flatMap((message) => {
+    const candidate = projectVisibleAttentionMessage(message);
+    return candidate ? [candidate] : [];
+  });
 }
 
 export function projectAttentionTasks(
