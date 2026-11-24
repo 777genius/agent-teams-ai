@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} kon niet starten",
         "teammatesFailedToStart": "{{count}} teamleden konden niet starten",
-        "teammatesFailedRatio": "{{count}}/{{total}} teamleden konden niet starten"
+        "teammatesFailedRatio": "{{count}}/{{total}} teamleden konden niet starten",
+        "manualPermissionUnsupported": "Deze startmethode ondersteunt geen handmatige goedkeuring van tools. Kies een methode die goedkeuringen ondersteunt en probeer opnieuw."
       },
       "skipped": {
         "memberSkipped": "{{name}} overgeslagen voor deze start",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Het starten van het team in project “{{project}}” is niet voltooid. Probeer opnieuw.",
+    "unknown": "Het is niet bevestigd dat de vorige uitvoering in project “{{project}}” is gestopt. Controleer de status voordat je opnieuw start.",
+    "retryLaunch": "Opnieuw starten",
+    "recoveryProject": "Controleer de onvoltooide start in project “{{project}}” voordat je dit team bewerkt.",
+    "openProject": "Project openen"
   }
 }

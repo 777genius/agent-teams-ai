@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} non si è avviato",
         "teammatesFailedToStart": "{{count}} membri del team non si sono avviati",
-        "teammatesFailedRatio": "{{count}}/{{total}} membri del team non si sono avviati"
+        "teammatesFailedRatio": "{{count}}/{{total}} membri del team non si sono avviati",
+        "manualPermissionUnsupported": "Questo metodo di avvio non supporta l’approvazione manuale degli strumenti. Scegli un metodo che la supporti e riprova."
       },
       "skipped": {
         "memberSkipped": "{{name}} saltato per questo avvio",
@@ -3311,5 +3312,12 @@
         "invalidRequest": "The export request was invalid."
       }
     }
+  },
+  "projectContextView": {
+    "incomplete": "L’avvio del team nel progetto «{{project}}» non è stato completato. Riprova.",
+    "unknown": "L’arresto dell’esecuzione precedente nel progetto «{{project}}» non è confermato. Verifica lo stato prima di riavviare.",
+    "retryLaunch": "Riprova avvio",
+    "recoveryProject": "Controlla l’avvio incompleto nel progetto «{{project}}» prima di modificare questo team.",
+    "openProject": "Apri progetto"
   }
 }

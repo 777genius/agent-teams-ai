@@ -73,6 +73,7 @@ import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
 import { hasMixedPersistedLaunchMetadata } from './TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
+import { TeamLiveRosterMutationError } from './TeamLiveRosterMutationError';
 import { isMaterializableInboxMemberName, TeamMemberResolver } from './TeamMemberResolver';
 import { planTeamMemberRestore } from './TeamMemberRestorePlan';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
@@ -82,6 +83,7 @@ import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
+import { mapLimitLocal } from './teamSnapshotReadConcurrency';
 import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
@@ -306,30 +308,6 @@ interface GlobalTaskTeamInfo {
   displayName: string;
   projectPath?: string;
   deletedAt?: string;
-}
-
-async function mapLimitLocal<T, R>(
-  items: readonly T[],
-  limit: number,
-  mapper: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(Math.max(1, limit), items.length);
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (true) {
-        const index = nextIndex++;
-        if (index >= items.length) {
-          return;
-        }
-        results[index] = await mapper(items[index]);
-      }
-    })
-  );
-
-  return results;
 }
 
 function readConfigForUiSnapshot(
@@ -641,32 +619,31 @@ export class TeamDataService {
     };
   }
 
-  private async assertRosterMutationAllowed(
+  async assertRosterMutationAllowed(
     teamName: string,
-    nextMembers: ReturnType<typeof toProvisioningMemberShape>
+    nextMembers: ReturnType<typeof toProvisioningMemberShape>,
+    knownRunning?: true
   ): Promise<void> {
     const context = await this.readTeamLaneMutationContext(teamName);
     const nextPlan = fromProvisioningMembers(context.leadProviderId, nextMembers);
     if (!nextPlan.ok) {
       throw new Error(nextPlan.message);
     }
-    const nextMixed = isMixedOpenCodeSideLanePlan(nextPlan.plan);
-    if (!(context.currentMixed || nextMixed)) {
+    if (!(context.currentMixed || isMixedOpenCodeSideLanePlan(nextPlan.plan))) {
       return;
     }
-    const isRunning = (await this.readProcesses(teamName).catch(() => [] as TeamProcess[])).some(
+    const isRunning = knownRunning ?? (await this.readProcesses(teamName).catch(() => [] as TeamProcess[])).some(
       (process) => !process.stoppedAt
     );
-    if (isRunning) {
-      if (
-        !isSupportedRunningMixedRosterMutation({
-          leadProviderId: context.leadProviderId,
-          previousMembers: context.activeMembers,
-          nextMembers,
-        })
-      ) {
-        throw new Error(MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE);
-      }
+    if (!isRunning) return;
+    if (
+      !isSupportedRunningMixedRosterMutation({
+        leadProviderId: context.leadProviderId,
+        previousMembers: context.activeMembers,
+        nextMembers,
+      })
+    ) {
+      throw new TeamLiveRosterMutationError(MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE);
     }
   }
 
@@ -1179,6 +1156,14 @@ export class TeamDataService {
     }
 
     return alive.sort((left, right) => left.localeCompare(right));
+  }
+
+  /** Source-backed attention selection, independent of the 500-row global task export. */
+  async getUserAttentionTasks(teamName: string): Promise<readonly TeamTask[]> {
+    const tasks = await this.readTasksForUiSnapshot(teamName);
+    return tasks.filter((task) =>
+      task.needsClarification === 'user' && task.status !== 'deleted' && !task.deletedAt
+    );
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {

@@ -111,6 +111,9 @@ export interface ScheduleChangeEvent {
   scheduleId: string;
   teamName: string;
   detail?: string;
+  /** Final run identity/status for reliable, deduplicated notifications. */
+  runId?: string;
+  runStatus?: ScheduleRunStatus;
 }
 
 // =============================================================================

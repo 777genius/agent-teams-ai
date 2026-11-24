@@ -10,6 +10,8 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
+import { NOTIFICATION_DESKTOP_ROUTABLE_EVENTS } from '@features/notification-channels/contracts';
+import { DEFAULT_TEAM_RUNTIME_RECOVERY_CONFIG } from '@features/team-runtime-recovery/contracts';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -86,6 +88,7 @@ function isReadableJsonObjectFile(filePath: string): boolean {
 export interface NotificationConfig {
   enabled: boolean;
   soundEnabled: boolean;
+  desktopDisabledEvents?: SharedAppConfig['notifications']['desktopDisabledEvents'];
   ignoredRegex: string[];
   ignoredRepositories: string[]; // Repository group IDs to ignore
   snoozedUntil: number | null; // Unix timestamp (ms) when snooze ends
@@ -357,6 +360,7 @@ const DEFAULT_CONFIG: AppConfig = {
   notifications: {
     enabled: true,
     soundEnabled: true,
+    desktopDisabledEvents: [],
     ignoredRegex: [...DEFAULT_IGNORED_REGEX],
     ignoredRepositories: [],
     snoozedUntil: null,
@@ -381,12 +385,7 @@ const DEFAULT_CONFIG: AppConfig = {
     statusChangeStatuses: ['in_progress', 'completed'],
     triggers: DEFAULT_TRIGGERS,
   },
-  teamRuntimeRecovery: {
-    transientErrorsEnabled: false,
-    rateLimitsEnabled: false,
-    initialDelaySeconds: 60,
-    maxAttempts: 2,
-  },
+  teamRuntimeRecovery: { ...DEFAULT_TEAM_RUNTIME_RECOVERY_CONFIG },
   general: {
     launchAtLogin: false,
     showDockIcon: true,
@@ -554,9 +553,6 @@ export class ConfigManager {
     );
   }
 
-  // ===========================================================================
-  // Singleton Pattern
-  // ===========================================================================
 
   /**
    * Gets the singleton instance of ConfigManager.
@@ -573,9 +569,6 @@ export class ConfigManager {
     ConfigManager.instance = null;
   }
 
-  // ===========================================================================
-  // Config Loading & Saving
-  // ===========================================================================
 
   /**
    * Loads configuration from disk.
@@ -663,6 +656,11 @@ export class ConfigManager {
       notifications: {
         enabled: loadedNotifications.enabled ?? DEFAULT_CONFIG.notifications.enabled,
         soundEnabled: loadedNotifications.soundEnabled ?? DEFAULT_CONFIG.notifications.soundEnabled,
+        desktopDisabledEvents: Array.isArray(loadedNotifications.desktopDisabledEvents)
+          ? [...new Set(loadedNotifications.desktopDisabledEvents.filter((event) =>
+              (NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event)
+            ))]
+          : [],
         ignoredRegex: loadedNotifications.ignoredRegex ?? DEFAULT_CONFIG.notifications.ignoredRegex,
         ignoredRepositories:
           loadedNotifications.ignoredRepositories ??
@@ -789,9 +787,6 @@ export class ConfigManager {
     return JSON.parse(JSON.stringify(obj)) as T;
   }
 
-  // ===========================================================================
-  // Config Access
-  // ===========================================================================
 
   /**
    * Gets the full configuration object.

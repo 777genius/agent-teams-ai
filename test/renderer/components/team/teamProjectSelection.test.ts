@@ -155,15 +155,19 @@ describe('teamProjectSelection', () => {
   });
 
   it('launches the selected project after a shared team switches to isolated history', () => {
-    expect(resolveTeamLaunchDefaultProjectPath(
-      'per_project', '/Users/test/project-b', '/Users/test/legacy-a'
-    )).toBe('/Users/test/project-b');
-    expect(resolveTeamLaunchDefaultProjectPath(
-      'shared', '/Users/test/project-b', '/Users/test/legacy-a'
-    )).toBe('/Users/test/legacy-a');
-    expect(resolveTeamLaunchDefaultProjectPath(
-      undefined, '/Users/test/project-b', null
-    )).toBe('/Users/test/project-b');
+    expect(
+      resolveTeamLaunchDefaultProjectPath(
+        'per_project',
+        '/Users/test/project-b',
+        '/Users/test/legacy-a'
+      )
+    ).toBe('/Users/test/project-b');
+    expect(
+      resolveTeamLaunchDefaultProjectPath('shared', '/Users/test/project-b', '/Users/test/legacy-a')
+    ).toBe('/Users/test/legacy-a');
+    expect(resolveTeamLaunchDefaultProjectPath(undefined, '/Users/test/project-b', null)).toBe(
+      '/Users/test/project-b'
+    );
   });
 
   it('uses only a verified runtime owned by the selected project for relaunch permissions', () => {
@@ -174,19 +178,34 @@ describe('teamProjectSelection', () => {
       workContextId: 'ctx-b',
       projectPath: '/Users/test/project-b',
     };
-    expect(resolveTeamListProjectPermissionAlias('logical-team', '/users/test/project-b/', ready))
-      .toBe('ptc-project-b');
-    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-a', ready))
-      .toBeNull();
-    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
-      ...ready, executionTeamName: 'logical-team',
-    })).toBeNull();
-    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
-      mode: 'per_project', state: 'pending',
-    })).toBeNull();
-    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
-      mode: 'shared', state: 'ready', executionTeamName: 'logical-team',
-    })).toBeNull();
+    expect(
+      resolveTeamListProjectPermissionAlias('logical-team', '/users/test/project-b/', ready)
+    ).toBe('ptc-project-b');
+    expect(
+      resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-a', ready)
+    ).toBeNull();
+    expect(
+      resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
+        ...ready,
+        executionTeamName: 'logical-team',
+      })
+    ).toBeNull();
+    expect(
+      resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
+        mode: 'per_project',
+        state: 'pending',
+        reason: 'launching',
+        projectPath: '/Users/test/project-b',
+        runId: null,
+      })
+    ).toBeNull();
+    expect(
+      resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
+        mode: 'shared',
+        state: 'ready',
+        executionTeamName: 'logical-team',
+      })
+    ).toBeNull();
   });
 
   it('uses priority project path as a create default fallback', () => {
@@ -240,20 +259,30 @@ describe('teamProjectSelection', () => {
 
   it('keeps verified physical task history when its project is no longer discovered', () => {
     const verified = {
-      mode: 'per_project' as const, state: 'redirect' as const,
-      logicalTeamName: 'builders', projectPath: '/Users/test/deleted-worktree',
+      mode: 'per_project' as const,
+      state: 'redirect' as const,
+      logicalTeamName: 'builders',
+      projectPath: '/Users/test/deleted-worktree',
     };
-    expect(resolveVerifiedProjectTaskNavigation(
-      'ptc-owned', verified, repositoryGroups, projects
-    )).toEqual({ teamName: 'ptc-owned' });
-    expect(resolveVerifiedProjectTaskNavigation(
-      'ptc-owned', { ...verified, projectPath: '/Users/test/headless' },
-      repositoryGroups, projects
-    )).toEqual({ teamName: 'builders', projectPath: '/Users/test/headless' });
-    expect(resolveVerifiedProjectTaskNavigation(
-      'ptc-owned', { ...verified, projectPath: '/Users/test/standalone' },
-      repositoryGroups, projects
-    )).toEqual({ teamName: 'builders', projectPath: '/Users/test/standalone' });
+    expect(
+      resolveVerifiedProjectTaskNavigation('ptc-owned', verified, repositoryGroups, projects)
+    ).toEqual({ teamName: 'ptc-owned' });
+    expect(
+      resolveVerifiedProjectTaskNavigation(
+        'ptc-owned',
+        { ...verified, projectPath: '/Users/test/headless' },
+        repositoryGroups,
+        projects
+      )
+    ).toEqual({ teamName: 'builders', projectPath: '/Users/test/headless' });
+    expect(
+      resolveVerifiedProjectTaskNavigation(
+        'ptc-owned',
+        { ...verified, projectPath: '/Users/test/standalone' },
+        repositoryGroups,
+        projects
+      )
+    ).toEqual({ teamName: 'builders', projectPath: '/Users/test/standalone' });
   });
 
   it('matches team project history against the selected project', () => {

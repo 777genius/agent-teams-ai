@@ -2335,7 +2335,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} gagal untuk memulai",
         "teammatesFailedToStart": "{{count}} rekan tim gagal untuk memulai",
-        "teammatesFailedRatio": "{{count}}/{{total}} rekan tim gagal untuk memulai"
+        "teammatesFailedRatio": "{{count}}/{{total}} rekan tim gagal untuk memulai",
+        "manualPermissionUnsupported": "Metode peluncuran ini tidak mendukung persetujuan alat secara manual. Pilih metode yang mendukung persetujuan, lalu coba lagi."
       },
       "skipped": {
         "memberSkipped": "{{name}} dilewati untuk peluncuran ini",
@@ -3311,5 +3312,12 @@
       "saving": "Saving…",
       "title": "Edit template"
     }
+  },
+  "projectContextView": {
+    "incomplete": "Peluncuran tim di proyek “{{project}}” belum selesai. Coba luncurkan lagi.",
+    "unknown": "Proses sebelumnya di proyek “{{project}}” belum dipastikan berhenti. Periksa statusnya sebelum meluncurkan lagi.",
+    "retryLaunch": "Coba luncurkan lagi",
+    "recoveryProject": "Periksa peluncuran yang belum selesai di proyek “{{project}}” sebelum mengedit tim ini.",
+    "openProject": "Buka proyek"
   }
 }

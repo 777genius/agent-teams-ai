@@ -7,6 +7,7 @@
  * Shared between preload and renderer processes.
  */
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
+import type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
@@ -55,7 +56,6 @@ import type {
 } from './schedule';
 import type { SshAPI } from './ssh';
 import type {
-  AddMemberRequest,
   AddTaskCommentRequest,
   AttachmentFileData,
   BoardTaskActivityDetailResult,
@@ -80,7 +80,6 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
-  ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
   SendMessageResult,
@@ -92,7 +91,6 @@ import type {
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
-  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -109,13 +107,13 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
   ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
+import type { TeamDefinitionEditApi, TeamDefinitionEditsTransport } from './teamDefinitionEdit';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
@@ -141,6 +139,7 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
@@ -156,6 +155,7 @@ import type {
 } from '@features/team-read-recovery/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
+import type { UserAttentionApi } from '@features/user-attention/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
 import type {
   ConversationGroup,
@@ -171,6 +171,7 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
+export type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -295,33 +296,6 @@ export interface ConfigAPI {
   addCustomProjectPath: (projectPath: string) => Promise<void>;
   /** Remove a custom project path */
   removeCustomProjectPath: (projectPath: string) => Promise<void>;
-}
-
-export interface ClaudeRootInfo {
-  /** Auto-detected default Claude root path for this machine */
-  defaultPath: string;
-  /** Effective path currently used by local context */
-  resolvedPath: string;
-  /** Custom override path from settings (null means auto-detect) */
-  customPath: string | null;
-}
-
-export interface ClaudeRootFolderSelection {
-  /** Selected directory absolute path */
-  path: string;
-  /** Whether the selected folder name is exactly ".claude" */
-  isClaudeDirName: boolean;
-  /** Whether selected folder contains a "projects" directory */
-  hasProjectsDir: boolean;
-}
-
-export interface WslClaudeRootCandidate {
-  /** WSL distribution name (e.g. Ubuntu) */
-  distro: string;
-  /** Candidate Claude root path in UNC format */
-  path: string;
-  /** True if this root contains "projects" directory */
-  hasProjectsDir: boolean;
 }
 
 // =============================================================================
@@ -451,7 +425,13 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, TeamProjectContextViewApi {
+export interface TeamsAPI
+  extends
+    TeamMemberSettingsApi,
+    TeamReadLegacyApi,
+    TeamProjectContextViewApi,
+    TeamDefinitionEditApi {
+  definitionEdits?: TeamDefinitionEditsTransport;
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamSummary[]>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -540,16 +520,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, Team
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
   getAllTasks: () => Promise<GlobalTask[]>;
-  updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
-  addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
-  replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
-  removeMember: (teamName: string, memberName: string) => Promise<void>;
-  restoreMember: (teamName: string, memberName: string) => Promise<void>;
-  updateMemberRole: (
-    teamName: string,
-    memberName: string,
-    role: string | undefined
-  ) => Promise<void>;
   addTaskComment: (
     teamName: string,
     taskId: string,
@@ -859,6 +829,7 @@ export interface ReviewAPI {
 export interface ElectronAPI
   extends
     RecentProjectsElectronApi,
+    UserAttentionApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
@@ -934,10 +905,9 @@ export interface ElectronAPI
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => Promise<Record<string, AgentConfig>>;
 
-  // Notifications API
   notifications: NotificationsAPI;
+  notificationChannels: NotificationChannelsApi;
 
-  // Config API
   config: ConfigAPI;
 
   // Deep link navigation

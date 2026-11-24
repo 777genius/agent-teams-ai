@@ -33,35 +33,50 @@ const { state, getView, launchTeam, launchTeamIpc, openTeamTab, selectTeam } = v
 });
 
 vi.mock('@renderer/store', () => ({
-  useStore: Object.assign(
-    (selector: (store: typeof state) => unknown) => selector(state),
-    {
-      getState: () => ({
-        ...state,
-        activeTabId: 'alias-tab',
-        getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
-        openTeamTab,
-        selectTeam,
-        launchTeam,
-      }),
-    }
-  ),
+  useStore: Object.assign((selector: (store: typeof state) => unknown) => selector(state), {
+    getState: () => ({
+      ...state,
+      activeTabId: 'alias-tab',
+      getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
+      openTeamTab,
+      selectTeam,
+      launchTeam,
+    }),
+  }),
 }));
-vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam: launchTeamIpc, onProvisioningProgress: () => () => undefined } } }));
+vi.mock('@renderer/api', () => ({
+  api: {
+    teams: {
+      getProjectContextView: getView,
+      launchTeam: launchTeamIpc,
+      onProvisioningProgress: () => () => undefined,
+    },
+  },
+}));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock('./TeamProvisioningBanner', () => ({
   TeamProvisioningBanner: ({ teamName }: { teamName: string }) =>
-    React.createElement('div', { 'data-testid': 'provisioning-banner' },
-      state.provisioningErrorByTeam[teamName] ?? 'Launching'),
+    React.createElement(
+      'div',
+      { 'data-testid': 'provisioning-banner' },
+      state.provisioningErrorByTeam[teamName] ?? 'Launching'
+    ),
 }));
 vi.mock('./TeamDetailView', () => ({
-  TeamDetailView: ({ teamName, retainedHistory }: { teamName: string; retainedHistory?: boolean }) =>
+  TeamDetailView: ({
+    teamName,
+    retainedHistory,
+  }: {
+    teamName: string;
+    retainedHistory?: boolean;
+  }) =>
     React.createElement(
       'div',
       {
-        'data-testid': 'team-detail', 'data-team': teamName,
+        'data-testid': 'team-detail',
+        'data-team': teamName,
         'data-retained': String(retainedHistory === true),
       },
       React.createElement('div', { 'data-section-id': 'kanban' })
@@ -73,21 +88,38 @@ vi.mock('./definitionEdit/TeamDefinitionEditDialog', () => ({
 }));
 vi.mock('./dialogs/LaunchTeamDialog', () => ({
   LaunchTeamDialog: ({
-    onLaunch, teamName, defaultProjectPath, projectPermissionTeamName, rosterReadOnly,
+    onLaunch,
+    teamName,
+    defaultProjectPath,
+    projectPermissionTeamName,
+    rosterReadOnly,
   }: {
-    onLaunch: (request: { teamName: string; cwd: string; providerId: 'anthropic' }) => Promise<void>;
+    onLaunch: (request: {
+      teamName: string;
+      cwd: string;
+      providerId: 'anthropic';
+    }) => Promise<void>;
     teamName: string;
     defaultProjectPath: string;
     projectPermissionTeamName?: string | null;
     rosterReadOnly?: boolean;
-  }) => React.createElement('button', {
-    'data-testid': 'launch-with-provider',
-    'data-permission-policy': projectPermissionTeamName === null ? 'manual' : 'inherited',
-    'data-roster-read-only': String(rosterReadOnly === true),
-    onClick: () => { void onLaunch({
-      teamName, cwd: defaultProjectPath, providerId: 'anthropic',
-    }); },
-  }, 'Configure runtime and launch'),
+  }) =>
+    React.createElement(
+      'button',
+      {
+        'data-testid': 'launch-with-provider',
+        'data-permission-policy': projectPermissionTeamName === null ? 'manual' : 'inherited',
+        'data-roster-read-only': String(rosterReadOnly === true),
+        onClick: () => {
+          void onLaunch({
+            teamName,
+            cwd: defaultProjectPath,
+            providerId: 'anthropic',
+          });
+        },
+      },
+      'Configure runtime and launch'
+    ),
 }));
 
 import { getVisibleTeamNamesInAnyPane } from '@renderer/store/team/teamViewVisibility';
@@ -136,32 +168,40 @@ describe('ProjectScopedTeamDetailView project switching', () => {
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+    vi.useRealTimers();
   });
 
   it('keeps the mounted native project visible for live inbox/task refresh and unregisters it', async () => {
-    const visible = () => getVisibleTeamNamesInAnyPane({
-      paneLayout: { panes: [] },
-    } as never);
+    const visible = () =>
+      getVisibleTeamNamesInAnyPane({
+        paneLayout: { panes: [] },
+      } as never);
     getView.mockImplementation(async (_logical: string, project: string) =>
       project === '/TEST/a' ? native('ptc-a-visible', project) : native('ptc-b-visible', project)
     );
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: true })
-    ));
+    await act(async () =>
+      root.render(
+        React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: true })
+      )
+    );
     await settle();
     expect(visible().has('ptc-a-visible')).toBe(true);
 
     state.selectedProjectId = 'project-b';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: true })
-    ));
+    await act(async () =>
+      root.render(
+        React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: true })
+      )
+    );
     await settle();
     expect(visible().has('ptc-a-visible')).toBe(false);
     expect(visible().has('ptc-b-visible')).toBe(true);
 
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: false })
-    ));
+    await act(async () =>
+      root.render(
+        React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: false })
+      )
+    );
     expect(visible().has('ptc-b-visible')).toBe(false);
   });
 
@@ -169,48 +209,49 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     getView.mockImplementation(async (_team: string, path: string) =>
       path === '/TEST/a' ? native('ptc-a', path) : native('ptc-b', path)
     );
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
 
     state.selectedProjectId = 'project-b';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-b');
 
     state.selectedProjectId = 'project-a';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
     expect(getView).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(getView).toHaveBeenCalledWith('builders', '/TEST/b');
   });
 
-
   it('restores physical selection on repeated logical tab activation and preserves section navigation', async () => {
     getView.mockResolvedValue(native('ptc-a', '/TEST/a'));
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
 
     // The logical tab section menu must reach the physical TeamDetailView sections.
-    expect(host.querySelector('[data-team-name="builders"] [data-section-id="kanban"]'))
-      .not.toBeNull();
-    expect(host.querySelector('[data-team-name="ptc-a"] [data-section-id="kanban"]'))
-      .not.toBeNull();
+    expect(
+      host.querySelector('[data-team-name="builders"] [data-section-id="kanban"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-team-name="ptc-a"] [data-section-id="kanban"]')
+    ).not.toBeNull();
 
     // Clicking an already-active tab reselects the logical name without remounting.
     state.selectedTeamName = 'builders';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(selectTeam).toHaveBeenCalledWith('ptc-a');
   });
@@ -222,9 +263,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
       logicalTeamName: 'builders',
       projectPath: '/TEST/a',
     });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-a' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-a' }))
+    );
     await settle();
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(host.querySelector('[data-team]')).toBeNull();
@@ -232,22 +273,32 @@ describe('ProjectScopedTeamDetailView project switching', () => {
 
   it('defers alias navigation until its original pane becomes focused', async () => {
     getView.mockResolvedValue({
-      mode: 'per_project', state: 'redirect',
-      logicalTeamName: 'builders', projectPath: '/TEST/a',
+      mode: 'per_project',
+      state: 'redirect',
+      logicalTeamName: 'builders',
+      projectPath: '/TEST/a',
     });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, {
-        teamName: 'ptc-a', isActive: true, isPaneFocused: false,
-      })
-    ));
+    await act(async () =>
+      root.render(
+        React.createElement(ProjectScopedTeamDetailView, {
+          teamName: 'ptc-a',
+          isActive: true,
+          isPaneFocused: false,
+        })
+      )
+    );
     await settle();
     expect(openTeamTab).not.toHaveBeenCalled();
 
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, {
-        teamName: 'ptc-a', isActive: true, isPaneFocused: true,
-      })
-    ));
+    await act(async () =>
+      root.render(
+        React.createElement(ProjectScopedTeamDetailView, {
+          teamName: 'ptc-a',
+          isActive: true,
+          isPaneFocused: true,
+        })
+      )
+    );
     await settle();
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
   });
@@ -259,9 +310,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
       logicalTeamName: 'builders',
       projectPath: '/removed/worktree',
     });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-removed' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-removed' }))
+    );
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-removed');
     expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
@@ -277,9 +328,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
       native('ptc-a', '/TEST/a'),
     ]) {
       getView.mockResolvedValue(view);
-      await act(async () => root.render(
-        React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-      ));
+      await act(async () =>
+        root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+      );
       await settle();
       expect(host.querySelector('[data-team]')).not.toBeNull();
       expect(host.textContent).toBe('');
@@ -291,47 +342,199 @@ describe('ProjectScopedTeamDetailView project switching', () => {
 
   it('keeps the pre-feature shared team name unchanged', async () => {
     getView.mockResolvedValue({
-      mode: 'shared', state: 'ready', executionTeamName: 'builders',
+      mode: 'shared',
+      state: 'ready',
+      executionTeamName: 'builders',
     });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('builders');
   });
 
   it('surfaces Create Team and Team List launch failures without a local launch reference', async () => {
-    getView.mockImplementation(async (_team: string, path: string) =>
-      ({ mode: 'per_project', state: path === '/TEST/a' ? 'pending' : 'empty' })
-    );
+    getView.mockImplementation(async (_team: string, path: string) => ({
+      mode: 'per_project',
+      state: path === '/TEST/a' ? 'pending' : 'empty',
+      reason: 'incomplete',
+      projectPath: path,
+      runId: 'failed-a',
+    }));
     state.provisioningErrorByTeam.builders = 'Project runtime bootstrap failed';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    state.currentProvisioningRunIdByTeam.builders = 'failed-a';
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
-    expect(host.querySelector('[data-testid="provisioning-banner"]')?.textContent)
-      .toContain('Project runtime bootstrap failed');
+    expect(host.querySelector('[data-testid="provisioning-banner"]')?.textContent).toContain(
+      'Project runtime bootstrap failed'
+    );
     expect(host.textContent).toContain('Project runtime bootstrap failed');
     expect(launchTeam).not.toHaveBeenCalled();
 
     state.selectedProjectId = 'project-b';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
     expect(host.textContent).toContain('projectContextView.empty');
+  });
+
+  it('offers retry only after main confirms the interrupted launch stopped', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'incomplete',
+      projectPath: '/TEST/a',
+      runId: 'failed-run',
+    });
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    expect(host.textContent).toContain('projectContextView.incomplete');
+    expect(host.textContent).not.toContain('projectContextView.pending');
+    const retry = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'projectContextView.retryLaunch'
+    );
+    expect(retry).toBeDefined();
+    await act(async () => retry?.click());
+    await vi.waitFor(() =>
+      expect(host.querySelector('[data-testid="launch-with-provider"]')).not.toBeNull()
+    );
+    expect(launchTeam).not.toHaveBeenCalled();
+  });
+
+  it('does not show a different project failure on an incomplete project screen', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'incomplete',
+      projectPath: '/TEST/a',
+      runId: 'failed-a',
+    });
+    state.currentProvisioningRunIdByTeam.builders = 'failed-b';
+    state.provisioningErrorByTeam.builders = 'Failure from project B';
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    expect(host.textContent).toContain('projectContextView.incomplete');
+    expect(host.textContent).not.toContain('Failure from project B');
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
+  });
+
+  it('does not let an older incomplete response replace newer unknown ownership', async () => {
+    vi.useFakeTimers();
+    const unknown = {
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'unknown',
+      projectPath: '/TEST/a',
+      runId: null,
+    };
+    getView.mockResolvedValue(unknown);
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    let resolveOlder!: (value: unknown) => void;
+    getView.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveOlder = resolve;
+        })
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
+    const refresh = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'actions.refresh'
+    );
+    await act(async () => refresh?.click());
+    await settle();
+    await act(async () => resolveOlder({ ...unknown, reason: 'incomplete' }));
+    await settle();
+    expect(host.textContent).toContain('projectContextView.unknown');
+    expect(host.textContent).not.toContain('projectContextView.retryLaunch');
+  });
+
+  it('reaches ready when each context read takes longer than the poll interval', async () => {
+    vi.useFakeTimers();
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'unknown',
+      projectPath: '/TEST/a',
+      runId: null,
+    });
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    getView.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(native('ptc-a', '/TEST/a')), 3000))
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5500);
+    });
+    await settle();
+    expect(host.querySelector('[data-testid="team-detail"]')?.getAttribute('data-team')).toBe(
+      'ptc-a'
+    );
+  });
+
+  it('keeps another project active run out of a launching project banner', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'launching',
+      projectPath: '/TEST/a',
+      runId: 'run-a',
+    });
+    state.currentProvisioningRunIdByTeam.builders = 'run-b';
+    state.provisioningRuns['run-b'] = { runId: 'run-b', teamName: 'builders', state: 'spawning' };
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
+    expect(host.textContent).toContain('projectContextView.pending');
+  });
+
+  it('does not enable launch when process ownership is unknown', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'unknown',
+      projectPath: '/TEST/a',
+      runId: 'unresolved-run',
+    });
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
+    await settle();
+    expect(host.textContent).toContain('projectContextView.unknown');
+    expect(host.textContent).not.toContain('projectContextView.retryLaunch');
+    expect(Array.from(host.querySelectorAll('button')).map((button) => button.textContent)).toEqual(
+      ['actions.refresh']
+    );
+    expect(launchTeam).not.toHaveBeenCalled();
   });
 
   it('does not invite to Launch when no Launch button is available', async () => {
     getView.mockResolvedValue({ mode: 'per_project', state: 'empty' });
     state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
     state.provisioningRuns['run-from-team-list'] = {
-      runId: 'run-from-team-list', teamName: 'builders', state: 'spawning',
+      runId: 'run-from-team-list',
+      teamName: 'builders',
+      state: 'spawning',
     };
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.textContent).not.toContain('projectContextView.emptyTitle');
     expect(host.textContent).not.toContain('projectContextView.empty');
@@ -341,23 +544,31 @@ describe('ProjectScopedTeamDetailView project switching', () => {
 
   it('edits the logical team from the screen of a project without history', async () => {
     getView.mockResolvedValue({ mode: 'per_project', state: 'empty' });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-testid="definition-edit"]')).toBeNull();
-    const edit = Array.from(host.querySelectorAll('button'))
-      .find((b) => b.textContent === 'detail.tooltips.editTeam');
+    const edit = Array.from(host.querySelectorAll('button')).find(
+      (b) => b.textContent === 'detail.tooltips.editTeam'
+    );
     await act(async () => edit?.click());
-    expect(host.querySelector('[data-testid="definition-edit"]')?.getAttribute('data-team'))
-      .toBe('builders');
+    expect(host.querySelector('[data-testid="definition-edit"]')?.getAttribute('data-team')).toBe(
+      'builders'
+    );
   });
 
   it('does not offer Edit team on a still-preparing project screen', async () => {
-    getView.mockResolvedValue({ mode: 'per_project', state: 'pending' });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'launching',
+      projectPath: '/TEST/a',
+      runId: null,
+    });
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.textContent).not.toContain('detail.tooltips.editTeam');
   });
@@ -366,9 +577,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     getView.mockResolvedValue({ mode: 'per_project', state: 'needs_project' });
     (state as { selectedProjectId: string | null }).selectedProjectId = null;
     (state as { activeProjectId: string | null }).activeProjectId = null;
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.textContent).toContain('projectContextView.selectProject');
     expect(host.textContent).not.toContain('projectContextView.emptyTitle');
@@ -379,16 +590,24 @@ describe('ProjectScopedTeamDetailView project switching', () => {
   });
 
   it('blocks duplicate launch while Team List is provisioning the selected project', async () => {
-    getView.mockResolvedValue({ mode: 'per_project', state: 'pending' });
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'pending',
+      reason: 'launching',
+      projectPath: '/TEST/a',
+      runId: null,
+    });
     state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
     state.provisioningRuns['run-from-team-list'] = {
-      runId: 'run-from-team-list', teamName: 'builders', state: 'spawning',
+      runId: 'run-from-team-list',
+      teamName: 'builders',
+      state: 'spawning',
     };
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
-    expect(host.querySelector('[data-testid="provisioning-banner"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
     expect(host.textContent).toContain('projectContextView.pending');
     expect(host.querySelector('button')).toBeNull();
   });
@@ -397,14 +616,14 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     getView.mockImplementation(async (_team: string, path: string) =>
       path === '/TEST/a' ? native('ptc-a', path) : { mode: 'per_project', state: 'empty' }
     );
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     state.selectedProjectId = 'project-b';
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
-    ));
+    await act(async () =>
+      root.render(React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' }))
+    );
     await settle();
     expect(host.querySelector('[data-team]')).toBeNull();
     // An empty project reads like any not-yet-launched team: a Launch action and
@@ -418,14 +637,20 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     const button = host.querySelector('button');
     expect(button?.textContent).toBe('detail.actions.launch');
     await act(async () => button?.click());
-    await vi.waitFor(() => expect(
-      host.querySelector('[data-testid="launch-with-provider"]')
-    ).not.toBeNull());
-    expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-permission-policy'))
-      .toBe('manual');
+    await vi.waitFor(() =>
+      expect(host.querySelector('[data-testid="launch-with-provider"]')).not.toBeNull()
+    );
+    expect(
+      host
+        .querySelector('[data-testid="launch-with-provider"]')
+        ?.getAttribute('data-permission-policy')
+    ).toBe('manual');
     // The roster of a per-project team belongs to its definition: this dialog never saves it.
-    expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-roster-read-only'))
-      .toBe('true');
+    expect(
+      host
+        .querySelector('[data-testid="launch-with-provider"]')
+        ?.getAttribute('data-roster-read-only')
+    ).toBe('true');
     expect(launchTeam).not.toHaveBeenCalled();
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
     // A previous project may leave a stale logical run. Only the canonical
@@ -437,7 +662,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     });
     await settle();
     expect(launchTeam).toHaveBeenCalledWith({
-      teamName: 'builders', cwd: '/TEST/b', providerId: 'anthropic',
+      teamName: 'builders',
+      cwd: '/TEST/b',
+      providerId: 'anthropic',
     });
     // Never bypass successor-run initialization with a raw API invocation.
     expect(launchTeamIpc).not.toHaveBeenCalled();

@@ -412,6 +412,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Сообщение руководителю команды",
+        "user_inbox": "Сообщение для вас",
+        "task_clarification": "Нужно уточнение",
+        "task_status_change": "Изменение статуса задачи",
+        "task_comment": "Новый комментарий к задаче",
+        "task_created": "Создана задача",
+        "cross_team_message": "Сообщение другой команды",
+        "team_launched": "Команда запущена",
+        "schedule_completed": "Запланированный запуск завершён",
+        "usage_budget_warning": "Предупреждение по бюджету",
+        "task_review_requested": "Запрошено ревью",
+        "task_blocked": "Задача заблокирована",
+        "all_tasks_completed": "Все задачи завершены",
+        "team_launch_incomplete": "Запуск команды требует внимания",
+        "runtime_recovery": "Восстановление агента",
+        "schedule_failed": "Ошибка запланированного запуска",
+        "usage_budget_exceeded": "Бюджет превышен"
+      },
+      "routingHint": "Выберите доставку рядом с каждым типом уведомлений. Если тип выключен, он отключён везде; по умолчанию — Desktop.",
+      "desktopOnly": "Только Desktop",
+      "additionalEvents": "Дополнительные типы уведомлений",
+      "pausedDisabled": "Автоматическая доставка приостановлена: системные уведомления выключены. Включите системные уведомления, чтобы возобновить доставку. Ручной Test доступен.",
+      "pausedSnoozed": "Автоматическая доставка приостановлена до {{time}}. Нажмите «Снять паузу» выше. Ручной Test доступен.",
+      "pausedSnoozedUnknown": "Автоматическая доставка приостановлена через Snooze. Нажмите «Снять паузу» выше. Ручной Test доступен.",
+      "agentGuide": "Пошаговая инструкция Agent Teams",
+      "exampleFormat": "Пример формата (нерабочие данные):",
+      "officialGuide": "Официальная инструкция провайдера",
+      "providerSetup": {
+        "telegram": "Создайте бота через @BotFather (/newbot), начните с ним чат, затем введите токен и Chat ID либо @имя_канала.",
+        "discord": "В нужном канале Discord откройте Edit Channel → Integrations → Webhooks, создайте вебхук и скопируйте полный URL.",
+        "slack": "Создайте Slack App, включите Incoming Webhooks, установите приложение в рабочую область и скопируйте URL.",
+        "ms-teams": "Используйте Teams Workflows → Send webhook alerts to a channel. Для собственного триггера выберите Anyone; не разглашайте URL.",
+        "google-chat": "В пространстве Google Chat выберите Apps & integrations → Add webhooks, создайте вебхук и скопируйте полный URL.",
+        "webhook": "Создайте публичный HTTPS-вебхук (например, в n8n), скопируйте полную подписанную ссылку и нажмите Test. Локальные и частные адреса заблокированы."
+      }
+    },
     "recovery": {
       "title": "Автоматическое восстановление агентов",
       "transient": {

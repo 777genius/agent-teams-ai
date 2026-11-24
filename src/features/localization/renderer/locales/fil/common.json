@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "Kailangan ang iyong atensyon",
+    "tab": "Atensyon",
+    "viewAll": "Tingnan lahat",
+    "refresh": "I-refresh ang status",
+    "loading": "Naglo-load…",
+    "loadFailed": "Hindi ma-load ang status",
+    "retry": "Subukan muli",
+    "partial": "Hindi ma-load ang ilang team. Maaaring hindi kumpleto ang bilang.",
+    "nothing": "Dito lalabas ang mga gawaing naghihintay ng iyong desisyon at mga hindi pa nababasang chat ng team.",
+    "tasks": "Naghihintay ng desisyon mo",
+    "chats": "Mga hindi pa nababasang chat",
+    "openTask": "Buksan ang gawain: {{subject}} sa {{team}}",
+    "timeUnknown": "Hindi alam ang oras",
+    "teamAttention": "Atensyon"
   }
 }

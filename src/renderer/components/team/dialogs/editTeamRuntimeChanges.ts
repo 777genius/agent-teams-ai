@@ -1,5 +1,6 @@
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { getConfiguredTeamMember as getEditTeamConfiguredMember } from '@shared/utils/teamMemberConfiguredSettings';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
@@ -8,29 +9,12 @@ import type {
   EffortLevel,
   ResolvedTeamMember,
   TeamFastMode,
-  TeamMemberConfiguredRuntimeSettings,
   TeamProviderBackendId,
   TeamProviderId,
   TeamProvisioningMemberInput,
 } from '@shared/types';
 
-// Edit canonical overrides, including absent keys, rather than a historical launch projection.
-export function getEditTeamConfiguredMember<
-  T extends {
-    configuredRuntimeSettings?: TeamMemberConfiguredRuntimeSettings;
-  },
->(member: T): T {
-  const settings = member.configuredRuntimeSettings;
-  if (settings === undefined) return member;
-  return {
-    ...member,
-    providerId: settings.providerId,
-    providerBackendId: settings.providerBackendId,
-    model: settings.model,
-    effort: settings.effort,
-    fastMode: settings.fastMode,
-  };
-}
+export { getEditTeamConfiguredMember };
 
 function normalizeRestartSensitiveMemberContract(member: {
   role?: string;

@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Gửi tự động đang tạm dừng: thông báo hệ thống đã tắt. Bật thông báo để tiếp tục. Vẫn có thể kiểm tra thủ công.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Hướng dẫn thiết lập Agent Teams từng bước",
+      "exampleFormat": "Ví dụ định dạng (không phải thông tin xác thực thật):",
+      "officialGuide": "Hướng dẫn chính thức của nhà cung cấp",
+      "providerSetup": {
+        "telegram": "Tạo bot với @BotFather (/newbot), bắt đầu trò chuyện rồi nhập token và Chat ID hoặc @tên_kênh.",
+        "discord": "Trong kênh Discord đích, mở Edit Channel → Integrations → Webhooks, tạo webhook và sao chép URL đầy đủ.",
+        "slack": "Tạo ứng dụng Slack, bật Incoming Webhooks, cài vào workspace rồi sao chép URL.",
+        "ms-teams": "Dùng Teams Workflows → Send webhook alerts to a channel. Với trigger tự tạo, chọn Anyone và giữ bí mật URL.",
+        "google-chat": "Trong không gian Google Chat, chọn Apps & integrations → Add webhooks, tạo webhook và sao chép URL đầy đủ.",
+        "webhook": "Tạo webhook HTTPS công khai (ví dụ trong n8n), sao chép toàn bộ URL có chữ ký và thử nghiệm. URL nội bộ bị chặn."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
