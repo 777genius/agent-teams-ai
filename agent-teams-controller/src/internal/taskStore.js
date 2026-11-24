@@ -999,9 +999,8 @@ function setNeedsClarification(paths, taskRef, value) {
     }
     if (value === 'user' && !wasAwaitingUser) {
       task.clarificationRequestedAt = nowIso();
-    } else if (value !== 'user') {
-      delete task.clarificationRequestedAt;
     }
+    if (value !== 'user') delete task.clarificationRequestedAt;
     return task;
   });
 }
