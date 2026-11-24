@@ -2031,7 +2031,7 @@ export class TeamProvisioningMemberLifecycleController {
 
     const effectiveMembers = await this.resolveOpenCodeMemberWorkspacesForRuntime({
       teamName,
-      baseCwd: projectPath,
+      baseCwd: config.projectPath?.trim() || teamMeta?.cwd?.trim() || projectPath,
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
