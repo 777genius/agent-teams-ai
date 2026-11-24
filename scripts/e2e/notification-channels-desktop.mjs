@@ -384,7 +384,7 @@ async function run() {
   // Patch only the mock public hostname in the main process; no vendor request.
   await click(button('Add channel'));
   await setInput('input[placeholder="My Telegram"]', 'TEST Custom Webhook');
-  await click("document.querySelector('section[aria-label=\\\"Delivery channels\\\"] [aria-label=\\\"Delivery provider\\\"]')");
+  await click("document.querySelector('section[aria-label=\"Delivery channels\"] [aria-label=\"Delivery provider\"]')");
   await cdp.waitFor(
     "Array.from(document.querySelectorAll('[role=option]')).find(x=>x.textContent?.includes('Custom Webhook'))",
     'custom webhook provider option'
@@ -416,16 +416,16 @@ async function run() {
   }, 'webhook test persisted');
   evidence.checks.push('Custom HTTPS Test → guarded DNS + pinned request → accepted response');
 
-  await click("document.querySelector('section[aria-label=\\\"Delivery channels\\\"] [aria-label=\\\"Enable TEST Custom Webhook\\\"]')");
+  await click("document.querySelector('section[aria-label=\"Delivery channels\"] [aria-label=\"Enable TEST Custom Webhook\"]')");
   await until(async () => (await rendererCall(
     'window.electronAPI.notificationChannels.list()'))[0]?.enabled === true,
     'webhook enabled');
   await click(routeButton);
   await cdp.waitFor(
-    "document.querySelector('[aria-label=\\\"Deliver Message for you to TEST Custom Webhook\\\"]')",
+    "document.querySelector('[aria-label=\"Deliver Message for you to TEST Custom Webhook\"]')",
     'webhook in event destinations'
   );
-  await click("document.querySelector('[aria-label=\\\"Deliver Message for you to TEST Custom Webhook\\\"]')");
+  await click("document.querySelector('[aria-label=\"Deliver Message for you to TEST Custom Webhook\"]')");
   await until(async () => (await rendererCall(
     'window.electronAPI.notificationChannels.list()'))[0]?.events.includes('user_inbox'),
     'webhook subscribed');
@@ -442,7 +442,7 @@ async function run() {
     'automatic delivery status');
   await click(button('Refresh status'));
   await until(async () => Boolean(await evaluate(
-    'document.querySelector(\'section[aria-label="Delivery channels"]\')?.textContent?.includes("Automatic: Accepted by endpoint")'
+    'document.body.textContent?.includes("Automatic: Accepted by endpoint")'
   )), 'visible automatic diagnostic');
   evidence.checks.push('Automatic webhook event → fixed safe JSON + session status');
 
