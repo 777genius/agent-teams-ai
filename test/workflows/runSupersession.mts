@@ -43,6 +43,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'updater-native-feasibility',
     'updater-windows',
     'updater-windows-ota',
+    'user-attention-e2e',
     'windows-backfill-diagnostic',
     'windows-teammate-console-native',
   ],

@@ -9,9 +9,9 @@ import { useStore } from '@renderer/store';
 
 import { requestAttentionChatNavigation } from './conversationAttentionNavigation';
 
-import type { ConversationScope } from '@features/team-direct-chats/renderer';
 import type { AttentionTaskCandidate } from '../../contracts';
 import type { AttentionChat } from '../../core/domain/buildAttention';
+import type { ConversationScope } from '@features/team-direct-chats/renderer';
 
 /** The only app-shell navigation adapter; attention UI stays presentation-only. */
 export function useAttentionInboxNavigation() {

@@ -3,9 +3,9 @@ import { useAttentionInboxNavigation } from '../hooks/useAttentionInboxNavigatio
 
 import { AttentionInboxPanel } from './AttentionInboxPanel';
 
-export function AttentionInboxView({ variant = 'full' }: {
+export function AttentionInboxView({ variant = 'full' }: Readonly<{
   variant?: 'compact' | 'full';
-}): React.JSX.Element | null {
+}>): React.JSX.Element | null {
   const { model, loading, error, refresh, supported } = useAttentionInbox();
   const { onOpenTask, onOpenChat, onOpenFull } = useAttentionInboxNavigation();
   if (!supported) return null;

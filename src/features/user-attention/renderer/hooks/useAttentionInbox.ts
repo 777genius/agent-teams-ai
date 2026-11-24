@@ -14,6 +14,7 @@ import {
 } from '@renderer/utils/teamMessageReadStorage';
 
 import { buildAttentionModel } from '../../core/domain/buildAttention';
+
 import {
   getAttentionStoreState,
   refreshAttention,

@@ -1,7 +1,8 @@
 import { api } from '@renderer/api';
 import { subscribeTeamMessageReadStore } from '@renderer/utils/teamMessageReadStorage';
 
-import { UserAttentionUnsupportedError, type AttentionSnapshot } from '../../contracts';
+import { type AttentionSnapshot, UserAttentionUnsupportedError } from '../../contracts';
+
 import type { TeamChangeEvent } from '@shared/types/team';
 
 export interface AttentionStoreState {
@@ -29,7 +30,7 @@ let epoch = 0;
 let fullLoading = false;
 let flushing = false;
 let queuedFull = false;
-let queuedTeams = new Set<string>();
+const queuedTeams = new Set<string>();
 // A successful refresh of another team must not certify stale data.
 // Undefined is the full-workspace request, recoverable only by a full refresh.
 const failedRefreshes = new Set<string | undefined>();

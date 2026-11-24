@@ -1,11 +1,11 @@
 import { projectAttentionMessage, projectAttentionTasks } from '../domain/projectAttention';
 
-import type { AttentionSourcePort, AttentionTeamSource } from './ports';
 import type {
   AttentionSnapshot,
   AttentionTeamSnapshot,
   UserAttentionApi,
 } from '../../contracts';
+import type { AttentionSourcePort, AttentionTeamSource } from './ports';
 
 const MAX_PARALLEL_READS = 3;
 

@@ -8,9 +8,9 @@ import {
 } from '@features/team-direct-chats';
 import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
 
+import type { AttentionSnapshot, AttentionTaskCandidate } from '../../contracts';
 import type { ConversationScope } from '@features/team-direct-chats';
 import type { InboxMessage } from '@shared/types/team';
-import type { AttentionSnapshot, AttentionTaskCandidate } from '../../contracts';
 
 export interface AttentionChat {
   teamName: string;

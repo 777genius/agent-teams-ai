@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { ChatListRow } from '@features/team-direct-chats/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { ChatListRow } from '@features/team-direct-chats/renderer';
 import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
 
 import { relativeAttentionAge, toAttentionChatRow } from '../view-models/toAttentionChatRow';
 
-import type { AttentionChat, AttentionModel } from '../../core/domain/buildAttention';
 import type { AttentionTaskCandidate } from '../../contracts';
+import type { AttentionChat, AttentionModel } from '../../core/domain/buildAttention';
 import type { ConversationScope } from '@features/team-direct-chats/renderer';
 
 export interface AttentionInboxPanelProps {
@@ -23,7 +23,7 @@ export interface AttentionInboxPanelProps {
 
 export function AttentionInboxPanel({
   variant, model, loading, error, onRetry, onOpenTask, onOpenChat, onOpenFull,
-}: AttentionInboxPanelProps): React.JSX.Element {
+}: Readonly<AttentionInboxPanelProps>): React.JSX.Element {
   const { t, resolvedLanguage } = useAppTranslation('common');
   const [now, setNow] = useState(() => Date.now());
   const [taskLimit, setTaskLimit] = useState(50);

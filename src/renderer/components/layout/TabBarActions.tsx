@@ -4,7 +4,7 @@
  * Reads focused pane data from root store selectors (auto-synced via syncRootState).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useAttentionInbox } from '@features/user-attention/renderer';
@@ -25,6 +25,7 @@ function formatDiscordMemberCount(count: number): string {
 export const TabBarActions = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const { model: attentionModel, supported: attentionSupported } = useAttentionInbox();
+  const attentionCountDescriptionId = useId();
   const {
     unreadCount,
     openNotificationsTab,
@@ -173,9 +174,7 @@ export const TabBarActions = (): React.JSX.Element => {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" aria-label={t('attention.title')}
-            aria-description={attentionModel
-              ? `${t('attention.tasks')}: ${attentionModel.taskCount}; ${t('attention.chats')}: ${attentionModel.chatCount}`
-              : undefined}
+            aria-describedby={attentionModel ? attentionCountDescriptionId : undefined}
             className="relative inline-flex items-center gap-1 rounded-md px-2 py-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
             onClick={() => {
               const state = useStore.getState();
@@ -185,6 +184,11 @@ export const TabBarActions = (): React.JSX.Element => {
               else state.openTab({ type: 'attention', label: t('attention.tab') });
             }}>
             <Inbox className="size-4" aria-hidden="true" />
+            {attentionModel && (
+              <span id={attentionCountDescriptionId} className="sr-only">
+                {`${t('attention.tasks')}: ${attentionModel.taskCount}; ${t('attention.chats')}: ${attentionModel.chatCount}`}
+              </span>
+            )}
             {attentionModel && (attentionModel.taskCount > 0 || attentionModel.chatCount > 0) && (
               <span data-testid="attention-toolbar-counts"
                 className="inline-flex items-center gap-1 text-[10px] font-medium text-red-400 tabular-nums"

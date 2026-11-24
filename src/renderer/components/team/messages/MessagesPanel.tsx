@@ -1,6 +1,5 @@
 import {
   memo,
-  type RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -12,13 +11,13 @@ import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { ChatVisualizationPresentationProvider } from '@features/chat-visualizations/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { useAttentionConversationNavigation } from '@features/user-attention/renderer';
 import {
   ChatUnreadBadges,
   ConversationHeader,
   TEAM_FEED_SCOPE,
   useTeamConversationSurface,
 } from '@features/team-direct-chats/renderer';
+import { useAttentionConversationNavigation } from '@features/user-attention/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
   DropdownMenu,
@@ -38,10 +37,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { type TimelineViewport } from '../activity/ActivityTimeline';
 import { isLeadThought } from '../activity/LeadThoughtsGroup';
-import {
-  CollapsibleTeamSection,
-  type CollapsibleTeamSectionVariant,
-} from '../CollapsibleTeamSection';
+import { CollapsibleTeamSection } from '../CollapsibleTeamSection';
 import {
   getTeamMessagesSidebarUiState,
   setTeamMessagesSidebarUiState,
@@ -83,7 +79,7 @@ import {
 import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
 import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
 import { MessagesSidebarSurface } from './MessagesSidebarSurface';
-import { type ExpandedChatHost, MessagesThreadPlacement } from './MessagesThreadPlacement';
+import { MessagesThreadPlacement } from './MessagesThreadPlacement';
 import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems';
 import { MessagesThreadView } from './MessagesThreadView';
 import { MessagesTimelineSection } from './MessagesTimelineSection';
@@ -108,21 +104,12 @@ import type { ConversationViewportHandle } from '../activity/useConversationView
 import type { ComposerDraftDestination } from './composerDraftDestination';
 import type { MessageRevisionTargetController } from './messageRevisionTarget';
 import type { MessagesFilterState } from './MessagesFilterPopover';
+import type { MessagesPanelProps } from './messagesPanelProps';
 import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
-import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
-import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type {
   DiscardQueuedUserMessagesResult,
   InboxMessage,
-  ResolvedTeamMember,
-  TeamTaskWithKanban,
 } from '@shared/types';
-
-interface TimeWindow {
-  start: number;
-  end: number;
-}
 
 const BOTTOM_SHEET_HEADER_HEIGHT = 40;
 const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
@@ -130,45 +117,6 @@ const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
 const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
-
-interface MessagesPanelProps {
-  isActive?: boolean;
-  teamName: string;
-  position: TeamMessagesPanelMode;
-  onPositionChange: (position: TeamMessagesPanelMode) => void;
-  mountPoint?: Element | null;
-  members: ResolvedTeamMember[];
-  tasks: TeamTaskWithKanban[];
-  isTeamAlive?: boolean;
-  leadActivity?: string;
-  leadContextUpdatedAt?: string;
-  timeWindow: TimeWindow | null;
-  /** Current lead session ID. */
-  currentLeadSessionId?: string;
-  /** Pending replies tracker (shared with parent for MemberList). */
-  pendingRepliesByMember: Record<string, number>;
-  /** Update pending replies tracker. */
-  onPendingReplyChange: (updater: (prev: Record<string, number>) => Record<string, number>) => void;
-  /** Callback when a member is clicked in the timeline. */
-  onMemberClick?: (member: ResolvedTeamMember) => void;
-  /** Callback when a task is clicked from timeline or status block. */
-  onTaskClick?: (task: TeamTaskWithKanban) => void;
-  /** Callback to open create task dialog from a message. */
-  onCreateTaskFromMessage?: (seed: MessageTaskSeed) => void;
-  /** Callback to open reply dialog for a message. */
-  onReplyToMessage?: (message: InboxMessage, recipientHint?: string) => void;
-  /** Callback when "Restart team" is clicked. */
-  onRestartTeam?: () => void;
-  onTaskIdClick?: TaskIdClickHandler;
-  /** Reports the rendered floating composer height so the parent can reserve scroll space. */
-  onFloatingComposerHeightChange?: (height: number) => void;
-  /** Parent-owned scroll viewport for the unchanged inline activity presentation. */
-  inlineScrollContainerRef?: RefObject<HTMLDivElement | null>;
-  /** Visual treatment for the inline section header. */
-  sectionVariant?: CollapsibleTeamSectionVariant;
-  /** Main-region host available only to the native team sidebar. */
-  expandedChatHost?: ExpandedChatHost;
-}
 
 const MessagesStatusSection = memo(StatusBlock);
 

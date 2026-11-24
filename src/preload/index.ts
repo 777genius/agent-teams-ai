@@ -292,6 +292,7 @@ import {
 import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
+import { unwrapIpcResult } from './ipcResult';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
 
 import type {
@@ -476,13 +477,6 @@ interface IpcFileChangePayload {
   projectId?: string;
   sessionId?: string;
   isSubagent: boolean;
-}
-
-function unwrapIpcResult<T>(result: IpcResult<T>): T {
-  if (!result.success) {
-    throw Object.assign(new Error(result.error ?? 'Unknown error'), { failure: result.failure });
-  }
-  return result.data as T;
 }
 
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {

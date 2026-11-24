@@ -314,6 +314,7 @@ import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
 import { installPersistentAppLog } from './utils/persistentAppLog';
+import { readOptionalEnv, readOptionalEnvArgs, readOptionalEnvNumber } from './utils/tokenUsageEnv';
 import {
   getAutoDetectedClaudeBasePath,
   getAppDataPath,
@@ -417,35 +418,6 @@ if (
 }
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
-}
-function readOptionalEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
-}
-function readOptionalEnvNumber(name: string): number | undefined {
-  const value = readOptionalEnv(name);
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-function readOptionalEnvArgs(name: string): string[] | undefined {
-  const value = readOptionalEnv(name);
-  if (!value) return undefined;
-  if (value.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(value) as unknown;
-      if (Array.isArray(parsed)) {
-        const args = parsed.filter(
-          (item): item is string => typeof item === 'string' && item.trim().length > 0
-        );
-        return args.length > 0 ? args : undefined;
-      }
-    } catch {
-      logger.warn(`Ignoring invalid JSON args in ${name}`);
-    }
-  }
-  const args = value.split(/\s+/).filter(Boolean);
-  return args.length > 0 ? args : undefined;
 }
 if (
   earlyElectronUserDataMigrationResult.migrated &&
@@ -2371,9 +2343,9 @@ async function initializeServices(): Promise<void> {
     ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
     tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
     ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
-    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS'),
+    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS', logger),
     tokscaleCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND'),
-    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS'),
+    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS', logger),
     commandImporterRefreshIntervalMs: readOptionalEnvNumber(
       'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
     ),

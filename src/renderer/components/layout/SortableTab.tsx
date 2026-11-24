@@ -18,10 +18,10 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   Activity,
   Bell,
-  Inbox,
   Calendar,
   FileText,
   Gauge,
+  Inbox,
   LayoutDashboard,
   Network,
   Pin,
