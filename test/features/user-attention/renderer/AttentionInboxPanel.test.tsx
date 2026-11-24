@@ -50,6 +50,7 @@ const chats = Array.from({ length: 5 }, (_, i) => ({
   latestUnread: {
     messageId: `m-${i}`, from: `agent-${i}`, to: 'user',
     text: `Please decide ${i}`, timestamp: '2026-11-23T12:00:00Z',
+    read: false,
   },
 }));
 const model: AttentionModel = {
