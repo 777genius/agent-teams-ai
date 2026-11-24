@@ -196,8 +196,8 @@ export function createQualifiedDarwinProcessApi(artifact: {
         before.size !== after.size ||
         before.mtimeMs !== after.mtimeMs ||
         before.ctimeMs !== after.ctimeMs ||
-        measure() !== birth ||
-        !captured.current()
+        // The second measurement already closes with this same currentness guard.
+        measure() !== birth
       )
         return hold();
       return {

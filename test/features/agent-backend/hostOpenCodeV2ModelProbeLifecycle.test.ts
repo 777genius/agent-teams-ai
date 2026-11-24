@@ -966,6 +966,32 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
   }
 });
 
+test('native-ready observes one original currentness guard before creating its first owned client', async () => {
+  const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
+  let observing = false, currentCalls = 0, callsAtClient: number | undefined;
+  const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+    .mockImplementation((selected, command, digest) => originalFactory(selected, command, digest, line => {
+      const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+      if (record.phase === 'native-ready') { observing = true; currentCalls = 0; }
+    }));
+  controlled.observeClient = () => {
+    if (observing) { callsAtClient = currentCalls; observing = false; }
+  };
+  let f: Awaited<ReturnType<typeof fixture>> | undefined;
+  try {
+    f = await fixture('http', undefined, () => { if (observing) currentCalls++; return true; });
+    const running = f.start();
+    await f.barrier();
+    expect(callsAtClient).toBe(2); // The single credential guard retains its before/after owner bracket.
+    expect(f.counts()).toMatchObject({ nativeCreations: 1, sessionCreates: 1, logReads: 1, promptPosts: 0 });
+    f.parent.abort();
+    await within(f.disconnected, 'original response after the first owned client');
+    await expect(running).resolves.toBe(false);
+    await expect(f.probe.close()).resolves.toBe(true);
+    f.assertClosed();
+  } finally { diagnostic.mockRestore(); await f?.dispose(); }
+});
+
 test.each(['native-ready', 'attestation-returned', 'session-create', 'first-submit'] as const)(
   'the original guard after %s still refuses ownership lost during observation', async boundary => {
     const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;

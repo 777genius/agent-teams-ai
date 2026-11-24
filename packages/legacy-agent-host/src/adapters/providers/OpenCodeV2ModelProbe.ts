@@ -317,7 +317,7 @@ export function createOpenCodeV2ModelProbe(
     coordinationSource?.beforeAllocation();
     ready = await server.start(signal);
     observePhase?.('native-ready');
-    assertCurrent(signal);
+    // withClient starts with the same synchronous guard before constructing a client.
     await withClient(signal, async (client, wire) => {
       let identity: Awaited<ReturnType<typeof client.identity>>;
       try {
