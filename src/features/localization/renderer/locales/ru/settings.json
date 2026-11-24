@@ -413,6 +413,25 @@
   },
   "notifications": {
     "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Сообщение руководителю команды",
+        "user_inbox": "Сообщение для вас",
+        "task_clarification": "Нужно уточнение",
+        "task_status_change": "Изменение статуса задачи",
+        "task_comment": "Новый комментарий к задаче",
+        "task_created": "Создана задача",
+        "cross_team_message": "Сообщение другой команды",
+        "team_launched": "Команда запущена",
+        "schedule_completed": "Запланированный запуск завершён",
+        "usage_budget_warning": "Предупреждение по бюджету",
+        "task_review_requested": "Запрошено ревью",
+        "task_blocked": "Задача заблокирована",
+        "all_tasks_completed": "Все задачи завершены",
+        "team_launch_incomplete": "Запуск команды требует внимания",
+        "runtime_recovery": "Восстановление агента",
+        "schedule_failed": "Ошибка запланированного запуска",
+        "usage_budget_exceeded": "Бюджет превышен"
+      },
       "routingHint": "Выберите доставку рядом с каждым типом уведомлений. Если тип выключен, он отключён везде; по умолчанию — Desktop.",
       "desktopOnly": "Только Desktop",
       "additionalEvents": "Дополнительные типы уведомлений",

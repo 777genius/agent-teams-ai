@@ -1,4 +1,3 @@
-import { DELIVERY_EVENT_LABELS } from '../../contracts';
 import { NotificationDestinationPicker } from './NotificationDestinationPicker';
 
 import type { DeliveryEvent } from '../../contracts';
@@ -7,6 +6,7 @@ import type { TeamEventType } from '@shared/types/notifications';
 
 interface DestinationRendererOptions {
   readonly settings: ReturnType<typeof useNotificationChannelsSettings>;
+  readonly labelForEvent: (event: DeliveryEvent) => string;
   readonly desktopDisabledEvents: readonly TeamEventType[];
   readonly globalEnabled: boolean;
   readonly budgetDesktopEnabled: boolean;
@@ -18,6 +18,7 @@ interface DestinationRendererOptions {
 /** One presenter for native toast routing and existing channel.events memberships. */
 export function createNotificationDestinationRenderer({
   settings,
+  labelForEvent,
   desktopDisabledEvents,
   globalEnabled,
   budgetDesktopEnabled,
@@ -41,7 +42,7 @@ export function createNotificationDestinationRenderer({
 
     return (
       <NotificationDestinationPicker
-        label={events.map((event) => DELIVERY_EVENT_LABELS[event]).join(' / ')}
+        label={events.map(labelForEvent).join(' / ')}
         events={events}
         channels={settings.channels}
         desktopEnabled={desktopEnabled}

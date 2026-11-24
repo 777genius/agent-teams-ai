@@ -5,7 +5,6 @@
 import { useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { DELIVERY_EVENT_LABELS } from '@features/notification-channels/contracts';
 import {
   NotificationChannelsSettings,
   createNotificationDestinationRenderer,
@@ -159,6 +158,7 @@ export const NotificationsSection = ({
 
   const destinations = createNotificationDestinationRenderer({
     settings: deliverySettings,
+    labelForEvent: (event) => t(`notifications.delivery.eventLabels.${event}` as const),
     desktopDisabledEvents: safeConfig.notifications.desktopDisabledEvents,
     globalEnabled: safeConfig.notifications.enabled,
     budgetDesktopEnabled: safeConfig.notifications.notifyOnUsageBudgetNativeToast,
@@ -632,7 +632,7 @@ export const NotificationsSection = ({
       <div className="mb-4 rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
         <p className="mb-2 text-xs font-medium">{t('notifications.delivery.additionalEvents')}</p>
         {(['runtime_recovery', 'schedule_completed', 'schedule_failed'] as const).map((event) => (
-          <SettingRow key={event} wrapControls label={DELIVERY_EVENT_LABELS[event]}>
+          <SettingRow key={event} wrapControls label={t(`notifications.delivery.eventLabels.${event}` as const)}>
             {destinations([event], true)}
           </SettingRow>
         ))}
