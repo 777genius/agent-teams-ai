@@ -1,5 +1,6 @@
 import {
   DELIVERY_EVENT_LABELS,
+  DELIVERY_PROVIDERS,
   type DeliveryEvent,
   type DeliveryProvider,
   NOTIFICATION_DELIVERY_EVENTS,
@@ -20,7 +21,7 @@ export function normalizeChannelInput(value: unknown): SaveDeliveryChannelReques
   const provider = input.provider;
   if (
     typeof provider !== 'string' ||
-    !['telegram', 'discord', 'slack', 'ms-teams', 'google-chat', 'webhook'].includes(provider)
+    !DELIVERY_PROVIDERS.some(({ id }) => id === provider)
   ) {
     throw new Error('Unsupported delivery provider');
   }
