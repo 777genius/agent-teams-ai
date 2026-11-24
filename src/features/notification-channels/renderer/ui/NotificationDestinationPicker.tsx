@@ -12,6 +12,7 @@ interface NotificationDestinationPickerProps {
   readonly desktopEnabled: boolean | 'indeterminate';
   readonly busy: boolean;
   readonly disabled?: boolean;
+  readonly allowDesktopOffWithoutExternal?: boolean;
   readonly onDesktopChange: (checked: boolean) => void;
   readonly onChannelChange: (
     channel: DeliveryChannelDto,
@@ -28,6 +29,7 @@ export function NotificationDestinationPicker({
   desktopEnabled,
   busy,
   disabled = false,
+  allowDesktopOffWithoutExternal = false,
   onDesktopChange,
   onChannelChange,
 }: NotificationDestinationPickerProps): React.JSX.Element {
@@ -76,7 +78,10 @@ export function NotificationDestinationPicker({
           <Checkbox
             aria-label={`Desktop for ${label}`}
             checked={desktopEnabled}
-            disabled={disabledControl || (!canDisableDesktop && desktopEnabled !== false)}
+            disabled={
+              disabledControl ||
+              (!allowDesktopOffWithoutExternal && !canDisableDesktop && desktopEnabled !== false)
+            }
             onCheckedChange={(value) => onDesktopChange(value === true)}
           />
           <Monitor className="size-3.5" />

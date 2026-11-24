@@ -45,6 +45,7 @@ export function createNotificationDestinationRenderer({
         events={events}
         channels={settings.channels}
         desktopEnabled={desktopEnabled}
+        allowDesktopOffWithoutExternal={budgetNativeToast}
         busy={settings.busy}
         disabled={
           saving ||

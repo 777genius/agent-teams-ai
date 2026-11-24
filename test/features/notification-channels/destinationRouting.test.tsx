@@ -89,6 +89,27 @@ describe('Event-side destination routing', () => {
     expect(mockApi.save.mock.calls.every(([request]) => request.secret === undefined)).toBe(true);
   });
 
+  it('preserves previous subscriptions if a save succeeded but the UI refresh failed', async () => {
+    await act(async () => root.render(<Probe />));
+    await vi.waitFor(() => expect(current?.channels).toHaveLength(2));
+    const staleChannel = current!.channels[0];
+    const liveList = mockApi.list.getMockImplementation();
+    expect(liveList).toBeDefined();
+    mockApi.list.mockImplementationOnce(liveList!).mockRejectedValueOnce(
+      new Error('Synthetic refresh interruption')
+    );
+
+    await act(async () => current!.route(staleChannel, ['user_inbox'], true));
+    await vi.waitFor(() => expect(current?.error).not.toBeNull());
+    expect(current?.channels[0].events).toEqual([]);
+
+    await act(async () => current!.route(staleChannel, ['task_comment'], true));
+    await vi.waitFor(() =>
+      expect(current?.channels[0].events).toEqual(['user_inbox', 'task_comment'])
+    );
+    expect(mockApi.save).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses unavailable or disabled provider routes without mutating credentials', async () => {
     mockApi.list.mockResolvedValue([
       { ...channels[0], enabled: false },
