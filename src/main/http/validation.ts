@@ -23,7 +23,10 @@ function isPathContained(fullPath: string, basePath: string): boolean {
   const normalizedFull = normalizeForContainment(fullPath);
   const normalizedBase = normalizeForContainment(basePath);
   const relative = path.relative(normalizedBase, normalizedFull);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return (
+    relative === '' ||
+    (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  );
 }
 
 function normalizeForContainment(value: string): string {

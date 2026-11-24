@@ -79,7 +79,10 @@ export function isPathWithinRoot(
   const target = normalizeForCompare(targetPath, isWindows);
   const root = normalizeForCompare(rootPath, isWindows);
   const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return (
+    relative === '' ||
+    (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  );
 }
 
 /** Use for real paths when distinct directory casing can name distinct files. */
