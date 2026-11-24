@@ -65,19 +65,23 @@ export function AttentionInboxPanel({
   const shownEntries = entries.slice(0, visibleLimit);
   const empty = !loading && !error && model?.complete &&
     model.tasks.length === 0 && model.chats.length === 0;
+  const compactEmpty = Boolean(empty && variant === 'compact');
 
   return (
     <section
       aria-label={t('attention.title')}
-      className={"rounded-xl border border-border bg-surface-raised/50 " +
-        (empty && variant === "compact" ? "px-3 py-2.5" : "p-4")}
+      className={'rounded-xl border border-border bg-surface-raised/50 ' +
+        (compactEmpty ? 'px-3 py-2' : 'p-4')}
       data-testid="user-attention-inbox"
     >
-      <header className={(empty && variant === "compact" ? "mb-1 " : "mb-3 ") +
-        "flex items-center justify-between gap-2"}>
-        <div className="flex min-w-0 items-center gap-2">
+      <header className={(compactEmpty ? '' : 'mb-3 ') +
+        'flex flex-wrap items-center justify-between gap-x-3 gap-y-1'}>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
           <Inbox size={17} className="shrink-0 text-text-secondary" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-text">{t('attention.title')}</h2>
+          <h2 className="shrink-0 text-sm font-semibold text-text">{t('attention.title')}</h2>
+          {compactEmpty && (
+            <span className="text-xs leading-5 text-text-secondary">{t('attention.nothing')}</span>
+          )}
           {model && (model.taskCount > 0 || model.chatCount > 0) ? (
             <span data-testid="attention-counts"
               className="inline-flex flex-wrap items-center gap-1 text-xs font-medium text-red-400 tabular-nums">
@@ -130,9 +134,9 @@ export function AttentionInboxPanel({
       {model && !model.complete && (
         <p role="status" className="mb-3 text-xs text-amber-500">{t('attention.partial')}</p>
       )}
-      {empty && <p className={variant === "compact"
-        ? "text-xs leading-5 text-text-secondary"
-        : "py-2 text-sm text-text-secondary"}>{t('attention.nothing')}</p>}
+      {empty && variant === 'full' && (
+        <p className="py-2 text-sm text-text-secondary">{t('attention.nothing')}</p>
+      )}
       {variant === 'full' && searchQuery.trim() && entries.length === 0 && model?.complete &&
         <p className="py-4 text-xs text-text-secondary">{t('search.noResults')}</p>}
 

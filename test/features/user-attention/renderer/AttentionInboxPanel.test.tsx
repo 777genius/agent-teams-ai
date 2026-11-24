@@ -152,12 +152,11 @@ describe('AttentionInboxPanel renderer', () => {
       onOpenChat={onOpenChat} onOpenFull={onOpenFull} onRetry={onRetry} />
     ));
     const panel = host.querySelector('[data-testid="user-attention-inbox"]');
-    expect(panel?.className).toContain('py-2.5');
+    expect(panel?.className).toContain('px-3 py-2');
     expect(panel?.className).not.toContain('p-4');
-    expect(panel?.querySelector('header')?.className).toContain('mb-1');
-    const empty = panel?.querySelector('p');
-    expect(empty?.textContent).toBe('attention.nothing');
-    expect(empty?.className).not.toContain('py-4');
+    expect(panel?.querySelector('header')?.className).not.toContain('mb-3');
+    expect(panel?.querySelector('header')?.textContent).toContain('attention.nothing');
+    expect(panel?.querySelector('p')).toBeNull();
     expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(0);
     await act(async () => root.unmount());
   });
