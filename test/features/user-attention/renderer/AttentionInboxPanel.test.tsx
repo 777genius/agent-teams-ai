@@ -69,6 +69,42 @@ afterEach(() => {
 });
 
 describe('AttentionInboxPanel renderer', () => {
+  it('shows a full-page filter dialog beside search, not on the Dashboard', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="full" model={model} loading={false} error={null}
+        onOpenTask={onOpenTask} onOpenChat={onOpenChat} onRetry={onRetry} />
+    ));
+    const search = host.querySelector('input[type="search"]') as HTMLInputElement;
+    const trigger = host.querySelector('[data-testid="attention-filter-trigger"]') as HTMLButtonElement;
+    expect(search).not.toBeNull();
+    expect(trigger).not.toBeNull();
+    expect(search.parentElement).toBe(trigger.parentElement);
+    await act(async () => trigger.click());
+    expect(document.querySelector('[data-testid="attention-filter-dialog"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="attention-filter-type"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="attention-filter-team"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="attention-filter-conversation"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="attention-filter-waiting"]')).not.toBeNull();
+    await act(async () =>
+      (document.querySelector('[data-testid="attention-filter-reset"]') as HTMLButtonElement).click());
+    await act(async () =>
+      (document.querySelector('[data-testid="attention-filter-apply"]') as HTMLButtonElement).click());
+    expect(document.querySelector('[data-testid="attention-filter-dialog"]')).toBeNull();
+
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="compact" model={model} loading={false} error={null}
+        onOpenTask={onOpenTask} onOpenChat={onOpenChat} onRetry={onRetry} />
+    ));
+    expect(host.querySelector('[data-testid="attention-filter-trigger"]')).toBeNull();
+    expect(host.querySelector('input[type="search"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+
   it('shows up to eight older decisions and eight recent chats independently', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const rootEl = document.createElement('div');

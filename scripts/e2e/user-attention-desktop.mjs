@@ -278,6 +278,80 @@ async function checkDesktop() {
     'window.__agentTeamsDevStore.getState().openTabs.some((tab) => tab.type === "attention")',
     'full Attention tab opened');
   evidence.checks.push('header-to-full-tab navigation');
+
+  // Exercise the actual shared Dialog + Select controls in the full Inbox.
+  // Dashboard must remain unfiltered after applying/resetting on this tab.
+  await cdp.waitFor(`Array.from(document.querySelectorAll('[data-testid=attention-filter-trigger]'))
+    .some((button) => button.getClientRects().length > 0)`,
+    'full Inbox filters visible next to search');
+  const clickAt = async (selector) => {
+    const point = await cdp.evaluate(`(() => {
+      const el = [...document.querySelectorAll(${JSON.stringify(selector)})]
+        .find((item) => item.getClientRects().length > 0);
+      if (!el) return null;
+      const box = el.getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    })()`);
+    assert(point, 'visible filter control ' + selector);
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1,
+    });
+  };
+  await clickAt('[data-testid=attention-filter-trigger]');
+  await cdp.waitFor('document.querySelector("[data-testid=attention-filter-dialog]")',
+    'full Inbox filter dialog open');
+  await cdp.waitFor('document.querySelector("[data-testid=attention-filter-waiting]")',
+    'all four filter controls mounted');
+  await cdp.screenshot(path.join(artifactRoot, 'attention-filters-dialog.png'));
+  await clickAt('[data-testid=attention-filter-type]');
+  await cdp.waitFor(`Array.from(document.querySelectorAll('[role=option]'))
+    .some((row) => row.textContent.trim() === 'Awaiting your decision')`,
+    'task option in native Select menu');
+  const taskOption = await cdp.evaluate(`(() => {
+    const row = Array.from(document.querySelectorAll('[role=option]'))
+      .find((el) => el.textContent.trim() === 'Awaiting your decision');
+    if (!row) return null;
+    const box = row.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  })()`);
+  assert(taskOption, 'task option position');
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: taskOption.x, y: taskOption.y,
+    button: 'left', clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: taskOption.x, y: taskOption.y,
+    button: 'left', clickCount: 1,
+  });
+  await cdp.waitFor(`document.querySelector('[data-testid=attention-filter-type]')
+    ?.textContent.includes('Awaiting your decision')`,
+    'task filter selected');
+  await clickAt('[data-testid=attention-filter-apply]');
+  await cdp.waitFor(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const sections = panel?.querySelector('[data-testid=attention-sections]');
+    return sections?.textContent.includes('Awaiting your decision') &&
+      !sections.textContent.includes('Unread chats') &&
+      panel?.querySelector('[data-testid=attention-filter-count]')?.textContent.trim() === '1';
+  })()`, 'applied task filter hides chats but keeps tasks');
+  await clickAt('[data-testid=attention-filter-trigger]');
+  await cdp.waitFor('document.querySelector("[data-testid=attention-filter-dialog]")',
+    'filters reopen with applied choices');
+  await clickAt('[data-testid=attention-filter-reset]');
+  await clickAt('[data-testid=attention-filter-apply]');
+  await cdp.waitFor(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const sections = panel?.querySelector('[data-testid=attention-sections]');
+    return sections?.textContent.includes('Unread chats') &&
+      sections.textContent.includes('Awaiting your decision') &&
+      !panel.querySelector('[data-testid=attention-filter-count]');
+  })()`, 'filter reset restores both sections');
+  evidence.checks.push('full Inbox filter dialog, apply/reset, preserved section order');
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
 
   const opened = await cdp.evaluate(`(() => {

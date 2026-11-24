@@ -967,6 +967,18 @@
     "chats": "未読チャット",
     "openTask": "タスクを開く: {{subject}}（{{team}}）",
     "timeUnknown": "時刻不明",
-    "teamAttention": "要対応"
+    "teamAttention": "要対応",
+    "filters": {
+      "title": "フィルター",
+      "description": "受信トレイに表示する項目を選択してください。",
+      "itemType": "項目の種類",
+      "conversationType": "チャットの種類",
+      "direct": "ダイレクトメッセージ",
+      "group": "グループチャット",
+      "teamFeed": "チームフィード",
+      "waiting": "タスクの待機時間",
+      "olderDay": "24時間以上",
+      "olderWeek": "7日以上"
+    }
   }
 }

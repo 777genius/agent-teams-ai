@@ -18,4 +18,10 @@ HTTP clients distinguish an absent Attention route (404) from temporary read
 failures. Standalone servers without team services do not show or repeatedly
 refresh Attention; the desktop HTTP server uses the same feature facade as IPC.
 
+The full Inbox view combines its text search with client-only filters for item kind,
+team, conversation scope and task waiting duration. The renderer uses one pure filter
+policy without changing the underlying model, its oldest-waiting-task/newest-chat
+order, or Dashboard compact presentation. Unknown legacy task timestamps are
+not assigned a fabricated age. Dialog edits apply only on confirmation.
+
 No notification delivery, second database, or new filesystem watcher.

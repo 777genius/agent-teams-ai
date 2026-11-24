@@ -42,6 +42,18 @@ export default interface Resources {
     },
     "attention": {
       "chats": "Unread chats",
+      "filters": {
+        "conversationType": "Chat type",
+        "description": "Choose what appears in the Inbox.",
+        "direct": "Direct messages",
+        "group": "Group chats",
+        "itemType": "Item type",
+        "olderDay": "Over 24 hours",
+        "olderWeek": "Over 7 days",
+        "teamFeed": "Team feed",
+        "title": "Filters",
+        "waiting": "Task waiting time"
+      },
       "loadFailed": "Unable to load attention status",
       "loading": "Loading attention status…",
       "nothing": "Nothing needs your attention right now.",

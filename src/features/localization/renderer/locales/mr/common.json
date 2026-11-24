@@ -967,6 +967,18 @@
     "chats": "न वाचलेल्या गप्पा",
     "openTask": "कार्य उघडा: {{subject}} — {{team}}",
     "timeUnknown": "वेळ अज्ञात",
-    "teamAttention": "लक्ष द्या"
+    "teamAttention": "लक्ष द्या",
+    "filters": {
+      "title": "फिल्टर",
+      "description": "इनबॉक्समध्ये काय दाखवायचे ते निवडा.",
+      "itemType": "घटक प्रकार",
+      "conversationType": "चॅट प्रकार",
+      "direct": "थेट संदेश",
+      "group": "गट चॅट",
+      "teamFeed": "टीम फीड",
+      "waiting": "कार्याची प्रतीक्षा वेळ",
+      "olderDay": "२४ तासांपेक्षा जास्त",
+      "olderWeek": "७ दिवसांपेक्षा जास्त"
+    }
   }
 }

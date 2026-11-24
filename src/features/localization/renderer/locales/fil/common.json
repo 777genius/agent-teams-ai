@@ -967,6 +967,18 @@
     "chats": "Mga hindi pa nababasang chat",
     "openTask": "Buksan ang gawain: {{subject}} sa {{team}}",
     "timeUnknown": "Hindi alam ang oras",
-    "teamAttention": "Atensyon"
+    "teamAttention": "Atensyon",
+    "filters": {
+      "title": "Mga filter",
+      "description": "Piliin ang lalabas sa inbox.",
+      "itemType": "Uri ng item",
+      "conversationType": "Uri ng chat",
+      "direct": "Direktang mensahe",
+      "group": "Mga panggrupong chat",
+      "teamFeed": "Feed ng team",
+      "waiting": "Tagal ng paghihintay ng task",
+      "olderDay": "Higit sa 24 oras",
+      "olderWeek": "Higit sa 7 araw"
+    }
   }
 }
