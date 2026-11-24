@@ -654,6 +654,7 @@ describe('prepared backend production storage path', () => {
         await h.store.ensurePending(input);
         const originalClaim = h.sqlite.claimDue.bind(h.sqlite);
         const claimed = vi.spyOn(h.sqlite, 'claimDue');
+        const gatewayClaims = vi.spyOn(h.gateway, 'outboxClaimDue');
         const error = new Error('TEST transient public storage failure');
         if (failure === 'before action') claimed.mockRejectedValueOnce(error);
         if (failure === 'after committed claim') claimed.mockImplementationOnce(async (request) => {
@@ -680,15 +681,22 @@ describe('prepared backend production storage path', () => {
           status: failure === 'before action' ? 'pending' : 'claimed',
           attemptGeneration: failure === 'before action' ? 0 : 1,
         });
-        const active = recovery === 'warm claim' ? h.store : coldStore(h);
+        const cold = recovery === 'fresh store read' ? coldStores(h) : undefined;
+        const coldClaims = cold ? vi.spyOn(cold.sqlite, 'claimDue') : undefined;
+        const active = cold?.store ?? h.store;
+        const claimsBeforeRecovery = gatewayClaims.mock.calls.length;
         if (recovery === 'fresh store read') {
           await active.readTeamMetrics(identity.teamName);
           expect(claimed).toHaveBeenCalledTimes(1);
+          expect(coldClaims).toHaveBeenCalledTimes(0);
+          expect(gatewayClaims).toHaveBeenCalledTimes(claimsBeforeRecovery);
           expect(recordsToSnapshot(identity.teamName,
             await h.gateway.listTeamSnapshot(identity.teamName)).outboxItems).toEqual([committed]);
         }
         const retry = await active.claimDue({ ...emptyClaim, claimedBy: 'TEST-next-dispatch' });
         expect(claimed).toHaveBeenCalledTimes(recovery === 'warm claim' ? 2 : 1);
+        if (coldClaims) expect(coldClaims).toHaveBeenCalledTimes(1);
+        expect(gatewayClaims).toHaveBeenCalledTimes(claimsBeforeRecovery + 1);
         if (failure === 'before action') expect(retry).toMatchObject([
           { id: input.id, attemptGeneration: 1, claimedBy: 'TEST-next-dispatch' },
         ]);
@@ -724,7 +732,15 @@ describe('prepared backend production storage path', () => {
       const value = status();
       if (reason === 'foreign primary') value.statusRevision!.incarnation = 'TEST-foreign';
       else delete value.statusRevision;
-      await h.gateway.importTeam(identity.teamName, snapshotToRecords(identity.teamName, snapshot(value)), { incarnation: identity.incarnation });
+      await h.gateway.importTeam(
+        identity.teamName, snapshotToRecords(identity.teamName, snapshot(value)),
+        reason === 'foreign primary'
+          ? { incarnation: identity.incarnation }
+          : { resetPrimaryIncarnation: true }
+      );
+      expect(await h.gateway.readPrimaryIncarnation(identity.teamName)).toBe(
+        reason === 'foreign primary' ? identity.incarnation : null
+      );
     }
     const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
     if (reason === 'foreign wrapper' || reason === 'malformed wrapper') {
