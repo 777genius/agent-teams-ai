@@ -7,6 +7,11 @@ import { shouldKeepIdleMessageInActivityWhenNoiseHidden } from '@renderer/utils/
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { isConversationLeadAlias } from '@shared/utils/leadDetection';
 import {
+  getRuntimeDeliveryRelayDuplicateKey,
+  normalizeRelayMessageText as normalizeMessageText,
+  normalizeRelayParticipant as normalizeParticipant,
+} from '@shared/utils/runtimeDeliveryRelayIdentity';
+import {
   isMemberWorkSyncNudgeMessage,
   isReviewPickupEscalationMessage,
   isRuntimeRecoveryNudgeMessage,
@@ -46,17 +51,6 @@ interface CachedMessageFilterData {
 }
 
 const messageFilterDataCache = new WeakMap<InboxMessage, CachedMessageFilterData>();
-
-function normalizeMessageText(value: string | undefined): string {
-  return (value ?? '')
-    .trim()
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ');
-}
-
-function normalizeParticipant(value: string | undefined): string {
-  return (value ?? '').trim().toLowerCase();
-}
 
 function normalizeLeadNames(values: Iterable<string> | undefined): Set<string> {
   const normalized = new Set<string>();
@@ -158,23 +152,6 @@ function isRelayDuplicateOfVisibleMessage(
   return messageData.normalizedText === originalData.normalizedText;
 }
 
-function getRuntimeDeliveryRelayDuplicateKey(
-  message: InboxMessage,
-  relayOfMessageId: string
-): string | null {
-  if (message.source !== 'runtime_delivery') {
-    return null;
-  }
-  const data = getMessageFilterData(message);
-  const from = data.normalizedFrom;
-  const to = data.normalizedTo;
-  const text = data.normalizedText;
-  if (!from || !to || !text) {
-    return null;
-  }
-  return [relayOfMessageId, from, to, text].join('\0');
-}
-
 export function filterTeamMessages(
   messages: InboxMessage[],
   options: {
@@ -271,7 +248,7 @@ export function filterTeamMessages(
     if (relayOfMessageId === data.trimmedMessageId) {
       return true;
     }
-    const runtimeDuplicateKey = getRuntimeDeliveryRelayDuplicateKey(m, relayOfMessageId);
+    const runtimeDuplicateKey = getRuntimeDeliveryRelayDuplicateKey(m);
     if (runtimeDuplicateKey) {
       if (seenRuntimeDeliveryRelayDuplicates.has(runtimeDuplicateKey)) {
         return false;
