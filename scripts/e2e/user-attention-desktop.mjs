@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { buildOpenCodeAppProfileScope } from '../../src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv.ts';
 import { chmod, mkdir, mkdtemp, readFile, writeFile, rename } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -94,6 +95,9 @@ async function setup() {
     env.ELECTRON_DISABLE_SANDBOX = '1';
   }
 
+  const profileScope = buildOpenCodeAppProfileScope(
+    envRoot.AGENT_TEAMS_ELECTRON_USER_DATA_DIR, claude
+  );
   for (const team of teams) {
     const teamDir = path.join(claude, 'teams', team);
     const members = ['team-lead', team === first ? 'alice' : 'bob'].map((name) => ({
@@ -106,6 +110,11 @@ async function setup() {
       name: team, description: 'Isolated Attention Inbox proof',
       createdAt: Date.now() - 86400000,
       leadAgentId: members[0].agentId, members, projectPath: project,
+    });
+    // Test-owned synthetic teams need the same official profile ownership
+    // marker as real app-created teams. Nothing outside artifactRoot is touched.
+    await json(path.join(teamDir, '.agent-teams-owner.json'), {
+      schemaVersion: 1, profileScope, claimedAt: nowIso(), reason: 'create',
     });
     const former = { ...members[1], name: 'former', agentId: 'former@' + team,
       removedAt: Date.now() - 3600000 };
@@ -434,6 +443,24 @@ async function checkDesktop() {
       task.comments?.some((comment) => comment.id === 'clarification-answer-' + oldRequestId &&
         comment.text === 'Use PostgreSQL for this task');
   }, 'task comment and clarification cleared in same persisted task', 60_000);
+  // The answer must also reach the owning agent or lead durably. This verifies
+  // the existing notification journal rather than just a disappearing UI row.
+  const expectedAnswerCommentId = 'clarification-answer-' + oldRequestId;
+  const expectedNotificationId =
+    'task-comment-forward:' + first + ':2:' + expectedAnswerCommentId;
+  const leadInbox = path.join(claude, 'teams', first, 'inboxes', 'team-lead.json');
+  await until(async () => {
+    try {
+      const messages = JSON.parse(await readFile(leadInbox, 'utf8'));
+      return messages.some((message) =>
+        message.messageId === expectedNotificationId &&
+        message.commentId === expectedAnswerCommentId &&
+        message.to === 'team-lead' &&
+        message.source === 'system_notification');
+    } catch { return false; }
+  }, 'user answer notification persisted to owning lead', 60_000);
+  evidence.checks.push('user answer notification persisted with stable id');
+
   await cdp.evaluate('window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()');
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',
@@ -449,6 +476,10 @@ async function checkDesktop() {
     `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
   assert.deepEqual(afterRetry.comments, firstAnswer.comments,
     'uncertain duplicate submission does not append a comment');
+  const answerNotices = JSON.parse(await readFile(leadInbox, 'utf8'))
+    .filter((message) => message.commentId === expectedAnswerCommentId);
+  assert.equal(answerNotices.length, 1,
+    'retry does not deliver the same user answer notification twice');
   await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', 'user')`);
   const newCycle = await cdp.evaluate(
     `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);

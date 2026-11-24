@@ -5559,6 +5559,14 @@ describe('TeamDataService', () => {
     }
   });
 
+  it('never clears an unowned profile task when a bound answer cannot be delivered', async () => {
+    const service = new TeamDataService();
+    await expect(service.addTaskComment(
+      'another-profile-team', '1', 'Use PostgreSQL',
+      undefined, undefined, 'e5221c1a-5d2a-410b-a7a9-7f926ea521bf'
+    )).rejects.toThrow('not managed by this app profile');
+  });
+
   it('recovers exactly one owner notification after a committed user answer send failure', async () => {
     const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
     process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';

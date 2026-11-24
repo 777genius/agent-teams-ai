@@ -2618,6 +2618,11 @@ export class TeamDataService {
     taskRefs?: TaskRef[],
     answerClarificationRequestId?: string
   ): Promise<TaskComment> {
+    // A background handoff notification must never be written into a team
+    // managed by another app profile. Fail before the atomic answer/clear.
+    if (answerClarificationRequestId && !(await this.isTeamManagedByThisProfile(teamName))) {
+      throw new Error('Cannot hand off a clarification for a team not managed by this app profile');
+    }
     const taskBoard = this.getTaskBoard(teamName);
     const addResult = taskBoard.addTaskComment(taskId, {
       from: 'user',
