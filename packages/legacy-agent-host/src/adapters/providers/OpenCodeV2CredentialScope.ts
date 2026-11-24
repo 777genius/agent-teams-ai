@@ -142,7 +142,9 @@ export class OpenCodeV2CredentialScope {
       const before = fstatSync(fd);
       if (!before.isFile() || before.dev !== entry.dev || before.ino !== entry.ino || before.size > maximum ||
           process.platform !== 'win32' && (before.uid !== process.getuid?.() || (before.mode & 0o077) !== 0)) held();
-      const bytes = Buffer.alloc(maximum + 1);
+      // Read the captured length plus one growth sentinel, rather than
+      // allocating the 2 MiB limit for each fresh credential observation.
+      const bytes = Buffer.alloc(before.size + 1);
       let length = 0;
       while (length < bytes.length) {
         const count = readSync(fd, bytes, length, bytes.length - length, null);
