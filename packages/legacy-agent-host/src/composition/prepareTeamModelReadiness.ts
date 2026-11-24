@@ -164,16 +164,24 @@ function captureOpenCodeProbeAccountInspection(
   const configuration = profile.nativeGeneration === 'v2' && profile.embedded?.configurationSource
     ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId }, ownerCurrent,
       'model', { source, config: raw }) : undefined;
-  const key = !configuration?.selectedFile && (profile.nativeGeneration === 'v2' || loopback(selectedUrl) && !configured)
-    ? configuration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
-    : undefined;
+  const needsKey = !configuration?.selectedFile && (profile.nativeGeneration === 'v2' || loopback(selectedUrl) && !configured);
+  const fallbackKey = needsKey && !configuration?.key
+    ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
+  const key = needsKey ? configuration?.key ?? fallbackKey : undefined;
+  const v2Fallback = profile.nativeGeneration === 'v2' ? fallbackKey : undefined;
   let fileProof: AcceptedOpenCodeV2FileKey | undefined;
   const nativeCurrent = () => {
     try {
+      // This locally captured fallback brackets every auth read with the exact
+      // source's fresh config and owner checks, including absent source files.
+      if (v2Fallback !== undefined)
+        return v2Fallback.isCurrent() && (fileProof?.filesCurrent() ?? true);
       // The private V1 bracket enters the same full owner check in source.isCurrent().
       if (!bracket && !ownerCurrent()) return false;
+      // A nominal configuration key carries configuration.isCurrent itself.
+      // Only a separate fallback key needs another check after that same callback.
       return source.isCurrent() && (configuration?.isCurrent() ?? true) &&
-        (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true);
+        (key === configuration?.key || (key?.isCurrent() ?? true)) && (fileProof?.filesCurrent() ?? true);
     } catch { return false; }
   };
   const current = () => {
