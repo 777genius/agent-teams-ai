@@ -202,6 +202,49 @@ describe('Thinwrap transport adapter', () => {
 });
 
 describe('Notification Channels HTTP boundary', () => {
+  it('accepts canonical default-port origins while preserving local-only restrictions', async () => {
+    const save = vi.fn(async () => ({ id: 'safe' }));
+    const list = vi.fn(async () => []);
+    const app = Fastify();
+    registerNotificationChannelsHttp(app, {
+      save, list, remove: vi.fn(), test: vi.fn(), dispatch: vi.fn(),
+    } as unknown as NotificationChannelsFeatureFacade);
+    const url = '/api/notification-channels';
+    try {
+      for (const host of ['localhost', 'localhost:80', '127.0.0.1', '127.0.0.1:80']) {
+        const origin = new URL('http://' + host).origin;
+        const headers = { host, origin, 'sec-fetch-site': 'same-origin' };
+        expect((await app.inject({ method: 'GET', url, headers })).statusCode).toBe(200);
+        expect((await app.inject({ method: 'POST', url, headers, payload: {} })).statusCode).toBe(200);
+      }
+
+      const invalid = [
+        { host: 'localhost', origin: 'http://127.0.0.1' },
+        { host: 'localhost', origin: 'http://localhost:3456' },
+        { host: 'localhost', origin: 'https://localhost' },
+        { host: 'localhost', origin: 'http://localhost/path' },
+        { host: 'localhost:65536', origin: 'http://localhost' },
+        { host: 'localhost:0', origin: 'http://localhost' },
+        { host: 'localhost.evil.example', origin: 'http://localhost' },
+        { host: 'localhost', origin: 'http://localhost', 'sec-fetch-site': 'cross-site' },
+      ];
+      for (const headers of invalid) {
+        expect((await app.inject({ method: 'GET', url, headers })).statusCode).toBe(403);
+        expect((await app.inject({ method: 'POST', url, headers, payload: {} })).statusCode).toBe(403);
+      }
+      expect((await app.inject({ method: 'POST', url, headers: { host: 'localhost' }, payload: {} })).statusCode).toBe(403);
+      const remote = await app.inject({
+        method: 'POST', url, headers: { host: 'localhost', origin: 'http://localhost' },
+        remoteAddress: '192.0.2.1', payload: {},
+      });
+      expect(remote.statusCode).toBe(403);
+      expect(save).toHaveBeenCalledTimes(4);
+      expect(list).toHaveBeenCalledTimes(4);
+    } finally {
+      await app.close();
+    }
+  });
+
   it('only allows local same-origin writes; read responses contain no credentials', async () => {
     const save = vi.fn(async () => ({ id: 'safe', hasCredential: true }));
     const list = vi.fn(async () => [{ id: 'safe', hasCredential: true }]);
