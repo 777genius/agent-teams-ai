@@ -7,6 +7,8 @@ describe('Notification channels browser origin', () => {
     expect(resolveLocalSettingsUrl('http://localhost:5173', '?port=3456', true)).toBeNull();
     expect(resolveLocalSettingsUrl('http://127.0.0.1:3456', '?port=3456', false)).toBeNull();
     expect(resolveLocalSettingsUrl('http://localhost:3456', '?port=3456', false)).toBeNull();
+    expect(resolveLocalSettingsUrl('http://localhost', '?port=80', false)).toBeNull();
+    expect(resolveLocalSettingsUrl('http://127.0.0.1', '?port=80', false)).toBeNull();
   });
 
   it('never attempts credential management from remote or TLS browser origins', () => {
