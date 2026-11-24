@@ -72,7 +72,9 @@ function observeOpenCodeReadinessSource(source: ReadinessSourceReference, maximu
     const first = fstatSync(fd);
     if (!first.isFile() || first.dev !== before.file.dev || first.ino !== before.file.ino ||
         first.size > maximum || first.nlink < 1) return held();
-    const bytes = Buffer.alloc(maximum + 1);
+    // One extra byte still detects concurrent growth; avoid allocating the full
+    // 1 MiB source limit for each small, freshly inspected configuration.
+    const bytes = Buffer.alloc(first.size + 1);
     let length = 0;
     while (length < bytes.length) {
       const count = readSync(fd, bytes, length, bytes.length - length, length);
