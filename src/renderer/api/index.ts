@@ -12,6 +12,7 @@
  * can install mocks on `window.electronAPI` before the adapter resolves.
  */
 
+import { resolveHttpBaseUrl } from './httpBaseUrl';
 import { HttpAPIClient } from './httpClient';
 import { withTeamDefinitionEdits } from './teamDefinitionEdits';
 
@@ -25,12 +26,7 @@ import type { ElectronAPI, TeamsAPI } from '@shared/types/api';
  *   to avoid cross-origin issues (localhost vs 127.0.0.1)
  */
 function getHttpBaseUrl(): string {
-  const params = new URLSearchParams(window.location.search);
-  const explicitPort = params.get('port');
-  if (explicitPort) {
-    return `http://127.0.0.1:${parseInt(explicitPort, 10)}`;
-  }
-  return window.location.origin;
+  return resolveHttpBaseUrl(window.location.origin, window.location.search);
 }
 
 let httpClient: HttpAPIClient | null = null;

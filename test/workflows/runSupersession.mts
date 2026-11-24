@@ -31,6 +31,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'electron-dev-profile-cross-platform',
     'kanban-table-desktop-e2e',
     'landing-hetzner-release',
+    'notification-channels-desktop-e2e',
     'opencode-desktop-e2e',
     'opencode-v2-cold-dashboard-e2e',
     'provider-real-runtime-e2e',

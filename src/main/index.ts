@@ -84,6 +84,10 @@ import {
 } from '@features/organizations/main';
 import * as projectFolderFeature from '@features/project-folder/main';
 import {
+  createNotificationChannelsRuntime,
+  type NotificationChannelsRuntime,
+} from './startNotificationChannels';
+import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
   registerRecentProjectsIpc,
@@ -932,6 +936,7 @@ let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let userAttentionFeature: UserAttentionFeatureFacade;
+let notificationChannelsRuntime: NotificationChannelsRuntime | null = null;
 let teamGroupChatsFeature: TeamGroupChatsFeature;
 let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature>;
 let teamImportFeature: TeamImportFeatureFacade;
@@ -1917,6 +1922,7 @@ async function initializeServices(): Promise<void> {
     internalStorageFeature.taskCommentNotificationJournalStore
   );
   const apiKeyService = new ApiKeyService();
+  notificationChannelsRuntime = createNotificationChannelsRuntime();
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
     composeGatewayProviderRuntime({
       ipcMain,
@@ -2894,6 +2900,7 @@ async function initializeServices(): Promise<void> {
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerUserAttentionIpc(ipcMain, userAttentionFeature);
+  notificationChannelsRuntime?.start(ipcMain, notificationManager, httpServer);
   registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
@@ -2909,16 +2916,6 @@ async function initializeServices(): Promise<void> {
   sshConnectionManager.on('state-change', (status: unknown) => {
     safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
-  });
-
-  notificationManager.on('notification-new', (notification: unknown) => {
-    httpServer.broadcast('notification:new', notification);
-  });
-  notificationManager.on('notification-updated', (data: unknown) => {
-    httpServer.broadcast('notification:updated', data);
-  });
-  notificationManager.on('notification-clicked', (data: unknown) => {
-    httpServer.broadcast('notification:clicked', data);
   });
 
   await externalAgentConnection.start();
@@ -2970,6 +2967,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         userAttentionFeature,
+        notificationChannelsFeature: notificationChannelsRuntime?.feature ?? undefined,
         teamGroupChatsFeature,
         customTeamTemplatesFeature,
         organizationsFeature,
@@ -3175,6 +3173,7 @@ async function shutdownServices(): Promise<void> {
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
       removeUserAttentionIpc(ipcMain);
+      notificationChannelsRuntime?.dispose();
       customTeamTemplatesFeature?.dispose();
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       projectFolderFeature.removeProjectFolderIpc(ipcMain);
