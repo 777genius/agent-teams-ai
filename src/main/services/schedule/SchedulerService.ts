@@ -758,6 +758,8 @@ export class SchedulerService {
       scheduleId: run.scheduleId,
       teamName: run.teamName,
       detail: error,
+      runId: run.id,
+      runStatus: status,
     });
   }
   // ===========================================================================

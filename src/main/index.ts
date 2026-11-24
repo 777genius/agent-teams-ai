@@ -165,6 +165,7 @@ import {
 import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
 import { getOpenCodeRuntimeResolverCacheGeneration } from '@main/services/infrastructure/openCodeRuntimeResolverCache';
 import { createSchedulerService } from '@main/services/schedule/createSchedulerService';
+import { scheduleNotificationFromChange } from '@main/services/schedule/scheduleNotificationFromChange';
 import type { SchedulerService } from '@main/services/schedule/SchedulerService';
 import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/JsonTaskChangePresenceRepository';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
@@ -2294,9 +2295,16 @@ async function initializeServices(): Promise<void> {
     teammateToolTracker?.handleLogSourceChange(teamName);
   });
 
-  // Allow SchedulerService to push schedule events to renderer
+  // Schedule lifecycle changes update the UI; actual final runs also produce
+  // persisted notifications for Desktop and explicitly configured destinations.
   schedulerService.setChangeEmitter((event) => {
     safeSendToRenderer(mainWindow, SCHEDULE_CHANGE, event);
+    const notification = scheduleNotificationFromChange(event);
+    if (notification) {
+      void notificationManager.addTeamNotification(notification).catch(() => {
+        logger.warn('Unable to store schedule completion notification');
+      });
+    }
   });
 
   skillsWatcherService.setEmitter((event) => {

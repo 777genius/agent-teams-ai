@@ -735,7 +735,10 @@ describe('SchedulerService', () => {
     await vi.advanceTimersByTimeAsync(500);
 
     const completedEvent = events.find((e) => e.type === 'run-completed');
-    expect(completedEvent).toBeTruthy();
+    expect(completedEvent).toMatchObject({
+      runId: expect.any(String),
+      runStatus: 'completed',
+    });
 
     await service.stop();
   });
@@ -770,7 +773,10 @@ describe('SchedulerService', () => {
     expect(executor.execute).toHaveBeenCalledTimes(3); // initial + 2 retries
 
     const failEvent = events.find((e) => e.type === 'run-failed');
-    expect(failEvent).toBeTruthy();
+    expect(failEvent).toMatchObject({
+      runId: expect.any(String),
+      runStatus: 'failed',
+    });
 
     warnSpy.mockRestore();
     await service.stop();
