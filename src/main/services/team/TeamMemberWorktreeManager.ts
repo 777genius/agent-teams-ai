@@ -124,6 +124,16 @@ function historicalWorktreePaths(repoPath: string, teamName: string, memberName:
   ];
 }
 
+function historicalBranchName(repoPath: string, teamName: string, memberName: string): string {
+  return `agent-teams/${legacySlugify(teamName)}/${legacySlugify(memberName)}-${shortHash(repoPath)}`;
+}
+
+async function branchExists(repoPath: string, branchName: string): Promise<boolean> {
+  return execGit(['rev-parse', '--verify', `refs/heads/${branchName}`], repoPath)
+    .then(() => true)
+    .catch(() => false);
+}
+
 function hasLongWorktreeName(teamName: string, memberName: string): boolean {
   return normalizedSlug(teamName).length > 48 || normalizedSlug(memberName).length > 48;
 }
@@ -152,17 +162,20 @@ export class TeamMemberWorktreeManager {
       // Check both origins, regardless of which request entered first. Truncated
       // long-name candidates are never eligible for automatic reuse.
       if (
-        !request.existingCwd &&
+        resolved.worktreePath !== request.existingCwd?.trim() &&
         sourceRepoPath !== ongoing.sourceRepoPath &&
         !hasLongWorktreeName(request.teamName, request.memberName)
       ) {
         const historicalPaths = await Promise.all(
           [sourceRepoPath, ongoing.sourceRepoPath].map(async (checkout) => {
             if (checkout === baseRepoPath) return undefined;
-            for (const candidate of historicalWorktreePaths(checkout, request.teamName, request.memberName)) {
+            const candidates = historicalWorktreePaths(checkout, request.teamName, request.memberName);
+            for (const candidate of candidates) {
               if (await fs.promises.stat(candidate).catch(() => null)) return candidate;
             }
-            return undefined;
+            // A removed checkout can still own a historical branch with committed work.
+            const historicalBranch = historicalBranchName(checkout, request.teamName, request.memberName);
+            return (await branchExists(baseRepoPath, historicalBranch)) ? candidates[0] : undefined;
           })
         );
         if (historicalPaths[0] !== historicalPaths[1] ||
@@ -288,9 +301,23 @@ export class TeamMemberWorktreeManager {
       }
     }
 
-    await fs.promises.mkdir(path.dirname(worktreePath), { recursive: true });
-    await this.createWorktree({ baseRepoPath, sourceCwd: request.baseCwd, worktreePath, branchName });
-    return { baseRepoPath, worktreePath, branchName };
+    // A historical linked-project checkout may have been removed manually while
+    // its short-name branch still contains committed teammate work.
+    let target = { worktreePath, branchName };
+    const [historicalPath] = linkedHistoricalPaths;
+    if (!longName && historicalPath) {
+      const historicalBranch = historicalBranchName(sourceRepoPath, request.teamName, request.memberName);
+      if (await branchExists(baseRepoPath, historicalBranch)) {
+        target = {
+          worktreePath: existingCwd && linkedHistoricalPaths.includes(existingCwd) ? existingCwd : historicalPath,
+          branchName: historicalBranch,
+        };
+      }
+    }
+
+    await fs.promises.mkdir(path.dirname(target.worktreePath), { recursive: true });
+    await this.createWorktree({ baseRepoPath, sourceCwd: request.baseCwd, ...target });
+    return { baseRepoPath, ...target };
   }
 
   private async resolveBaseRepoPath(baseCwd: string): Promise<{ baseRepoPath: string; sourceRepoPath: string }> {
@@ -379,12 +406,7 @@ export class TeamMemberWorktreeManager {
     worktreePath: string;
     branchName: string;
   }): Promise<void> {
-    const branchExists = await execGit(
-      ['rev-parse', '--verify', `refs/heads/${params.branchName}`],
-      params.baseRepoPath
-    )
-      .then(() => true)
-      .catch(() => false);
+    const existingBranch = await branchExists(params.baseRepoPath, params.branchName);
 
     const listRaw = await execGit(['worktree', 'list', '--porcelain'], params.baseRepoPath);
     const branchInUse = parseGitWorktreeList(listRaw).some(
@@ -396,7 +418,7 @@ export class TeamMemberWorktreeManager {
       );
     }
 
-    if (branchExists) {
+    if (existingBranch) {
       await execGit(
         ['worktree', 'add', params.worktreePath, params.branchName],
         params.baseRepoPath

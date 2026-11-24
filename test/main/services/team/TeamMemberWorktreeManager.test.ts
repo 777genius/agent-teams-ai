@@ -482,6 +482,40 @@ describe('TeamMemberWorktreeManager', () => {
     }
   );
 
+  it.each(['current', 'legacy'] as const)(
+    'recreates a removed historical %s checkout from its surviving branch',
+    async (location) => {
+      const repoPath = await createGitRepo(tempRoot);
+      const linkedProject = path.join(tempRoot, 'linked-project');
+      await execGit(['worktree', 'add', '-b', 'linked-project', linkedProject, 'HEAD'], repoPath);
+      const linkedRoot = await fs.realpath(linkedProject);
+      const oldPath = location === 'legacy' ? legacyWorktreePath(linkedRoot) : expectedWorktreePath(linkedRoot);
+      const oldBranch = `agent-teams/atlas-hq/bob-${shortHash(linkedRoot)}`;
+      await fs.mkdir(path.dirname(oldPath), { recursive: true });
+      await execGit(['worktree', 'add', '-b', oldBranch, oldPath, 'HEAD'], repoPath);
+      await fs.writeFile(path.join(oldPath, 'member.txt'), 'committed member work\n');
+      await execGit(['add', 'member.txt'], oldPath);
+      await execGit(
+        ['-c', 'user.email=test@example.com', '-c', 'user.name=Test', 'commit', '-m', 'member work'],
+        oldPath
+      );
+      const memberHead = await execGit(['rev-parse', 'HEAD'], oldPath);
+      // Simulate manual removal; production code must not remove any worktree.
+      await execGit(['worktree', 'remove', oldPath], repoPath);
+      const manager = new TeamMemberWorktreeManager();
+      const request = {
+        teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: linkedProject,
+        ...(location === 'legacy' ? { existingCwd: oldPath } : {}),
+      };
+      const restored = await manager.ensureMemberWorktree(request);
+      expect(restored).toEqual({ baseRepoPath: repoPath, worktreePath: oldPath, branchName: oldBranch });
+      await expect(execGit(['rev-parse', 'HEAD'], oldPath)).resolves.toBe(memberHead);
+      await expect(fs.readFile(path.join(oldPath, 'member.txt'), 'utf8')).resolves.toBe('committed member work\n');
+      await expect(manager.ensureMemberWorktree(request)).resolves.toEqual(restored);
+      await expect(fs.stat(expectedWorktreePath(repoPath))).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
   it('coalesces concurrent requests from primary and linked project roots', async () => {
     const repoPath = await createGitRepo(tempRoot);
     const linkedProject = path.join(tempRoot, 'linked-project');
@@ -499,13 +533,19 @@ describe('TeamMemberWorktreeManager', () => {
   });
 
   it.each([
-    { longName: false, linkedFirst: false },
-    { longName: false, linkedFirst: true },
-    { longName: true, linkedFirst: false },
-    { longName: true, linkedFirst: true },
-  ])('handles concurrent historical paths (long=$longName, linked first=$linkedFirst)', async ({
+    { longName: false, linkedFirst: false, missingSaved: false, branchOnly: false },
+    { longName: false, linkedFirst: true, missingSaved: false, branchOnly: false },
+    { longName: true, linkedFirst: false, missingSaved: false, branchOnly: false },
+    { longName: true, linkedFirst: true, missingSaved: false, branchOnly: false },
+    { longName: false, linkedFirst: false, missingSaved: true, branchOnly: false },
+    { longName: false, linkedFirst: true, missingSaved: true, branchOnly: false },
+    { longName: false, linkedFirst: false, missingSaved: false, branchOnly: true },
+    { longName: false, linkedFirst: true, missingSaved: false, branchOnly: true },
+  ])('handles concurrent historical paths (long=$longName, linked first=$linkedFirst, missing saved=$missingSaved, branch only=$branchOnly)', async ({
     longName,
     linkedFirst,
+    missingSaved,
+    branchOnly,
   }) => {
     const repoPath = await createGitRepo(tempRoot);
     const linkedProject = path.join(tempRoot, 'linked-project');
@@ -513,15 +553,25 @@ describe('TeamMemberWorktreeManager', () => {
     const linkedRoot = await fs.realpath(linkedProject);
     const manager = new TeamMemberWorktreeManager();
     const memberName = longName ? 'a'.repeat(49) : 'Bob';
-    const request = { teamName: 'Atlas HQ', memberName };
+    const request = {
+      teamName: 'Atlas HQ', memberName,
+      ...(missingSaved ? { existingCwd: path.join(tempRoot, 'missing-saved') } : {}),
+    };
     // A valid current long-name workspace must win over an unrelated truncated path.
     const current = longName
       ? await manager.ensureMemberWorktree({ ...request, baseCwd: repoPath })
       : undefined;
     const historical = expectedWorktreePath(linkedRoot, request.teamName, legacySlugify(memberName));
     await fs.mkdir(path.dirname(historical), { recursive: true });
-    await execGit(['worktree', 'add', '-b', 'historical-member', historical, 'HEAD'], repoPath);
-    await fs.writeFile(path.join(historical, 'notes.txt'), 'preserved');
+    const historicalBranch = branchOnly
+      ? `agent-teams/atlas-hq/bob-${shortHash(linkedRoot)}`
+      : 'historical-member';
+    await execGit(['worktree', 'add', '-b', historicalBranch, historical, 'HEAD'], repoPath);
+    if (branchOnly) {
+      await execGit(['worktree', 'remove', historical], repoPath);
+    } else {
+      await fs.writeFile(path.join(historical, 'notes.txt'), 'preserved');
+    }
 
     const internal = manager as unknown as {
       ensureMemberWorktreeInternal: (...args: unknown[]) => Promise<unknown>;
@@ -569,7 +619,16 @@ describe('TeamMemberWorktreeManager', () => {
         status: 'rejected', reason: expect.objectContaining({ message: expect.stringContaining('Conflicting concurrent worktree paths') }),
       });
     }
-    await expect(fs.readFile(path.join(historical, 'notes.txt'), 'utf8')).resolves.toBe('preserved');
+    if (branchOnly) {
+      await expect(execGit(['rev-parse', '--verify', `refs/heads/${historicalBranch}`], repoPath)).resolves.toMatch(/^[a-f0-9]{40}$/);
+      if (linkedFirst) {
+        await expect(execGit(['branch', '--show-current'], historical)).resolves.toBe(historicalBranch);
+      } else {
+        await expect(fs.stat(historical)).rejects.toMatchObject({ code: 'ENOENT' });
+      }
+    } else {
+      await expect(fs.readFile(path.join(historical, 'notes.txt'), 'utf8')).resolves.toBe('preserved');
+    }
   });
 
   it('rejects conflicting concurrent paths rather than sharing a member checkout', async () => {
