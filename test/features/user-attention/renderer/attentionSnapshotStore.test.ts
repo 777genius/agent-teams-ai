@@ -54,6 +54,26 @@ describe('Attention snapshot live update scheduling', () => {
     vi.useRealTimers();
   });
 
+  it('coalesces burst updates for the same team and reconciles on focus', async () => {
+    const context = 'attention-burst-and-focus';
+    fake.fetch.mockResolvedValue(snapshot(context, ['alpha']));
+    setAttentionContext(context, 21);
+    unsubscribe = subscribeAttention(() => {});
+    await vi.advanceTimersByTimeAsync(250);
+    expect(fake.fetch).toHaveBeenCalledTimes(1);
+
+    fake.changeListener?.(null, { type: 'task', teamName: 'alpha' } as TeamChangeEvent);
+    fake.changeListener?.(null, { type: 'inbox', teamName: 'alpha' } as TeamChangeEvent);
+    fake.changeListener?.(null, { type: 'lead-message', teamName: 'alpha' } as TeamChangeEvent);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(fake.fetch.mock.calls.map(([name]) => name)).toEqual([undefined, 'alpha']);
+
+    // An idle team need not be actively watched: a focus catch-up scans all.
+    window.dispatchEvent(new Event('focus'));
+    await vi.advanceTimersByTimeAsync(250);
+    expect(fake.fetch.mock.calls.map(([name]) => name)).toEqual([undefined, 'alpha', undefined]);
+  });
+
   it('replays a pending team change without accidentally fetching the entire workspace', async () => {
     const context = 'attention-live-queue-fixture';
     const initial = snapshot(context, ['alpha', 'beta']);

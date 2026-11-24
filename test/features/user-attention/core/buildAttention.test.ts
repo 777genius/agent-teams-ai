@@ -235,7 +235,7 @@ describe('Attention Inbox pure domain', () => {
   });
 
 
-  it('sorts newest human decisions first, keeping unknown legacy times last', () => {
+  it('sorts longest waiting human decisions first, keeping unknown legacy times last', () => {
     const tasks = [
       { teamName: 'one', teamDisplayName: 'One', taskId: 'legacy',
         subject: 'Legacy', requestedAt: null },
@@ -251,7 +251,7 @@ describe('Attention Inbox pure domain', () => {
     const model = buildAttentionModel(snapshot, () => ({
       direct: new Set(), group: new Set(),
     }), (item) => item.messageId ?? '');
-    expect(model.tasks.map((task) => task.taskId)).toEqual(['newest', 'older', 'legacy']);
+    expect(model.tasks.map((task) => task.taskId)).toEqual(['older', 'newest', 'legacy']);
   });
 
   it('includes stopped team entries, counts unique tasks and sorts chats by latest unread', () => {

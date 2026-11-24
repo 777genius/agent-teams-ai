@@ -366,8 +366,8 @@ async function checkDesktop() {
   evidence.checks.push('controller transition / repeated setter / clear');
   evidence.checks.push('live Dashboard clarification appears and disappears');
 
-  // Fill the compact list beyond eight items. Newer clarifications must rank
-  // above legacy tasks, with a Show more button rather than an inner scrollbar.
+  // A long waiting task ranks above a newer one, without starving the chat list.
+  // Legacy tasks have no known request timestamp, so they are accessible via More.
   for (let taskId = 3; taskId <= 12; taskId++) {
     await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, ${JSON.stringify(String(taskId))}, 'user')`);
   }
@@ -375,27 +375,26 @@ async function checkDesktop() {
     const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
       .find((node) => node.getClientRects().length > 0);
     const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
-    const more = [...(panel?.querySelectorAll('button') ?? [])]
-      .find((button) => button.textContent.trim().startsWith('Show more'));
+    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
     return panel?.querySelector('[data-testid=attention-task-count]')?.textContent.trim().endsWith('12') &&
-      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 12') &&
-      buttons.length <= 8 && Boolean(more) && !panel.textContent.includes('Time unknown');
-  })()`), 'newest first, eight visible and no unknown time');
+      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 3') &&
+      buttons.length === 8 && Boolean(more) &&
+      !panel.textContent.includes('Time unknown') &&
+      panel.textContent.includes('Unread chats');
+  })()`), 'longest known waiting decision first, eight tasks, chats still visible');
   const expanded = await cdp.evaluate(`(() => {
     const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
       .find((node) => node.getClientRects().length > 0);
-    const count = panel.querySelectorAll('button[aria-label^="Open task"]').length;
-    const more = [...panel.querySelectorAll('button')]
-      .find((button) => button.textContent.trim().startsWith('Show more'));
+    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
     if (!more) return false;
     more.click();
-    return count;
+    return true;
   })()`);
-  assert(expanded > 0 && expanded <= 8, 'compact list starts with at most eight entries');
+  assert(expanded, 'show more tasks control is actionable');
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_OLDEST_USER_DECISION")',
-    'load more reveals the legacy task without losing it');
-  evidence.checks.push('newest-first combined ordering + initial eight + Show more');
+    'load more retains legacy decisions without dropping messages');
+  evidence.checks.push('waiting-first decisions + recent chats + eight-at-a-time expansion');
 
   await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
 

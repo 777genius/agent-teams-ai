@@ -43,6 +43,12 @@ function timeMs(timestamp: string | null | undefined): number {
   return Number.isFinite(value) ? value : 0;
 }
 
+/** Unknown legacy request times are not older than known unanswered requests. */
+function waitingTimeMs(timestamp: string | null | undefined): number {
+  const value = Date.parse(timestamp ?? '');
+  return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+}
+
 /** A human-facing conversation has a single canonical home, never also team-feed. */
 export function conversationForAttentionMessage(
   message: InboxMessage,
@@ -142,7 +148,7 @@ export function buildAttentionModel(
   }
 
   tasks.sort((a, b) =>
-    timeMs(b.requestedAt) - timeMs(a.requestedAt) ||
+    waitingTimeMs(a.requestedAt) - waitingTimeMs(b.requestedAt) ||
     a.teamName.localeCompare(b.teamName) ||
     a.taskId.localeCompare(b.taskId)
   );
