@@ -498,6 +498,80 @@ describe('TeamMemberWorktreeManager', () => {
     expect(registered.match(/^worktree /gm)).toHaveLength(3);
   });
 
+  it.each([
+    { longName: false, linkedFirst: false },
+    { longName: false, linkedFirst: true },
+    { longName: true, linkedFirst: false },
+    { longName: true, linkedFirst: true },
+  ])('handles concurrent historical paths (long=$longName, linked first=$linkedFirst)', async ({
+    longName,
+    linkedFirst,
+  }) => {
+    const repoPath = await createGitRepo(tempRoot);
+    const linkedProject = path.join(tempRoot, 'linked-project');
+    await execGit(['worktree', 'add', '-b', 'linked-project', linkedProject, 'HEAD'], repoPath);
+    const linkedRoot = await fs.realpath(linkedProject);
+    const manager = new TeamMemberWorktreeManager();
+    const memberName = longName ? 'a'.repeat(49) : 'Bob';
+    const request = { teamName: 'Atlas HQ', memberName };
+    // A valid current long-name workspace must win over an unrelated truncated path.
+    const current = longName
+      ? await manager.ensureMemberWorktree({ ...request, baseCwd: repoPath })
+      : undefined;
+    const historical = expectedWorktreePath(linkedRoot, request.teamName, legacySlugify(memberName));
+    await fs.mkdir(path.dirname(historical), { recursive: true });
+    await execGit(['worktree', 'add', '-b', 'historical-member', historical, 'HEAD'], repoPath);
+    await fs.writeFile(path.join(historical, 'notes.txt'), 'preserved');
+
+    const internal = manager as unknown as {
+      ensureMemberWorktreeInternal: (...args: unknown[]) => Promise<unknown>;
+      resolveBaseRepoPath: (cwd: string) => Promise<{ baseRepoPath: string; sourceRepoPath: string }>;
+    };
+    const original = internal.ensureMemberWorktreeInternal.bind(manager);
+    const resolveBase = internal.resolveBaseRepoPath.bind(manager);
+    let release!: () => void;
+    let started!: () => void;
+    let joined!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const entered = new Promise<void>((resolve) => { started = resolve; });
+    const joining = new Promise<void>((resolve) => { joined = resolve; });
+    vi.spyOn(internal, 'ensureMemberWorktreeInternal').mockImplementationOnce(async (...args) => {
+      started();
+      await gate;
+      return original(...args);
+    });
+    const initial = manager.ensureMemberWorktree({
+      ...request, baseCwd: linkedFirst ? linkedProject : repoPath,
+    });
+    await entered;
+    vi.spyOn(internal, 'resolveBaseRepoPath').mockImplementationOnce(async (cwd) => {
+      try {
+        return await resolveBase(cwd);
+      } finally {
+        joined();
+      }
+    });
+    const concurrent = manager.ensureMemberWorktree({
+      ...request, baseCwd: linkedFirst ? repoPath : linkedProject,
+    });
+    const outcomes = Promise.allSettled([initial, concurrent]);
+    await joining;
+    // Let the second request enter the in-flight branch before releasing the first.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    release();
+    const [first, second] = await outcomes;
+    const expected = current?.worktreePath ?? (linkedFirst ? historical : expectedWorktreePath(repoPath));
+    expect(first).toMatchObject({ status: 'fulfilled', value: { worktreePath: expected } });
+    if (longName) {
+      expect(second).toMatchObject({ status: 'fulfilled', value: { worktreePath: expected } });
+    } else {
+      expect(second).toMatchObject({
+        status: 'rejected', reason: expect.objectContaining({ message: expect.stringContaining('Conflicting concurrent worktree paths') }),
+      });
+    }
+    await expect(fs.readFile(path.join(historical, 'notes.txt'), 'utf8')).resolves.toBe('preserved');
+  });
+
   it('rejects conflicting concurrent paths rather than sharing a member checkout', async () => {
     const repoPath = await createGitRepo(tempRoot);
     const manager = new TeamMemberWorktreeManager();

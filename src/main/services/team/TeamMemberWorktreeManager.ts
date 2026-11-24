@@ -124,6 +124,10 @@ function historicalWorktreePaths(repoPath: string, teamName: string, memberName:
   ];
 }
 
+function hasLongWorktreeName(teamName: string, memberName: string): boolean {
+  return normalizedSlug(teamName).length > 48 || normalizedSlug(memberName).length > 48;
+}
+
 export class TeamMemberWorktreeManager {
   private static readonly inFlight = new Map<
     string,
@@ -144,16 +148,26 @@ export class TeamMemberWorktreeManager {
         throw new Error(`Conflicting concurrent worktree paths for member "${request.memberName}"`);
       }
       const resolved = await ongoing.promise;
-      // Do not hide a distinct historical workspace when a concurrent request
-      // originates from another linked project checkout without a saved cwd.
-      if (!request.existingCwd && sourceRepoPath !== ongoing.sourceRepoPath && sourceRepoPath !== baseRepoPath) {
-        for (const candidate of historicalWorktreePaths(sourceRepoPath, request.teamName, request.memberName)) {
-          if (await fs.promises.stat(candidate).catch(() => null)) {
-            if (candidate !== resolved.worktreePath) {
-              throw new Error(`Conflicting concurrent worktree paths for member "${request.memberName}"`);
+      // Short-name historical workspaces are specific to the selected checkout.
+      // Check both origins, regardless of which request entered first. Truncated
+      // long-name candidates are never eligible for automatic reuse.
+      if (
+        !request.existingCwd &&
+        sourceRepoPath !== ongoing.sourceRepoPath &&
+        !hasLongWorktreeName(request.teamName, request.memberName)
+      ) {
+        const historicalPaths = await Promise.all(
+          [sourceRepoPath, ongoing.sourceRepoPath].map(async (checkout) => {
+            if (checkout === baseRepoPath) return undefined;
+            for (const candidate of historicalWorktreePaths(checkout, request.teamName, request.memberName)) {
+              if (await fs.promises.stat(candidate).catch(() => null)) return candidate;
             }
-            break;
-          }
+            return undefined;
+          })
+        );
+        if (historicalPaths[0] !== historicalPaths[1] ||
+            (historicalPaths[0] && historicalPaths[0] !== resolved.worktreePath)) {
+          throw new Error(`Conflicting concurrent worktree paths for member "${request.memberName}"`);
         }
       }
       return resolved;
@@ -233,7 +247,7 @@ export class TeamMemberWorktreeManager {
       }
     }
 
-    const longName = teamPrefix.length > 0 || memberPrefix.length > 0;
+    const longName = hasLongWorktreeName(request.teamName, request.memberName);
     // Older versions keyed short-name paths by the selected checkout root.
     // Prefer the original linked-project workspace before creating a new one.
     const linkedHistoricalPaths = sourceRepoPath === baseRepoPath
