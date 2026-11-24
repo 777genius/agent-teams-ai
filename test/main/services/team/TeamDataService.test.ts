@@ -5559,6 +5559,84 @@ describe('TeamDataService', () => {
     }
   });
 
+  it('recovers exactly one owner notification after a committed user answer send failure', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    try {
+      const id = 'clarification-answer-a12fc382-7ad8-4139-b37a-1f807a962e60';
+      const answer = {
+        id, author: 'user', text: 'Use PostgreSQL', type: 'regular' as const,
+        createdAt: '2026-11-24T16:00:00Z',
+      };
+      const journal = createForwardingJournalStore();
+      const inboxWriter = {
+        sendMessage: vi.fn()
+          .mockRejectedValueOnce(new Error('Simulated offline inbox'))
+          .mockResolvedValue({ deliveredToInbox: true, messageId: 'persisted' }),
+      };
+      const { service } = createTaskCommentForwardingService({
+        journal: journal.journal, inboxWriter,
+        members: [{ name: 'team-lead', role: 'Lead' }, { name: 'bob', role: 'developer' }],
+        tasks: [{
+          id: 'answer-task', subject: 'Choose database', displayId: 'choose-db',
+          status: 'pending', owner: 'bob', comments: [answer],
+        }],
+      });
+
+      // The task-file answer has already been committed; the notification is
+      // a separate recoverable side effect, never a reason to undo that answer.
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
+        expect.objectContaining({
+          member: 'bob', from: 'user', commentId: id,
+          messageKind: 'task_comment_notification',
+          messageId: 'task-comment-forward:my-team:answer-task:' + id,
+        }));
+      expect(journal.journalEntries).toHaveLength(1);
+      expect(journal.journalEntries[0]).toMatchObject({ state: 'pending_send', commentId: id });
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+      expect(journal.journalEntries[0]).toMatchObject({ state: 'sent', commentId: id });
+
+      // A subsequent reconciliation never sends another notification.
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('does not seed an unanswered owner handoff as historical noise on the first journal scan', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    try {
+      const id = 'clarification-answer-9641e725-41aa-4e14-bec5-9b3d7d084a76';
+      const { journalEntries, journal } = createForwardingJournalStore();
+      journal.exists.mockResolvedValueOnce(false).mockResolvedValue(true);
+      const { service, inboxWriter } = createTaskCommentForwardingService({
+        journal, tasks: [{
+          id: 'answer-task', subject: 'Choose database', status: 'pending',
+          owner: 'team-lead', comments: [{
+            id, author: 'user', text: 'Use SQLite', type: 'regular',
+            createdAt: '2026-11-24T16:02:00Z',
+          }],
+        }],
+      });
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
+        expect.objectContaining({ member: 'team-lead', commentId: id }));
+      expect(journalEntries).toHaveLength(1);
+      expect(journalEntries[0]).toMatchObject({ state: 'sent' });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
   it('does not forward user-authored, lead-authored, mirrored, or non-regular comments', async () => {
     const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
     process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';

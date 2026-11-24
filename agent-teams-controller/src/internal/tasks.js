@@ -738,7 +738,10 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
     try {
         maybeNotifyTaskOwnerOnComment(context, result.task, result.comment, {
             inserted: result.inserted,
-            notifyOwner: commentFlags.notifyOwner,
+            // Durable main-owned journal handles bound human answers; do not
+            // also emit a best-effort immediate notice to the same owner.
+            notifyOwner: commentFlags.answerClarificationRequestId === undefined &&
+              commentFlags.notifyOwner,
         });
     } catch (notifyError) {
         warnNonCritical(`[tasks] owner notification failed for task ${taskId}`, notifyError);
