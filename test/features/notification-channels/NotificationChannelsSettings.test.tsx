@@ -98,6 +98,16 @@ async function renderChannel(
 }
 
 describe('Notification Channels settings: unavailable credentials', () => {
+  it('shows a decorative, locally bundled provider logo without replacing accessible labels', async () => {
+    await renderChannel(true, true);
+    const logo = container.querySelector<HTMLImageElement>(
+      'img[data-notification-provider-logo="telegram"]'
+    );
+    expect(logo).not.toBeNull();
+    expect(logo?.getAttribute('alt')).toBe('');
+    expect(logo?.getAttribute('src')).not.toMatch(/^https?:\/\//);
+  });
+
   it('still permits disabling an already-enabled channel if its vault is unavailable', async () => {
     const { control, channel, toggle } = await renderChannel(true, false);
     expect(control.disabled).toBe(false);

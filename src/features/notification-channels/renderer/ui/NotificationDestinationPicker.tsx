@@ -3,6 +3,8 @@ import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { ChevronDown, Monitor } from 'lucide-react';
 
+import { NotificationProviderLogo } from './NotificationProviderLogo';
+
 import type { DeliveryChannelDto, DeliveryEvent } from '../../contracts';
 
 interface NotificationDestinationPickerProps {
@@ -41,7 +43,9 @@ export function NotificationDestinationPicker({
   const summary = hasDesktop
     ? active.length === 0
       ? 'Desktop'
-      : `Desktop + ${active.length}`
+      : active.length === 1
+        ? `Desktop + ${active[0].name}`
+        : `Desktop + ${active.length}`
     : active.length === 0
       ? 'No delivery'
       : active.length === 1
@@ -66,8 +70,12 @@ export function NotificationDestinationPicker({
           className="ml-2 max-w-44 gap-1.5"
           disabled={disabledControl}
           aria-label={`Destinations for ${label}`}
+          title={summary}
           data-delivery-events={events.join(',')}
         >
+          {active.length === 1 && (
+            <NotificationProviderLogo provider={active[0].provider} className="size-3.5" />
+          )}
           <span className="truncate">{summary}</span>
           <ChevronDown className="size-3 shrink-0" />
         </Button>
@@ -101,6 +109,7 @@ export function NotificationDestinationPicker({
                 disabled={disabledControl || !available}
                 onCheckedChange={(value) => onChannelChange(channel, events, value === true)}
               />
+              <NotificationProviderLogo provider={channel.provider} />
               <span className="min-w-0">
                 <span className="block break-words">{channel.name}</span>
                 {!channel.hasCredential && (

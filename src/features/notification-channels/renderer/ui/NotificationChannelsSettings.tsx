@@ -14,6 +14,7 @@ import { BellPlus, CheckCircle2, ExternalLink, Send, Trash2 } from 'lucide-react
 
 import { DELIVERY_PROVIDERS } from '../../contracts';
 
+import { NotificationProviderLogo } from './NotificationProviderLogo';
 import { CHANNEL_SETUP_DOCS_URL, PROVIDER_SETUP_GUIDES } from './providerSetupGuide';
 
 import type { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
@@ -146,6 +147,7 @@ export function NotificationChannelsSettings({
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
+                <NotificationProviderLogo provider={channel.provider} className="size-5" />
                 <span className="truncate text-sm font-medium">{channel.name}</span>
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   {DELIVERY_PROVIDERS.find((item) => item.id === channel.provider)?.label}
@@ -159,7 +161,9 @@ export function NotificationChannelsSettings({
                 {channel.hasCredential
                   ? displayTest(channel.lastTest)
                   : 'Credential unavailable: edit to re-enter'}{' '}
-                · {channel.events.length} routed event types
+                · {channel.events.length === 0
+                    ? 'Choose notification types below'
+                    : `${channel.events.length} event type${channel.events.length === 1 ? '' : 's'} selected`}
               </div>
             </div>
             <label className="flex items-center gap-2 text-xs">
@@ -248,8 +252,11 @@ export function NotificationChannelsSettings({
               </SelectTrigger>
               <SelectContent>
                 {DELIVERY_PROVIDERS.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.label}
+                  <SelectItem key={provider.id} value={provider.id} textValue={provider.label}>
+                    <span className="flex items-center gap-2">
+                      <NotificationProviderLogo provider={provider.id} />
+                      {provider.label}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -72,6 +72,14 @@ describe('Notification destination coverage', () => {
     expect(onDesktopChange).toHaveBeenCalledWith(false);
   });
 
+  it('names an individual destination and shows its provider mark', async () => {
+    await renderPicker([partialChannel], false);
+    expect(container.textContent).toContain('Desktop + Budget Slack');
+    expect(
+      container.querySelector('img[data-notification-provider-logo="slack"]')
+    ).not.toBeNull();
+  });
+
   it('does not treat one destination as coverage for two separate event types', async () => {
     const { checkbox } = await renderPicker([partialChannel], false);
     expect(checkbox.disabled).toBe(true);
