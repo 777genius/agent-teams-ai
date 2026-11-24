@@ -356,7 +356,8 @@
         "discord": "Trong kênh Discord đích, mở Edit Channel → Integrations → Webhooks, tạo webhook và sao chép URL đầy đủ.",
         "slack": "Tạo ứng dụng Slack, bật Incoming Webhooks, cài vào workspace rồi sao chép URL.",
         "ms-teams": "Dùng Teams Workflows → Send webhook alerts to a channel. Với trigger tự tạo, chọn Anyone và giữ bí mật URL.",
-        "google-chat": "Trong không gian Google Chat, chọn Apps & integrations → Add webhooks, tạo webhook và sao chép URL đầy đủ."
+        "google-chat": "Trong không gian Google Chat, chọn Apps & integrations → Add webhooks, tạo webhook và sao chép URL đầy đủ.",
+        "webhook": "Tạo webhook HTTPS công khai (ví dụ trong n8n), sao chép toàn bộ URL có chữ ký và thử nghiệm. URL nội bộ bị chặn."
       }
     },
     "recovery": {

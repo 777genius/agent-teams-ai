@@ -371,7 +371,8 @@
         "discord": "În canalul Discord deschide Edit Channel → Integrations → Webhooks, creează un webhook și copiază URL-ul complet.",
         "slack": "Creează o aplicație Slack, activează Incoming Webhooks, instaleaz-o în spațiul de lucru și copiază URL-ul.",
         "ms-teams": "Folosește Teams Workflows → Send webhook alerts to a channel. Pentru un trigger propriu alege Anyone și păstrează URL-ul secret.",
-        "google-chat": "În spațiul Google Chat deschide Apps & integrations → Add webhooks, creează un webhook și copiază URL-ul complet."
+        "google-chat": "În spațiul Google Chat deschide Apps & integrations → Add webhooks, creează un webhook și copiază URL-ul complet.",
+        "webhook": "Creează un webhook HTTPS public (de exemplu în n8n), copiază URL-ul semnat complet și testează-l. URL-urile locale sunt blocate."
       }
     },
     "recovery": {

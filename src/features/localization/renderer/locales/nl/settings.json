@@ -356,7 +356,8 @@
         "discord": "Open in het gewenste Discord-kanaal Kanaal bewerken → Integraties → Webhooks, maak een webhook en kopieer de volledige URL.",
         "slack": "Maak een Slack-app, schakel Incoming Webhooks in, installeer deze in je werkruimte en kopieer de URL.",
         "ms-teams": "Gebruik Teams Workflows → Send webhook alerts to a channel. Kies Anyone bij een aangepaste trigger en houd de URL geheim.",
-        "google-chat": "Open in de Google Chat-ruimte Apps en integraties → Webhooks toevoegen, maak een webhook en kopieer de volledige URL."
+        "google-chat": "Open in de Google Chat-ruimte Apps en integraties → Webhooks toevoegen, maak een webhook en kopieer de volledige URL.",
+        "webhook": "Maak een openbare HTTPS-webhook (bijvoorbeeld in n8n), kopieer de volledige ondertekende URL en test deze. Lokale URL's worden geblokkeerd."
       }
     },
     "recovery": {

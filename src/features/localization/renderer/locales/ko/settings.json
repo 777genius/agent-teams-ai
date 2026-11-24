@@ -356,7 +356,8 @@
         "discord": "Discord 대상 채널의 채널 편집 → 연동 → Webhooks에서 웹훅을 만들고 전체 URL을 복사하세요.",
         "slack": "Slack 앱을 만들고 Incoming Webhooks를 활성화해 워크스페이스에 설치한 후 URL을 복사하세요.",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel을 사용하세요. 직접 만든 트리거는 Anyone으로 설정하고 URL을 비밀로 유지하세요.",
-        "google-chat": "Google Chat 스페이스의 앱 및 통합 → 웹훅 추가에서 웹훅을 만들고 전체 URL을 복사하세요."
+        "google-chat": "Google Chat 스페이스의 앱 및 통합 → 웹훅 추가에서 웹훅을 만들고 전체 URL을 복사하세요.",
+        "webhook": "공개 HTTPS 웹훅(예: n8n)을 만들고 서명된 URL 전체를 복사한 뒤 테스트하세요. 로컬 URL은 차단됩니다."
       }
     },
     "recovery": {
