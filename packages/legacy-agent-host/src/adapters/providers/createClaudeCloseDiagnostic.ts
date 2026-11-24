@@ -5,6 +5,7 @@ import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude'
 import type { RuntimeBinding } from '../../runtime/contracts.js';
 import type { OpenCodeV2GraphPhase } from './OpenCodeV2EmbeddedGraph.js';
 import type { OpenCodeCurrentnessPhase, OpenCodeCurrentnessStats } from './OpenCodeCurrentnessTiming.js';
+import type { OpenCodeCatalogRepeatObservation } from './OpenCodeV2ModelSelection.js';
 
 const prefix = 'legacy-agent-host: claude-close ';
 let stderrObserved = false;
@@ -214,14 +215,27 @@ function submitSummary(reply: unknown): ProbeSubmitSummary {
     submitDelivery: delivery === 'known-not-sent' ? 'known-not-sent' : 'unobserved' };
 }
 
-/** Phase and bounded SPI return only; no provider acceptance, readiness, process identity or release authority. */
+function catalogRepeatSummary(value: unknown): OpenCodeCatalogRepeatObservation | undefined {
+  try {
+    if (!value || typeof value !== 'object' || types.isProxy(value) || Array.isArray(value)) return;
+    const fields = Object.getOwnPropertyDescriptors(value);
+    if (Reflect.ownKeys(fields).length !== 2 || !Object.hasOwn(fields, 'catalogProviderPresent') ||
+        !Object.hasOwn(fields, 'catalogModelPresent') || !fields.catalogProviderPresent || !fields.catalogModelPresent ||
+        !('value' in fields.catalogProviderPresent) || !('value' in fields.catalogModelPresent)) return;
+    const provider: unknown = fields.catalogProviderPresent.value, model: unknown = fields.catalogModelPresent.value;
+    if (typeof provider !== 'boolean' || typeof model !== 'boolean' || (provider && model)) return;
+    return { catalogProviderPresent: provider, catalogModelPresent: model };
+  } catch { return; }
+}
+
+/** Bounded observations only; no provider acceptance, readiness, process identity or release authority. */
 export function createOpenCodeProbeDiagnostic(
   selected: { profileId: string; configRevision: string },
   commandId: string,
   probeDigest: string,
   write: (line: string) => void = writeDiagnostic,
   now: () => number = () => performance.now()
-): (phase: OpenCodeProbePhase, detail?: OpenCodeCurrentnessStats | { readonly ok: boolean }) => void {
+): (phase: OpenCodeProbePhase, detail?: OpenCodeCurrentnessStats | OpenCodeCatalogRepeatObservation | { readonly ok: boolean }) => void {
   try {
     const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
     const identity = Object.freeze({ profileHash: hash([selected.profileId, selected.configRevision]),
@@ -244,7 +258,7 @@ export function createOpenCodeProbeDiagnostic(
             phase, sequence: count, elapsedMs, ...stats }) + '\n');
           return;
         }
-        if (detail !== undefined && phase !== 'first-submit-returned') return;
+        if (detail !== undefined && phase !== 'first-submit-returned' && phase !== 'catalog-repeat') return;
         if (!valid || count >= probePhases.size || !probePhases.has(phase) || observed.has(phase)) return;
         observed.add(phase); count++;
         if (count > 1 && started === undefined) return;
@@ -255,6 +269,7 @@ export function createOpenCodeProbeDiagnostic(
         if (!Number.isSafeInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > 3_600_000) return;
         write('legacy-agent-host: opencode-probe ' + JSON.stringify({ ...identity,
           phase, sequence: count, elapsedMs,
+          ...(phase === 'catalog-repeat' ? catalogRepeatSummary(detail) : {}),
           ...(phase === 'first-submit-returned' ? submitSummary(detail) : {}) }) + '\n');
       } catch { /* Diagnostics cannot replace an original probe operation or error. */ }
     };

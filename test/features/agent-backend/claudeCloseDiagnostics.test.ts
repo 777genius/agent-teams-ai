@@ -625,3 +625,67 @@ test('passive probe handoff decoder accepts the exact reply shape only at the re
   decode(frame(unknown));
   assert.deepEqual(values, [valid, unknown]);
 });
+
+test('catalog repeat diagnostics retain only an optional own boolean pair without getters or Proxy traps', () => {
+  const secret = 'TEST-private-catalog-provider-model-path';
+  const pairs = [
+    { catalogProviderPresent: false, catalogModelPresent: false },
+    { catalogProviderPresent: false, catalogModelPresent: true },
+    { catalogProviderPresent: true, catalogModelPresent: false },
+  ];
+  let forbiddenReads = 0;
+  const getter = () => { forbiddenReads++; throw Error(secret); };
+  const trapped = new Proxy({}, { get: getter, ownKeys: getter, getOwnPropertyDescriptor: getter,
+    getPrototypeOf: getter, has: getter });
+  const cases: [unknown, Record<string, boolean>][] = [
+    ...pairs.map(pair => [pair, pair] as [unknown, Record<string, boolean>]),
+    [undefined, {}], [null, {}], [[], {}], [{}, {}], [trapped, {}],
+    [Object.defineProperty({ catalogModelPresent: false }, 'catalogProviderPresent', { get: getter }), {}],
+    [Object.assign(Object.create({ catalogProviderPresent: false }), { catalogModelPresent: true }), {}],
+    [{ catalogProviderPresent: true, catalogModelPresent: true }, {}],
+    [{ catalogProviderPresent: false, catalogModelPresent: secret }, {}],
+    [{ catalogProviderPresent: false }, {}], [{ ...pairs[0], extra: secret }, {}],
+    [{ ...pairs[0], [Symbol(secret)]: true }, {}], [{ ...pairs[0], toJSON: getter }, {}],
+  ];
+  for (const [detail, expected] of cases) {
+    const lines: string[] = [], retained: OpenCodeProbeDiagnostic[] = [];
+    const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST', configRevision: 'TEST' }, secret,
+      'a'.repeat(64), line => lines.push(line), () => 50);
+    const emit = observe as (phase: string, detail?: unknown) => void;
+    observe('run'); emit('catalog-repeat', detail); emit('catalog-repeat', detail);
+    assert.equal(lines.length, 2, 'invalid detail does not erase or repeat the original phase');
+    const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { retained.push(value); });
+    for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
+    assert.equal(retained.length, 2);
+    assert.deepEqual(retained[1], { profileHash: retained[0]!.profileHash, commandHash: retained[0]!.commandHash,
+      probeDigest: 'a'.repeat(64), phase: 'catalog-repeat', sequence: 2, elapsedMs: 0, ...expected });
+    assert.ok(Object.isFrozen(retained[1]));
+    assert.ok(lines.every(line => Buffer.byteLength(line) < 512));
+    assert.equal(lines.join('').includes(secret), false);
+  }
+  assert.equal(forbiddenReads, 0, 'diagnostics cannot execute a getter, serializer or Proxy trap');
+});
+
+test('catalog repeat decoder accepts exactly the optional missing-selection pair at its original phase', () => {
+  const values: OpenCodeProbeDiagnostic[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { values.push(value); });
+  const base = { profileHash: 'a'.repeat(64), commandHash: 'b'.repeat(64), probeDigest: 'c'.repeat(64),
+    phase: 'catalog-repeat', sequence: 64, elapsedMs: 3_600_000 };
+  const valid = { ...base, catalogProviderPresent: false, catalogModelPresent: true };
+  const frame = (value: unknown) => Buffer.from(probePrefix + JSON.stringify(value) + '\n');
+  for (const invalid of [
+    { ...valid, catalogProviderPresent: undefined }, { ...valid, catalogModelPresent: undefined },
+    { ...valid, catalogProviderPresent: true }, { ...valid, catalogProviderPresent: null },
+    { ...valid, catalogModelPresent: 'TEST-private' }, { ...valid, phase: 'catalog-read-returned' },
+    { ...valid, phase: 'run' }, { ...valid, currentCalls: 1, currentElapsedMs: 0 },
+    { ...valid, submitStatus: 'ok', submitCode: null, submitDelivery: 'unobserved' },
+    { ...valid, ready: true }, { ...valid, sequence: 65 },
+  ]) decode(frame(invalid));
+  assert.deepEqual(values, []);
+  for (const value of [base, valid, { ...valid, catalogModelPresent: false },
+    { ...valid, catalogProviderPresent: true, catalogModelPresent: false }]) {
+    for (const byte of frame(value)) decode(Buffer.from([byte]));
+  }
+  assert.deepEqual(values, [base, valid, { ...valid, catalogModelPresent: false },
+    { ...valid, catalogProviderPresent: true, catalogModelPresent: false }]);
+});

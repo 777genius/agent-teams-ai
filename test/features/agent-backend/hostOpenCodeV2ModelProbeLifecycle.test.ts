@@ -610,16 +610,20 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         const observed = records.map(record => record.phase).filter(phase => catalogPhases.includes(phase));
         const second = fault === 'custody' ? [0, 1, 4] : fault === 'mismatch' ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
         expect(observed).toEqual(sink === 'absent' ? [] : fault === 'complete' ? catalogPhases
-          : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
+          : fault === 'http' ? catalogPhases.slice(0, 5)
+            : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
         assertCurrentnessSummaries(records, sink === 'absent' ? [] : fault === 'complete'
-          ? currentnessPhases : currentnessPhases.slice(0, 3));
+          ? currentnessPhases : currentnessPhases.slice(0, fault === 'http' ? 2 : 3));
         for (const record of records.filter(record => currentnessPhases.includes(record.phase)))
           expect(record.currentCalls).toBe(originalCalls.get(record.phase));
         expect(records.map(record => record.phase).filter(phase =>
           ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'].includes(phase)))
           .toEqual(sink !== 'absent' && fault === 'complete'
             ? ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'] : []);
-        expect(routes.length).toBe(fault === 'complete' ? 7 : fault === 'http' ? 3 : 2);
+        expect(routes).toEqual(fault === 'complete'
+          ? ['/api/info', '/api/model', '/api/provider', '/api/model/default',
+            '/api/model', '/api/provider', '/api/model/default']
+          : ['/api/info', '/api/model']);
         const phaseCount = records.length, release = await admission!(controller.signal);
         assert.ok(typeof release === 'function'); release(); release();
         expect(records).toHaveLength(phaseCount); // finally disables catalog marks, even after failure.
@@ -773,6 +777,75 @@ test.each(['complete', 'read-failed', 'current-lost'] as const)(
       expect(phases).toEqual(sink === 'absent' || fault === 'read-failed' ? [] : fault === 'current-lost'
         ? ['catalog-read-returned'] : ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat']);
       expect(reads).toBe(fault === 'complete' ? 3 : 1);
+    }
+  }
+);
+
+test.each(['first-pass', 'absent-provider', 'absent-model', 'both-absent', 'hard-invalid'] as const)(
+  'catalog repeat preserves the first missing selection pair for %s', async shape => {
+    let baseline: unknown;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' };
+      const observations: { phase: string; detail?: unknown }[] = [];
+      let reads = 0, checks = 0;
+      const result = attestOpenCodeV2ModelSelection({ readCatalog: async () => {
+        reads++;
+        const first = reads === 1;
+        return {
+          provider: first && (shape === 'absent-provider' || shape === 'both-absent') ? null
+            : { id: selection.providerID, activation: shape === 'hard-invalid' ? 'disabled' : 'enabled' },
+          defaultModel: { providerId: selection.providerID, modelId: selection.id },
+          models: first && (shape === 'absent-model' || shape === 'both-absent') ? []
+            : [{ id: selection.id, enabled: true, variants: [] }],
+        };
+      } }, selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+        isCurrent: () => { checks++; return true; } }, sink === 'absent' ? undefined : (phase, detail?: unknown) => {
+        observations.push({ phase, ...(detail === undefined ? {} : { detail }) });
+        if (sink === 'throws') throw Error('TEST diagnostic failure');
+      });
+      if (shape === 'hard-invalid') await expect(result).rejects.toMatchObject({ code: 'invalid' });
+      else await expect(result).resolves.toBeUndefined();
+      baseline ??= { reads, checks }; expect({ reads, checks }).toEqual(baseline);
+      const repeats = shape !== 'first-pass' && shape !== 'hard-invalid';
+      expect({ reads, checks }).toEqual(repeats ? { reads: 2, checks: 4 } : { reads: 1, checks: 2 });
+      expect(observations.filter(row => row.phase === 'catalog-repeat')).toEqual(sink === 'absent' || !repeats ? [] : [{
+        phase: 'catalog-repeat', detail: {
+          catalogProviderPresent: shape === 'absent-model', catalogModelPresent: shape === 'absent-provider',
+        },
+      }]);
+      expect(observations.filter(row => row.phase !== 'catalog-repeat').every(row => row.detail === undefined)).toBe(true);
+    }
+  }
+);
+
+test.each(['accessor', 'proxy'] as const)(
+  'catalog repeat projection adds no reads or reflection through a %s catalog', async shape => {
+    let baseline: string[] | undefined;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' }, trace: string[] = [];
+      const complete = { provider: { id: selection.providerID, activation: 'enabled' },
+        defaultModel: { providerId: selection.providerID, modelId: selection.id },
+        models: [{ id: selection.id, enabled: true, variants: [] }] };
+      const missing = { ...complete, provider: null };
+      const catalog = shape === 'accessor' ? Object.defineProperty(missing, 'provider', {
+        get() { trace.push('provider getter'); return null; },
+      }) : new Proxy(missing, {
+        get(target, key, receiver) { trace.push('get ' + String(key)); return Reflect.get(target, key, receiver); },
+        getOwnPropertyDescriptor() { trace.push('forbidden descriptor'); throw Error('TEST diagnostic reflection'); },
+        ownKeys() { trace.push('forbidden keys'); throw Error('TEST diagnostic reflection'); },
+      });
+      let reads = 0;
+      const observations: { phase: string; detail?: unknown }[] = [];
+      await expect(attestOpenCodeV2ModelSelection({ readCatalog: async () => ++reads === 1 ? catalog : complete },
+        selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+          isCurrent: () => { trace.push('current'); return true; } }, sink === 'absent' ? undefined : (phase, detail?: unknown) => {
+          observations.push({ phase, ...(detail === undefined ? {} : { detail }) });
+          if (sink === 'throws') throw Error('TEST diagnostic failure');
+        })).resolves.toBeUndefined();
+      baseline ??= trace; expect(trace).toEqual(baseline);
+      expect(trace.some(value => value.startsWith('forbidden'))).toBe(false);
+      expect(observations.filter(row => row.phase === 'catalog-repeat')).toEqual(sink === 'absent' ? [] : [{ phase: 'catalog-repeat' }]);
+      expect(reads).toBe(2);
     }
   }
 );

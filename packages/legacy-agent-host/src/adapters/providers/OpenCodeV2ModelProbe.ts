@@ -388,7 +388,24 @@ export function createOpenCodeV2ModelProbe(
           },
           probe: async (probeSignal) =>
             withClient(probeSignal, async (client) => {
-              const observed = await client.readSession();
+              // Independent native reads keep their original custody/currentness gates.
+              // Await all before comparing so no check is silently skipped.
+              const [session, permissions, plugins, mcpResult] = await Promise.allSettled([
+                client.readSession(),
+                client.savedPermissionsEmpty(),
+                client.builtinPluginsOnly(),
+                client.readMcp(),
+              ]);
+              // Settle every native request/lease before owner-client dispose, even
+              // if an earlier request failed.
+              if (session.status === 'rejected') throw session.reason;
+              if (permissions.status === 'rejected') throw permissions.reason;
+              if (plugins.status === 'rejected') throw plugins.reason;
+              if (mcpResult.status === 'rejected') throw mcpResult.reason;
+              const observed = session.value;
+              const permissionsEmpty = permissions.value;
+              const pluginsOnly = plugins.value;
+              const mcp = mcpResult.value;
               return (
                 managementDigest({
                   agent: observed.agent,
@@ -396,13 +413,10 @@ export function createOpenCodeV2ModelProbe(
                   permissions: observed.permissions,
                   ...(observed.credential ? { credential: observed.credential } : {}),
                 }) === managementDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
-                (await client.savedPermissionsEmpty()) &&
-                (await client.builtinPluginsOnly()) &&
-                await (async () => {
-                  const mcp = await client.readMcp();
-                  return coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
-                    mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0;
-                })()
+                permissionsEmpty &&
+                pluginsOnly &&
+                (coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
+                  mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0)
               );
             }),
           confirmStopped: () => server!.stopOwned(),
