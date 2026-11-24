@@ -385,6 +385,8 @@ export interface TeamTask {
   needsClarification?: 'lead' | 'user';
   /** Exact first transition into awaiting human response; legacy tasks may not contain it. */
   clarificationRequestedAt?: string;
+  /** Opaque identity of the current human clarification cycle; absent on legacy tasks. */
+  clarificationRequestId?: string;
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
   /** Attachments associated with this task. Metadata only — actual files stored on disk. */
@@ -698,6 +700,8 @@ export interface DiscardQueuedUserMessagesResult {
 
 export interface AddTaskCommentRequest {
   text: string;
+  /** Optional exact user clarification cycle answered by this task-scoped comment. */
+  answerClarificationRequestId?: string;
   attachments?: CommentAttachmentPayload[];
   taskRefs?: TaskRef[];
 }

@@ -695,6 +695,7 @@ function createTask(paths, input = {}) {
         ? input.needsClarification
         : undefined,
     clarificationRequestedAt: input.needsClarification === 'user' ? createdAt : undefined,
+    clarificationRequestId: input.needsClarification === 'user' ? crypto.randomUUID() : undefined,
     reviewState: normalizeTaskReviewState(input.reviewState),
     deletedAt:
       status === 'deleted' && typeof input.deletedAt === 'string' ? input.deletedAt : undefined,
@@ -954,8 +955,15 @@ function addTaskComment(paths, taskRef, text, options = {}) {
     throw new Error('Missing comment text');
   }
 
+  const answerRequestId = options.answerClarificationRequestId;
+  if (answerRequestId !== undefined &&
+      (!UUID_TASK_ID_PATTERN.test(String(answerRequestId)) || options.author !== 'user')) {
+    throw new Error('Invalid task clarification answer identity');
+  }
   const comment = {
-    id: options.id || crypto.randomUUID(),
+    // One response identity per clarification cycle makes an uncertain retry
+    // idempotent without a second journal or arbitrary client-chosen comment ID.
+    id: answerRequestId ? 'clarification-answer-' + answerRequestId : options.id || crypto.randomUUID(),
     author:
       typeof options.author === 'string' && options.author.trim() ? options.author.trim() : 'user',
     text,
@@ -972,19 +980,60 @@ function addTaskComment(paths, taskRef, text, options = {}) {
       : {}),
   };
 
+  if (answerRequestId) {
+    // Called under the controller's team-board lock. A stale answer must never
+    // clear a newer question, even if it was successfully recorded earlier.
+    const current = readTask(paths, taskRef, { includeDeleted: true });
+    if (current.needsClarification === 'user' &&
+        current.clarificationRequestId !== answerRequestId) {
+      throw new Error('Clarification request changed; reload the task before replying');
+    }
+    const existing = (Array.isArray(current.comments) ? current.comments : [])
+      .find((row) => row.id === comment.id);
+    if (existing) {
+      const refs = (rows) => JSON.stringify(rows || []);
+      const attachments = (rows) => JSON.stringify((rows || []).map((row) => ({
+        id: row.id, filename: row.filename, mimeType: row.mimeType, size: row.size,
+      })));
+      if (existing.author !== comment.author || existing.text !== comment.text ||
+          refs(existing.taskRefs) !== refs(comment.taskRefs) ||
+          attachments(existing.attachments) !== attachments(comment.attachments)) {
+        throw new Error('Clarification already answered with different content');
+      }
+      return { comment: existing, task: current, inserted: false, clarificationCleared: false };
+    }
+    if (current.needsClarification !== 'user' ||
+        current.clarificationRequestId !== answerRequestId ||
+        current.status === 'deleted' || current.deletedAt) {
+      throw new Error('Clarification request is no longer awaiting your answer');
+    }
+  }
+
   let inserted = false;
+  let clarificationCleared = false;
   const task = updateTask(paths, taskRef, (currentTask) => {
     const comments = Array.isArray(currentTask.comments) ? currentTask.comments : [];
     if (comments.some((entry) => entry.id === comment.id)) {
       return currentTask;
     }
-
+    if (answerRequestId &&
+        (currentTask.needsClarification !== 'user' ||
+         currentTask.clarificationRequestId !== answerRequestId ||
+         currentTask.status === 'deleted' || currentTask.deletedAt)) {
+      throw new Error('Clarification request changed; reload the task before replying');
+    }
     currentTask.comments = comments.concat([comment]);
     inserted = true;
+    if (answerRequestId) {
+      delete currentTask.needsClarification;
+      delete currentTask.clarificationRequestedAt;
+      delete currentTask.clarificationRequestId;
+      clarificationCleared = true;
+    }
     return currentTask;
   });
 
-  return { comment, task, inserted, clarificationCleared: false };
+  return { comment, task, inserted, clarificationCleared };
 }
 
 function setNeedsClarification(paths, taskRef, value) {
@@ -999,8 +1048,12 @@ function setNeedsClarification(paths, taskRef, value) {
     }
     if (value === 'user' && !wasAwaitingUser) {
       task.clarificationRequestedAt = nowIso();
+      task.clarificationRequestId = crypto.randomUUID();
     }
-    if (value !== 'user') delete task.clarificationRequestedAt;
+    if (value !== 'user') {
+      delete task.clarificationRequestedAt;
+      delete task.clarificationRequestId;
+    }
     return task;
   });
 }

@@ -710,6 +710,12 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
             allowProviderAliases: !fromRequiredForAgentTool,
         }
     );
+    // This intent is reserved for a user-origin task-scoped answer. Agent
+    // tools must not be able to masquerade as the human decision-maker.
+    if (commentFlags.answerClarificationRequestId !== undefined &&
+        (fromRequiredForAgentTool || author !== 'user')) {
+        throw new Error('Only the user may answer a task clarification');
+    }
     const result = withTeamBoardLock(context.paths, () => {
         readMutableTask(context, taskId, 'adding a comment');
         const insertResult = taskStore.addTaskComment(context.paths, taskId, commentFlags.text, {
@@ -719,6 +725,9 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
             ...(commentFlags.type ? { type: commentFlags.type } : {}),
             ...(Array.isArray(commentFlags.taskRefs) ? { taskRefs: commentFlags.taskRefs } : {}),
             ...(Array.isArray(commentFlags.attachments) ? { attachments: commentFlags.attachments } : {}),
+            ...(commentFlags.answerClarificationRequestId !== undefined
+                ? { answerClarificationRequestId: commentFlags.answerClarificationRequestId }
+                : {}),
         });
         // A comment is evidence or coordination, not a start command. Pending
         // work must move to in_progress only through the explicit task_start
@@ -729,7 +738,10 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
     try {
         maybeNotifyTaskOwnerOnComment(context, result.task, result.comment, {
             inserted: result.inserted,
-            notifyOwner: commentFlags.notifyOwner,
+            // Durable main-owned journal handles bound human answers; do not
+            // also emit a best-effort immediate notice to the same owner.
+            notifyOwner: commentFlags.answerClarificationRequestId === undefined &&
+              commentFlags.notifyOwner,
         });
     } catch (notifyError) {
         warnNonCritical(`[tasks] owner notification failed for task ${taskId}`, notifyError);

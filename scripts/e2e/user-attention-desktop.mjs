@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { buildOpenCodeAppProfileScope } from '../../src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv.ts';
 import { chmod, mkdir, mkdtemp, readFile, writeFile, rename } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -94,6 +95,9 @@ async function setup() {
     env.ELECTRON_DISABLE_SANDBOX = '1';
   }
 
+  const profileScope = buildOpenCodeAppProfileScope(
+    envRoot.AGENT_TEAMS_ELECTRON_USER_DATA_DIR, claude
+  );
   for (const team of teams) {
     const teamDir = path.join(claude, 'teams', team);
     const members = ['team-lead', team === first ? 'alice' : 'bob'].map((name) => ({
@@ -106,6 +110,11 @@ async function setup() {
       name: team, description: 'Isolated Attention Inbox proof',
       createdAt: Date.now() - 86400000,
       leadAgentId: members[0].agentId, members, projectPath: project,
+    });
+    // Test-owned synthetic teams need the same official profile ownership
+    // marker as real app-created teams. Nothing outside artifactRoot is touched.
+    await json(path.join(teamDir, '.agent-teams-owner.json'), {
+      schemaVersion: 1, profileScope, claimedAt: nowIso(), reason: 'create',
     });
     const former = { ...members[1], name: 'former', agentId: 'former@' + team,
       removedAt: Date.now() - 3600000 };
@@ -387,9 +396,112 @@ async function checkDesktop() {
   const repeated = (await getSnapshot()).teams.find((t) => t.teamName === first)
     .tasks.find((t) => t.taskId === '2');
   assert.equal(repeated.requestedAt, added.requestedAt, 'same-value setter keeps request age');
+
+  // Real Task Detail comment UI must submit the bound request generation through
+  // the normal Electron IPC path. No second Mark Resolved click is permitted.
+  const requestBeforeAnswer = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert.match(requestBeforeAnswer.clarificationRequestId,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  const oldRequestId = requestBeforeAnswer.clarificationRequestId;
+  await cdp.evaluate(`(() => {
+    const panel = [...document.querySelectorAll('[data-testid=user-attention-inbox]')]
+      .find((element) => element.getClientRects().length > 0);
+    const button = [...(panel?.querySelectorAll('button') ?? [])].find((element) =>
+      element.getAttribute('aria-label')?.includes('Filler task 2'));
+    if (!button) throw new Error('Expected task answer deep link');
+    button.click();
+  })()`);
+  await cdp.waitFor(
+    'Array.from(document.querySelectorAll("textarea[id^=task-comment-input-]")).some((node) => node.getClientRects().length > 0)',
+    'task-scoped answer editor');
+  await cdp.evaluate(`(() => {
+    const field = [...document.querySelectorAll('textarea[id^="task-comment-input-"]')]
+      .find((node) => node.getClientRects().length > 0);
+    if (!field) throw new Error('Task answer editor unavailable');
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+    setter.call(field, 'Use PostgreSQL for this task');
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await cdp.waitFor(`(() => [...document.querySelectorAll('button.message-composer-send-button')]
+    .some((button) => button.getClientRects().length > 0 && !button.disabled &&
+      button.textContent.toLowerCase().includes('comment')))()`,
+    'task answer submit enabled');
+  await cdp.evaluate(`(() => {
+    const button = [...document.querySelectorAll('button.message-composer-send-button')]
+      .find((row) => row.getClientRects().length > 0 && !row.disabled &&
+        row.textContent.toLowerCase().includes('comment'));
+    if (!button) throw new Error('Task answer submit missing');
+    button.click();
+  })()`);
+  await until(async () => {
+    const task = await cdp.evaluate(
+      `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+    return task.needsClarification === undefined &&
+      task.clarificationRequestId === undefined &&
+      task.status === 'pending' &&
+      task.comments?.some((comment) => comment.id === 'clarification-answer-' + oldRequestId &&
+        comment.text === 'Use PostgreSQL for this task');
+  }, 'task comment and clarification cleared in same persisted task', 60_000);
+  // The answer must also reach the owning agent or lead durably. This verifies
+  // the existing notification journal rather than just a disappearing UI row.
+  const expectedAnswerCommentId = 'clarification-answer-' + oldRequestId;
+  const expectedNotificationId =
+    'task-comment-forward:' + first + ':2:' + expectedAnswerCommentId;
+  const leadInbox = path.join(claude, 'teams', first, 'inboxes', 'team-lead.json');
+  await until(async () => {
+    try {
+      const messages = JSON.parse(await readFile(leadInbox, 'utf8'));
+      return messages.some((message) =>
+        message.messageId === expectedNotificationId &&
+        message.commentId === expectedAnswerCommentId &&
+        message.to === 'team-lead' &&
+        message.source === 'system_notification');
+    } catch { return false; }
+  }, 'user answer notification persisted to owning lead', 60_000);
+  evidence.checks.push('user answer notification persisted with stable id');
+
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',
+    'answered task disappears without manually marking resolved', 30_000);
+  const firstAnswer = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  await cdp.evaluate(`window.electronAPI.teams.addTaskComment(
+    ${JSON.stringify(first)}, '2', {
+      text: 'Use PostgreSQL for this task',
+      answerClarificationRequestId: ${JSON.stringify(oldRequestId)}
+    })`);
+  const afterRetry = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert.deepEqual(afterRetry.comments, firstAnswer.comments,
+    'uncertain duplicate submission does not append a comment');
+  const answerNotices = JSON.parse(await readFile(leadInbox, 'utf8'))
+    .filter((message) => message.commentId === expectedAnswerCommentId);
+  assert.equal(answerNotices.length, 1,
+    'retry does not deliver the same user answer notification twice');
+  await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', 'user')`);
+  const newCycle = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert(newCycle.clarificationRequestId && newCycle.clarificationRequestId !== oldRequestId,
+    'fresh question gets an independent generation');
+  const staleOutcome = await cdp.evaluate(`window.electronAPI.teams.addTaskComment(
+    ${JSON.stringify(first)}, '2', {
+      text: 'Use PostgreSQL for this task',
+      answerClarificationRequestId: ${JSON.stringify(oldRequestId)}
+    }).then(() => 'accepted', () => 'rejected')`);
+  assert.equal(staleOutcome, 'rejected', 'old response cannot clear new request');
+  const freshAfterStale = await cdp.evaluate(
+    `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
+  assert.equal(freshAfterStale.clarificationRequestId, newCycle.clarificationRequestId);
+  assert.equal(freshAfterStale.needsClarification, 'user');
+  evidence.checks.push('real Task Detail user answer, atomic handoff, retry and stale-cycle E2E');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2")',
+    'new clarification returns to live Dashboard', 30_000);
+  // Test-only cleanup after asserting that the stale answer cannot clear B.
   await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, '2', null)`);
-  await until(async () => (await getSnapshot()).teams.find((t) => t.teamName === first)
-    ?.tasks.every((t) => t.taskId !== '2'), 'cleared clarification removed');
+
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("Filler task 2") === false',
     'live Dashboard removes resolved clarification without reload', 30_000);

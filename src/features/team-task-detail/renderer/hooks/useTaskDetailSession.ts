@@ -196,6 +196,7 @@ export function useTaskDetailSession({
       useStore.getState().hydrateTaskDetailSessionDraft(identity, {
         text: hydration.text ?? undefined,
         commentChips: hydration.commentChips ?? undefined,
+        answerClarificationRequestId: hydration.answerClarificationRequestId,
       });
       if (
         identity.contextId === 'local' &&
@@ -207,6 +208,7 @@ export function useTaskDetailSession({
           {
             text: next?.commentText ?? hydration.legacyText ?? '',
             commentChips: next?.commentChips ?? hydration.legacyCommentChips ?? [],
+            answerClarificationRequestId: next?.answerClarificationRequestId ?? null,
           },
           { migrateLegacy: true }
         );
@@ -237,10 +239,19 @@ export function useTaskDetailSession({
   }, [identity, identityKey, isOriginCurrent, scope, session.ownerRevision, surfaceId]);
 
   const persistDraft = useCallback(
-    (value: { text?: string; commentChips?: InlineChip[] }) => {
+    () => {
+      const draft = useStore.getState().taskDetailSessionById[identityKey];
+      if (!draft) return;
       setIsDraftSaved(false);
+      // Capture a COMPLETE same-revision snapshot. Persisting only one changed
+      // field could pair stale on-disk text with a new request identity if an
+      // earlier save failed. Never merge the generation with unrelated content.
       void taskDraftStorage
-        .save(identity, value)
+        .save(identity, {
+          text: draft.commentText,
+          commentChips: draft.commentChips,
+          answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
+        })
         .then(() => {
           if (isOriginCurrent()) setIsDraftSaved(true);
         })
@@ -248,14 +259,14 @@ export function useTaskDetailSession({
           if (isOriginCurrent()) setIsDraftSaved(false);
         });
     },
-    [identity, isOriginCurrent, setIsDraftSaved]
+    [identity, identityKey, isOriginCurrent, setIsDraftSaved]
   );
 
   const setCommentText = useCallback(
     (text: string) => {
       if (!requireOwner()) return;
       useStore.getState().updateTaskDetailSessionPart(identity, 'commentText', text);
-      persistDraft({ text });
+      persistDraft();
     },
     [identity, persistDraft, requireOwner]
   );
@@ -264,7 +275,7 @@ export function useTaskDetailSession({
     (chips: InlineChip[]) => {
       if (!requireOwner()) return;
       useStore.getState().updateTaskDetailSessionPart(identity, 'commentChips', chips);
-      persistDraft({ commentChips: chips });
+      persistDraft();
     },
     [identity, persistDraft, requireOwner]
   );
@@ -398,12 +409,27 @@ export function useTaskDetailSession({
             base64Data: attachment.base64Data,
           }))
         : undefined;
+    const activeTask = state.taskDetailById[identityKey]?.full;
+    // The bound generation is captured when the draft was FIRST composed,
+    // not at send time. A late task refresh must never rebind A's text to B.
+    const boundCycle = current.answerClarificationRequestId;
+    const activeCycle =
+      activeTask?.needsClarification === 'user' ? activeTask.clarificationRequestId : undefined;
     const revision = state.beginTaskDetailSubmitSession(identity);
+    if (activeCycle && boundCycle !== activeCycle) {
+      useStore.getState().failTaskDetailSubmitSession(
+        identity, revision,
+        'The clarification changed while this answer was drafted. Copy your text and start a fresh answer.'
+      );
+      return;
+    }
+    const answerClarificationRequestId = typeof boundCycle === 'string' ? boundCycle : undefined;
     try {
       await state.addTaskComment(identity.teamName, identity.taskId, {
         text,
         attachments,
         taskRefs,
+        ...(answerClarificationRequestId ? { answerClarificationRequestId } : {}),
       });
       if (!isOriginCurrent()) return;
       const before = useStore.getState().taskDetailSessionById[identityKey];
@@ -414,7 +440,7 @@ export function useTaskDetailSession({
         if (after.commentText === '' && after.commentChips.length === 0) {
           void taskDraftStorage.clear(identity);
         } else {
-          persistDraft({ text: after.commentText, commentChips: after.commentChips });
+          persistDraft();
         }
       }
     } catch (error) {
