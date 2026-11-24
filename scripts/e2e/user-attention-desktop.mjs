@@ -366,38 +366,6 @@ async function checkDesktop() {
   evidence.checks.push('controller transition / repeated setter / clear');
   evidence.checks.push('live Dashboard clarification appears and disappears');
 
-  // A long waiting task ranks above a newer one, without starving the chat list.
-  // Legacy tasks have no known request timestamp, so they are accessible via More.
-  for (let taskId = 3; taskId <= 12; taskId++) {
-    await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, ${JSON.stringify(String(taskId))}, 'user')`);
-  }
-  await until(async () => cdp.evaluate(`(() => {
-    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
-      .find((node) => node.getClientRects().length > 0);
-    const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
-    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
-    return panel?.querySelector('[data-testid=attention-task-count]')?.textContent.trim().endsWith('12') &&
-      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 3') &&
-      buttons.length === 8 && Boolean(more) &&
-      !panel.textContent.includes('Time unknown') &&
-      panel.textContent.includes('Unread chats');
-  })()`), 'longest known waiting decision first, eight tasks, chats still visible');
-  const expanded = await cdp.evaluate(`(() => {
-    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
-      .find((node) => node.getClientRects().length > 0);
-    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
-    if (!more) return false;
-    more.click();
-    return true;
-  })()`);
-  assert(expanded, 'show more tasks control is actionable');
-  await cdp.waitFor(
-    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_OLDEST_USER_DECISION")',
-    'load more retains legacy decisions without dropping messages');
-  evidence.checks.push('waiting-first decisions + recent chats + eight-at-a-time expansion');
-
-  await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
-
   // Historical messages still need attention after their sender is removed.
   const formerInbox = path.join(claude, 'teams', first, 'inboxes', 'user.json');
   const existing = JSON.parse(await readFile(formerInbox, 'utf8'));
@@ -412,6 +380,52 @@ async function checkDesktop() {
       !team.directParticipants.includes('former') &&
       team.messages.some((message) => message.messageId === 'attention-former-' + first);
   }, 'removed member remains an unread candidate without an active direct thread', 90_000);
+
+  // A long waiting task ranks above a newer one, without starving the chat list.
+  // Legacy tasks have no known request timestamp, so they are accessible via More.
+  for (let taskId = 3; taskId <= 12; taskId++) {
+    await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, ${JSON.stringify(String(taskId))}, 'user')`);
+  }
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
+    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
+    return panel?.querySelector('[data-testid=attention-task-count]')?.textContent.trim().endsWith('12') &&
+      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 3') &&
+      buttons.length === 8 && Boolean(more) &&
+      !panel.textContent.includes('Time unknown') &&
+      panel.textContent.includes('Unread chats') &&
+      [...panel.querySelectorAll('button')].some((button) =>
+        button.getClientRects().length > 0 &&
+        button.textContent.includes('ATTENTION_E2E_REMOVED_MEMBER'));
+  })()`), 'longest known waiting decision first, eight tasks, chats still visible');
+  const expanded = await cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
+    if (!more) return false;
+    more.click();
+    return true;
+  })()`);
+  assert(expanded, 'show more tasks control is actionable');
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
+    return buttons.length === 12 &&
+      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 3') &&
+      buttons.some((button) => button.textContent.includes('ATTENTION_E2E_OLDEST_USER_DECISION')) &&
+      !panel.textContent.includes('Time unknown') &&
+      [...panel.querySelectorAll('button')].some((button) =>
+        button.getClientRects().length > 0 &&
+        button.textContent.includes('ATTENTION_E2E_REMOVED_MEMBER'));
+  })()`), 'load more retains legacy decisions and the actual unread chat');
+  evidence.checks.push('waiting-first decisions + recent chats + eight-at-a-time expansion');
+
+  await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
+
+  // The same unread historical message remains actionable after task expansion.
   await until(async () => cdp.evaluate(`(() => {
     const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
       .find((node) => node.getClientRects().length > 0);

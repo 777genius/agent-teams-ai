@@ -22,11 +22,6 @@ export interface AttentionInboxPanelProps {
   onOpenFull?(): void;
 }
 
-function timeMs(timestamp: string | null | undefined): number {
-  const parsed = Date.parse(timestamp ?? '');
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 export function AttentionInboxPanel({
   variant, model, loading, error, onRetry, onOpenTask, onOpenChat, onOpenFull,
 }: Readonly<AttentionInboxPanelProps>): React.JSX.Element {
@@ -144,9 +139,7 @@ export function AttentionInboxPanel({
             </h3>
             <div className="flex flex-col gap-1">
               {shownTasks.map((task) => {
-                const age = task.requestedAt
-                  ? relativeAttentionAge(task.requestedAt, now, resolvedLanguage)
-                  : null;
+                const age = relativeAttentionAge(task.requestedAt, now, resolvedLanguage, '');
                 return (
                   <button type="button" key={['task', task.teamName, task.taskId].join(':')}
                     onClick={() => onOpenTask(task)}
@@ -182,9 +175,7 @@ export function AttentionInboxPanel({
             <div className="flex flex-col gap-2">
               {shownChats.map((chat) => {
                 const item = toAttentionChatRow(chat);
-                const age = timeMs(chat.latestUnread.timestamp)
-                  ? relativeAttentionAge(chat.latestUnread.timestamp, now, resolvedLanguage)
-                  : null;
+                const age = relativeAttentionAge(chat.latestUnread.timestamp, now, resolvedLanguage, '');
                 const scopeKey = item.scope.kind === 'group' ? item.scope.groupChatId :
                   item.scope.kind === 'direct' ? item.scope.participant : 'team-feed';
                 return (

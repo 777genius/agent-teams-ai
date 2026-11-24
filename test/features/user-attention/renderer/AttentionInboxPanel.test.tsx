@@ -176,6 +176,39 @@ describe('AttentionInboxPanel renderer', () => {
     await act(async () => root.unmount());
   });
 
+  it('omits missing and invalid ages but displays a valid epoch timestamp', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const epoch = '1970-01-01T00:00:00.000Z';
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="compact" model={{
+        ...model,
+        tasks: [
+          { ...tasks[0], requestedAt: null },
+          { ...tasks[1], requestedAt: 'not-a-date' },
+          { ...tasks[2], requestedAt: epoch },
+        ],
+        chats: [
+          { ...chats[0], latestUnread: { ...chats[0].latestUnread, timestamp: 'not-a-date' } },
+          { ...chats[1], latestUnread: { ...chats[1].latestUnread, timestamp: epoch } },
+        ],
+        taskCount: 3, chatCount: 2,
+      }} loading={false} error={null}
+        onOpenTask={onOpenTask} onOpenChat={onOpenChat} onRetry={onRetry} />
+    ));
+    const taskRows = host.querySelectorAll('[aria-label^="attention.openTask"]');
+    expect(taskRows[0].textContent).not.toContain(' · ');
+    expect(taskRows[1].textContent).not.toContain(' · ');
+    expect(taskRows[2].textContent).toContain(' · ');
+    const chatRows = host.querySelectorAll('[data-testid="chat-row"]');
+    expect(chatRows[0].parentElement?.textContent).not.toContain(' · ');
+    expect(chatRows[1].parentElement?.textContent).toContain(' · ');
+    expect(host.textContent).not.toContain('Time unknown');
+    await act(async () => root.unmount());
+  });
+
   it('uses a compact explanatory empty state on the Dashboard', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
