@@ -3248,94 +3248,98 @@ export class TeamDataService {
         }
       }
 
-      const pending = await this.taskCommentNotificationJournal.withEntries(teamName, (entries) => {
-        const toSend: EligibleTaskCommentNotification[] = [];
-        let changed = false;
-        const now = new Date().toISOString();
+      // Retain only this batch's claims until delivery completes. A journal write
+      // or an earlier send can fail before later pending entries are attempted.
+      const claimedKeys = new Set<string>();
+      try {
+        const pending = await this.taskCommentNotificationJournal.withEntries(teamName, (entries) => {
+          const toSend: EligibleTaskCommentNotification[] = [];
+          let changed = false;
+          const now = new Date().toISOString();
 
-        for (const notification of notifications) {
-          const existing = entries.find((entry) => entry.key === notification.key);
-          const claimKey = this.buildTaskCommentNotificationClaimKey(teamName, notification.key);
-          // Even on the very first journal initialization, an unforwarded
-          // committed user answer is actionable, not historical lead chatter.
-          const seedThisEntry = shouldSeedHistorical && !notification.isUserAnswer;
-          if (!existing) {
-            entries.push({
-              key: notification.key,
-              taskId: notification.task.id,
-              commentId: notification.comment.id,
-              author: notification.comment.author,
-              commentCreatedAt: notification.comment.createdAt,
-              messageId: notification.messageId,
-              state: seedThisEntry ? 'seeded' : 'pending_send',
-              createdAt: now,
-              updatedAt: now,
-            });
-            changed = true;
-            if (seedThisEntry) {
+          for (const notification of notifications) {
+            const existing = entries.find((entry) => entry.key === notification.key);
+            const claimKey = this.buildTaskCommentNotificationClaimKey(teamName, notification.key);
+            // Even on the very first journal initialization, an unforwarded
+            // committed user answer is actionable, not historical lead chatter.
+            const seedThisEntry = shouldSeedHistorical && !notification.isUserAnswer;
+            if (!existing) {
+              entries.push({
+                key: notification.key,
+                taskId: notification.task.id,
+                commentId: notification.comment.id,
+                author: notification.comment.author,
+                commentCreatedAt: notification.comment.createdAt,
+                messageId: notification.messageId,
+                state: seedThisEntry ? 'seeded' : 'pending_send',
+                createdAt: now,
+                updatedAt: now,
+              });
+              changed = true;
+              if (seedThisEntry) {
+                logger.info(
+                  `[TeamDataService] Seeded historical task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                );
+              } else {
+                logger.info(
+                  `[TeamDataService] Queued task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                );
+                this.taskCommentNotificationInFlight.add(claimKey);
+                claimedKeys.add(claimKey);
+                toSend.push(notification);
+              }
+              continue;
+            }
+
+            if (existing.state === 'seeded' || existing.state === 'sent') continue;
+
+            const messageId = existing.messageId?.trim() || notification.messageId;
+            if (!existing.messageId) {
+              existing.messageId = messageId;
+              existing.updatedAt = now;
+              changed = true;
+            }
+
+            if (inboxMessageIdsByRecipient.get(notification.recipientName)?.has(messageId)) {
+              existing.state = 'sent';
+              existing.sentAt = existing.sentAt ?? now;
+              existing.updatedAt = now;
+              changed = true;
               logger.info(
-                `[TeamDataService] Seeded historical task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                `[TeamDataService] Comment notification already present in lead inbox for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
               );
-            } else {
+              continue;
+            }
+
+            if (existing.state === 'pending_send') {
+              if (this.taskCommentNotificationInFlight.has(claimKey)) {
+                logger.info(
+                  `[TeamDataService] Task comment notification already in flight for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                );
+                continue;
+              }
+              if (!recoverPending) {
+                logger.info(
+                  `[TeamDataService] Pending task comment notification awaits recovery for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                );
+                continue;
+              }
+
+              existing.updatedAt = now;
+              changed = true;
               logger.info(
-                `[TeamDataService] Queued task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                `[TeamDataService] Recovering pending task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
               );
               this.taskCommentNotificationInFlight.add(claimKey);
-              toSend.push(notification);
+              claimedKeys.add(claimKey);
+              toSend.push({ ...notification, messageId });
             }
-            continue;
           }
 
-          if (existing.state === 'seeded' || existing.state === 'sent') continue;
+          return { result: toSend, changed };
+        });
 
-          const messageId = existing.messageId?.trim() || notification.messageId;
-          if (!existing.messageId) {
-            existing.messageId = messageId;
-            existing.updatedAt = now;
-            changed = true;
-          }
-
-          if (inboxMessageIdsByRecipient.get(notification.recipientName)?.has(messageId)) {
-            existing.state = 'sent';
-            existing.sentAt = existing.sentAt ?? now;
-            existing.updatedAt = now;
-            changed = true;
-            logger.info(
-              `[TeamDataService] Comment notification already present in lead inbox for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-            );
-            continue;
-          }
-
-          if (existing.state === 'pending_send') {
-            if (this.taskCommentNotificationInFlight.has(claimKey)) {
-              logger.info(
-                `[TeamDataService] Task comment notification already in flight for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-              );
-              continue;
-            }
-            if (!recoverPending) {
-              logger.info(
-                `[TeamDataService] Pending task comment notification awaits recovery for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-              );
-              continue;
-            }
-
-            existing.updatedAt = now;
-            changed = true;
-            logger.info(
-              `[TeamDataService] Recovering pending task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-            );
-            this.taskCommentNotificationInFlight.add(claimKey);
-            toSend.push({ ...notification, messageId });
-          }
-        }
-
-        return { result: toSend, changed };
-      });
-
-      for (const notification of pending) {
-        const claimKey = this.buildTaskCommentNotificationClaimKey(teamName, notification.key);
-        try {
+        for (const notification of pending) {
           const delivery = await this.inboxWriter.sendMessage(teamName, {
             member: notification.recipientName,
             from: notification.comment.author,
@@ -3369,7 +3373,9 @@ export class TeamDataService {
             `[TeamDataService] Forwarded task comment notification to lead for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
           );
           await this.markTaskCommentNotificationSent(teamName, notification);
-        } finally {
+        }
+      } finally {
+        for (const claimKey of claimedKeys) {
           this.taskCommentNotificationInFlight.delete(claimKey);
         }
       }

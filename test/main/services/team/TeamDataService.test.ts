@@ -5648,6 +5648,51 @@ describe('TeamDataService', () => {
     }
   });
 
+  it('recovers all claimed user answers when the first send in a batch fails', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    try {
+      const ids = [
+        'clarification-answer-a12fc382-7ad8-4139-b37a-1f807a962e60',
+        'clarification-answer-9641e725-41aa-4e14-bec5-9b3d7d084a76',
+      ];
+      const { journalEntries, journal } = createForwardingJournalStore();
+      const inboxWriter = {
+        sendMessage: vi.fn()
+          .mockRejectedValueOnce(new Error('Simulated offline inbox'))
+          .mockResolvedValue({ deliveredToInbox: true, messageId: 'persisted' }),
+      };
+      const { service } = createTaskCommentForwardingService({
+        journal,
+        inboxWriter,
+        tasks: [{
+          id: 'answer-task', subject: 'Choose database', status: 'pending', owner: 'team-lead',
+          comments: ids.map((id) => ({
+            id, author: 'user', text: 'Use PostgreSQL', type: 'regular' as const,
+            createdAt: '2026-11-24T16:00:00Z',
+          })),
+        }],
+      });
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(journalEntries.map((entry) => entry.state)).toEqual(['pending_send', 'pending_send']);
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(3);
+      expect(journalEntries.map((entry) => entry.state)).toEqual(['sent', 'sent']);
+      expect(inboxWriter.sendMessage).toHaveBeenNthCalledWith(
+        3, 'my-team', expect.objectContaining({ commentId: ids[1] })
+      );
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(3);
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
   it('does not seed an unanswered owner handoff as historical noise on the first journal scan', async () => {
     const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
     process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
