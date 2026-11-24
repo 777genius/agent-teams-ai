@@ -88,7 +88,11 @@ async function setup() {
     CLAUDE_DEV_RUNTIME_DISABLE_GH: '1',
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: deny,
   };
-  if (process.getuid?.() === 0) env.NO_SANDBOX = '1';
+  // Match the project-history smoke: CI's Chromium SUID helper is not configured.
+  // Disable sandboxing only in this isolated Linux test process, never in the app.
+  if (process.platform === 'linux' && (process.env.GITHUB_ACTIONS === 'true' || process.getuid?.() === 0)) {
+    env.ELECTRON_DISABLE_SANDBOX = '1';
+  }
 
   for (const team of teams) {
     const teamDir = path.join(claude, 'teams', team);
