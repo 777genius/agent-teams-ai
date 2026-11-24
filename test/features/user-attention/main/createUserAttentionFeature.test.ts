@@ -120,6 +120,38 @@ describe('User Attention read facade', () => {
     expect(model.unreadMessageCount).toBe(2);
   });
 
+  it('shares Messenger relay identity before projection and clears canonical read keys', async () => {
+    const message = {
+      from: 'alice', to: 'user', source: 'runtime_delivery',
+      relayOfMessageId: 'delivery-1', timestamp: '2026-11-23T12:00:00Z', read: false,
+    };
+    const text = 'x'.repeat(260);
+    const facade = createUserAttentionFeature({
+      getContextId: () => 'local',
+      getTeamDataService: () => ({
+        listTeams: async () => [{ teamName: 'alpha', displayName: 'Alpha',
+          members: [{ name: 'alice' }] }],
+        getUserAttentionTasks: async () => [],
+        getMessageFeed: async () => ({ teamName: 'alpha', feedRevision: '1', messages: [
+          { ...message, messageId: 'canonical', text: text + ' answer' },
+          { ...message, messageId: 'copy', text: ' ' + text + '  answer ' },
+          { ...message, messageId: 'distinct', text: text + ' other' },
+          { ...message, messageId: 'another-delivery', relayOfMessageId: 'delivery-2',
+            text: text + ' answer' },
+        ] }),
+      } as never),
+    });
+    const snapshot = await facade.getUserAttentionSnapshot();
+    expect(snapshot.teams[0].messages.map((item) => item.messageId)).toEqual([
+      'canonical', 'distinct', 'another-delivery',
+    ]);
+    const build = (direct: string[]) => buildAttentionModel(snapshot, () => ({
+      direct: new Set(direct), group: new Set(),
+    }), (item) => item.messageId ?? '');
+    expect(build([]).unreadMessageCount).toBe(3);
+    expect(build(['canonical', 'distinct', 'another-delivery']).unreadMessageCount).toBe(0);
+  });
+
   it('fences a root switch during in-flight reads', async () => {
     let context = 'root-1';
     let markStarted!: () => void;
