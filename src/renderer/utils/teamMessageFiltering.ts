@@ -5,7 +5,6 @@ import {
 } from '@renderer/utils/bootstrapPromptSanitizer';
 import { shouldKeepIdleMessageInActivityWhenNoiseHidden } from '@renderer/utils/idleNotificationSemantics';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
-import { deduplicateVisibleRelayMessages } from '@shared/utils/teamMessageRelayDeduplication';
 import {
   isMemberWorkSyncNudgeMessage,
   isReviewPickupEscalationMessage,
@@ -13,6 +12,7 @@ import {
   isTaskStallRemediationMessage,
 } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
+import { deduplicateVisibleRelayMessages } from '@shared/utils/teamMessageRelayDeduplication';
 
 import type { InboxMessage } from '@shared/types';
 
