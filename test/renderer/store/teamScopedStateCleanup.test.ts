@@ -26,7 +26,7 @@ const teamScopedRecordKeys = [
   'provisioningErrorByTeam',
 ] as const;
 
-function buildRecord(label: string): Record<string, unknown> {
+function buildRecord(label: string): Record<string, string> {
   return {
     'my-team': `${label}:mine`,
     'other-team': `${label}:other`,
