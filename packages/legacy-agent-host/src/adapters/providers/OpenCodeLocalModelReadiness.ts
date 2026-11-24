@@ -138,9 +138,11 @@ export function createOpenCodeLocalModelReadiness(
     ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId: selectedModel },
       ownerCurrent, 'model', { source, config: raw }) : undefined;
   const selectedFile = nativeConfiguration?.selectedFile;
-  const key = !selectedFile && (localCandidate || profile.nativeGeneration === 'v2')
-    ? nativeConfiguration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
-    : undefined;
+  const needsKey = !selectedFile && (localCandidate || profile.nativeGeneration === 'v2');
+  const fallbackKey = needsKey && !nativeConfiguration?.key
+    ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
+  const key = needsKey ? nativeConfiguration?.key ?? fallbackKey : undefined;
+  const v2Fallback = profile.nativeGeneration === 'v2' ? fallbackKey : undefined;
   const baseline = profile.nativeGeneration === 'v2' && profile.nativeModel?.providerId === input.providerId
     ? profile.embedded?.providerConfiguration : undefined;
   const baselineSettings = object(baseline?.settings) ? baseline.settings : undefined;
@@ -161,7 +163,9 @@ export function createOpenCodeLocalModelReadiness(
   let fileProof: AcceptedOpenCodeV2FileKey | undefined;
   let closed = false;
   let released = false;
-  const current = () => !closed && ownerCurrent() && source.isCurrent() &&
+  // This local V2 fallback repeats source/owner checks on both sides of auth.
+  // Policy keeps its own owner bracket and its original position before the key.
+  const current = () => !closed && (v2Fallback !== undefined || ownerCurrent() && source.isCurrent()) &&
     (policyOrigin?.isCurrent() ?? true) && (key?.isCurrent() ?? true) &&
     (selectedFile?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true);
   const observeProvider = (value: unknown, nativeFileProof?: AcceptedOpenCodeV2FileKey) => {
