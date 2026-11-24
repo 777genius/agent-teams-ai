@@ -234,6 +234,26 @@ describe('Attention Inbox pure domain', () => {
     expect(model.countsByTeam.get('logical')).toEqual({ tasks: 2, chats: 0 });
   });
 
+
+  it('sorts newest human decisions first, keeping unknown legacy times last', () => {
+    const tasks = [
+      { teamName: 'one', teamDisplayName: 'One', taskId: 'legacy',
+        subject: 'Legacy', requestedAt: null },
+      { teamName: 'one', teamDisplayName: 'One', taskId: 'older',
+        subject: 'Older', requestedAt: '2026-11-22T10:00:00Z' },
+      { teamName: 'one', teamDisplayName: 'One', taskId: 'newest',
+        subject: 'Newest', requestedAt: '2026-11-24T10:00:00Z' },
+    ];
+    const snapshot: AttentionSnapshot = {
+      contextId: 'local', complete: true,
+      teams: [{ teamName: 'one', teamDisplayName: 'One', tasks, messages: [] }],
+    };
+    const model = buildAttentionModel(snapshot, () => ({
+      direct: new Set(), group: new Set(),
+    }), (item) => item.messageId ?? '');
+    expect(model.tasks.map((task) => task.taskId)).toEqual(['newest', 'older', 'legacy']);
+  });
+
   it('includes stopped team entries, counts unique tasks and sorts chats by latest unread', () => {
     const snapshot: AttentionSnapshot = {
       contextId: 'local',

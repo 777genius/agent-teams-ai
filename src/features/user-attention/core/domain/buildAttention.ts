@@ -142,7 +142,7 @@ export function buildAttentionModel(
   }
 
   tasks.sort((a, b) =>
-    timeMs(a.requestedAt) - timeMs(b.requestedAt) ||
+    timeMs(b.requestedAt) - timeMs(a.requestedAt) ||
     a.teamName.localeCompare(b.teamName) ||
     a.taskId.localeCompare(b.taskId)
   );

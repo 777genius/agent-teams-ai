@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 describe('AttentionInboxPanel renderer', () => {
-  it('reuses chat rows, limits compact task DOM, scrolls chats and opens exact destinations', async () => {
+  it('shows the newest eight items across tasks/chats, then loads more and opens destinations', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const rootEl = document.createElement('div');
     document.body.append(rootEl);
@@ -79,9 +79,14 @@ describe('AttentionInboxPanel renderer', () => {
         onOpenTask={onOpenTask} onOpenChat={onOpenChat}
         onOpenFull={onOpenFull} onRetry={onRetry} />
     ));
-    expect(rootEl.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(4);
+    // Five chats have dates; five legacy tasks do not. The eight newest are
+    // all five chats followed by three tasks, with no nested scroll trap.
+    expect(rootEl.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(3);
     expect(rootEl.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(5);
-    expect(rootEl.querySelector('.overflow-y-auto')).not.toBeNull();
+    expect(rootEl.querySelector('.overflow-y-auto')).toBeNull();
+    const showMore = Array.from(rootEl.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('actions.showMore'));
+    expect(showMore).toBeDefined();
     const headerCounts = rootEl.querySelector('[data-testid="attention-counts"]');
     expect(headerCounts?.querySelector('[data-testid="attention-task-count"]')?.textContent)
       .toContain('attention.tasks: 5');
@@ -92,6 +97,45 @@ describe('AttentionInboxPanel renderer', () => {
     expect(onOpenTask).toHaveBeenCalledWith(tasks[0]);
     await act(async () => (rootEl.querySelector('[data-testid="chat-row"]') as HTMLButtonElement).click());
     expect(onOpenChat).toHaveBeenCalledWith(chats[0], chats[0].scope);
+    await act(async () => showMore?.click());
+    expect(rootEl.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(5);
+    expect(rootEl.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(5);
+    await act(async () => root.unmount());
+  });
+
+
+  it('filters the full inbox by team, task, speaker and message preview', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="full" model={{
+        ...model,
+        tasks: [{ ...tasks[0], teamName: 'design', teamDisplayName: 'Design team',
+          subject: 'Approve new banner' }, tasks[1]],
+        chats: [{ ...chats[0], teamName: 'design', teamDisplayName: 'Design team',
+          latestUnread: { ...chats[0].latestUnread, text: 'Choose a palette' } }, chats[1]],
+        taskCount: 2, chatCount: 2,
+      }} loading={false} error={null} onOpenTask={onOpenTask}
+      onOpenChat={onOpenChat} onRetry={onRetry} />
+    ));
+    const input = host.querySelector('input[type="search"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    expect(valueSetter).toBeDefined();
+    await act(async () => {
+      valueSetter?.call(input, 'palette');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(1);
+    expect(host.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(0);
+    await act(async () => {
+      valueSetter?.call(input, 'design team');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(1);
+    expect(host.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(1);
     await act(async () => root.unmount());
   });
 

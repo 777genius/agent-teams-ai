@@ -366,6 +366,37 @@ async function checkDesktop() {
   evidence.checks.push('controller transition / repeated setter / clear');
   evidence.checks.push('live Dashboard clarification appears and disappears');
 
+  // Fill the compact list beyond eight items. Newer clarifications must rank
+  // above legacy tasks, with a Show more button rather than an inner scrollbar.
+  for (let taskId = 3; taskId <= 12; taskId++) {
+    await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, ${JSON.stringify(String(taskId))}, 'user')`);
+  }
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
+    const more = [...(panel?.querySelectorAll('button') ?? [])]
+      .find((button) => button.textContent.trim().startsWith('Show more'));
+    return panel?.querySelector('[data-testid=attention-task-count]')?.textContent.trim().endsWith('12') &&
+      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 12') &&
+      buttons.length <= 8 && Boolean(more) && !panel.textContent.includes('Time unknown');
+  })()`), 'newest first, eight visible and no unknown time');
+  const expanded = await cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const count = panel.querySelectorAll('button[aria-label^="Open task"]').length;
+    const more = [...panel.querySelectorAll('button')]
+      .find((button) => button.textContent.trim().startsWith('Show more'));
+    if (!more) return false;
+    more.click();
+    return count;
+  })()`);
+  assert(expanded > 0 && expanded <= 8, 'compact list starts with at most eight entries');
+  await cdp.waitFor(
+    'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_OLDEST_USER_DECISION")',
+    'load more reveals the legacy task without losing it');
+  evidence.checks.push('newest-first combined ordering + initial eight + Show more');
+
   await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
 
   // Historical messages still need attention after their sender is removed.

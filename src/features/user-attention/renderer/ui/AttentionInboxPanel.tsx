@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { ChatListRow } from '@features/team-direct-chats/renderer';
+import { Input } from '@renderer/components/ui/input';
 import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
 
 import { relativeAttentionAge, toAttentionChatRow } from '../view-models/toAttentionChatRow';
@@ -21,26 +22,49 @@ export interface AttentionInboxPanelProps {
   onOpenFull?(): void;
 }
 
+function timeMs(timestamp: string | null | undefined): number {
+  const parsed = Date.parse(timestamp ?? '');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function AttentionInboxPanel({
   variant, model, loading, error, onRetry, onOpenTask, onOpenChat, onOpenFull,
 }: Readonly<AttentionInboxPanelProps>): React.JSX.Element {
   const { t, resolvedLanguage } = useAppTranslation('common');
   const [now, setNow] = useState(() => Date.now());
-  const [taskLimit, setTaskLimit] = useState(50);
+  const [visibleLimit, setVisibleLimit] = useState(variant === 'compact' ? 8 : 50);
+  const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(interval);
   }, []);
 
-  const chats = model?.chats ?? [];
-  const rows = useMemo(
-    () => chats.map((chat) => ({ chat, item: toAttentionChatRow(chat) })),
-    [chats]
-  );
-  const tasks = model?.tasks ?? [];
-  const shownTasks = variant === 'compact' ? tasks.slice(0, 4) : tasks.slice(0, taskLimit);
+  // One chronological feed: old tasks must not push newer conversations below the fold.
+  // Unknown legacy timestamps remain actionable, but always sort last.
+  const entries = useMemo(() => {
+    const search = variant === 'full' ? searchQuery.trim().toLocaleLowerCase() : '';
+    const matches = (...values: Array<string | undefined>): boolean =>
+      !search || values.some((value) => value?.toLocaleLowerCase().includes(search));
+    const tasks = model?.tasks ?? [];
+    const chats = model?.chats ?? [];
+    return [
+      ...tasks.filter((task) => matches(task.subject, task.teamName, task.teamDisplayName))
+        .map((task, index) => ({
+          kind: 'task' as const, time: timeMs(task.requestedAt), index, task,
+        })),
+      ...chats.filter((chat) =>
+        matches(chat.name, chat.teamName, chat.teamDisplayName, chat.latestUnread.text)
+      ).map((chat, index) => ({
+        kind: 'chat' as const, time: timeMs(chat.latestUnread.timestamp),
+        index: tasks.length + index, chat,
+      })),
+    ].sort((a, b) => b.time - a.time || a.index - b.index);
+  }, [model, searchQuery, variant]);
+
+  const shownEntries = entries.slice(0, visibleLimit);
   const empty = !loading && !error && model?.complete &&
-    tasks.length === 0 && chats.length === 0;
+    model.tasks.length === 0 && model.chats.length === 0;
 
   return (
     <section
@@ -54,17 +78,17 @@ export function AttentionInboxPanel({
           <h2 className="text-sm font-semibold text-text">{t('attention.title')}</h2>
           {model && (model.taskCount > 0 || model.chatCount > 0) ? (
             <span data-testid="attention-counts"
-              className="inline-flex flex-wrap items-center gap-1 text-[11px] font-medium text-red-400 tabular-nums">
+              className="inline-flex flex-wrap items-center gap-1 text-xs font-medium text-red-400 tabular-nums">
               {model.taskCount > 0 && (
                 <span data-testid="attention-task-count" className="inline-flex items-center gap-0.5">
-                  <AlertCircle size={12} aria-hidden="true" />
+                  <AlertCircle size={13} aria-hidden="true" />
                   <span className="sr-only">{t('attention.tasks')}: </span>
                   {model.taskCount}
                 </span>
               )}
               {model.chatCount > 0 && (
                 <span data-testid="attention-chat-count" className="inline-flex items-center gap-0.5">
-                  <MessageCircle size={12} aria-hidden="true" />
+                  <MessageCircle size={13} aria-hidden="true" />
                   <span className="sr-only">{t('attention.chats')}: </span>
                   {model.chatCount}
                 </span>
@@ -77,12 +101,23 @@ export function AttentionInboxPanel({
             <button type="button" onClick={onOpenFull}
               className="text-xs text-text-secondary hover:text-text">{t('attention.viewAll')}</button>
           )}
-          <button type="button" onClick={onRetry} aria-label={t('attention.refresh')}
-            className="rounded-md p-1.5 text-text-secondary hover:bg-surface-overlay hover:text-text">
+          <button type="button" onClick={onRetry} disabled={loading}
+            aria-label={t('attention.refresh')}
+            className="rounded-md p-1.5 text-text-secondary hover:bg-surface-overlay hover:text-text disabled:opacity-50">
             <RefreshCw size={15} aria-hidden="true" />
           </button>
         </div>
       </header>
+
+      {variant === 'full' && model && (model.taskCount > 0 || model.chatCount > 0) && (
+        <Input type="search" aria-label={t('search.placeholder')}
+          placeholder={t('search.placeholder')} value={searchQuery}
+          onChange={(event) => {
+            setSearchQuery(event.target.value);
+            setVisibleLimit(50);
+          }}
+          className="mb-4" />
+      )}
 
       {loading && !model && <p role="status" className="py-4 text-xs text-text-muted">{t('attention.loading')}</p>}
       {error && (
@@ -91,68 +126,58 @@ export function AttentionInboxPanel({
         </p>
       )}
       {model && !model.complete && (
-        <p role="status" className="mb-3 text-xs text-amber-500">
-          {t('attention.partial')}
-        </p>
+        <p role="status" className="mb-3 text-xs text-amber-500">{t('attention.partial')}</p>
       )}
       {empty && <p className="py-4 text-xs text-text-muted">{t('attention.nothing')}</p>}
+      {variant === 'full' && searchQuery.trim() && entries.length === 0 && model?.complete &&
+        <p className="py-4 text-xs text-text-secondary">{t('search.noResults')}</p>}
 
-      {tasks.length > 0 && (
-        <div className="mb-4">
-          <h3 className="mb-2 flex items-center gap-2 text-xs font-medium text-text-secondary">
-            <AlertCircle size={14} aria-hidden="true" />
-            {t('attention.tasks')} · {tasks.length}
-          </h3>
-          <div className="flex flex-col gap-1">
-            {shownTasks.map((task) => (
-              <button type="button" key={`${task.teamName}:${task.taskId}`}
+      <div className="flex flex-col gap-2">
+        {shownEntries.map((entry) => {
+          if (entry.kind === 'task') {
+            const task = entry.task;
+            const age = task.requestedAt
+              ? relativeAttentionAge(task.requestedAt, now, resolvedLanguage)
+              : null;
+            return (
+              <button type="button" key={'task:' + task.teamName + ':' + task.taskId}
                 onClick={() => onOpenTask(task)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-surface-overlay"
+                className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-emphasis"
                 aria-label={t('attention.openTask', { subject: task.subject, team: task.teamDisplayName })}>
-                <span className="size-2 shrink-0 rounded-full bg-red-500" aria-hidden="true" />
+                <AlertCircle size={16} className="shrink-0 text-red-400" aria-hidden="true" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-medium text-text">{task.subject}</span>
-                  <span className="block truncate text-[11px] text-text-muted">
-                    {task.teamDisplayName} · {relativeAttentionAge(task.requestedAt, now, resolvedLanguage, t('attention.timeUnknown'))}
+                  <span className="block truncate text-sm font-medium text-text">{task.subject}</span>
+                  <span className="block truncate text-xs text-text-secondary">
+                    {task.teamDisplayName}{age ? ' · ' + age : ''}
                   </span>
                 </span>
               </button>
-            ))}
-          </div>
-          {tasks.length > shownTasks.length && (
-            variant === 'compact' ? (
-              <button type="button" onClick={onOpenFull}
-                className="mt-2 text-xs text-text-secondary hover:text-text">
-                +{tasks.length - shownTasks.length} {t('attention.viewAll')}
-              </button>
-            ) : (
-              <button type="button" onClick={() => setTaskLimit((limit) => limit + 50)}
-                className="mt-2 text-xs text-text-secondary hover:text-text">
-                {t('attention.viewAll')} (+{Math.min(50, tasks.length - shownTasks.length)})
-              </button>
-            )
-          )}
-        </div>
-      )}
-
-      {rows.length > 0 && (
-        <div>
-          <h3 className="mb-2 flex items-center gap-2 text-xs font-medium text-text-secondary">
-            <MessageCircle size={14} aria-hidden="true" />
-            {t('attention.chats')} · {rows.length}
-          </h3>
-          <div className={variant === 'compact' ? 'max-h-[238px] overflow-y-auto' : 'overflow-y-auto'}>
-            {rows.map(({ chat, item }) => (
-              <div key={`${chat.teamName}:${item.scope.kind}:${'groupChatId' in item.scope ? item.scope.groupChatId : 'participant' in item.scope ? item.scope.participant : ''}`}>
-                <div className="px-2 text-[10px] text-text-muted">
-                  {chat.teamDisplayName} · {relativeAttentionAge(chat.latestUnread.timestamp, now, resolvedLanguage, t('attention.timeUnknown'))}
-                </div>
-                <ChatListRow item={item} teamName={chat.teamName}
-                  onOpen={(scope) => onOpenChat(chat, scope)} />
+            );
+          }
+          const chat = entry.chat;
+          const item = toAttentionChatRow(chat);
+          const age = timeMs(chat.latestUnread.timestamp)
+            ? relativeAttentionAge(chat.latestUnread.timestamp, now, resolvedLanguage)
+            : null;
+          const scopeKey = item.scope.kind === 'group' ? item.scope.groupChatId :
+            item.scope.kind === 'direct' ? item.scope.participant : 'team-feed';
+          return (
+            <div key={'chat:' + chat.teamName + ':' + item.scope.kind + ':' + scopeKey}>
+              <div className="px-2 text-xs text-text-secondary">
+                {chat.teamDisplayName}{age ? ' · ' + age : ''}
               </div>
-            ))}
-          </div>
-        </div>
+              <ChatListRow item={item} teamName={chat.teamName}
+                onOpen={(scope) => onOpenChat(chat, scope)} />
+            </div>
+          );
+        })}
+      </div>
+      {entries.length > shownEntries.length && (
+        <button type="button"
+          onClick={() => setVisibleLimit((limit) => limit + (variant === 'compact' ? 8 : 50))}
+          className="mt-3 w-full rounded-md py-2 text-center text-sm text-text-secondary hover:bg-surface-overlay hover:text-text">
+          {t('actions.showMore')} (+{Math.min(variant === 'compact' ? 8 : 50, entries.length - shownEntries.length)})
+        </button>
       )}
     </section>
   );
