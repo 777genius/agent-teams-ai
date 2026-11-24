@@ -422,6 +422,7 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       launchStateQueuesToDrain.push({ svc, teamName });
       let stopping: Promise<PromiseSettledResult<void>> | undefined;
+      let creatingSettled = false;
       const creating = svc.createTeam(
         {
           teamName,
@@ -453,11 +454,22 @@ describe(
           }
         }
       );
+      void creating.then(
+        () => {
+          creatingSettled = true;
+        },
+        () => {
+          creatingSettled = true;
+        }
+      );
       try {
-        await handshakeEntered;
+        await waitForLaunchMilestone(handshakeEntered, creating, 'the Stop handshake');
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(creatingSettled).toBe(false);
         expect(svc.isTeamAlive(teamName)).toBe(false);
       } finally {
         releaseHandshake();
+        await Promise.allSettled([creating, stopping]);
       }
       await creating;
       expect(await stopping).toEqual({ status: 'fulfilled', value: undefined });
@@ -519,6 +531,7 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       launchStateQueuesToDrain.push({ svc, teamName });
       let stopping: Promise<PromiseSettledResult<void>> | undefined;
+      let stoppingSettled = false;
       const creating = svc.createTeam(
         {
           teamName,
@@ -544,17 +557,25 @@ describe(
         (progress) => {
           if (progress.state === 'ready' && !stopping) {
             stopping = svc.stopTeam(teamName).then(
-              () => ({ status: 'fulfilled' as const, value: undefined }),
-              (reason: unknown) => ({ status: 'rejected' as const, reason })
+              () => {
+                stoppingSettled = true;
+                return { status: 'fulfilled' as const, value: undefined };
+              },
+              (reason: unknown) => {
+                stoppingSettled = true;
+                return { status: 'rejected' as const, reason };
+              }
             );
           }
         }
       );
       try {
-        await secondaryEntered;
+        await waitForLaunchMilestone(secondaryEntered, creating, 'secondary lane cleanup');
         await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(stoppingSettled).toBe(false);
       } finally {
         releaseSecondary();
+        await Promise.allSettled([creating, stopping]);
       }
       await creating;
       expect(await stopping).toEqual({ status: 'rejected', reason: failure });
@@ -609,9 +630,14 @@ describe(
           progress.push(next);
         }
       );
-      await launchGate.entered;
-      const stopping = svc.stopTeam(teamName);
-      launchGate.release();
+      let stopping: Promise<void> | undefined;
+      try {
+        await waitForLaunchMilestone(launchGate.entered, creating, 'the primary launch gate');
+        stopping = svc.stopTeam(teamName);
+      } finally {
+        launchGate.release();
+        await Promise.allSettled([creating, stopping]);
+      }
       await Promise.all([creating, stopping]);
       await waitForLaunchStateQueueIdle(svc, teamName);
       expect(progress.some((next) => next.state === 'ready')).toBe(false);
@@ -23168,6 +23194,19 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   releaseLaunches(): void {
     this.releaseGate?.();
   }
+}
+
+async function waitForLaunchMilestone(
+  milestone: Promise<void>,
+  creating: Promise<unknown>,
+  description: string
+): Promise<void> {
+  await Promise.race([
+    milestone,
+    creating.then(() => {
+      throw new Error(`Launch completed before ${description}`);
+    }),
+  ]);
 }
 
 /**
