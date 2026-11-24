@@ -1019,7 +1019,7 @@
     "loadFailed": "Unable to load attention status",
     "retry": "Retry",
     "partial": "Some teams could not be loaded. Counts may be incomplete.",
-    "nothing": "Nothing needs your attention right now.",
+    "nothing": "Tasks awaiting your decision and unread team chats will appear here.",
     "tasks": "Awaiting your decision",
     "chats": "Unread chats",
     "openTask": "Open task: {{subject}} in {{team}}",

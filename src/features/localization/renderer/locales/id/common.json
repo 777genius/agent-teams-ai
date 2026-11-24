@@ -962,7 +962,7 @@
     "loadFailed": "Gagal memuat status perhatian",
     "retry": "Coba lagi",
     "partial": "Sebagian tim gagal dimuat. Jumlah mungkin tidak lengkap.",
-    "nothing": "Tidak ada yang memerlukan perhatian Anda saat ini.",
+    "nothing": "Tugas yang menunggu keputusan Anda dan obrolan tim yang belum dibaca akan muncul di sini.",
     "tasks": "Menunggu keputusan Anda",
     "chats": "Chat belum dibaca",
     "openTask": "Buka tugas: {{subject}} di {{team}}",

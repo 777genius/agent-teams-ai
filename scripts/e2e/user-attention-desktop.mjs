@@ -119,7 +119,12 @@ async function setup() {
       from: team === first ? 'alice' : 'bob',
       to: 'user', text: 'ATTENTION_E2E_DIRECT_' + team,
       timestamp: team === first ? stamp : nowIso(), read: false, messageId: 'attention-dm-' + team,
-    }, ...(team === first ? Array.from({ length: 60 }, (_, index) => ({
+      ...(team === second ? { source: 'runtime_delivery', relayOfMessageId: 'attention-bob-delivery' } : {}),
+    }, ...(team === second ? [{
+      from: 'bob', to: 'user', text: ' ATTENTION_E2E_DIRECT_' + team + ' ',
+      source: 'runtime_delivery', relayOfMessageId: 'attention-bob-delivery',
+      timestamp: stamp, read: false, messageId: 'attention-dm-copy-' + team,
+    }] : []), ...(team === first ? Array.from({ length: 60 }, (_, index) => ({
       from: 'alice', to: 'user', text: 'Newer already read ' + index,
       timestamp: new Date(Date.now() - (60 - index) * 1000).toISOString(),
       read: true, messageId: 'attention-read-filler-' + index,
@@ -212,7 +217,9 @@ async function checkDesktop() {
   assert.equal(oldest.tasks[0].requestedAt, null, 'legacy timestamp not fabricated');
   assert(oldest.messages.some((message) => message.messageId === 'attention-dm-' + first),
     'old unread message survives 60 newer messages');
-  assert.equal(snap.teams.find((t) => t.teamName === second).messages.length, 1);
+  const relayTeam = snap.teams.find((t) => t.teamName === second);
+  assert.deepEqual(relayTeam.messages.map((message) => message.messageId), ['attention-dm-' + second],
+    'duplicate runtime relay retains only the canonical Messenger read identity');
   evidence.checks.push('two teams + full task scan + old unread beyond first 50 messages');
 
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
@@ -319,8 +326,20 @@ async function checkDesktop() {
       document.body.innerText.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + second)});
   })()`), 'exact bob thread and unread message visible despite stale participant filters', 60000);
   evidence.checks.push('cross-team Messenger conversation navigation');
-
+  await until(async () => cdp.evaluate(`(async () => {
+    const reads = await import('/utils/teamMessageReadStorage.ts');
+    const root = await window.electronAPI.config.getClaudeRootInfo();
+    const scope = reads.getTeamMessageReadContextScope('local', root);
+    const direct = reads.getReadSet(reads.getTeamMessageReadStorageKey(${JSON.stringify(second)}, scope));
+    return direct.has(${JSON.stringify('attention-dm-' + second)});
+  })()`), 'Messenger marks the canonical direct relay read');
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    return Boolean(panel && !panel.textContent.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + second)}));
+  })()`), 'canonical direct relay disappears from Attention after reading');
+  evidence.checks.push('duplicate direct relay clears via canonical Messenger read key');
 
   // Engage the team watch scope before modifying its disposable task file.
   await cdp.evaluate(`window.electronAPI.teams.getData(${JSON.stringify(first)})`);
@@ -347,8 +366,6 @@ async function checkDesktop() {
   evidence.checks.push('controller transition / repeated setter / clear');
   evidence.checks.push('live Dashboard clarification appears and disappears');
 
-  await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
-
   // Historical messages still need attention after their sender is removed.
   const formerInbox = path.join(claude, 'teams', first, 'inboxes', 'user.json');
   const existing = JSON.parse(await readFile(formerInbox, 'utf8'));
@@ -363,6 +380,52 @@ async function checkDesktop() {
       !team.directParticipants.includes('former') &&
       team.messages.some((message) => message.messageId === 'attention-former-' + first);
   }, 'removed member remains an unread candidate without an active direct thread', 90_000);
+
+  // A long waiting task ranks above a newer one, without starving the chat list.
+  // Legacy tasks have no known request timestamp, so they are accessible via More.
+  for (let taskId = 3; taskId <= 12; taskId++) {
+    await cdp.evaluate(`window.electronAPI.teams.setTaskClarification(${JSON.stringify(first)}, ${JSON.stringify(String(taskId))}, 'user')`);
+  }
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
+    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
+    return panel?.querySelector('[data-testid=attention-task-count]')?.textContent.trim().endsWith('12') &&
+      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 3') &&
+      buttons.length === 8 && Boolean(more) &&
+      !panel.textContent.includes('Time unknown') &&
+      panel.textContent.includes('Unread chats') &&
+      [...panel.querySelectorAll('button')].some((button) =>
+        button.getClientRects().length > 0 &&
+        button.textContent.includes('ATTENTION_E2E_REMOVED_MEMBER'));
+  })()`), 'longest known waiting decision first, eight tasks, chats still visible');
+  const expanded = await cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const more = panel?.querySelector('[data-testid=attention-tasks-more]');
+    if (!more) return false;
+    more.click();
+    return true;
+  })()`);
+  assert(expanded, 'show more tasks control is actionable');
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    const buttons = [...(panel?.querySelectorAll('button[aria-label^="Open task"]') ?? [])];
+    return buttons.length === 12 &&
+      buttons[0]?.getAttribute('aria-label')?.includes('Filler task 3') &&
+      buttons.some((button) => button.textContent.includes('ATTENTION_E2E_OLDEST_USER_DECISION')) &&
+      !panel.textContent.includes('Time unknown') &&
+      [...panel.querySelectorAll('button')].some((button) =>
+        button.getClientRects().length > 0 &&
+        button.textContent.includes('ATTENTION_E2E_REMOVED_MEMBER'));
+  })()`), 'load more retains legacy decisions and the actual unread chat');
+  evidence.checks.push('waiting-first decisions + recent chats + eight-at-a-time expansion');
+
+  await cdp.screenshot(path.join(artifactRoot, 'attention-dashboard.png'));
+
+  // The same unread historical message remains actionable after task expansion.
   await until(async () => cdp.evaluate(`(() => {
     const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
       .find((node) => node.getClientRects().length > 0);
@@ -438,7 +501,45 @@ async function checkDesktop() {
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_STANDARD_GROUP") === false',
     'standard group mention disappears after being read in Messenger');
+
   evidence.checks.push('standard group mention opens team-feed and clears through shared group read state');
+
+  // Complete every test-only request and mark all source messages read. The
+  // dashboard should immediately shrink to its compact, explanatory state.
+  await cdp.evaluate(`(async () => {
+    const snapshot = await window.electronAPI.getUserAttentionSnapshot();
+    for (const team of snapshot.teams) {
+      for (const task of team.tasks) {
+        await window.electronAPI.teams.setTaskClarification(team.teamName, task.taskId, null);
+      }
+    }
+    const reads = await import('/utils/teamMessageReadStorage.ts');
+    const root = await window.electronAPI.config.getClaudeRootInfo();
+    const scope = reads.getTeamMessageReadContextScope('local', root);
+    for (const team of snapshot.teams) {
+      for (const message of team.messages) {
+        const key = reads.getTeamMessageReadStorageKey(
+          team.teamName, scope, message.groupChatId ? 'group' : undefined
+        );
+        reads.markRead(key, message.messageId);
+      }
+    }
+  })()`);
+  await until(async () => {
+    const snapshot = await getSnapshot();
+    return snapshot.complete && snapshot.teams.every((team) => team.tasks.length === 0);
+  }, 'all test-only human decisions resolved');
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    return Boolean(panel) &&
+      panel.textContent.includes('Tasks awaiting your decision and unread team chats will appear here.') &&
+      panel.getBoundingClientRect().height < 110 &&
+      panel.querySelector('[data-testid=attention-counts]') === null &&
+      panel.querySelectorAll('button[aria-label^="Open task"]').length === 0;
+  })()`), 'compact explanatory empty state after all items resolved', 30_000);
+  await cdp.screenshot(path.join(artifactRoot, 'attention-empty.png'));
+  evidence.checks.push('compact empty state and live resolution of all requests');
 }
 async function cleanup() {
   await cdp?.close().catch(() => {});

@@ -962,7 +962,7 @@
     "loadFailed": "Impossibile caricare lo stato",
     "retry": "Riprova",
     "partial": "Impossibile caricare alcuni team. I conteggi potrebbero essere incompleti.",
-    "nothing": "Al momento non ci sono elementi che richiedono attenzione.",
+    "nothing": "Qui appariranno le attività in attesa di una tua decisione e le chat del team non lette.",
     "tasks": "In attesa della tua decisione",
     "chats": "Chat non lette",
     "openTask": "Apri attività: {{subject}} in {{team}}",

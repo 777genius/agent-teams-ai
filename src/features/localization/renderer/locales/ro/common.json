@@ -962,7 +962,7 @@
     "loadFailed": "Nu s-a putut încărca starea",
     "retry": "Reîncearcă",
     "partial": "Unele echipe nu au putut fi încărcate. Numerele pot fi incomplete.",
-    "nothing": "Nimic nu necesită atenția ta momentan.",
+    "nothing": "Aici vor apărea sarcinile care așteaptă decizia ta și conversațiile de echipă necitite.",
     "tasks": "Așteaptă decizia ta",
     "chats": "Conversații necitite",
     "openTask": "Deschide sarcina: {{subject}} în {{team}}",

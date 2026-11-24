@@ -962,7 +962,7 @@
     "loadFailed": "Hindi ma-load ang status",
     "retry": "Subukan muli",
     "partial": "Hindi ma-load ang ilang team. Maaaring hindi kumpleto ang bilang.",
-    "nothing": "Wala pang nangangailangan ng atensyon mo.",
+    "nothing": "Dito lalabas ang mga gawaing naghihintay ng iyong desisyon at mga hindi pa nababasang chat ng team.",
     "tasks": "Naghihintay ng desisyon mo",
     "chats": "Mga hindi pa nababasang chat",
     "openTask": "Buksan ang gawain: {{subject}} sa {{team}}",

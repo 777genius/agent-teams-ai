@@ -962,7 +962,7 @@
     "loadFailed": "Aandachtsstatus kan niet worden geladen",
     "retry": "Opnieuw proberen",
     "partial": "Sommige teams konden niet worden geladen. Aantallen zijn mogelijk onvolledig.",
-    "nothing": "Er is momenteel niets dat uw aandacht vereist.",
+    "nothing": "Taken die op je beslissing wachten en ongelezen teamchats verschijnen hier.",
     "tasks": "Wacht op uw beslissing",
     "chats": "Ongelezen chats",
     "openTask": "Taak openen: {{subject}} in {{team}}",

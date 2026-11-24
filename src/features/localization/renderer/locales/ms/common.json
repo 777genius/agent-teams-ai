@@ -962,7 +962,7 @@
     "loadFailed": "Gagal memuatkan status perhatian",
     "retry": "Cuba lagi",
     "partial": "Sesetengah pasukan gagal dimuatkan. Kiraan mungkin tidak lengkap.",
-    "nothing": "Tiada perkara yang memerlukan perhatian anda sekarang.",
+    "nothing": "Tugasan yang menunggu keputusan anda dan sembang pasukan yang belum dibaca akan muncul di sini.",
     "tasks": "Menunggu keputusan anda",
     "chats": "Sembang belum dibaca",
     "openTask": "Buka tugasan: {{subject}} dalam {{team}}",

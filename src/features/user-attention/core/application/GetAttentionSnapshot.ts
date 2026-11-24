@@ -1,4 +1,4 @@
-import { projectAttentionMessage, projectAttentionTasks } from '../domain/projectAttention';
+import { projectAttentionMessages, projectAttentionTasks } from '../domain/projectAttention';
 
 import type {
   AttentionSnapshot,
@@ -18,11 +18,11 @@ export class GetAttentionSnapshot implements UserAttentionApi {
       this.source.listHumanTasks(team.teamName),
       this.source.listNormalizedMessages(team.teamName),
     ]);
-    const unique = new Map<string, NonNullable<ReturnType<typeof projectAttentionMessage>>>();
+    const unique = new Map<string, ReturnType<typeof projectAttentionMessages>[number]>();
     if (messagesResult.status === 'fulfilled') {
-      for (const message of messagesResult.value) {
-        const candidate = projectAttentionMessage(message);
-        if (!candidate) continue;
+      for (const candidate of projectAttentionMessages(
+        messagesResult.value, team.leadName ? [team.leadName] : []
+      )) {
         const key = candidate.messageId ?? `${candidate.timestamp}:${candidate.from}`;
         if (!unique.has(key)) unique.set(key, candidate);
       }

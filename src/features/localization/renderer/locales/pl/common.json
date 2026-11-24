@@ -962,7 +962,7 @@
     "loadFailed": "Nie udało się wczytać statusu",
     "retry": "Spróbuj ponownie",
     "partial": "Nie udało się wczytać niektórych zespołów. Liczniki mogą być niepełne.",
-    "nothing": "W tej chwili nic nie wymaga Twojej uwagi.",
+    "nothing": "Tutaj pojawią się zadania oczekujące na Twoją decyzję i nieprzeczytane czaty zespołu.",
     "tasks": "Oczekuje na Twoją decyzję",
     "chats": "Nieprzeczytane czaty",
     "openTask": "Otwórz zadanie: {{subject}} w {{team}}",
