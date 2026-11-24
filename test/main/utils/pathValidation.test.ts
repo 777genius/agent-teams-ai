@@ -94,6 +94,8 @@ describe('pathValidation', () => {
       expect(isPathWithinRoot(path.join(root, '..env'), root)).toBe(true);
       expect(isPathWithinRoot(path.join(root, '..'), root)).toBe(false);
       expect(isPathWithinRoot(path.join(root, '..', 'repo2', 'a.ts'), root)).toBe(false);
+      expect(isPathWithinRoot(path.join(root, '.. '), root)).toBe(false);
+      expect(isPathWithinRoot(path.join(root, '... ', 'a.ts'), root)).toBe(false);
     });
 
     it('handles Windows drive casing and traversal consistently', () => {
