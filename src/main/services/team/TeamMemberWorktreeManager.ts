@@ -114,26 +114,54 @@ function parseGitWorktreeList(raw: string): GitWorktreeEntry[] {
   return entries;
 }
 
+function historicalWorktreePaths(repoPath: string, teamName: string, memberName: string): string[] {
+  const repoHash = shortHash(repoPath);
+  const teamSlug = legacySlugify(teamName);
+  const memberSlug = legacySlugify(memberName);
+  return [
+    path.join(getAppDataPath(), 'team-worktrees', `${legacySlugify(path.basename(repoPath))}-${repoHash}`, teamSlug, memberSlug),
+    path.join(getClaudeBasePath(), 'team-worktrees', repoHash, teamSlug, memberSlug),
+  ];
+}
+
 export class TeamMemberWorktreeManager {
   private static readonly inFlight = new Map<
     string,
-    { existingCwd?: string; promise: Promise<TeamMemberWorktreeResolution> }
+    { existingCwd?: string; sourceRepoPath: string; promise: Promise<TeamMemberWorktreeResolution> }
   >();
 
   async ensureMemberWorktree(
     request: TeamMemberWorktreeRequest
   ): Promise<TeamMemberWorktreeResolution> {
-    const key = JSON.stringify([request.baseCwd, request.teamName, request.memberName]);
+    if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+      throw new Error('Git is required for worktree isolation but is not installed on this Mac.');
+    }
+    const { baseRepoPath, sourceRepoPath } = await this.resolveBaseRepoPath(request.baseCwd);
+    const key = JSON.stringify([baseRepoPath, request.teamName, request.memberName]);
     const ongoing = TeamMemberWorktreeManager.inFlight.get(key);
     if (ongoing) {
       if (ongoing.existingCwd !== request.existingCwd) {
         throw new Error(`Conflicting concurrent worktree paths for member "${request.memberName}"`);
       }
-      return ongoing.promise;
+      const resolved = await ongoing.promise;
+      // Do not hide a distinct historical workspace when a concurrent request
+      // originates from another linked project checkout without a saved cwd.
+      if (!request.existingCwd && sourceRepoPath !== ongoing.sourceRepoPath && sourceRepoPath !== baseRepoPath) {
+        for (const candidate of historicalWorktreePaths(sourceRepoPath, request.teamName, request.memberName)) {
+          if (await fs.promises.stat(candidate).catch(() => null)) {
+            if (candidate !== resolved.worktreePath) {
+              throw new Error(`Conflicting concurrent worktree paths for member "${request.memberName}"`);
+            }
+            break;
+          }
+        }
+      }
+      return resolved;
     }
-    const pending = this.ensureMemberWorktreeInternal(request);
+    const pending = this.ensureMemberWorktreeInternal(request, baseRepoPath, sourceRepoPath);
     TeamMemberWorktreeManager.inFlight.set(key, {
       existingCwd: request.existingCwd,
+      sourceRepoPath,
       promise: pending,
     });
     try {
@@ -146,12 +174,10 @@ export class TeamMemberWorktreeManager {
   }
 
   private async ensureMemberWorktreeInternal(
-    request: TeamMemberWorktreeRequest
+    request: TeamMemberWorktreeRequest,
+    baseRepoPath: string,
+    sourceRepoPath: string
   ): Promise<TeamMemberWorktreeResolution> {
-    if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
-      throw new Error('Git is required for worktree isolation but is not installed on this Mac.');
-    }
-    const baseRepoPath = await this.resolveBaseRepoPath(request.baseCwd);
     const repoHash = shortHash(baseRepoPath);
     // The repository hash already disambiguates long project directory names.
     const projectSlug = legacySlugify(path.basename(baseRepoPath));
@@ -207,46 +233,37 @@ export class TeamMemberWorktreeManager {
       }
     }
 
-    const existingStat = await fs.promises.stat(worktreePath).catch(() => null);
-    if (existingStat) {
-      if (!existingStat.isDirectory()) {
-        throw new Error(`Worktree path exists but is not a directory: ${worktreePath}`);
+    const longName = teamPrefix.length > 0 || memberPrefix.length > 0;
+    // Older versions keyed short-name paths by the selected checkout root.
+    // Prefer the original linked-project workspace before creating a new one.
+    const linkedHistoricalPaths = sourceRepoPath === baseRepoPath
+      ? []
+      : historicalWorktreePaths(sourceRepoPath, request.teamName, request.memberName);
+    const candidates = [
+      ...(!longName ? linkedHistoricalPaths : []),
+      worktreePath,
+      legacyWorktreePath,
+    ];
+    for (const candidate of candidates) {
+      const stat = await fs.promises.stat(candidate).catch(() => null);
+      if (!stat) continue;
+      if (!stat.isDirectory()) {
+        throw new Error(`Worktree path exists but is not a directory: ${candidate}`);
       }
       const currentBranch = await this.validateExistingWorktreeAndGetBranch(
-        worktreePath,
+        candidate,
         baseRepoPath,
         request.memberName
       );
-      return { baseRepoPath, worktreePath, branchName: currentBranch };
-    }
-
-    const legacyStat = await fs.promises.stat(legacyWorktreePath).catch(() => null);
-    if (legacyStat) {
-      if (!legacyStat.isDirectory()) {
-        throw new Error(`Worktree path exists but is not a directory: ${legacyWorktreePath}`);
-      }
-      const currentBranch = await this.validateExistingWorktreeAndGetBranch(
-        legacyWorktreePath,
-        baseRepoPath,
-        request.memberName
-      );
-      return { baseRepoPath, worktreePath: legacyWorktreePath, branchName: currentBranch };
+      return { baseRepoPath, worktreePath: candidate, branchName: currentBranch };
     }
 
     // Historical long-name paths were truncated and have no reliable owner identity.
     // Never silently attach a second member to one of those older checkouts.
-    const oldTeamSlug = legacySlugify(request.teamName);
-    const oldMemberSlug = legacySlugify(request.memberName);
-    if (teamPrefix.length > 0 || memberPrefix.length > 0) {
+    if (longName) {
       const oldPaths = [
-        path.join(
-          getAppDataPath(),
-          'team-worktrees',
-          `${projectSlug}-${repoHash}`,
-          oldTeamSlug,
-          oldMemberSlug
-        ),
-        path.join(getClaudeBasePath(), 'team-worktrees', repoHash, oldTeamSlug, oldMemberSlug),
+        ...historicalWorktreePaths(baseRepoPath, request.teamName, request.memberName),
+        ...linkedHistoricalPaths,
       ];
       for (const oldPath of oldPaths) {
         if (await fs.promises.stat(oldPath).catch(() => null)) {
@@ -262,7 +279,7 @@ export class TeamMemberWorktreeManager {
     return { baseRepoPath, worktreePath, branchName };
   }
 
-  private async resolveBaseRepoPath(baseCwd: string): Promise<string> {
+  private async resolveBaseRepoPath(baseCwd: string): Promise<{ baseRepoPath: string; sourceRepoPath: string }> {
     if (!path.isAbsolute(baseCwd)) {
       throw new Error('OpenCode worktree isolation requires an absolute project path.');
     }
@@ -282,7 +299,10 @@ export class TeamMemberWorktreeManager {
     if (!primaryCheckout) {
       throw new Error(`OpenCode worktree isolation could not find the main checkout: ${baseCwd}`);
     }
-    return (await realpathIfExists(primaryCheckout)) ?? path.resolve(primaryCheckout);
+    return {
+      baseRepoPath: (await realpathIfExists(primaryCheckout)) ?? path.resolve(primaryCheckout),
+      sourceRepoPath: (await realpathIfExists(root)) ?? path.resolve(root),
+    };
   }
 
   private async validateExistingWorktreeAndGetBranch(

@@ -460,15 +460,73 @@ describe('TeamMemberWorktreeManager', () => {
     await expect(manager.ensureMemberWorktree(request)).resolves.toEqual(results[0]);
   });
 
+  it.each(['current', 'legacy'] as const)(
+    'reuses the historical %s short-name path derived from a linked project',
+    async (location) => {
+      const repoPath = await createGitRepo(tempRoot);
+      const linkedProject = path.join(tempRoot, 'linked-project');
+      await execGit(['worktree', 'add', '-b', 'linked-project', linkedProject, 'HEAD'], repoPath);
+      const linkedRoot = await fs.realpath(linkedProject);
+      const oldPath = location === 'legacy' ? legacyWorktreePath(linkedRoot) : expectedWorktreePath(linkedRoot);
+      const oldBranch = `agent-teams/atlas-hq/bob-${shortHash(linkedRoot)}`;
+      await fs.mkdir(path.dirname(oldPath), { recursive: true });
+      await execGit(['worktree', 'add', '-b', oldBranch, oldPath, 'HEAD'], repoPath);
+      await execGit(['switch', '-c', 'historical-task'], oldPath);
+      await fs.writeFile(path.join(oldPath, 'notes.txt'), 'preserved\n');
+      const result = await new TeamMemberWorktreeManager().ensureMemberWorktree({
+        teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: linkedProject,
+      });
+      expect(result).toEqual({ baseRepoPath: repoPath, worktreePath: oldPath, branchName: 'historical-task' });
+      await expect(fs.readFile(path.join(oldPath, 'notes.txt'), 'utf8')).resolves.toBe('preserved\n');
+      await expect(fs.stat(expectedWorktreePath(repoPath))).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
+  it('coalesces concurrent requests from primary and linked project roots', async () => {
+    const repoPath = await createGitRepo(tempRoot);
+    const linkedProject = path.join(tempRoot, 'linked-project');
+    await execGit(['worktree', 'add', '-b', 'linked-project', linkedProject, 'HEAD'], repoPath);
+    const manager = new TeamMemberWorktreeManager();
+    const request = { teamName: 'Atlas HQ', memberName: 'Bob' };
+    const results = await Promise.all([
+      manager.ensureMemberWorktree({ ...request, baseCwd: repoPath }),
+      manager.ensureMemberWorktree({ ...request, baseCwd: linkedProject }),
+    ]);
+    expect(results[0]).toEqual(results[1]);
+    expect(results[0]?.worktreePath).toBe(expectedWorktreePath(repoPath));
+    const registered = await execGit(['worktree', 'list', '--porcelain'], repoPath);
+    expect(registered.match(/^worktree /gm)).toHaveLength(3);
+  });
+
   it('rejects conflicting concurrent paths rather than sharing a member checkout', async () => {
     const repoPath = await createGitRepo(tempRoot);
     const manager = new TeamMemberWorktreeManager();
     const request = { teamName: 'Atlas HQ', memberName: 'Bob', baseCwd: repoPath };
+    // Hold the initial request after identity resolution so the competing
+    // request deterministically exercises the in-flight conflict check.
+    const internal = manager as unknown as {
+      ensureMemberWorktreeInternal: (...args: unknown[]) => Promise<unknown>;
+    };
+    const original = internal.ensureMemberWorktreeInternal.bind(manager);
+    let release!: () => void;
+    let started!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const entered = new Promise<void>((resolve) => { started = resolve; });
+    vi.spyOn(internal, 'ensureMemberWorktreeInternal').mockImplementationOnce(async (...args) => {
+      started();
+      await gate;
+      return original(...args);
+    });
     const initial = manager.ensureMemberWorktree(request);
-    await expect(manager.ensureMemberWorktree({
-      ...request,
-      existingCwd: repoPath,
-    })).rejects.toThrow('Conflicting concurrent worktree paths');
+    await entered;
+    try {
+      await expect(manager.ensureMemberWorktree({
+        ...request,
+        existingCwd: repoPath,
+      })).rejects.toThrow('Conflicting concurrent worktree paths');
+    } finally {
+      release();
+    }
     const resolved = await initial;
     expect(await execGit(['branch', '--show-current'], resolved.worktreePath)).toBe(
       resolved.branchName
