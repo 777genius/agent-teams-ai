@@ -129,3 +129,5 @@ jobs:
             fi
           done
           echo 'Both real Electron and standalone E2E passed.'
+      - name: Check production source formatting
+        run: pnpm format:check
