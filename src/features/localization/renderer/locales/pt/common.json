@@ -962,7 +962,7 @@
     "loadFailed": "Não foi possível carregar o estado",
     "retry": "Tentar novamente",
     "partial": "Não foi possível carregar algumas equipas. As contagens podem estar incompletas.",
-    "nothing": "De momento, nada requer a sua atenção.",
+    "nothing": "As tarefas que aguardam sua decisão e as conversas não lidas da equipe aparecerão aqui.",
     "tasks": "A aguardar a sua decisão",
     "chats": "Conversas não lidas",
     "openTask": "Abrir tarefa: {{subject}} em {{team}}",

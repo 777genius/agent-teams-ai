@@ -962,7 +962,7 @@
     "loadFailed": "Không thể tải trạng thái",
     "retry": "Thử lại",
     "partial": "Không thể tải một số nhóm. Số liệu có thể chưa đầy đủ.",
-    "nothing": "Hiện không có gì cần bạn chú ý.",
+    "nothing": "Các tác vụ đang chờ quyết định của bạn và cuộc trò chuyện nhóm chưa đọc sẽ xuất hiện ở đây.",
     "tasks": "Đang chờ quyết định của bạn",
     "chats": "Cuộc trò chuyện chưa đọc",
     "openTask": "Mở tác vụ: {{subject}} trong {{team}}",

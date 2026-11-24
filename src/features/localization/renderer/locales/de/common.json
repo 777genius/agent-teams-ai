@@ -962,7 +962,7 @@
     "loadFailed": "Aufmerksamkeitsstatus konnte nicht geladen werden",
     "retry": "Erneut versuchen",
     "partial": "Einige Teams konnten nicht geladen werden. Die Zähler sind möglicherweise unvollständig.",
-    "nothing": "Zurzeit ist keine Aktion erforderlich.",
+    "nothing": "Hier erscheinen Aufgaben, die auf deine Entscheidung warten, und ungelesene Team-Chats.",
     "tasks": "Wartet auf Ihre Entscheidung",
     "chats": "Ungelesene Chats",
     "openTask": "Aufgabe öffnen: {{subject}} in {{team}}",

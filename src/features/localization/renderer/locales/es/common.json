@@ -962,7 +962,7 @@
     "loadFailed": "No se pudo cargar el estado de atención",
     "retry": "Reintentar",
     "partial": "No se pudieron cargar algunos equipos. Los recuentos pueden estar incompletos.",
-    "nothing": "Ahora mismo nada requiere tu atención.",
+    "nothing": "Aquí aparecerán las tareas pendientes de tu decisión y los chats de equipo sin leer.",
     "tasks": "Pendiente de tu decisión",
     "chats": "Chats sin leer",
     "openTask": "Abrir tarea: {{subject}} en {{team}}",

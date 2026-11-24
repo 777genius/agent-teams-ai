@@ -139,6 +139,29 @@ describe('AttentionInboxPanel renderer', () => {
     await act(async () => root.unmount());
   });
 
+
+  it('uses a compact explanatory empty state on the Dashboard', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="compact" model={{
+        ...model, tasks: [], chats: [], taskCount: 0, chatCount: 0,
+      }} loading={false} error={null} onOpenTask={onOpenTask}
+      onOpenChat={onOpenChat} onOpenFull={onOpenFull} onRetry={onRetry} />
+    ));
+    const panel = host.querySelector('[data-testid="user-attention-inbox"]');
+    expect(panel?.className).toContain('py-2.5');
+    expect(panel?.className).not.toContain('p-4');
+    expect(panel?.querySelector('header')?.className).toContain('mb-1');
+    const empty = panel?.querySelector('p');
+    expect(empty?.textContent).toBe('attention.nothing');
+    expect(empty?.className).not.toContain('py-4');
+    expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(0);
+    await act(async () => root.unmount());
+  });
+
   it('does not announce an empty state when data is incomplete', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

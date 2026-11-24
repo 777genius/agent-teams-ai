@@ -962,7 +962,7 @@
     "loadFailed": "Durum yüklenemedi",
     "retry": "Tekrar dene",
     "partial": "Bazı ekipler yüklenemedi. Sayılar eksik olabilir.",
-    "nothing": "Şu anda ilgilenmeniz gereken bir şey yok.",
+    "nothing": "Kararınızı bekleyen görevler ve okunmamış ekip sohbetleri burada görünür.",
     "tasks": "Kararınızı bekliyor",
     "chats": "Okunmamış sohbetler",
     "openTask": "Görevi aç: {{subject}} — {{team}}",

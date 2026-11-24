@@ -69,10 +69,12 @@ export function AttentionInboxPanel({
   return (
     <section
       aria-label={t('attention.title')}
-      className="rounded-xl border border-border bg-surface-raised/50 p-4"
+      className={"rounded-xl border border-border bg-surface-raised/50 " +
+        (empty && variant === "compact" ? "px-3 py-2.5" : "p-4")}
       data-testid="user-attention-inbox"
     >
-      <header className="mb-3 flex items-center justify-between gap-2">
+      <header className={(empty && variant === "compact" ? "mb-1 " : "mb-3 ") +
+        "flex items-center justify-between gap-2"}>
         <div className="flex min-w-0 items-center gap-2">
           <Inbox size={17} className="shrink-0 text-text-secondary" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-text">{t('attention.title')}</h2>
@@ -128,7 +130,9 @@ export function AttentionInboxPanel({
       {model && !model.complete && (
         <p role="status" className="mb-3 text-xs text-amber-500">{t('attention.partial')}</p>
       )}
-      {empty && <p className="py-4 text-xs text-text-muted">{t('attention.nothing')}</p>}
+      {empty && <p className={variant === "compact"
+        ? "text-xs leading-5 text-text-secondary"
+        : "py-2 text-sm text-text-secondary"}>{t('attention.nothing')}</p>}
       {variant === 'full' && searchQuery.trim() && entries.length === 0 && model?.complete &&
         <p className="py-4 text-xs text-text-secondary">{t('search.noResults')}</p>}
 

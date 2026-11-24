@@ -962,7 +962,7 @@
     "loadFailed": "Imeshindwa kupakia hali",
     "retry": "Jaribu tena",
     "partial": "Baadhi ya timu hazikupakiwa. Idadi inaweza kuwa si kamili.",
-    "nothing": "Hakuna kinachohitaji umakini wako sasa.",
+    "nothing": "Kazi zinazosubiri uamuzi wako na mazungumzo ya timu ambayo hujasoma yataonekana hapa.",
     "tasks": "Inasubiri uamuzi wako",
     "chats": "Mazungumzo ambayo hayajasomwa",
     "openTask": "Fungua kazi: {{subject}} katika {{team}}",
