@@ -296,7 +296,11 @@ export function NotificationChannelsSettings({
                       ? CHANNEL_SETUP_DOCS_URL.replace('/guide/', '/ru/guide/')
                       : CHANNEL_SETUP_DOCS_URL) +
                       '#' +
-                      (draft.provider === 'ms-teams' ? 'microsoft-teams-workflows' : draft.provider)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+                      (draft.provider === 'ms-teams'
+                          ? 'microsoft-teams-workflows'
+                          : draft.provider === 'webhook'
+                            ? 'custom-webhook'
+                            : draft.provider)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
                     {t('notifications.delivery.agentGuide')} <ExternalLink className="size-3" />
                   </a>
                 </div>
