@@ -76,7 +76,7 @@ jobs:
         assert.equal(sourceTree, "4457d1111fc5eb7cd52f8d1b0e92fae573a435a2");
         const commitHeaders = execFileSync('git', ['cat-file', '-p', 'HEAD'], { encoding: 'utf8' }).split('\n\n', 1)[0];
         const sourceParents = commitHeaders.split('\n').filter(line => line.startsWith('parent ')).map(line => line.slice(7));
-        assert.deepEqual(sourceParents, ["ae193bf19174dca3d3382fa418617eb8b1956042"]);
+        assert.deepEqual(sourceParents, ["77cc9dc6555edca3d3382fa418617eb8b1956042"]);
         assert.equal(process.env.HOST_EMULATED_SOURCE_HEAD, sourceHead);
         assert.equal(process.env.GITHUB_EVENT_NAME, 'push');
         assert.equal(process.env.GITHUB_REF, "refs/heads/review/provider-host-pr1220-finite-e2e-ae193bf19174");
@@ -392,7 +392,7 @@ jobs:
           
           TARGET_SHA = 'ae193bf191743a1288fb11a1acdebb508095c163'
           TARGET_TREE = '4457d1111fc5eb7cd52f8d1b0e92fae573a435a2'
-          TARGET_PARENT = 'ae193bf19174dca3d3382fa418617eb8b1956042'
+          TARGET_PARENT = '77cc9dc6555edca3d3382fa418617eb8b1956042'
           CONTROL_REF = 'refs/heads/review/provider-host-pr1220-finite-e2e-ae193bf19174'
           ROOT = Path(os.environ['GITHUB_WORKSPACE']).resolve()
           OUT = Path(os.environ['RUNNER_TEMP']) / 'pr1220-h5-finite-types-evidence'
