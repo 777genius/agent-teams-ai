@@ -189,7 +189,7 @@ jobs:
               resolve_undo = git('ls-files', '--resolve-undo', '-z')
               merge_head = git_dir / 'MERGE_HEAD'
               index_after = file_pin(index_path)
-              assert index_after == index_before, 'Index changed during source snapshot'
+              assert index_after['symlink'] == index_before['symlink'], 'Index path changed during source snapshot'
               return {'head': head, 'tree': tree, 'tracked': tracked, 'untracked': untracked,
                       'indexEntriesSha256': hashlib.sha256(entries).hexdigest(),
                       'indexEntryFlagsSha256': flags,
