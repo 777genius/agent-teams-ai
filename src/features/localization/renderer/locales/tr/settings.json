@@ -356,7 +356,8 @@
         "discord": "Discord kanalında Kanalı Düzenle → Entegrasyonlar → Webhooks bölümünden webhook oluşturup tam URL'yi kopyalayın.",
         "slack": "Slack uygulaması oluşturun, Incoming Webhooks'u etkinleştirip çalışma alanına yükleyin ve URL'yi kopyalayın.",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel kullanın. Özel tetikleyicide Anyone seçin; URL'yi gizli tutun.",
-        "google-chat": "Google Chat alanında Uygulamalar ve entegrasyonlar → Webhook ekle bölümünden webhook oluşturup tam URL'yi kopyalayın."
+        "google-chat": "Google Chat alanında Uygulamalar ve entegrasyonlar → Webhook ekle bölümünden webhook oluşturup tam URL'yi kopyalayın.",
+        "webhook": "Herkese açık bir HTTPS webhook'u (ör. n8n'de) oluşturun, imzalı URL'nin tamamını kopyalayıp test edin. Yerel URL'ler engellenir."
       }
     },
     "recovery": {

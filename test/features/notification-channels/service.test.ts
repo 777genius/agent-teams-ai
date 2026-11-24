@@ -67,6 +67,22 @@ describe('Notification Channels application', () => {
     expect(id).toBeTruthy();
   });
 
+  it('shows only the last sanitized automatic result in session memory', async () => {
+    const id = await add(true);
+    const before = JSON.stringify(records);
+    sent.mockResolvedValueOnce({ success: false, code: 'rate_limited' });
+    await service.dispatch(event);
+    expect((await service.list())[0].lastDelivery).toEqual({
+      at: '2026-11-23T12:00:00.000Z', success: false, code: 'rate_limited',
+    });
+    expect(JSON.stringify(records)).toEqual(before);
+    expect((await service.list())[0].lastTest).toBeUndefined();
+    await service.dispatch(event);
+    expect((await service.list())[0].lastDelivery?.success).toBe(true);
+    await service.remove(id);
+    expect(await service.list()).toEqual([]);
+  });
+
   it('honors the global disable/snooze policy, without suppressing manual test', async () => {
     const id = await add(true);
     canDeliver = false;

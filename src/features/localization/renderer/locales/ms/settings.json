@@ -356,7 +356,8 @@
         "discord": "Dalam saluran Discord sasaran, buka Edit Channel → Integrations → Webhooks, cipta webhook dan salin URL penuh.",
         "slack": "Cipta aplikasi Slack, dayakan Incoming Webhooks, pasang ke ruang kerja dan salin URL.",
         "ms-teams": "Gunakan Teams Workflows → Send webhook alerts to a channel. Untuk pencetus tersuai, pilih Anyone dan rahsiakan URL.",
-        "google-chat": "Dalam ruang Google Chat, pilih Apps & integrations → Add webhooks, cipta webhook dan salin URL penuh."
+        "google-chat": "Dalam ruang Google Chat, pilih Apps & integrations → Add webhooks, cipta webhook dan salin URL penuh.",
+        "webhook": "Cipta webhook HTTPS awam (contohnya dalam n8n), salin URL bertandatangan penuh dan ujinya. URL setempat disekat."
       }
     },
     "recovery": {

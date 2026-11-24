@@ -400,7 +400,8 @@
         "discord": "在目標 Discord 頻道開啟「編輯頻道 → 整合 → Webhooks」，建立 Webhook 並複製完整網址。",
         "slack": "建立 Slack 應用程式，啟用 Incoming Webhooks，安裝至工作區並複製產生的網址。",
         "ms-teams": "使用 Teams Workflows → Send webhook alerts to a channel。自訂觸發程序請選擇 Anyone，並妥善保管網址。",
-        "google-chat": "在 Google Chat 聊天室選擇「應用程式與整合 → 新增 Webhooks」，建立後複製完整網址。"
+        "google-chat": "在 Google Chat 聊天室選擇「應用程式與整合 → 新增 Webhooks」，建立後複製完整網址。",
+        "webhook": "建立公開的 HTTPS Webhook（例如在 n8n 中），複製完整的簽署網址並測試。區域網路網址不允許使用。"
       }
     },
     "recovery": {

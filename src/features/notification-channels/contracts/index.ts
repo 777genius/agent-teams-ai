@@ -34,7 +34,7 @@ export const NOTIFICATION_DESKTOP_ROUTABLE_EVENTS = NOTIFICATION_DELIVERY_EVENTS
 );
 
 export type DeliveryEvent = (typeof NOTIFICATION_DELIVERY_EVENTS)[number];
-export type DeliveryProvider = 'telegram' | 'discord' | 'slack' | 'ms-teams' | 'google-chat';
+export type DeliveryProvider = 'telegram' | 'discord' | 'slack' | 'ms-teams' | 'google-chat' | 'webhook';
 
 export const DELIVERY_PROVIDERS: readonly { id: DeliveryProvider; label: string; hint: string }[] =
   [
@@ -43,6 +43,7 @@ export const DELIVERY_PROVIDERS: readonly { id: DeliveryProvider; label: string;
     { id: 'slack', label: 'Slack', hint: 'Incoming webhook URL' },
     { id: 'ms-teams', label: 'Microsoft Teams', hint: 'Workflows webhook URL' },
     { id: 'google-chat', label: 'Google Chat', hint: 'Incoming webhook URL' },
+    { id: 'webhook', label: 'Custom Webhook', hint: 'Public HTTPS URL (signed URL supported)' },
   ];
 
 export const DELIVERY_EVENT_LABELS: Record<DeliveryEvent, string> = {
@@ -71,6 +72,9 @@ export type DeliveryFailureCode =
   | 'invalid_recipient'
   | 'rate_limited'
   | 'network_error'
+  | 'invalid_request'
+  | 'redirect_rejected'
+  | 'unsafe_endpoint'
   | 'delivery_failed';
 
 export interface ChannelTestStatus {
@@ -88,6 +92,8 @@ export interface DeliveryChannelDto {
   chatId?: string;
   hasCredential: boolean;
   lastTest?: ChannelTestStatus;
+  /** Latest automatic attempt during this app session; never written to disk. */
+  lastDelivery?: ChannelTestStatus;
 }
 
 export interface SaveDeliveryChannelRequest {

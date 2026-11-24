@@ -40,7 +40,8 @@ export interface DeliverySender {
   send(
     channel: StoredDeliveryChannel,
     secret: string,
-    message: string
+    message: string,
+    event?: DeliveryEvent | 'test'
   ): Promise<{
     success: boolean;
     code?: DeliveryFailureCode;
@@ -74,6 +75,8 @@ export class NotificationChannelsService {
   private transaction: Promise<void> = Promise.resolve();
   private activeDispatches = 0;
   private activeAutomaticSends = 0;
+  // At most one status per configured destination; no disk write per event.
+  private readonly automaticResults = new Map<string, ChannelTestStatus>();
   private static readonly MAX_CONCURRENT_DISPATCHES = 4;
   // One full set of configured destinations; overlapping events share this budget.
   private static readonly MAX_CONCURRENT_AUTOMATIC_SENDS = 20;
@@ -99,6 +102,9 @@ export class NotificationChannelsService {
     return Promise.all(
       channels.map(async (channel) => ({
         ...toDto(channel),
+        ...(this.automaticResults.has(channel.id)
+          ? { lastDelivery: this.automaticResults.get(channel.id) }
+          : {}),
         // OS-keyring credentials may be unavailable after switching runtimes.
         hasCredential: Boolean(await this.readSecret(channel.credentialId)),
       }))
@@ -165,6 +171,9 @@ export class NotificationChannelsService {
       if (previous && secret) {
         await this.deps.credentials.remove(previous.credentialId).catch(() => undefined);
       }
+      if (secret || (previous && previous.provider !== next.provider)) {
+        this.automaticResults.delete(next.id);
+      }
       return {
         ...toDto(next),
         // Rotation or OS backend changes can make an existing vault unreadable.
@@ -181,6 +190,7 @@ export class NotificationChannelsService {
       const channel = current.find((item) => item.id === id);
       if (!channel) throw new Error('Channel not found');
       await this.deps.repository.write(current.filter((item) => item.id !== id));
+      this.automaticResults.delete(id);
       // Deletion of orphaned credentials is best effort after the route is disabled.
       await this.deps.credentials.remove(channel.credentialId).catch(() => undefined);
     });
@@ -198,7 +208,8 @@ export class NotificationChannelsService {
         ? await this.safeSend(
             channel,
             secret,
-            'Agent Teams: Test notification. No agent content is included.'
+            'Agent Teams: Test notification. No agent content is included.',
+            'test'
           )
         : { success: false, code: 'credentials_missing' as DeliveryFailureCode };
       const status: ChannelTestStatus = {
@@ -233,14 +244,21 @@ export class NotificationChannelsService {
       await Promise.allSettled(
         channels.map(async (channel) => {
           const secret = await this.readSecret(channel.credentialId);
-          if (
-            !secret ||
-            this.activeAutomaticSends >= NotificationChannelsService.MAX_CONCURRENT_AUTOMATIC_SENDS
-          )
+          if (!secret) {
+            this.automaticResults.set(channel.id, {
+              at: this.deps.now(),
+              success: false,
+              code: 'credentials_missing',
+            });
             return;
+          }
+          if (
+            this.activeAutomaticSends >= NotificationChannelsService.MAX_CONCURRENT_AUTOMATIC_SENDS
+          ) return;
           this.activeAutomaticSends++;
           try {
-            await this.safeSend(channel, secret, outbound.message);
+            const result = await this.safeSend(channel, secret, outbound.message, outbound.event);
+            this.automaticResults.set(channel.id, { at: this.deps.now(), ...result });
           } finally {
             this.activeAutomaticSends--;
           }
@@ -264,13 +282,14 @@ export class NotificationChannelsService {
   private async safeSend(
     channel: StoredDeliveryChannel,
     secret: string,
-    message: string
+    message: string,
+    event?: DeliveryEvent | 'test'
   ): Promise<{
     success: boolean;
     code?: DeliveryFailureCode;
   }> {
     try {
-      return await this.deps.sender.send(channel, secret, message);
+      return await this.deps.sender.send(channel, secret, message, event);
     } catch {
       // Never return/log a vendor exception: it can contain a credential-bearing URL.
       return { success: false, code: 'delivery_failed' };

@@ -101,6 +101,30 @@ describe('Notification Channels local end-to-end contract', () => {
       expect(deleted.statusCode).toBe(200);
       expect(vault.size).toBe(0);
       expect((await app.inject({ method: 'GET', url: ENDPOINT })).json()).toEqual([]);
+
+      // Regression: the persisted repository must recognize new providers on
+      // the next read, not merely accept their initial write.
+      const signedUrl = 'https://hooks.example.org/events?sig=private-webhook';
+      const webhook = await app.inject({
+        method: 'POST', url: ENDPOINT, headers: HEADERS,
+        payload: {
+          name: 'Workflow endpoint', provider: 'webhook',
+          enabled: false, events: ['user_inbox'], secret: signedUrl,
+        },
+      });
+      expect(webhook.statusCode).toBe(200);
+      const webhookId: string = webhook.json().id;
+      expect((await app.inject({ method: 'GET', url: ENDPOINT })).json()).toMatchObject([
+        { id: webhookId, provider: 'webhook', enabled: false, hasCredential: true },
+      ]);
+      expect((await fs.readFile(settingsPath, 'utf8'))).not.toContain(signedUrl);
+      expect(vault.size).toBe(1);
+      const removeWebhook = await app.inject({
+        method: 'DELETE', url: ENDPOINT + '/' + webhookId, headers: HEADERS,
+      });
+      expect(removeWebhook.statusCode).toBe(200);
+      expect(vault.size).toBe(0);
+      expect((await app.inject({ method: 'GET', url: ENDPOINT })).json()).toEqual([]);
     } finally {
       await app.close();
       await fs.rm(temp, { force: true, recursive: true });

@@ -356,7 +356,8 @@
         "discord": "Discord च्या निवडलेल्या चॅनेलमध्ये Edit Channel → Integrations → Webhooks उघडा, वेबहुक तयार करा आणि संपूर्ण URL कॉपी करा.",
         "slack": "Slack ॲप तयार करा, Incoming Webhooks सक्षम करा, वर्कस्पेसमध्ये इन्स्टॉल करा आणि URL कॉपी करा.",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel वापरा. स्वतःच्या ट्रिगरसाठी Anyone निवडा आणि URL गुप्त ठेवा.",
-        "google-chat": "Google Chat स्पेसमध्ये Apps & integrations → Add webhooks मधून वेबहुक तयार करा आणि संपूर्ण URL कॉपी करा."
+        "google-chat": "Google Chat स्पेसमध्ये Apps & integrations → Add webhooks मधून वेबहुक तयार करा आणि संपूर्ण URL कॉपी करा.",
+        "webhook": "सार्वजनिक HTTPS वेबहुक (उदा. n8n मध्ये) तयार करा, संपूर्ण स्वाक्षरी केलेला URL कॉपी करून चाचणी करा. स्थानिक URL प्रतिबंधित आहेत."
       }
     },
     "recovery": {

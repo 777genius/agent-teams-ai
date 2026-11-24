@@ -356,7 +356,8 @@
         "discord": "مطلوبہ Discord چینل میں Edit Channel → Integrations → Webhooks کھولیں، ویب ہک بنائیں اور مکمل URL کاپی کریں۔",
         "slack": "Slack ایپ بنائیں، Incoming Webhooks فعال کریں، ورک اسپیس میں انسٹال کریں اور URL کاپی کریں۔",
         "ms-teams": "Teams Workflows → Send webhook alerts to a channel استعمال کریں۔ اپنی ٹرگر ترتیب میں Anyone منتخب کریں اور URL خفیہ رکھیں۔",
-        "google-chat": "Google Chat اسپیس میں Apps & integrations → Add webhooks سے ویب ہک بنائیں اور مکمل URL کاپی کریں۔"
+        "google-chat": "Google Chat اسپیس میں Apps & integrations → Add webhooks سے ویب ہک بنائیں اور مکمل URL کاپی کریں۔",
+        "webhook": "عوامی HTTPS ویب ہُک (مثلاً n8n میں) بنائیں، مکمل دستخط شدہ URL کاپی کریں اور ٹیسٹ کریں۔ مقامی URLs مسدود ہیں۔"
       }
     },
     "recovery": {

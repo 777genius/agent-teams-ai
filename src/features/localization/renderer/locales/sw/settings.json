@@ -371,7 +371,8 @@
         "discord": "Katika kituo cha Discord, fungua Edit Channel → Integrations → Webhooks, tengeneza webhook na unakili URL kamili.",
         "slack": "Tengeneza programu ya Slack, washa Incoming Webhooks, isakinishe kwenye workspace na unakili URL.",
         "ms-teams": "Tumia Teams Workflows → Send webhook alerts to a channel. Kwa trigger yako chagua Anyone na uhifadhi URL kwa siri.",
-        "google-chat": "Katika nafasi ya Google Chat, chagua Apps & integrations → Add webhooks, tengeneza webhook na unakili URL kamili."
+        "google-chat": "Katika nafasi ya Google Chat, chagua Apps & integrations → Add webhooks, tengeneza webhook na unakili URL kamili.",
+        "webhook": "Unda webhook ya HTTPS ya umma (kwa mfano n8n), nakili URL yote iliyotiwa saini na uijaribu. URL za ndani zimezuiwa."
       }
     },
     "recovery": {

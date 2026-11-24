@@ -1,11 +1,11 @@
 ---
-title: Notification channels — connect Telegram, Discord, Slack, Teams, and Google Chat
+title: Notification channels — connect Telegram, Discord, Slack, Teams, Google Chat and Custom Webhook
 description: Set up secure outbound Agent Teams notifications, test delivery, and route each event to Desktop or a messaging provider.
 ---
 
 # Notification channels
 
-**Agent Teams → Settings → Notifications → Delivery Channels** lets you send brief, opt-in event alerts to Telegram, Discord, Slack, Microsoft Teams, or Google Chat. A destination is a named bot/chat or webhook you've configured once. Then select it beside each notification type.
+**Agent Teams → Settings → Notifications → Delivery Channels** lets you send brief, opt-in event alerts to Telegram, Discord, Slack, Microsoft Teams, Google Chat, or a public HTTPS custom webhook. A destination is a named bot/chat or webhook you've configured once. Then select it beside each notification type.
 
 ## Quick setup
 
@@ -22,6 +22,8 @@ Never post a bot token or webhook URL in an issue, chat, or screenshot: it grant
 2. Open a private conversation with the new bot and press **Start** before testing. For a channel, add the bot with permission to post.
 3. Enter the token in **Bot token** and your destination in **Chat ID or @channelname**. A channel username looks like `@my_team_alerts`; private chats use a numeric chat ID, e.g. `123456789`.
 4. Save and send a **Test**. If the recipient cannot receive bot messages, check chat permissions and destination ID.
+
+For a **private chat or private group**, the numeric chat ID comes from the bot's [official updates API](https://core.telegram.org/bots/api#getupdates) or another trusted bot-administration tool. `@BotFather` creates a bot but **does not provide your chat ID**; Thinwrap only sends messages. If this bot already uses a webhook, do not delete its webhook or consume somebody else's updates to discover the ID. Channel usernames avoid this step for public channels. No Agent Teams backend or always-on bot is required.
 
 Token shape: `123456789:<TOKEN_FROM_BOTFATHER>` (illustrative only, not a usable credential). Never use the token as a chat ID.
 
@@ -67,8 +69,26 @@ Expected shape: `https://chat.googleapis.com/v1/spaces/<space>/messages?key=<key
 - **Browser/remote access:** for security, credential configuration requires the Electron app or a page served from the exact same local loopback origin as the API. A remote browser cannot edit these settings.
 - **No delivery with the app closed:** this version sends from the running local host. There is no cloud relay, offline queue, or automatic retry.
 
-## Can I add a custom webhook?
+## Custom Webhook
 
-Not yet. Arbitrary outbound URLs or templated bodies would need a deliberate SSRF/DNS-rebinding and secret-leakage security review. The five supported integrations use fixed official HTTPS host allowlists; extensions must add a validated connector and transport tests, not bypass those controls. This also keeps automatic notifications limited to safe fixed labels.
+Choose **Custom Webhook**, enter a public HTTPS destination URL and save. Signed URLs containing a token in their path or query are supported and stored only in the encrypted local vault. Click **Test**, then enable the channel and choose its event subscriptions.
+
+Agent Teams sends POST with `Content-Type: application/json` and a fixed JSON object. Example:
+
+```json
+{
+  "source": "agent-teams",
+  "event": "user_inbox",
+  "message": "Agent Teams: Message for you."
+}
+```
+
+The `event` field is a known event code; manual tests use `"test"`. **No team names, conversations, prompts or private task details.**
+
+For example, create a webhook trigger in [n8n](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/) or another automation service and copy its public production HTTPS URL. The receiving service is user-managed.
+
+**Security restrictions:** HTTPS on port 443 only; DNS hostnames only (no raw IP), every resolved address validated and pinned to the TLS connection, no local/private/reserved network destinations, no redirects, no custom headers, no raw error/secret logging, and no automatic retries. Endpoint authentication in this version is through a signed URL, **not an arbitrary Authorization header**. TLS certificate validation remains enabled. The app cannot reach private self-hosted webhooks by design.
+
+**Diagnostics:** the persisted manual Test result is separate from the latest automatic attempt. Click **Refresh status** to see the latter during the current app session. It clears when the app restarts; no per-event diagnostic file is written.
 
 For implementation details, see [Notification Channels architecture](https://github.com/777genius/agent-teams-ai/blob/main/src/features/notification-channels/README.md).
