@@ -7,9 +7,11 @@ on:
     paths:
       - '.github/workflows/opencode-local-provider-app-launch.yml'
       - 'test/main/services/team/OpenCodeLocalProviderAppLaunch.live.test.ts'
+      - 'test/main/services/team/OpenCodeSemanticMessaging.live.test.ts'
       - 'test/main/services/team/openCodeLiveTestHarness.ts'
       - 'test/main/services/team/memberWorkSyncLiveHarness.ts'
       - 'test/workflows/runSupersession.mts'
+      - 'scripts/prove-opencode-semantic-messaging.mjs'
       - 'src/main/services/team/provisioning/**'
       - 'src/main/services/team/runtime/OpenCode*.ts'
       - 'src/main/services/team/opencode/**'
@@ -20,6 +22,11 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
   workflow_dispatch:
+    inputs:
+      prove_big_pickle:
+        description: Verify one real free big-pickle reply after the native lifecycle cases
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,13 +48,20 @@ jobs:
     env:
       EXPECTED_APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       SDK_SHA: '5841f978fa0c03345eb8c1fd05ed94530d8ed612'
-      TEST_EVIDENCE: ${{ runner.temp }}/TEST-opencode-local-provider-evidence
-      TEST_TMP: ${{ runner.temp }}/TEST-opencode-local-provider-tmp
-      TEST_NATIVE: ${{ runner.temp }}/TEST-opencode-local-provider-native
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       pnpm_config_package_import_method: copy
     steps:
+      - name: Prepare owned test directories
+        run: |
+          set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          mkdir -m 700 "$RUNNER_TEMP/TEST-opencode-local-provider-evidence" \
+            "$RUNNER_TEMP/TEST-opencode-local-provider-tmp" \
+            "$RUNNER_TEMP/TEST-opencode-local-provider-native"
+          printf 'TEST_EVIDENCE=%s/TEST-opencode-local-provider-evidence\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'TEST_TMP=%s/TEST-opencode-local-provider-tmp\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'TEST_NATIVE=%s/TEST-opencode-local-provider-native\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -69,7 +83,6 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_APP_SHA"
           test "$(git -C TEST-local-provider-sdk rev-parse HEAD)" = "$SDK_SHA"
-          mkdir -m 700 "$TEST_EVIDENCE" "$TEST_TMP" "$TEST_NATIVE"
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { readFileSync, appendFileSync } from 'node:fs';
@@ -153,6 +166,42 @@ jobs:
           assert(liveCases.every((test) => test.status === 'passed'));
           console.log('PASS: all 3 native local-provider app lifecycle cases executed.');
           NODE
+      - name: Verify one real free big-pickle reply
+        if: github.event_name == 'workflow_dispatch' && inputs.prove_big_pickle
+        env:
+          TMPDIR: ${{ env.TEST_TMP }}
+          OPENCODE_E2E_STRICT: '1'
+          OPENCODE_E2E_MODEL: opencode/big-pickle
+          OPENCODE_E2E_SINGLE_MESSAGE: '1'
+          OPENCODE_E2E_REPORT_FILE: ${{ env.TEST_EVIDENCE }}/free-model.json
+          OPENCODE_E2E_KEEP_TEMP: '1'
+          OPENCODE_E2E_USE_REAL_APP_CREDENTIALS: '0'
+          CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: ${{ github.workspace }}/TEST-local-provider-sdk/cli-source
+          CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: ${{ env.TEST_NATIVE }}/node_modules/@opencode/cli-darwin-x64/bin/opencode
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const receipt = JSON.parse(readFileSync(`${process.env.TEST_EVIDENCE}/source-receipt.json`, 'utf8'));
+          writeFileSync(`${process.env.TEST_EVIDENCE}/free-model-source-receipt.json`, JSON.stringify({
+            ...receipt, model: process.env.OPENCODE_E2E_MODEL, scenario: 'single-member-message',
+          }, null, 2));
+          NODE
+          node scripts/prove-opencode-semantic-messaging.mjs \
+            2>&1 | tee "$TEST_EVIDENCE/free-model.log"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const result = JSON.parse(readFileSync(process.env.OPENCODE_E2E_REPORT_FILE, 'utf8'));
+          assert.equal(result.success, true);
+          assert.equal(result.numPassedTests, 1);
+          assert.equal(result.numFailedTests, 0);
+          const expected = 'OpenCode semantic messaging live e2e delivers a desktop message to an OpenCode member and records the reply through agent-teams_message_send';
+          const selected = result.testResults.flatMap((file) => file.assertionResults).filter((test) => test.fullName === expected);
+          assert.equal(selected.length, 1);
+          assert.equal(selected[0].status, 'passed');
+          console.log('PASS: real big-pickle member reply reached the app inbox and the owned lane stopped.');
+          NODE
       - name: Preserve exact-source evidence and owned test state
         if: always()
         uses: actions/upload-artifact@v4
@@ -162,5 +211,7 @@ jobs:
           if-no-files-found: warn
           include-hidden-files: true
           path: |
-            ${{ env.TEST_EVIDENCE }}/
-            ${{ env.TEST_TMP }}/opencode-local-provider-app-launch-*/
+            ${{ runner.temp }}/TEST-opencode-local-provider-evidence/
+            ${{ runner.temp }}/TEST-opencode-local-provider-tmp/opencode-local-provider-app-launch-*/
+            ${{ runner.temp }}/TEST-opencode-local-provider-tmp/opencode-semantic-proof-*/
+            ${{ runner.temp }}/TEST-opencode-local-provider-tmp/opencode-semantic-message-e2e-*/
