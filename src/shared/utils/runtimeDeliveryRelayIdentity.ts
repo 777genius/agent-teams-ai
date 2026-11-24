@@ -13,8 +13,9 @@ export function normalizeRelayParticipant(value: string | undefined): string {
 
 /** Exact runtime relay copies share a key even when their persisted message IDs differ. */
 export function getRuntimeDeliveryRelayDuplicateKey(message: InboxMessage): string | null {
-  const relayId = message.relayOfMessageId?.trim();
-  if (message.source !== 'runtime_delivery' || !relayId || relayId === message.messageId?.trim()) {
+  const relayId = typeof message.relayOfMessageId === 'string' ? message.relayOfMessageId.trim() : '';
+  const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+  if (message.source !== 'runtime_delivery' || !relayId || relayId === messageId) {
     return null;
   }
   const from = normalizeRelayParticipant(message.from);
