@@ -156,6 +156,43 @@ describe('User Attention read facade', () => {
     expect(build(['canonical', 'distinct', 'another-delivery', 'original']).unreadMessageCount).toBe(0);
   });
 
+  it.each([true, false])(
+    'retains the group read identity of a cross-scope relay (direct first: %s)',
+    async (directFirst) => {
+      const common = {
+        from: 'alice', to: 'user', source: 'runtime_delivery',
+        relayOfMessageId: 'group-delivery', text: '@user Please review', read: false,
+      };
+      const direct = {
+        ...common, messageId: 'direct-copy', timestamp: '2026-11-23T12:01:00Z',
+      };
+      const group = {
+        ...common, messageId: 'group-canonical', groupMessageId: 'group-canonical',
+        groupChatId: 'review', timestamp: '2026-11-23T12:00:00Z',
+      };
+      const facade = createUserAttentionFeature({
+        getContextId: () => 'local',
+        getTeamDataService: () => ({
+          listTeams: async () => [{ teamName: 'alpha', displayName: 'Alpha',
+            members: [{ name: 'alice' }] }],
+          getUserAttentionTasks: async () => [],
+          getMessageFeed: async () => ({
+            teamName: 'alpha', feedRevision: '1',
+            messages: directFirst ? [direct, group] : [group, direct],
+          }),
+        } as never),
+      });
+      const snapshot = await facade.getUserAttentionSnapshot();
+      expect(snapshot.teams[0].messages.map((item) => item.messageId)).toEqual(['group-canonical']);
+      const build = (groupRead: string[]) => buildAttentionModel(snapshot, () => ({
+        direct: new Set(['direct-copy']), group: new Set(groupRead),
+      }), (item) => item.messageId ?? '');
+      expect(build([]).unreadMessageCount).toBe(1);
+      expect(build([]).chats[0].scope).toEqual({ kind: 'group', groupChatId: 'review' });
+      expect(build(['group-canonical']).unreadMessageCount).toBe(0);
+    }
+  );
+
   it('fences a root switch during in-flight reads', async () => {
     let context = 'root-1';
     let markStarted!: () => void;

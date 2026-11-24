@@ -326,8 +326,20 @@ async function checkDesktop() {
       document.body.innerText.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + second)});
   })()`), 'exact bob thread and unread message visible despite stale participant filters', 60000);
   evidence.checks.push('cross-team Messenger conversation navigation');
-
+  await until(async () => cdp.evaluate(`(async () => {
+    const reads = await import('/utils/teamMessageReadStorage.ts');
+    const root = await window.electronAPI.config.getClaudeRootInfo();
+    const scope = reads.getTeamMessageReadContextScope('local', root);
+    const direct = reads.getReadSet(reads.getTeamMessageReadStorageKey(${JSON.stringify(second)}, scope));
+    return direct.has(${JSON.stringify('attention-dm-' + second)});
+  })()`), 'Messenger marks the canonical direct relay read');
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openDashboard()');
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    return Boolean(panel && !panel.textContent.includes(${JSON.stringify('ATTENTION_E2E_DIRECT_' + second)}));
+  })()`), 'canonical direct relay disappears from Attention after reading');
+  evidence.checks.push('duplicate direct relay clears via canonical Messenger read key');
 
   // Engage the team watch scope before modifying its disposable task file.
   await cdp.evaluate(`window.electronAPI.teams.getData(${JSON.stringify(first)})`);

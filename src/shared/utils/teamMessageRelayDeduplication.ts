@@ -69,6 +69,11 @@ function getRuntimeDeliveryRelayDuplicateKey(
   return from && to && text ? [relayId, from, to, text].join('\0') : null;
 }
 
+function isCanonicalGroupRow(message: InboxMessage): boolean {
+  return Boolean(message.groupChatId && message.groupMessageId &&
+    message.groupMessageId === message.messageId);
+}
+
 /** Shared relay policy. Call after visibility filtering, preserving feed order and raw text. */
 export function deduplicateVisibleRelayMessages(
   messages: readonly InboxMessage[],
@@ -81,12 +86,28 @@ export function deduplicateVisibleRelayMessages(
     if (id) visibleMessagesById.set(id, message);
   }
 
+  // Prefer the canonical group row over a direct relay copy, even when the
+  // direct copy is newer. Its group read key must remain reachable.
+  const canonicalGroupRelays = new Set<string>();
+  for (const message of messages) {
+    if (!isCanonicalGroupRow(message)) continue;
+    const relayId = normalizeMessageId(message.relayOfMessageId);
+    if (!relayId || relayId === normalizeMessageId(message.messageId)) continue;
+    const key = getRuntimeDeliveryRelayDuplicateKey(message, relayId);
+    if (key && !isRelayDuplicateOfVisibleMessage(
+      message, visibleMessagesById.get(relayId), leadNames
+    )) {
+      canonicalGroupRelays.add(key);
+    }
+  }
+
   const seenRuntimeRelays = new Set<string>();
   return messages.filter((message) => {
     const relayId = normalizeMessageId(message.relayOfMessageId);
     if (!relayId || relayId === normalizeMessageId(message.messageId)) return true;
     const runtimeKey = getRuntimeDeliveryRelayDuplicateKey(message, relayId);
     if (runtimeKey) {
+      if (canonicalGroupRelays.has(runtimeKey) && !isCanonicalGroupRow(message)) return false;
       if (seenRuntimeRelays.has(runtimeKey)) return false;
       seenRuntimeRelays.add(runtimeKey);
     }
