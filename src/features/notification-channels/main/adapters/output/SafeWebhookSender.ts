@@ -54,7 +54,7 @@ const network: WebhookNetwork = {
         },
         lookup: (hostname, options, callback) => {
           if (hostname !== url.hostname) {
-            callback(new Error('Untrusted webhook DNS lookup host'));
+            callback(new Error('Untrusted webhook DNS lookup host'), options.all ? [] : '');
             return;
           }
           if (options.all) {
@@ -63,7 +63,7 @@ const network: WebhookNetwork = {
           }
           const address = addresses.find((item) => !options.family || item.family === options.family);
           if (!address) {
-            callback(new Error('No approved address for requested family'));
+            callback(new Error('No approved address for requested family'), '');
             return;
           }
           callback(null, address.address, address.family);
