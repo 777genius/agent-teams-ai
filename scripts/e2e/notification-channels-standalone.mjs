@@ -214,7 +214,27 @@ async function run() {
   assert.deepEqual(JSON.parse(await readFile(vaultPath, 'utf8')), []);
   assertions.push('Deleting destination removes encrypted credential');
 
-  // Never call POST /:id/test: this smoke must not contact real vendor endpoints.
+  // Arbitrary HTTPS destinations use the same local-only API and encrypted vault.
+  // Do not call Test: the standalone harness must never contact real hosts.
+  const webhookUrl = 'https://hooks.example.org/events?sig=standalone-private';
+  const webhook = await request(baseUrl, 'POST', '', {
+    name: 'Standalone custom HTTPS', provider: 'webhook', enabled: false,
+    events: ['user_inbox'], secret: webhookUrl,
+  });
+  assert.equal(webhook.status, 200, webhook.body.slice(0, 200));
+  assert.equal(webhook.json.provider, 'webhook');
+  assert(!webhook.body.includes('standalone-private'));
+  assert(!(await readFile(metaPath, 'utf8')).includes('standalone-private'));
+  assert(!(await readFile(vaultPath, 'utf8')).includes('standalone-private'));
+  const unsafe = await request(baseUrl, 'POST', '', {
+    name: 'Unsafe', provider: 'webhook', enabled: false, events: [],
+    secret: 'https://127.0.0.1/secret',
+  });
+  assert.equal(unsafe.status, 400);
+  const removed = await request(baseUrl, 'DELETE', '/' + webhook.json.id);
+  assert.equal(removed.status, 200);
+  assert.deepEqual(JSON.parse(await readFile(vaultPath, 'utf8')), []);
+  assertions.push('Standalone custom HTTPS → isolated encrypted vault; unsafe URL rejected');
   passed = true;
 }
 
