@@ -488,7 +488,45 @@ async function checkDesktop() {
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_STANDARD_GROUP") === false',
     'standard group mention disappears after being read in Messenger');
+
   evidence.checks.push('standard group mention opens team-feed and clears through shared group read state');
+
+  // Complete every test-only request and mark all source messages read. The
+  // dashboard should immediately shrink to its compact, explanatory state.
+  await cdp.evaluate(`(async () => {
+    const snapshot = await window.electronAPI.getUserAttentionSnapshot();
+    for (const team of snapshot.teams) {
+      for (const task of team.tasks) {
+        await window.electronAPI.teams.setTaskClarification(team.teamName, task.taskId, null);
+      }
+    }
+    const reads = await import('/utils/teamMessageReadStorage.ts');
+    const root = await window.electronAPI.config.getClaudeRootInfo();
+    const scope = reads.getTeamMessageReadContextScope('local', root);
+    for (const team of snapshot.teams) {
+      for (const message of team.messages) {
+        const key = reads.getTeamMessageReadStorageKey(
+          team.teamName, scope, message.groupChatId ? 'group' : undefined
+        );
+        reads.markRead(key, message.messageId);
+      }
+    }
+  })()`);
+  await until(async () => {
+    const snapshot = await getSnapshot();
+    return snapshot.complete && snapshot.teams.every((team) => team.tasks.length === 0);
+  }, 'all test-only human decisions resolved');
+  await until(async () => cdp.evaluate(`(() => {
+    const panel = Array.from(document.querySelectorAll('[data-testid=user-attention-inbox]'))
+      .find((node) => node.getClientRects().length > 0);
+    return Boolean(panel) &&
+      panel.textContent.includes('Tasks awaiting your decision and unread team chats will appear here.') &&
+      panel.getBoundingClientRect().height < 110 &&
+      panel.querySelector('[data-testid=attention-counts]') === null &&
+      panel.querySelectorAll('button[aria-label^="Open task"]').length === 0;
+  })()`), 'compact explanatory empty state after all items resolved', 30_000);
+  await cdp.screenshot(path.join(artifactRoot, 'attention-empty.png'));
+  evidence.checks.push('compact empty state and live resolution of all requests');
 }
 async function cleanup() {
   await cdp?.close().catch(() => {});
