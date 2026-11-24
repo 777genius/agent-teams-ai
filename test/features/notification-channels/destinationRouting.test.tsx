@@ -124,6 +124,7 @@ describe('Event-side destination routing', () => {
     await vi.waitFor(() => expect(current?.channels[0].name).toBe('Renamed Telegram'));
     expect(current?.channels[0].events).toEqual(['user_inbox']);
     expect(mockApi.save.mock.lastCall?.[0].expectedEvents).toEqual(['user_inbox']);
+    expect(mockApi.save.mock.lastCall?.[0].expectedEnabled).toBe(true);
   });
 
   it('keeps new subscriptions when toggling a channel from a stale snapshot', async () => {
@@ -138,6 +139,7 @@ describe('Event-side destination routing', () => {
     await vi.waitFor(() => expect(current?.channels[0].enabled).toBe(false));
     expect(current?.channels[0].events).toEqual(['task_comment']);
     expect(mockApi.save.mock.lastCall?.[0].expectedEvents).toEqual(['task_comment']);
+    expect(mockApi.save.mock.lastCall?.[0].expectedEnabled).toBe(true);
   });
 
   it('refuses unavailable or disabled provider routes without mutating credentials', async () => {

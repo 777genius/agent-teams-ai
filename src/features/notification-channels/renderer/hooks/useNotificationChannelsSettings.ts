@@ -98,7 +98,9 @@ export function useNotificationChannelsSettings() {
       if (draft.id && !current) throw new Error('Channel unavailable');
       await api.notificationChannels.save({
         ...draft,
-        ...(current ? { events: current.events, expectedEvents: current.events } : {}),
+        ...(current
+          ? { events: current.events, expectedEvents: current.events, expectedEnabled: current.enabled }
+          : {}),
         secret: draft.secret?.trim() || undefined,
       });
       setDraft(null);
@@ -129,6 +131,7 @@ export function useNotificationChannelsSettings() {
         enabled,
         events: current.events,
         expectedEvents: current.events,
+        expectedEnabled: current.enabled,
         chatId: current.chatId,
       });
     }));
@@ -187,6 +190,7 @@ export function useNotificationChannelsSettings() {
         enabled: fresh.enabled,
         events: updated,
         expectedEvents: fresh.events,
+        expectedEnabled: fresh.enabled,
         chatId: fresh.chatId,
       });
     }));

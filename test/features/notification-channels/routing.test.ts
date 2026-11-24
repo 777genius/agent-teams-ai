@@ -34,6 +34,14 @@ describe('Notification Channels domain', () => {
     })).toThrow();
   });
 
+  it('requires a valid existing channel guard for an expected enabled state', () => {
+    expect(() => normalizeChannelInput({ ...base, expectedEnabled: false })).toThrow();
+    expect(() => normalizeChannelInput({
+      ...base, id: 'f97bfa8d-5f66-4cd1-a789-12bda1097e28',
+      expectedEnabled: 'false' as never,
+    })).toThrow();
+  });
+
   it('validates only official HTTPS destinations (SSRF protection)', () => {
     expect(() => validateProviderCredential('discord',
       'https://127.0.0.1/api/webhooks/123/secret')).toThrow();

@@ -111,6 +111,9 @@ export class NotificationChannelsService {
       const existing = await this.deps.repository.read();
       const previous = input.id ? existing.find((ch) => ch.id === input.id) : undefined;
       if (input.id && !previous) throw new Error('Channel not found');
+      if (previous && input.expectedEnabled !== undefined && previous.enabled !== input.expectedEnabled) {
+        throw new Error('Channel enabled state changed. Refresh and try again.');
+      }
       if (
         previous &&
         input.expectedEvents !== undefined &&

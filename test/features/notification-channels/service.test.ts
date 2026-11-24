@@ -91,6 +91,20 @@ describe('Notification Channels application', () => {
     expect((await service.list())[0].events).toEqual(['user_inbox', 'task_comment']);
   });
 
+  it('rejects stale route saves that would re-enable a disabled channel', async () => {
+    const id = await add(true);
+    await service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: false,
+      events: ['user_inbox'], chatId: '123456',
+    });
+    await expect(service.save({
+      id, name: 'My Telegram', provider: 'telegram', enabled: true,
+      events: ['user_inbox', 'task_comment'], expectedEvents: ['user_inbox'],
+      expectedEnabled: true, chatId: '123456',
+    })).rejects.toThrow('Channel enabled state changed');
+    expect((await service.list())[0]).toMatchObject({ enabled: false, events: ['user_inbox'] });
+  });
+
   it('does not send unless explicitly enabled and selected', async () => {
     const id = await add();
     await service.dispatch(event);
