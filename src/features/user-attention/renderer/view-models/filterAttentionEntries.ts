@@ -31,13 +31,20 @@ export function attentionFilterCount(filters: AttentionFilters): number {
     Number(filters.waiting !== 'all');
 }
 
-/** Every team seen in either section is filterable, including stopped teams. */
+type AttentionTeamIdentity = Pick<AttentionTaskCandidate, 'teamName' | 'logicalTeamName'>;
+
+function visibleTeamName(item: AttentionTeamIdentity): string {
+  return item.logicalTeamName || item.teamName;
+}
+
+/** Every visible team in either section is filterable, including stopped teams. */
 export function attentionTeamOptions(model: AttentionModel | null): AttentionTeamOption[] {
   const teams = new Map<string, AttentionTeamOption>();
   for (const item of [...(model?.tasks ?? []), ...(model?.chats ?? [])]) {
-    if (!teams.has(item.teamName)) {
-      teams.set(item.teamName, {
-        teamName: item.teamName,
+    const teamName = visibleTeamName(item);
+    if (!teams.has(teamName)) {
+      teams.set(teamName, {
+        teamName,
         displayName: item.teamDisplayName,
       });
     }
@@ -57,8 +64,8 @@ export function filterAttentionEntries(
   const matches = (...values: Array<string | undefined>): boolean =>
     !search || values.some((value) => value?.toLocaleLowerCase().includes(search));
 
-  const teamMatches = (teamName: string): boolean =>
-    filters.teamName === null || teamName === filters.teamName;
+  const teamMatches = (item: AttentionTeamIdentity): boolean =>
+    filters.teamName === null || visibleTeamName(item) === filters.teamName;
 
   const waitingMatches = (requestedAt: string | null | undefined): boolean => {
     if (filters.waiting === 'all') return true;
@@ -70,10 +77,10 @@ export function filterAttentionEntries(
 
   return {
     tasks: filters.type === 'chats' ? [] : (model?.tasks ?? []).filter((task) =>
-      teamMatches(task.teamName) && waitingMatches(task.requestedAt) &&
+      teamMatches(task) && waitingMatches(task.requestedAt) &&
       matches(task.subject, task.teamName, task.teamDisplayName)),
     chats: filters.type === 'tasks' ? [] : (model?.chats ?? []).filter((chat) =>
-      teamMatches(chat.teamName) &&
+      teamMatches(chat) &&
       (filters.conversation === 'all' || chat.scope.kind === filters.conversation) &&
       matches(chat.name, chat.teamName, chat.teamDisplayName,
         chat.latestUnread.from, chat.latestUnread.text)),

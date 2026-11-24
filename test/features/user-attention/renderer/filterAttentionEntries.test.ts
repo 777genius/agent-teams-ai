@@ -91,6 +91,44 @@ describe('full Attention Inbox filter policy', () => {
     expect(attentionTeamOptions(null)).toEqual([]);
   });
 
+  it('groups execution aliases by visible team for options and filtering without rewriting source identity', () => {
+    const aliasTask = {
+      ...model.tasks[0], teamName: 'alpha-execution', logicalTeamName: 'alpha',
+      taskId: 'alias-task',
+    };
+    const aliasChat = {
+      ...model.chats[1], teamName: 'alpha-execution', logicalTeamName: 'alpha',
+    };
+    const aliasOnlyTask = {
+      ...model.tasks[0], teamName: 'gamma-execution', logicalTeamName: 'gamma',
+      teamDisplayName: 'Gamma', taskId: 'gamma-task',
+    };
+    const aliasOnlyChat = {
+      ...model.chats[1], teamName: 'gamma-execution', logicalTeamName: 'gamma',
+      teamDisplayName: 'Gamma',
+    };
+    const withAliases: AttentionModel = {
+      ...model,
+      tasks: [...model.tasks, aliasTask, aliasOnlyTask],
+      chats: [...model.chats, aliasChat, aliasOnlyChat],
+    };
+
+    expect(attentionTeamOptions(withAliases)).toEqual([
+      { teamName: 'alpha', displayName: 'Alpha' },
+      { teamName: 'beta', displayName: 'Beta' },
+      { teamName: 'gamma', displayName: 'Gamma' },
+    ]);
+    const selectTeam = (teamName: string) => filterAttentionEntries(
+      withAliases, { ...DEFAULT_ATTENTION_FILTERS, teamName }, '', now
+    );
+    expect(selectTeam('alpha').tasks).toEqual([model.tasks[0], model.tasks[2], aliasTask]);
+    expect(selectTeam('alpha').chats).toEqual([model.chats[1], model.chats[2], aliasChat]);
+    expect(selectTeam('gamma')).toEqual({ tasks: [aliasOnlyTask], chats: [aliasOnlyChat] });
+    expect(selectTeam('alpha').tasks[2]).toBe(aliasTask);
+    expect(selectTeam('alpha').chats[2]).toBe(aliasChat);
+    expect(selectTeam('alpha-execution')).toEqual({ tasks: [], chats: [] });
+  });
+
   it('counts only active criteria and preserves reset defaults', () => {
     expect(attentionFilterCount(DEFAULT_ATTENTION_FILTERS)).toBe(0);
     expect(attentionFilterCount({
