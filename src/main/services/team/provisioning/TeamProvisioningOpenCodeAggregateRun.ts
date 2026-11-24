@@ -414,6 +414,9 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       }),
       input.onProgress
     );
+    if (aggregateLaunchNoLongerCurrent()) {
+      return await finishCancelledAggregateLaunch();
+    }
     run.progress = finalProgress;
     let rollbackComplete = true;
     if (!terminalFailure) {
