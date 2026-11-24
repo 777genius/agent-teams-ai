@@ -121,7 +121,9 @@ async function launch() {
 
   const env = {
     ...Object.fromEntries(
-      ['PATH', 'DISPLAY', 'XAUTHORITY', 'LANG', 'LC_ALL', 'TZ'].flatMap(
+      // Keep pnpm's installed store location when HOME is isolated. Otherwise
+      // pnpm 11 tries to reinstall the workspace before the dev script starts.
+      ['PATH', 'PNPM_HOME', 'DISPLAY', 'XAUTHORITY', 'LANG', 'LC_ALL', 'TZ'].flatMap(
         (key) => process.env[key] === undefined ? [] : [[key, process.env[key]]]
       )
     ),
