@@ -49,8 +49,6 @@ Target branch: `main`; immutable release source `2a4e1c2938923826cb1555e8fb894a3
 
 <img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/81c0334a-d93f-45d7-8528-fbabd5dbb974" />
 
-
-
 ### What's New
 
 - Find tasks and unread messages across all teams on the new Attention page, with a header indicator.
