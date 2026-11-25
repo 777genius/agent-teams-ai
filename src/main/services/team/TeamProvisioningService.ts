@@ -324,7 +324,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 export function createDefaultTeamProvisioningService(
   getGroupChats: () => ProvisioningGroupChatCallbacks,
   resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null,
   budgetAdmission: (teamName: string) => Promise<void>
 ) {
   return new TeamProvisioningService(

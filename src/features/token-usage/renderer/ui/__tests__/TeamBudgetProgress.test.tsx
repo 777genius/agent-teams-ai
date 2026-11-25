@@ -60,4 +60,15 @@ describe('team budget card', () => {
     expect(container.textContent).toContain('teamCardUnknown');
     expect(container.querySelector('.bg-emerald-500\\/70')).toBeNull();
   });
+  it('never shows a healthy budget if another configured metric is incomplete', async () => {
+    const data = status({ value: 18, policy: 'block_launch' });
+    data.targets[0].metrics.push({
+      metric: 'tokens', value: 25, limit: 100, percent: 25, remaining: 75,
+      incomplete: true,
+    });
+    await act(async () => root.render(<TeamBudgetProgress teamName="alpha" status={data} />));
+    expect(container.textContent).toContain('teamCardUnknown');
+    expect(container.querySelector('[style*="width: 90%"]')).toBeNull();
+  });
+
 });

@@ -93,12 +93,17 @@ describe('Budget Save/Cancel and standalone status', () => {
     container.remove();
     vi.unstubAllGlobals();
   });
-  async function render(settings = config, data = status) {
+  async function render(
+    settings = config,
+    data = status,
+    knownTeams: TokenUsageBudgetStatusDto['options'] = []
+  ) {
     await act(async () =>
       root.render(
         <TooltipProvider>
           <BudgetAlertsPanel
             status={data}
+            knownTeams={knownTeams}
             budgetConfig={settings}
             budgetTargetKey={selected}
             error={null}
@@ -152,6 +157,17 @@ describe('Budget Save/Cancel and standalone status', () => {
       option.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     );
   }
+
+  it('configures enforcement for a new team before it has any recorded usage', async () => {
+    selected = 'team:team:new-team';
+    await render(config, status, [{ scope: 'team', id: 'team:new-team', label: 'New team' }]);
+    await open();
+    expect(document.body.textContent).toContain('tokenUsage.budgets.editor.onExceeded');
+    await input('tokenUsage.budgets.tokenLimit', '100');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[0][0].settings.teams['team:new-team'].monthlyTokenLimit).toBe(100);
+  });
+
   // These assertions go red under the old autosave form even before touching disk.
   it('typing and Cancel never write; Save writes once and preserves unedited identities', async () => {
     await render();

@@ -50,6 +50,7 @@ function createHost(
   const lockCalls: string[] = [];
   return {
     lockCalls,
+    assertTeamBudgetAdmission: async () => undefined,
     withTeamLock: (teamName, fn) => {
       lockCalls.push(teamName);
       return fn();

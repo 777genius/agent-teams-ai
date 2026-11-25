@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createTeamBudgetControls } from '../createTeamBudgetControls';
+import { createTeamBudgetAdmission, createTeamBudgetControls } from '../createTeamBudgetControls';
 
 import type {
   TokenUsageBudgetExceededAction,
@@ -60,7 +60,6 @@ function setup(initial: {
 }) {
   let state = initial;
   let alive = true;
-  let guard!: (name: string) => Promise<void>;
   const refresh = vi.fn(async () => {
     state = { ...state, stale: false };
     return {};
@@ -68,9 +67,6 @@ function setup(initial: {
   const stop = vi.fn(async () => { alive = false; });
   const warn = vi.fn();
   const runtime = {
-    setTeamBudgetAdmissionGuard: (callback: (name: string) => Promise<void>) => {
-      guard = callback;
-    },
     getAliveTeams: () => alive ? [state.aliveName ?? 'alpha'] : [],
     isTeamManagedByThisProfile: async () => true,
     stopTeam: stop,
@@ -86,6 +82,7 @@ function setup(initial: {
     getBudgetStatus: async () => budgetStatus(state),
     refreshSnapshot: refresh,
   };
+  const guard = createTeamBudgetAdmission(() => reader);
   const controls = createTeamBudgetControls(
     () => reader, runtime,
     () => ({
