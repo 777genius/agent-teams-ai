@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-  <strong>You're the boss. Your agents are the team.</strong><br />
-  Give the lead a goal. Agents create tasks, delegate, talk to each other and review each other's work. Follow progress across teams and projects, and step in when they need you.<br />
+  <strong>You're the boss. Split your work across multiple teams.</strong><br />
+  Give each teammate a role, each team a lead, and organize teams into a hierarchy. Agents create tasks, delegate, talk to each other and review each other's work. Follow progress across teams and projects, and step in when they need you.<br />
   <sub>Free, open-source desktop app for macOS, Windows and Linux. For coding and broader project work. <strong>300+ models · 200+ LLM providers · Free models with no auth</strong> — no signup, API key or credit card needed to get started. Connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Kiro, Z.AI, Xiaomi, MiniMax, Kimi and more.</sub>
 
   <sub>Check also:
@@ -230,32 +230,45 @@ Agent Teams AI is a free, open-source workspace for building and running AI team
 
 Ask the lead to deliver a feature, investigate a problem or run a project. The lead can break the work into tasks, assign them to teammates and ask another agent to review the result. A task has a life beyond the chat: an owner, dependencies, comments, attachments, execution logs and, for coding work, code changes. You can see the same work the agents are coordinating, from one task to an entire organization.
 
-- **Assemble your team** — create agent teams using one prompt or a template, with different roles that work autonomously in parallel
-- **Sit back and watch** — agents move work through a live Kanban board; switch to the sortable task table or open a task to inspect ownership, blockers and progress
+- **Assemble your team** — create a team of up to 30 teammates using one prompt or a template. Define the lead, roles and workflows; choose a model, runtime and supported reasoning effort per teammate. Agents work autonomously in parallel.
+- **Sit back and watch** — agents move work through a live Kanban board; switch to the sortable task table with configurable columns or open a task to inspect ownership, blockers and progress.
+- **Live agent graph** — watch messages, handoffs, task assignments and approval requests as they happen. Inspect agents and tasks directly on the graph, including cross-team activity.
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
 - **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Built-in review workflow** — see how agents review each other's tasks against the original requirements, what feedback they leave and how the work progresses. Configure the review flow for your team
-- **Token analytics and budgets** — see input, output, cache, and reasoning usage across teams, agents, tasks, projects, models, runtimes, sessions, commands, and runs. Spot expensive work, track trends and forecasts, set monthly token or estimated-cost budgets, and get alerts at 80% and 100%
-- **Organizations and global overview** — group teams into departments, squads, or any nested structure. Track every organization on one live map with team and agent status, task progress, dependencies, delegation, and cross-team communication
+- **Token analytics and budgets** — see input, output, cache, and reasoning usage across teams, agents, tasks, projects, models, runtimes, sessions, commands, and runs. Spot expensive work, track trends, forecasts and activity calendars. Set monthly token or estimated-cost budgets globally, per team or per project, with configurable alert thresholds (including 80% and 100%). Costs are estimates, not provider invoices.
+- **Organizations and global overview** — organize teams into departments, squads or any nested hierarchy. Edit organization structures and relationships; navigate each organization on a live map with team and agent status, task progress, dependencies, delegation and cross-team communication.
 - **Stay in control** — send a direct message to any agent (DM or group chat), drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
 - **Attention across all teams** — see tasks requiring your attention and unread messages in one place, with a header indicator and a dedicated Attention page. Go straight to the task or conversation instead of opening every team
-- **Flexible autonomy** — let agents run fully autonomous, or review and approve supported tool actions one by one (you'll get a notification) — configure the level of control that fits your security needs
+- **Flexible autonomy** — let agents work autonomously, or review and approve supported tool actions one by one (you'll get a notification). Set per-team approval preferences and review flow, and see the provider-aware project trust notice before launch.
 - **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Integrated terminal workspace** — run commands in a visual PTY scoped to each team and project, with local shell tabs, persistent history, autocomplete, and terminal settings
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
 - **Multi-provider orchestration** — choose a runtime and model for each teammate. Auto-detect installed Claude Code, Codex and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more. Mix them in the same team, start with a free model with no auth, or use the subscriptions or API keys you already have
+- **Local and self-hosted models** — use Ollama, LM Studio, llama.cpp or other supported OpenAI-compatible endpoints on your computer, local network or a remote HTTPS server. Make models available per project or globally, configure context/output limits, and test compatibility before launch.
 - **Separate project context** — reuse a team across projects without mixing their tasks and conversations. New teams use separate project histories by default; existing teams retain their shared history
-- **Scheduled automation** — schedule individual agents or entire teams, optionally link runs to board tasks, inspect run history and set scheduled-run budget caps
-- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment on individual hunks
+- **Scheduled automation** — schedule individual agents or entire teams, including recurring cron schedules and time zones. Preview upcoming runs, optionally link them to board tasks, inspect run history and set scheduled-run budget caps.
+- **Review changes like in Cursor** — see what code each task changed, then approve, reject or comment on individual hunks. Preview checkpoints and undo or redo review decisions, with history retained across app restarts.
+- **Local-first workspace** — teams, tasks and project data are managed locally by the desktop app. No Agent Teams cloud backend stores your code; connected AI runtimes and providers may process project data under their own terms.
 
 <details>
 <summary><strong>More features</strong></summary>
 
-- **Reusable team templates** — create, edit, import and export your own templates or use built-in ones. Reuse roles and instructions without copying task or conversation history. Thanks to [@hassanbht](https://github.com/hassanbht).
+- **Reusable team templates** — create, edit, import and export your own templates or use built-in ones for development and other work such as sales, support, operations and learning. Reuse roles and instructions without copying task or conversation history. Thanks to [@hassanbht](https://github.com/hassanbht).
 
-- **Group chats with agents** — create named conversations with selected teammates, link them to tasks, reply to messages, attach supported files and view OpenUI charts, tables and Mermaid diagrams directly in chat.
+- **AI-assisted team creation and import** — create or edit team drafts through installed Claude Code or Codex, or import an existing Claude-style agent folder. Preview detected members, skills and project path before creating a draft; choose providers before launch.
 
-- **External agent connection** — connect external AI agents to the running desktop app with guided local MCP setup for supported team management operations.
+- **Group chats with agents** — create named conversations with selected teammates or ask an agent to create one. Link them to tasks, reply to messages, attach supported files and view OpenUI charts, tables and Mermaid diagrams directly in chat.
+
+- **Messenger and message controls** — use fullscreen chats and 1:1 threads, queue messages with Cmd/Ctrl+Enter for manual sending, and see unconfirmed group-message delivery. Edit or remove queued messages before sending.
+
+- **Task organization** — organize tasks into folders with drag-and-drop, link tasks and blockers, and open individual tasks in separate tabs with edits and drafts shared across views.
+
+- **External agent connection** — connect external AI agents to the running desktop app with guided local MCP setup for supported team management operations, including creating and editing teams.
+
+- **Provider and model management** — connect supported subscriptions or API keys, browse and refresh model catalogs, identify free models, and check provider/model compatibility before launch. Manage supported runtime installations and updates from the app, including OpenCode 1.x/2.x.
+
+- **Per-teammate gateways** — configure supported Anthropic/OpenAI-compatible API gateways for individual teammates and see their attributed usage.
 
 - **Live process section** — see registered background services, stop them, and open their URLs directly in the browser
 
@@ -264,6 +277,8 @@ Ask the lead to deliver a feature, investigate a problem or run a project. The l
 - **Task creation with attachments** — send a message to the team lead with any attached images. The lead will automatically create a fully described task and attach your files directly to the task for complete context.
 
 - **Auto-resume after rate limits** — when the lead hits a Claude rate limit and the reset time is known, the app can automatically nudge the lead to continue once the cooldown has passed
+
+- **Agent readiness and recovery** — inspect startup status and diagnostics, retry a failed supported teammate without restarting the whole team, and resume stalled work from the team page. Guarded nudges help agents reconnect with their tasks and reviews.
 
 - **Deep session analysis** — detailed breakdown of each agent session: agent output, tool calls, bash commands, and subprocesses
 
@@ -277,7 +292,11 @@ Ask the lead to deliver a feature, investigate a problem or run a project. The l
 
 - **30 interface languages** — choose the app language and preferred agent communication language. Includes English, Simplified Chinese, Traditional Chinese (Taiwan), Spanish, Hindi, Portuguese, French, Arabic, German, Japanese, Korean, Russian, Ukrainian, and 17 more. Thanks to [@keepinmind2054](https://github.com/keepinmind2054) for Traditional Chinese.
 
-- **Built-in code editor** — edit project files with Git support without leaving the app. Built-in Git handles app diffs, worktrees and cloning without a separate Git installation
+- **Built-in code editor** — edit project files with Git support without leaving the app. Built-in Git handles app diffs, worktrees and cloning without a separate Git installation. Restore open editor tabs when returning to a project.
+
+- **Document previews** — open PDF, Word, Excel and PowerPoint files directly in the project editor. Preview task attachments on the board or open saved attachments in the editor.
+
+- **Personalize the workspace** — use local UI fonts, adjust text size and app scaling, and import or export portable JSON themes.
 
 - **Branch strategy** - choose per teammate at launch: use the main checkout or run selected agents in their own git worktree. You can still spell out branch rules in the provisioning prompt.
 
@@ -287,7 +306,7 @@ Ask the lead to deliver a feature, investigate a problem or run a project. The l
 
 - **Notification system** — configurable alerts when tasks complete, agents need your response, new comments arrive, or errors occur. Route selected events to Telegram, Discord, Slack, Microsoft Teams, Google Chat or custom HTTPS webhooks
 
-- **MCP integration** — supports the built-in `mcp-server` (see [mcp-server folder](./mcp-server)) for integrating external tools and extensible agent plugins out of the box
+- **MCP integration** — supports the built-in `mcp-server` (see [mcp-server folder](./mcp-server)) for integrating external tools and extensible agent plugins out of the box. Configure supported MCP settings for individual teammates.
 
 - **Post-compact context recovery** — when the active runtime compacts its context, the app restores the key team-management instructions so kanban/task-board coordination stays consistent and important operational context is not lost
 
