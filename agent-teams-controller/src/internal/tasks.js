@@ -8,6 +8,7 @@ const agenda = require('./agenda.js');
 const { withTeamBoardLock } = require('./boardLock.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
 const { buildCommentNotificationMessage } = require('./taskCommentNotification.js');
+const { buildTaskRef, mergeTaskRefs } = require('./taskReferences.js');
 const { findRecentDuplicateTask } = require('./taskCreationDeduplication.js');
 const { isTaskOpen } = require('./taskLifecycle.js');
 const {
@@ -114,37 +115,6 @@ function maybeNotifyPreviousOwnerOnReassignment(context, previousTask, updatedTa
         warnNonCritical(`[tasks] reassignment notification failed for task ${updatedTask.id}`, error);
     }
 }
-function buildTaskRef(context, task) {
-    return {
-        taskId: task.id,
-        displayId: task.displayId || task.id,
-        teamName: context.teamName,
-    };
-}
-
-function mergeTaskRefs(primaryTaskRef, extraTaskRefs) {
-    const refs = [primaryTaskRef, ...(Array.isArray(extraTaskRefs) ? extraTaskRefs : [])]
-        .filter((ref) => ref && typeof ref === 'object');
-    const seen = new Set();
-    const merged = [];
-    for (const ref of refs) {
-        const taskId = typeof ref.taskId === 'string' ? ref.taskId.trim() : '';
-        const displayId = typeof ref.displayId === 'string' ? ref.displayId.trim() : '';
-        const teamName = typeof ref.teamName === 'string' ? ref.teamName.trim() : '';
-        const key = `${teamName || ''}:${taskId || displayId}`;
-        if ((!taskId && !displayId) || seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
-        merged.push({
-            ...(taskId ? { taskId } : {}),
-            ...(displayId ? { displayId } : {}),
-            ...(teamName ? { teamName } : {}),
-        });
-    }
-    return merged.length > 0 ? merged : undefined;
-}
-
 function getOpenBlockers(context, task) {
     const blockers = [];
     const blockerIds = Array.isArray(task.blockedBy) ? task.blockedBy : [];
