@@ -72,7 +72,7 @@ describe('team budget stop observer', () => {
       isTeamAlive: async () => true,
       warn,
     });
-    observer.observe({ ...makeStatus(), stale: true });
+    observer.observe({ ...makeStatus(), stale: true, targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], value: 0 }] }] });
     observer.observe({ ...makeStatus(), targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], incomplete: true }] }] });
     expect(stop).not.toHaveBeenCalled();
     observer.observe(makeStatus());
