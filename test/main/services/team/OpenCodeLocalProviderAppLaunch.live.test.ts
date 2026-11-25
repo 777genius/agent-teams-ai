@@ -117,7 +117,12 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     });
     expect(verificationModes).toEqual(['compatibility', 'deep']);
     expect(preflight.status, JSON.stringify(preflight, null, 2)).toBe('notes');
-    expect(preflight.modelResultsById[LOCAL_MODEL]).toMatchObject({ status: 'ready' });
+    expect(
+      preflight.modelResultsById[LOCAL_MODEL],
+      JSON.stringify(preflight, null, 2)
+    ).toMatchObject({
+      status: 'ready',
+    });
     expect(preflight.warnings).toEqual([
       expect.stringContaining('does not expose enough runtime metadata'),
     ]);
@@ -246,24 +251,8 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     expect(fakeServer.requests, progressDump).not.toContain('POST /v1/chat/completions');
     await waitUntil(
       async () => {
-        const laneIndexPath = path.join(
-          getTeamsBasePath(),
-          teamName!,
-          'runtime',
-          'opencode',
-          'lanes.json'
-        );
-        try {
-          const parsed = JSON.parse(await fs.readFile(laneIndexPath, 'utf8')) as {
-            lanes?: Record<string, unknown>;
-          };
-          return Object.keys(parsed.lanes ?? {}).length === 0;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-            return true;
-          }
-          throw error;
-        }
+        const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName!);
+        return Object.keys(laneIndex.lanes).length === 0;
       },
       15_000,
       500
@@ -291,6 +280,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     });
 
     teamName = `opencode-local-provider-restart-${Date.now()}`;
+    const progressEvents: TeamProvisioningProgress[] = [];
     await withLiveStageTimeout(
       'initial local team create',
       harness.svc.createTeam(
@@ -310,11 +300,15 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
             },
           ],
         },
-        () => undefined
+        (progress) => progressEvents.push(progress)
       ),
       300_000
     );
 
+    expect(
+      progressEvents.some((progress) => progress.message.includes('OpenCode team launch is ready')),
+      formatProgressDump(progressEvents)
+    ).toBe(true);
     const beforeOutage = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(beforeOutage.members.bob).toMatchObject({
       alive: true,
