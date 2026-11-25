@@ -1,5 +1,4 @@
 import { useAppTranslation } from '@features/localization/renderer';
-
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
@@ -17,9 +16,8 @@ import { DELIVERY_PROVIDERS } from '../../contracts';
 import { NotificationProviderLogo } from './NotificationProviderLogo';
 import { CHANNEL_SETUP_DOCS_URL, PROVIDER_SETUP_GUIDES } from './providerSetupGuide';
 
-import type { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
-
 import type { ChannelTestStatus, DeliveryProvider } from '../../contracts';
+import type { useNotificationChannelsSettings } from '../hooks/useNotificationChannelsSettings';
 
 function displayTest(status?: ChannelTestStatus): string {
   if (!status) return 'Not tested';

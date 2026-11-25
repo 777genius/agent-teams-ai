@@ -21,10 +21,19 @@ const base = {
 describe('Notification Channels domain', () => {
   it('rejects unsupported event types and arbitrary providers', () => {
     expect(() => normalizeChannelInput({ ...base, events: ['text'] })).toThrow();
-    expect(() => normalizeChannelInput({ ...base, provider: 'webhook' })).toThrow();
+    expect(() => normalizeChannelInput({ ...base, provider: 'unsupported' })).toThrow();
     expect(() => normalizeChannelInput({ ...base, provider: { toString: () => 'telegram' } })).toThrow();
     expect(isDeliveryEvent('user_inbox')).toBe(true);
     expect(isDeliveryEvent('tool_result')).toBe(false);
+  });
+
+  it('accepts the supported custom webhook provider without a Telegram chat ID', () => {
+    const secret = 'https://hooks.example.org/events';
+    expect(normalizeChannelInput({ ...base, provider: 'webhook', secret })).toMatchObject({
+      provider: 'webhook',
+      chatId: undefined,
+      secret,
+    });
   });
 
   it('rejects invalid or orphaned expected-event guards', () => {

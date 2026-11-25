@@ -6,13 +6,21 @@ import { validateProviderCredential } from '../../../core/domain/routing';
 
 import type { DeliveryEvent, DeliveryFailureCode } from '../../../contracts';
 
-type WebhookResult = { success: boolean; code?: DeliveryFailureCode };
-type Address = { address: string; family: number };
+interface WebhookResult {
+  success: boolean;
+  code?: DeliveryFailureCode;
+}
+
+interface Address {
+  address: string;
+  family: number;
+}
 
 const deniedV4 = new BlockList();
 const deniedV6 = new BlockList();
 const globalV6 = new BlockList();
 
+/* eslint-disable sonarjs/no-hardcoded-ip -- IANA special-use CIDR constants define the SSRF denylist, not connection destinations. */
 for (const [address, prefix] of [
   ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10],
   ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12],
@@ -24,6 +32,7 @@ globalV6.addSubnet('2000::', 3, 'ipv6');
 for (const [address, prefix] of [
   ['2001::', 23], ['2001:db8::', 32], ['2002::', 16],
 ] as const) deniedV6.addSubnet(address, prefix, 'ipv6');
+/* eslint-enable sonarjs/no-hardcoded-ip */
 
 /** Only globally routable destinations; deliberately reject IP literals and tunnels. */
 export function isPublicWebhookAddress(address: string): boolean {

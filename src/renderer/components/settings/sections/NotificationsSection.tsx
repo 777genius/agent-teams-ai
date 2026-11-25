@@ -6,8 +6,8 @@ import { useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  NotificationChannelsSettings,
   createNotificationDestinationRenderer,
+  NotificationChannelsSettings,
   useNotificationChannelsSettings,
 } from '@features/notification-channels/renderer';
 import { api } from '@renderer/api';
