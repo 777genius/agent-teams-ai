@@ -15,6 +15,7 @@ import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
 import { admissionRefusal, folderChange, type ScheduleAdmissionCheck } from './scheduleTarget';
+import { updateScheduleTimestamps } from './updateScheduleTimestamps';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -186,7 +187,10 @@ export class SchedulerService {
       id: randomUUID(),
       teamName: input.teamName,
       ...(input.executionMode && { executionMode: input.executionMode }),
-      ...(input.taskFirst && { taskFirst: true as const, reviewedSavedPrompt: input.reviewedSavedPrompt }),
+      ...(input.taskFirst && {
+        taskFirst: true as const,
+        reviewedSavedPrompt: input.reviewedSavedPrompt,
+      }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
       cronExpression,
@@ -224,7 +228,8 @@ export class SchedulerService {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
     await this.assertSchedulableTeam(existing.teamName, folderChange(existing, patch));
-    if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
+    if (patch.reviewedSavedPrompt && !existing.taskFirst)
+      throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
     const timezone = (patch.timezone ?? existing.timezone).trim();
@@ -245,11 +250,11 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
     // Reschedule cron job if expression or timezone changed
-    const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
-    if (reschedule && updated.status === 'active') updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    const nextJob = reschedule && updated.status === 'active'
-      ? this.prepareCronJob(updated)
-      : null;
+    const reschedule =
+      cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
+    if (reschedule && updated.status === 'active')
+      updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
+    const nextJob = reschedule && updated.status === 'active' ? this.prepareCronJob(updated) : null;
     try {
       await this.repository.saveSchedule(updated);
     } catch (error) {
@@ -392,7 +397,8 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
-    if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
+    if (this.stopped || generation !== this.lifecycleEpoch)
+      throw new Error('Scheduler stopped before dispatch');
     this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
 
     // Execute in background (don't await — triggerNow returns immediately)
@@ -415,8 +421,11 @@ export class SchedulerService {
 
   /** Prepare the replacement without touching the currently active cron timer. */
   private prepareCronJob(schedule: Schedule): Cron {
-    return new Cron(schedule.cronExpression, { timezone: schedule.timezone, paused: true },
-      () => void this.onCronTick(schedule.id));
+    return new Cron(
+      schedule.cronExpression,
+      { timezone: schedule.timezone, paused: true },
+      () => void this.onCronTick(schedule.id)
+    );
   }
 
   private activateCronJob(schedule: Schedule, job: Cron): void {
@@ -424,8 +433,10 @@ export class SchedulerService {
     this.cronJobs.set(schedule.id, job);
     job.resume();
     this.scheduleWarmUp(schedule);
-    logger.info(`Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
-      `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`);
+    logger.info(
+      `Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
+        `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`
+    );
   }
 
   /** Historic records may be invalid: log and keep the rest of startup running. */
@@ -596,18 +607,23 @@ export class SchedulerService {
       const outcome = refusal
         ? { kind: 'skipped' as const, summary: refusal }
         : schedule.executionMode
-        ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
-            this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
-          )
-        : {
-            kind: 'one_shot' as const,
-            result: await this.executor.execute({
-              runId: run.id,
-              config: launchConfig,
-              maxTurns: schedule.maxTurns,
-              maxBudgetUsd: schedule.maxBudgetUsd,
-            }),
-          };
+          ? await this.smartDispatcher?.dispatch(
+              schedule,
+              run.id,
+              () =>
+                this.stopped ||
+                generation !== this.lifecycleEpoch ||
+                this.activeRuns.get(scheduleId)?.id !== run.id
+            )
+          : {
+              kind: 'one_shot' as const,
+              result: await this.executor.execute({
+                runId: run.id,
+                config: launchConfig,
+                maxTurns: schedule.maxTurns,
+                maxBudgetUsd: schedule.maxBudgetUsd,
+              }),
+            };
       if (this.stopped || generation !== this.lifecycleEpoch) return;
       finishFinalization = this.stopBarrier.beginFinalization();
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
@@ -629,7 +645,12 @@ export class SchedulerService {
             await this.completeRun(run, 'failed', result.exitCode, undefined, errorMsg);
             await this.incrementConsecutiveFailures(schedule);
           } else {
-            retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+            retriedInternally = await this.handleRunFailure(
+              schedule,
+              run,
+              result.exitCode,
+              errorMsg
+            );
           }
         }
       }
@@ -651,7 +672,9 @@ export class SchedulerService {
         if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
-        await this.updateScheduleTimestamps(schedule);
+        await updateScheduleTimestamps(this.repository, schedule, (event) =>
+          this.emitChange(event)
+        );
         const freshSchedule = await this.repository.getSchedule(scheduleId);
         if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
       } finally {
@@ -800,32 +823,6 @@ export class SchedulerService {
         detail: `auto-paused after ${newCount} consecutive failures`,
       });
     }
-  }
-  // ===========================================================================
-  // Schedule Timestamp Updates
-  // ===========================================================================
-
-  private async updateScheduleTimestamps(schedule: Schedule): Promise<void> {
-    // Reload fresh from repo to avoid overwriting changes from incrementConsecutiveFailures
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh) return;
-
-    const now = new Date().toISOString();
-    const nextRunAt = computeScheduleNextRunAt(fresh);
-
-    const updated: Schedule = {
-      ...fresh,
-      lastRunAt: now,
-      nextRunAt: nextRunAt ?? undefined,
-      updatedAt: now,
-    };
-
-    await this.repository.saveSchedule(updated);
-    this.emitChange({
-      type: 'schedule-updated',
-      scheduleId: fresh.id,
-      teamName: fresh.teamName,
-    });
   }
 
   private releaseRunLocks(scheduleId: string): void {
