@@ -79,10 +79,19 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   private launchAdmissionGuard: (() => void) | null = null;
+  private teamBudgetAdmissionGuard: ((teamName: string) => Promise<void>) | null = null;
   private pendingLaunchAdmissions = 0;
 
   setLaunchAdmissionGuard(guard: () => void): void {
     this.launchAdmissionGuard = guard;
+  }
+
+  setTeamBudgetAdmissionGuard(guard: (teamName: string) => Promise<void>): void {
+    this.teamBudgetAdmissionGuard = guard;
+  }
+
+  assertTeamBudgetAdmission(teamName: string): Promise<void> {
+    return this.teamBudgetAdmissionGuard?.(teamName) ?? Promise.resolve();
   }
 
   private async withLaunchAdmission<T>(launch: () => Promise<T>): Promise<T> {
