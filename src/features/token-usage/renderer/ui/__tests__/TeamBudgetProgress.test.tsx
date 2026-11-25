@@ -53,13 +53,20 @@ describe('team budget card', () => {
     await act(async () => root.render(<TeamBudgetProgress teamName="beta" status={status()} />));
     expect(container.textContent).toBe('');
   });
-  it('distinguishes a stop policy from an uncertain stale status', async () => {
+  it('shows an observed limit as reached despite stale other usage', async () => {
     await act(async () => root.render(<TeamBudgetProgress teamName="alpha" status={status({ policy: 'stop_team', value: 22 })} />));
     expect(container.textContent).toContain('teamCardBlocked');
     await act(async () => root.render(<TeamBudgetProgress teamName="alpha" status={status({ policy: 'stop_team', value: 22, stale: true })} />));
-    expect(container.textContent).toContain('teamCardUnknown');
+    expect(container.textContent).toContain('teamCardBlocked');
     expect(container.querySelector('.bg-emerald-500\\/70')).toBeNull();
   });
+  it('shows unknown usage when the latest under-limit counters are stale', async () => {
+    await act(async () =>
+      root.render(<TeamBudgetProgress teamName="alpha" status={status({ policy: 'stop_team', stale: true })} />)
+    );
+    expect(container.textContent).toContain('teamCardUnknown');
+  });
+
   it('never shows a healthy budget if another configured metric is incomplete', async () => {
     const data = status({ value: 18, policy: 'block_launch' });
     data.targets[0].metrics.push({

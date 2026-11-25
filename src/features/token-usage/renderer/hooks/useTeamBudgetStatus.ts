@@ -8,17 +8,21 @@ import type { TokenUsageBudgetStatusDto } from '../../contracts';
 export function useTeamBudgetStatus(): TokenUsageBudgetStatusDto | null {
   const [status, setStatus] = useState<TokenUsageBudgetStatusDto | null>(null);
   const lastOrder = useRef<TokenUsageBudgetStatusDto['statusOrder']>(undefined);
+  const retiredEpochs = useRef(new Set<string>());
   useEffect(() => {
     let alive = true;
     let receivedEvent = false;
     const accept = (next: TokenUsageBudgetStatusDto, fromEvent: boolean): void => {
       if (!alive) return;
       if (fromEvent) receivedEvent = true;
-      if (!fromEvent && receivedEvent && !next.statusOrder) return;
       const prior = lastOrder.current;
+      if (!fromEvent && receivedEvent &&
+          (!next.statusOrder || next.statusOrder.epoch !== prior?.epoch)) return;
+      if (next.statusOrder && retiredEpochs.current.has(next.statusOrder.epoch)) return;
+      if (prior && !next.statusOrder) return;
       if (prior && next.statusOrder?.epoch === prior.epoch &&
           next.statusOrder.sequence <= prior.sequence) return;
-      if (prior && !next.statusOrder) return;
+      if (prior && next.statusOrder?.epoch !== prior.epoch) retiredEpochs.current.add(prior.epoch);
       if (next.statusOrder) lastOrder.current = next.statusOrder;
       setStatus(next);
     };
