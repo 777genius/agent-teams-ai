@@ -672,7 +672,9 @@ export class SchedulerService {
         if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
-        await updateScheduleTimestamps(this.repository, schedule, (event) => this.emitChange(event));
+        await updateScheduleTimestamps(this.repository, schedule, (event) =>
+          this.emitChange(event)
+        );
         const freshSchedule = await this.repository.getSchedule(scheduleId);
         if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
       } finally {
