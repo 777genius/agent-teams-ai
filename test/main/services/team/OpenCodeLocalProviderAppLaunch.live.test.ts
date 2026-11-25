@@ -253,6 +253,12 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     expect(progressDump).toMatch(/missing-test:0\.5b|not available|unavailable/i);
     expect(fakeServer.requests, progressDump).not.toContain('POST /v1/chat/completions');
     await waitUntil(() => hasNoOpenCodeRuntimeLanes(getTeamsBasePath(), teamName!), 15_000, 500);
+    const failedSnapshot = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(
+      failedSnapshot.members['team-lead']?.alive,
+      JSON.stringify(failedSnapshot, null, 2)
+    ).toBe(false);
+    expect(failedSnapshot.members.bob?.alive, JSON.stringify(failedSnapshot, null, 2)).toBe(false);
     clearBenignSlowConfigReadWarnings();
   }, 180_000);
 
