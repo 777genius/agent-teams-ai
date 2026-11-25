@@ -36,8 +36,15 @@ export class TeamBudgetStopObserver {
           const current = await this.ports.readCurrentStatus();
           const decision = evaluateTeamBudgetEnforcement(current, teamName);
           if (decision.action !== 'stop_team' || decision.state !== 'exceeded') return;
-          const nativeNames = await this.ports.resolveRuntimeNames?.(teamName) ?? [teamName];
-          for (const name of new Set(nativeNames)) {
+          let nativeNames: readonly string[] = [teamName];
+          try {
+            nativeNames = await this.ports.resolveRuntimeNames?.(teamName) ?? nativeNames;
+          } catch (error) {
+            // A damaged project index must not hide an independently owned
+            // native team. Never guess any project alias from that index.
+            this.ports.warn(`Budget stop could not enumerate project copies of "${teamName}"`, error);
+          }
+          for (const name of new Set([teamName, ...nativeNames])) {
             // A slow stop can overlap a user raising the limit or disabling
             // enforcement. Recheck before stopping each remaining runtime.
             const latest = evaluateTeamBudgetEnforcement(
