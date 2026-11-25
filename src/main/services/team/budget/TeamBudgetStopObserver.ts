@@ -23,7 +23,6 @@ export class TeamBudgetStopObserver {
   constructor(private readonly ports: TeamBudgetStopPorts) {}
 
   observe(status: TokenUsageBudgetStatusDto): void {
-    if (status.stale || status.degraded) return;
     const alive = new Set(this.ports.aliveTeams());
     for (const target of status.targets) {
       if (target.scope !== 'team' || target.onExceeded !== 'stop_team') continue;
