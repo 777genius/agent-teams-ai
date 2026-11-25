@@ -69,6 +69,10 @@ jobs:
           - platform: win32-x64
             runner: windows-2022
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           persist-credentials: false

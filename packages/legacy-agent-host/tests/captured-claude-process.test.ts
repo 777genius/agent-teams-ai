@@ -288,16 +288,26 @@ process.exit(7);
   }
 );
 
-test('captured native executable is pinned again at launch and sealing forbids late allocation', async () => {
-  const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');
+test('captured native executable pins bytes beyond one MiB again before launch and sealing forbids late allocation', async t => {
+  const source = `#!/bin/sh\nexit 0\n#${'TEST original bytes '.repeat(60_000)}original tail\n`;
+  const { root, profile, request } = await setup(source);
+  let allocations = 0;
+  t.mock.method(childProcess, 'spawn', (() => {
+    allocations++;
+    throw new Error('TEST process allocation must remain unreachable');
+  }) as typeof childProcess.spawn);
+  syncBuiltinESMExports();
   try {
     const custody = new CapturedProcess(profile);
-    await writeFile(profile.executable.path, '#!/bin/sh\nexit 7\n');
-    assert.throws(() => custody.launch(request), /unavailable/);
+    await writeFile(profile.executable.path, `${source.slice(0, -2)}X\n`);
+    assert.throws(() => custody.launch(request), /Native executable unavailable/);
+    assert.throws(() => new CapturedProcess(profile), /Native executable unavailable/);
     custody.seal();
     assert.throws(() => custody.launch(request), /unavailable/);
+    assert.equal(allocations, 0, 'changed trailing bytes must refuse before any process allocation');
     assert.equal(await custody.confirmStopped(), true);
   } finally {
+    t.mock.restoreAll(); syncBuiltinESMExports();
     await rm(root, { recursive: true, force: true });
   }
 });

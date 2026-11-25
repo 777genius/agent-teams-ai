@@ -4,10 +4,10 @@ import type {
   RegistrarBinding,
 } from '../../process/registeredProcessContracts.js';
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { closeSync, lstatSync, openSync, realpathSync, statSync } from 'node:fs';
 import { ChildProcess } from 'node:child_process';
 import { WindowsCapturedProcess } from './WindowsCapturedProcess.js';
+import { digestOpenExecutable } from '../../process/digestOpenExecutable.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
 import type { RetainedWindowsLaunchPort } from '../../owned-process/HostWindowsLaunch.js';
@@ -295,10 +295,14 @@ export class CapturedProcess implements CapturedProcessPort {
     if (
       !before.isFile() ||
       before.isSymbolicLink() ||
-      realpathSync(path) !== path ||
-      createHash('sha256').update(readFileSync(path)).digest('hex') !== sha256
+      realpathSync(path) !== path
     )
       throw new Error('Native executable unavailable');
+    const file = openSync(path, 'r');
+    let digest: string;
+    try { digest = digestOpenExecutable(file); }
+    finally { closeSync(file); }
+    if (digest !== sha256) throw new Error('Native executable unavailable');
     const after = lstatSync(path, { bigint: true });
     if (
       before.dev !== after.dev ||
