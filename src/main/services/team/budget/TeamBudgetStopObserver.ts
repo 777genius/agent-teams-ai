@@ -9,7 +9,7 @@ export interface TeamBudgetStopPorts {
   resolveRuntimeNames?(logicalTeamName: string): Promise<readonly string[]>;
   ownsTeam(teamName: string): Promise<boolean>;
   stopTeam(teamName: string): Promise<void>;
-  isTeamAlive(teamName: string): Promise<boolean>;
+  isTeamAlive(teamName: string): boolean | Promise<boolean>;
   warn(message: string, error: unknown): void;
 }
 

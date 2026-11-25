@@ -19,7 +19,7 @@ interface TeamBudgetRuntime {
   getAliveTeams(): string[];
   isTeamManagedByThisProfile(teamName: string): Promise<boolean>;
   stopTeam(teamName: string): Promise<void>;
-  isTeamAlive(teamName: string): Promise<boolean>;
+  isTeamAlive(teamName: string): boolean | Promise<boolean>;
 }
 
 export interface TeamBudgetNotificationFlags {
