@@ -49,7 +49,7 @@ jobs:
       EXPECTED_APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       # A maintainer opt-in is read on source events; changing a label starts no run.
       PROVE_BIG_PICKLE: ${{ (github.event_name == 'workflow_dispatch' && inputs.prove_big_pickle) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'opencode-free-model-e2e')) }}
-      SDK_SHA: 'd82a93ca4702edba8f336e1c61ea2ccf0ac5df94'
+      SDK_SHA: '408eac8ce851cce6a288b64d58094ba8aa99bab4'
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       pnpm_config_package_import_method: copy

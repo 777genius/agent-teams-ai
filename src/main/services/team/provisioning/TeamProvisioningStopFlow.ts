@@ -134,7 +134,7 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
     const stopSecondaryRuntimeLanes = ports.hasSecondaryRuntimeRuns(teamName)
       ? ports.stopMixedSecondaryRuntimeLanes(teamName)
       : null;
-    await Promise.all(
+    await awaitAllOwnedProcessStops(
       [stopPrimaryRuntimeLane, stopSecondaryRuntimeLanes].filter(
         (stop): stop is Promise<void> => stop !== null
       )

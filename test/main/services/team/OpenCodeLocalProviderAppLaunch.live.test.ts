@@ -355,7 +355,6 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       harness.svc.restartMember(teamName, 'bob'),
       360_000
     );
-    clearExpectedLocalRestartWarnings();
     await waitUntil(
       async () => {
         const [snapshot, laneIndex] = await Promise.all([
@@ -416,12 +415,53 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       500
     );
 
+    retainVerifiedLocalRestartWarning(teamName, 'bob');
     await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
     clearBenignSlowConfigReadWarnings();
   }, 720_000);
 });
 
 describe('OpenCode local provider fixture', () => {
+  it('retains only the owned restart metadata warning alongside pending stop diagnostics', () => {
+    const teamName = 'TEST-owned-restart';
+    const prefix = '[Service:TeamProvisioning]';
+    const warning =
+      `[${teamName}] Local model primary restart preflight warnings for bob: ` +
+      'qwen-test:0.5b completed the Agent Teams task_briefing -> message_send ' +
+      'coordination probe with valid tool arguments. Custom OpenAI-compatible server ' +
+      'does not expose enough runtime metadata to prove the effective context size; ' +
+      'use at least 16K (64K recommended).';
+    const otherWarnings: unknown[][] = [
+      [prefix, `[${teamName}] Slow OpenCode stop: primary lane stop took 11982ms (stopped=true)`],
+      [prefix, warning.replace(teamName, 'TEST-other-team')],
+      [prefix, warning.replace('for bob:', 'for alice:')],
+      [prefix, warning.replace('with valid tool arguments', 'with invalid tool arguments')],
+      [prefix, `${warning} Additional failure.`],
+      [prefix, warning, new Error('restart failed')],
+      ['unrelated warning'],
+    ];
+    const warn = vi.mocked(console.warn);
+    const error = vi.mocked(console.error);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    try {
+      console.warn(prefix, warning);
+      for (const call of otherWarnings) console.warn(...call);
+      console.error(prefix, warning);
+
+      retainVerifiedLocalRestartWarning(teamName, 'bob');
+
+      expect(warn.mock.calls).toEqual(otherWarnings);
+      expect(error.mock.calls).toEqual([[prefix, warning]]);
+      expect(info).toHaveBeenCalledExactlyOnceWith(
+        `[OpenCodeLocalProviderAppLaunch.live] verified local restart: ${prefix} ${warning}`
+      );
+    } finally {
+      warn.mockClear();
+      error.mockClear();
+      info.mockRestore();
+    }
+  });
+
   it.each(['absent', 'empty'] as const)(
     'retains slow-stop timing only after the owned stop succeeds and the lane index is %s',
     async (terminalIndex) => {
@@ -938,19 +978,24 @@ function clearExpectedLocalServerOutageErrors(port: number): void {
   }
 }
 
-function clearExpectedLocalRestartWarnings(): void {
+function retainVerifiedLocalRestartWarning(teamName: string, memberName: string): void {
+  // Called only after restart, live-lane recovery and fresh message delivery pass.
+  // Other warnings, including stop timing awaiting cleanup proof, stay visible.
+  const prefix = '[Service:TeamProvisioning]';
+  const warning =
+    `[${teamName}] Local model primary restart preflight warnings for ${memberName}: ` +
+    'qwen-test:0.5b completed the Agent Teams task_briefing -> message_send ' +
+    'coordination probe with valid tool arguments. Custom OpenAI-compatible server ' +
+    'does not expose enough runtime metadata to prove the effective context size; ' +
+    'use at least 16K (64K recommended).';
   const warn = vi.mocked(console.warn);
-  if (
-    warn.mock.calls.length > 0 &&
-    warn.mock.calls.every((call) => {
-      const message = call.map((part) => String(part)).join(' ');
-      return (
-        message.includes('Local model') &&
-        message.includes('restart preflight warnings') &&
-        message.includes('does not expose enough runtime metadata')
+  for (let index = warn.mock.calls.length - 1; index >= 0; index -= 1) {
+    const call = warn.mock.calls[index];
+    if (call.length === 2 && call[0] === prefix && call[1] === warning) {
+      console.info(
+        `[OpenCodeLocalProviderAppLaunch.live] verified local restart: ${prefix} ${warning}`
       );
-    })
-  ) {
-    warn.mockClear();
+      warn.mock.calls.splice(index, 1);
+    }
   }
 }
