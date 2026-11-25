@@ -42,6 +42,7 @@ export interface TokenUsageAnalyticsServiceDeps {
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
   gatewayUsage?: TokenUsageGatewayUsagePort;
+  budgetTeamNameAliases?: (names: readonly string[]) => Promise<ReadonlyMap<string, string>>;
   logger?: TokenUsageLoggerPort;
 }
 
@@ -247,10 +248,16 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
     }
     const policy = this.deps.budgetNotificationSettings?.getSettings();
     const health = await this.gatewayHealth(ledger?.sourceStates ?? []);
+    const rawNames = [
+      ...(ledger?.runs ?? []).map((run) => run.teamName),
+      ...(ledger?.events ?? []).map((event) => event.teamName),
+    ].filter((name): name is string => typeof name === 'string');
+    const teamNameAliases = await this.deps.budgetTeamNameAliases?.([...new Set(rawNames)]);
     const status = buildBudgetStatus({
       now,
       settings,
       ledger,
+      teamNameAliases,
       usageUpdatedAt: this.usageUpdatedAt,
       degraded: this.refreshDegraded || readFailed || health.degraded,
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },

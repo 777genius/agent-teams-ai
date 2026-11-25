@@ -6,6 +6,7 @@ import type { TokenUsageBudgetStatusDto } from '@features/token-usage/contracts'
 export interface TeamBudgetStopPorts {
   readCurrentStatus(): Promise<TokenUsageBudgetStatusDto>;
   aliveTeams(): string[];
+  resolveRuntimeNames?(logicalTeamName: string): Promise<readonly string[]>;
   ownsTeam(teamName: string): Promise<boolean>;
   stopTeam(teamName: string): Promise<void>;
   isTeamAlive(teamName: string): Promise<boolean>;
@@ -23,11 +24,10 @@ export class TeamBudgetStopObserver {
   constructor(private readonly ports: TeamBudgetStopPorts) {}
 
   observe(status: TokenUsageBudgetStatusDto): void {
-    const alive = new Set(this.ports.aliveTeams());
     for (const target of status.targets) {
       if (target.scope !== 'team' || target.onExceeded !== 'stop_team') continue;
       const teamName = rawTeamName(target.id);
-      if (!teamName || !alive.has(teamName) || this.inFlight.has(teamName)) continue;
+      if (!teamName || this.inFlight.has(teamName)) continue;
       if (evaluateTeamBudgetEnforcement(status, teamName).state !== 'exceeded') continue;
       this.inFlight.add(teamName);
       void Promise.resolve()
@@ -36,11 +36,16 @@ export class TeamBudgetStopObserver {
           const current = await this.ports.readCurrentStatus();
           const decision = evaluateTeamBudgetEnforcement(current, teamName);
           if (decision.action !== 'stop_team' || decision.state !== 'exceeded') return;
-          if (!(await this.ports.ownsTeam(teamName))) return;
-          if (!this.ports.aliveTeams().includes(teamName)) return;
-          await this.ports.stopTeam(teamName);
-          if (await this.ports.isTeamAlive(teamName)) {
-            throw new Error('Stop returned without a confirmed stopped runtime');
+          const nativeNames = await this.ports.resolveRuntimeNames?.(teamName) ?? [teamName];
+          for (const name of new Set(nativeNames)) {
+            if (!this.ports.aliveTeams().includes(name)) continue;
+            if (!(await this.ports.ownsTeam(name))) {
+              throw new Error('Cannot prove runtime ownership for budget stop');
+            }
+            await this.ports.stopTeam(name);
+            if (await this.ports.isTeamAlive(name)) {
+              throw new Error('Stop returned without a confirmed stopped runtime');
+            }
           }
         })
         .catch((error: unknown) => this.ports.warn(`Budget stop failed for "${teamName}"`, error))

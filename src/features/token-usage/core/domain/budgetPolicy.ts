@@ -1,7 +1,7 @@
-import { LEGACY_COMBINED_TEAM_ID, teamIdentityLabel, teamIdForName } from '../../contracts';
+import { LEGACY_COMBINED_TEAM_ID, teamIdentityLabel, teamIdForName, rawTeamName } from '../../contracts';
 
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
-import { runProjectKey, runTeamKey } from './budgetScopeKeys';
+import { runProjectKey } from './budgetScopeKeys';
 import { normalizeCostBreakdown, normalizeTokenBreakdown } from './tokenUsageTotals';
 
 import type {
@@ -51,6 +51,8 @@ export function buildBudgetStatus(input: {
   usageUpdatedAt?: string;
   degraded: boolean;
   policy: TokenUsageBudgetStatusDto['notificationPolicy'];
+  /** Verified project-runtime aliases counted against their parent team. */
+  teamNameAliases?: ReadonlyMap<string, string>;
   gateway?: {
     /** Team ids with missing or degraded gateway usage; undefined inventory fails closed. */
     degradedTeamIds?: readonly string[];
@@ -66,15 +68,26 @@ export function buildBudgetStatus(input: {
     options.set(key(scope, id), { scope, id, label });
   };
   const gatewayMarkedProjects = new Set<string>();
+  const normalizeName = (name: string | undefined): string | undefined =>
+    name === undefined ? undefined : (input.teamNameAliases?.get(name) ?? name);
+  const teamScope = (name: string | undefined) => {
+    const id = teamIdForName(normalizeName(name));
+    return { id, label: teamIdentityLabel(id) };
+  };
   addOption('global', 'global', 'All teams');
   for (const run of runs) {
-    const team = runTeamKey(run);
+    const team = teamScope(run.teamName);
     const project = runProjectKey(run);
     addOption('team', team.id, team.label);
     addOption('project', project.id, project.label);
     if (run.gatewayUsageRef) gatewayMarkedProjects.add(project.id);
   }
-  const degradedGatewayTeams = new Set(input.gateway?.degradedTeamIds ?? []);
+  const degradedGatewayTeams = new Set(
+    (input.gateway?.degradedTeamIds ?? []).map((id) => {
+      const physicalName = rawTeamName(id);
+      return physicalName === undefined ? id : teamIdForName(normalizeName(physicalName));
+    })
+  );
   const coverageIncomplete = (scope: TokenUsageBudgetScope, id: string): boolean =>
     scope === 'global'
       ? Boolean(input.gateway?.inventoryUnavailable) || degradedGatewayTeams.size > 0
@@ -95,10 +108,8 @@ export function buildBudgetStatus(input: {
   const runById = new Map(runs.map((run) => [run.appRunId, run]));
   for (const event of attributed.attributed) {
     const run = runById.get(event.appRunId);
-    const teamName = run?.teamName ?? event.teamName;
-    const team = run
-      ? runTeamKey(run)
-      : { id: teamIdForName(teamName), label: teamIdentityLabel(teamIdForName(teamName)) };
+    const teamName = normalizeName(run?.teamName ?? event.teamName);
+    const team = teamScope(teamName);
     const project = run ? runProjectKey(run) : null;
     const cost = normalizeCostBreakdown(event.cost);
     const tokens = normalizeTokenBreakdown(event.tokens).totalTokens;

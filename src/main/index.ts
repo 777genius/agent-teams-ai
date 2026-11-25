@@ -2371,6 +2371,7 @@ async function initializeServices(): Promise<void> {
       'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
     ),
     budgetNotificationSettings: budgetControls.notificationSettings,
+    budgetTeamNameAliases: budgetControls.resolveBudgetAliases,
     budgetNotificationSink: createBudgetNotificationSink(notificationManager),
     publisher: {
       publishBudgetStatus: (status) => {
