@@ -317,8 +317,9 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     expect(afterBlockedRestartLaneIndex).toEqual(beforeOutageLaneIndex);
 
     fakeServer = await runLiveCaseStage(owned, 'restore local provider', async () => {
-      owned.fakeServer = await startFakeOpenAiCompatibleServer(localServerPort);
-      return owned.fakeServer;
+      const server = await startFakeOpenAiCompatibleServer(localServerPort);
+      owned.fakeServer = server;
+      return server;
     }, 10_000);
     await runLiveCaseStage(owned,
       'recovered local teammate restart',

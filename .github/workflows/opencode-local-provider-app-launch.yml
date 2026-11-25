@@ -109,6 +109,14 @@ jobs:
           node scripts/ci/install-dependencies-with-retry.mjs
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
+      - name: Verify local provider fixture formatting and regressions
+        run: |
+          set -euo pipefail
+          fixture=test/main/services/team/OpenCodeLocalProviderAppLaunch.live.test.ts
+          pnpm exec prettier "$fixture" > "$TEST_EVIDENCE/fixture.formatted.ts"
+          diff -u "$fixture" "$TEST_EVIDENCE/fixture.formatted.ts"
+          pnpm lint:fast:files -- "$fixture"
+          pnpm exec vitest run --maxWorkers=1 "$fixture" -t '^OpenCode local provider fixture'
       - name: Install exact native OpenCode package without install scripts
         env:
           OPENCODE_PIN: ${{ steps.pins.outputs.opencode }}
