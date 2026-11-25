@@ -18,7 +18,7 @@ describe('budget admission on secondary runtime-spawning entrypoints', () => {
     const runtimeRetry = vi.spyOn(
       TeamProvisioningOpenCodeAggregatePrimaryFacade.prototype,
       'retryFailedOpenCodeSecondaryLanes'
-    ).mockResolvedValue({ attempted: [], confirmed: [], pending: [], failed: [] });
+    ).mockResolvedValue({ attempted: [], confirmed: [], pending: [], failed: [], skipped: [] });
     const runtimeAttach = vi.spyOn(
       TeamProvisioningOpenCodeAggregatePrimaryFacade.prototype,
       'attachLiveRosterMember'
