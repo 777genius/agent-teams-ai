@@ -51,12 +51,12 @@ import type {
   EffortLevel,
   TeamChangeEvent,
   TeamCreateRequest,
+  RetryFailedOpenCodeSecondaryLanesResult,
   TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProviderId,
   TeamProvisioningProgress,
-  RetryFailedOpenCodeSecondaryLanesResult,
 } from '@shared/types';
 
 /** Stable app-shell facade. Construction and orchestration live in focused delegate layers. */

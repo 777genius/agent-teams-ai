@@ -30,7 +30,9 @@ const TEAM_PROVISIONING_SERVICE_FORMAT_OPTIONS: PrettierOptions = {
 const SUBSCRIPTION_RUNTIME_REFERENCE_PATTERN = /subscription[-_\s]+runtime|subscriptionRuntime/i;
 const TEAM_PROVISIONING_SERVICE_CLASS_NAME = 'TeamProvisioningService';
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
+  'assertTeamBudgetAdmission',
   'assessLeadRuntimeRestart',
+  'attachLiveRosterMember',
   'createTeam',
   // The launch prompt reaches the lead through the inbox rather than the
   // orchestrator leadPrompt, and the launch flow drives it from outside.
@@ -43,10 +45,14 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'isTeamManagedByThisProfileSync',
   'launchTeam',
   // Opening a team repairs crash-stale task intervals only for teams this profile manages.
+  'reattachOpenCodeOwnedMemberLane',
+  'rebootstrapOpenCodeAggregatePrimaryLane',
   'repairStaleTaskActivityIntervalsBeforeSnapshot',
   // Human message send may explicitly repair a verified OpenCode recipient identity.
   'resolveRuntimeRecipientProviderIdForUserSend',
   'restartLeadRuntime',
+  'restartMember',
+  'retryFailedOpenCodeSecondaryLanes',
   // Both watchdog passes are admitted only for teams this profile manages.
   'scanOpenCodePromptDeliveryWatchdog',
   'setLaunchAdmissionGuard',
@@ -55,6 +61,7 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
+  'assertTeamBudgetAdmission',
   'assessLeadRuntimeRestart',
   'attachLiveRosterMember',
   'buildCrossProviderMemberArgs',
@@ -264,6 +271,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     name: 'memberGatewayRuntimeSeams',
     readonly: false,
     type: 'MemberGatewayRuntimeSeams | null',
+  },
+  {
+    accessibility: 'private',
+    defaultNew: null,
+    name: 'budgetAdmission',
+    readonly: true,
+    type: '(teamName: string) => Promise<void>',
   },
 ] as const;
 
