@@ -38,13 +38,18 @@ export class TeamBudgetStopObserver {
           if (decision.action !== 'stop_team' || decision.state !== 'exceeded') return;
           const nativeNames = await this.ports.resolveRuntimeNames?.(teamName) ?? [teamName];
           for (const name of new Set(nativeNames)) {
-            if (!this.ports.aliveTeams().includes(name)) continue;
-            if (!(await this.ports.ownsTeam(name))) {
-              throw new Error('Cannot prove runtime ownership for budget stop');
-            }
-            await this.ports.stopTeam(name);
-            if (await this.ports.isTeamAlive(name)) {
-              throw new Error('Stop returned without a confirmed stopped runtime');
+            try {
+              if (!this.ports.aliveTeams().includes(name)) continue;
+              if (!(await this.ports.ownsTeam(name))) {
+                throw new Error('Cannot prove runtime ownership for budget stop');
+              }
+              await this.ports.stopTeam(name);
+              if (await this.ports.isTeamAlive(name)) {
+                throw new Error('Stop returned without a confirmed stopped runtime');
+              }
+            } catch (error) {
+              // One broken project runtime must not prevent stopping its siblings.
+              this.ports.warn(`Budget stop failed for "${teamName}" runtime "${name}"`, error);
             }
           }
         })

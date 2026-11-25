@@ -31,16 +31,20 @@ export interface TeamBudgetNotificationFlags {
 
 function createBudgetAccess(getReader: () => TeamBudgetReader | null) {
   const projectContexts = TeamProjectContextRegistry.fromCurrentApp();
-  const resolveBudgetAliases = async (
-    names: readonly string[]
-  ): Promise<ReadonlyMap<string, string>> => {
+  const resolveBudgetAliases = async (names: readonly string[]) => {
     const lookup = await projectContexts.resolveOwnedExecutionAliases(names);
     const aliases = new Map<string, string>();
-    for (const [name, result] of lookup) {
-      if ('error' in result) throw result.error;
-      if (result.alias) aliases.set(name, result.alias.logicalTeamName);
+    const unresolvedNames: string[] = [];
+    for (const name of names) {
+      const result = lookup.get(name);
+      if (!result || 'error' in result) {
+        // A foreign or corrupted entry must not hide unrelated teams' budgets.
+        unresolvedNames.push(name);
+      } else if (result.alias) {
+        aliases.set(name, result.alias.logicalTeamName);
+      }
     }
-    return aliases;
+    return { aliases, unresolvedNames };
   };
   const read = (): TeamBudgetReader => {
     const reader = getReader();
@@ -54,11 +58,12 @@ function createBudgetAccess(getReader: () => TeamBudgetReader | null) {
 export function createTeamBudgetAdmission(
   getReader: () => TeamBudgetReader | null
 ): (teamName: string) => Promise<void> {
-  const { read, resolveBudgetAliases } = createBudgetAccess(getReader);
+  const { read, projectContexts } = createBudgetAccess(getReader);
   return async (teamName) => {
     const reader = read();
-    const aliases = await resolveBudgetAliases([teamName]);
-    const logicalTeam = aliases.get(teamName) ?? teamName;
+    // Admission is strict: never treat an unreadable runtime alias as a native team.
+    const owner = await projectContexts.resolveOwnedExecutionAlias(teamName);
+    const logicalTeam = owner?.logicalTeamName ?? teamName;
     const settings = await reader.getBudgetSettings();
     if ((settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify') === 'notify') return;
     let status = await reader.getBudgetStatus();

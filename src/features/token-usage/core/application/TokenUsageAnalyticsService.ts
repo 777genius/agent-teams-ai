@@ -1,4 +1,4 @@
-import { teamIdForName, validateTeamIds } from '../../contracts';
+import { rawTeamName, teamIdForName, validateTeamIds } from '../../contracts';
 import { budgetPeriod, buildBudgetStatus, buildTokenUsageSnapshot } from '../domain';
 
 import { SerialQueue } from './SerialQueue';
@@ -17,6 +17,7 @@ import type {
 import type {
   TokenUsageAnalyticsServicePort,
   TokenUsageBudgetNotificationEvaluatorPort,
+  TokenUsageBudgetTeamAliasResolution,
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetSettingsRepositoryPort,
   TokenUsageClockPort,
@@ -42,7 +43,9 @@ export interface TokenUsageAnalyticsServiceDeps {
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
   gatewayUsage?: TokenUsageGatewayUsagePort;
-  budgetTeamNameAliases?: (names: readonly string[]) => Promise<ReadonlyMap<string, string>>;
+  budgetTeamNameAliases?: (
+    names: readonly string[]
+  ) => Promise<TokenUsageBudgetTeamAliasResolution>;
   logger?: TokenUsageLoggerPort;
 }
 
@@ -248,18 +251,36 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
     }
     const policy = this.deps.budgetNotificationSettings?.getSettings();
     const health = await this.gatewayHealth(ledger?.sourceStates ?? []);
+    const period = budgetPeriod(now);
+    const currentEvents = (ledger?.events ?? []).filter((event) => {
+      const occurredAt = Date.parse(event.occurredAt);
+      return occurredAt >= Date.parse(period.from) && occurredAt < Date.parse(period.to);
+    });
+    const currentRunIds = new Set(currentEvents.map((event) => event.appRunId));
     const rawNames = [
-      ...(ledger?.runs ?? []).map((run) => run.teamName),
-      ...(ledger?.events ?? []).map((event) => event.teamName),
+      ...(ledger?.runs ?? []).filter((run) => currentRunIds.has(run.appRunId))
+        .map((run) => run.teamName),
+      ...currentEvents.map((event) => event.teamName),
+      ...health.degradedTeamIds.map(rawTeamName),
     ].filter((name): name is string => typeof name === 'string');
-    const teamNameAliases = await this.deps.budgetTeamNameAliases?.([...new Set(rawNames)]);
+    const uniqueNames = [...new Set(rawNames)];
+    let aliasResolution: TokenUsageBudgetTeamAliasResolution | undefined;
+    if (this.deps.budgetTeamNameAliases && uniqueNames.length) {
+      try {
+        aliasResolution = await this.deps.budgetTeamNameAliases(uniqueNames);
+      } catch (error) {
+        this.deps.logger?.warn('Failed to resolve team budget runtime ownership', error);
+        aliasResolution = { aliases: new Map(), unresolvedNames: uniqueNames };
+      }
+    }
     const status = buildBudgetStatus({
       now,
       settings,
       ledger,
-      teamNameAliases,
+      teamNameAliases: aliasResolution?.aliases,
       usageUpdatedAt: this.usageUpdatedAt,
-      degraded: this.refreshDegraded || readFailed || health.degraded,
+      degraded: this.refreshDegraded || readFailed || health.degraded ||
+        Boolean(aliasResolution?.unresolvedNames.length),
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },
       gateway: {
         degradedTeamIds: health.degradedTeamIds,
