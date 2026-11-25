@@ -20,6 +20,13 @@ import { registerTokenUsageHttp } from '../registerTokenUsageHttp';
 
 import type { TokenUsageFeatureFacade } from '../../../../composition/createTokenUsageFeature';
 
+// The native process path is exercised separately in team-stop escalation tests.
+// Here the process adapter is fake; never inspect real profile-owned runtime paths.
+vi.mock('@main/services/team/lifecycle/stopTeamWithVerifiedEscalation', () => ({
+  stopTeamWithVerifiedEscalation: (name: string, runtime: { stopTeam(team: string): Promise<void> }) =>
+    runtime.stopTeam(name),
+}));
+
 vi.mock('@features/team-project-context/main', () => ({
   TeamProjectContextRegistry: {
     fromCurrentApp: () => ({
