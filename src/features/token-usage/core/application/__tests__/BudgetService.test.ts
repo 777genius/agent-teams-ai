@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { testEvent, testRun } from '../../domain/__tests__/budgetFixtures';
-import { TokenUsageAnalyticsService } from '../TokenUsageAnalyticsService';
 import { evaluateTeamBudgetEnforcement } from '../../domain/teamBudgetEnforcement';
-
-import type { TokenUsageAnalyticsServiceDeps } from '../TokenUsageAnalyticsService';
+import { TokenUsageAnalyticsService } from '../TokenUsageAnalyticsService';
 
 import type {
   TokenUsageBudgetSettingsDto,
@@ -12,6 +10,7 @@ import type {
   TokenUsageEventDto,
   TokenUsageRunDto,
 } from '../../../contracts';
+import type { TokenUsageAnalyticsServiceDeps } from '../TokenUsageAnalyticsService';
 
 // Catches closed-screen freshness starvation, concurrent importer writes, erased failure health and month reuse.
 function fixture(

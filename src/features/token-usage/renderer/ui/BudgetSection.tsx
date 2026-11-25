@@ -1,7 +1,8 @@
 import { useState } from 'react';
 
-import { namedTeamId } from '../../contracts';
 import { useStore } from '@renderer/store';
+
+import { namedTeamId } from '../../contracts';
 
 import { useOpenTokenUsageNotificationSettings } from '../hooks/useOpenTokenUsageNotificationSettings';
 import { useTokenUsageBudgetSettings } from '../hooks/useTokenUsageBudgetSettings';
