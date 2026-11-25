@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { Server } from 'node:http';
 import { stripTypeScriptTypes } from 'node:module';
@@ -12,6 +12,7 @@ import { runInNewContext } from 'node:vm';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { createRuntimeMemberProviderFactory } from '../dist/composition/createRuntimeMemberProviderFactory.js';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { beginModelReadinessAuthorityTiming, beginModelReadinessNamespaceTiming, createModelReadinessTiming } from '../dist/diagnostics/modelReadinessTiming.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
@@ -833,9 +834,11 @@ function profile(root: string): TeamHostProfile {
 }
 
 
-async function composedHost(t: TestContext, action: (context: MemberProviderContext) => Promise<Awaited<ReturnType<DriverFactory['open']>>>) {
+async function composedHost(t: TestContext, action: (context: MemberProviderContext) => Promise<Awaited<ReturnType<DriverFactory['open']>>>,
+  configure?: (selected: TeamHostProfile) => void) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-factory-open-diagnostic-')));
   const selected = profile(root), input = new PassThrough(), output = new PassThrough();
+  configure?.(selected);
   const replies = new Map<number, { resolve(value: unknown): void; reject(error: unknown): void }>();
   let pending = '', sequence = 0, providerCalls = 0;
   output.on('data', (chunk: Buffer) => {
@@ -887,6 +890,44 @@ async function composedHost(t: TestContext, action: (context: MemberProviderCont
   });
   return { open, providerCalls: () => providerCalls, root };
 }
+
+test('real factory retains the original readiness refusal before a provider reports generic unavailability',
+  { timeout: 30_000 }, async t => {
+    const records = capture(t), original = Error('PRIVATE-generic-provider-unavailable');
+    const f = await composedHost(t, async context => {
+      assert.equal(context.canAllocate(), true, 'the original captured readiness still admits allocation');
+      writeFileSync(join(context.profile.cwd, 'opencode.json'), '{"TEST":"changed-source"}');
+      assert.equal(context.canAllocate(), false, 'fresh readiness refuses the changed original source');
+      assert.equal(context.canAllocate(), false, 'a later guard cannot replace the first diagnostic');
+      throw original;
+    }, selected => {
+      const previous = selected.runtime!.members[0]!, root = selected.owner.storageRoot;
+      selected.runtime!.members = [{
+        provider: 'opencode', protocolRevision: '1.19.4',
+        teamId: previous.teamId, memberId: previous.memberId, principalId: previous.principalId,
+        sessionId: previous.sessionId, generation: previous.generation, configRevision: previous.configRevision,
+        cwd: root, model: 'TEST-model', accountBinding: previous.accountBinding, executable: previous.executable,
+        environment: { HOME: root, XDG_CONFIG_HOME: root, XDG_DATA_HOME: root, XDG_CACHE_HOME: root },
+        endpoint: 'http://127.0.0.1:9', nativeOptions: { providerId: 'TEST-provider', agent: 'build' },
+        limits: previous.limits,
+      }];
+      writeFileSync(join(root, 'opencode.json'), '{}');
+      selected.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(selected, {
+        method: 'runtime.open', teamId: previous.teamId, commandId: 'TEST-original-open',
+        payload: { memberId: previous.memberId },
+      })];
+    });
+    await f.open();
+    assert.equal(f.providerCalls(), 1);
+    assert.deepEqual(records.map(({ source, phase, category }) => ({ source, phase, category })), [
+      { source: 'factory', phase: 'model-readiness', category: 'held' },
+      { source: 'runtime', phase: 'driver-open', category: 'unknown' },
+    ]);
+    const state = new FileRuntimeStore(f.root).fenced(binding, tx => tx.get());
+    assert.equal(state?.phase, 'held'); assert.equal(state?.custody, 'unknown');
+    assert.equal(state?.diagnostic, 'open-unknown');
+    assert.equal(JSON.stringify(records).includes('PRIVATE-'), false);
+  });
 
 for (const cleanupFailure of [false, true]) {
   test('real composition keeps the first factory refusal before endpoint close; cleanup failure=' + cleanupFailure,

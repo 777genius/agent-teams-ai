@@ -218,10 +218,14 @@ export function createHostTeamsApi(
     if (!connection) throw new Error('Host team unavailable');
     return connection;
   }
-  async function selected(key: string, check: CurrentScope) {
+  async function selected(key: string, check: CurrentScope, assertOriginal?: () => void) {
+    assertOriginal?.();
     const bindings = await connections(check);
+    assertOriginal?.();
     const connection = await resolveConnection(key, check, bindings);
+    assertOriginal?.();
     const observed = await snapshot(connection, check);
+    assertOriginal?.();
     return {
       connection,
       snapshot: remapSnapshot(observed.data, key, bindings),
@@ -590,7 +594,11 @@ export function createHostTeamsApi(
   };
   const logStats = createHostLogStatsApi(activityReadOptions);
   const lead = createHostLeadApi(activityReadOptions);
-  const taskActivity = createHostTaskActivityApi(activityReadOptions);
+  const taskActivity = createHostTaskActivityApi({
+    ...activityReadOptions,
+    readTask: (key, taskId, check, assertOriginal) =>
+      createHostTaskReads(backend, (key) => selected(key, check, assertOriginal)).getTask(key, taskId),
+  });
   const killProcess = createHostProcessControls({
     backend,
     captureScope,

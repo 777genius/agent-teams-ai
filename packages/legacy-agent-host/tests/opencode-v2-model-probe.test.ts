@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -372,6 +372,54 @@ test(
     assert.deepEqual(readdirSync(f.root), []);
   }
 );
+
+for (const change of ['writer', 'sealed', 'namespace', 'selection'] as const) {
+  test(`V2 Team probe checks its writer once per target observation and refuses ${change} changes`,
+    { skip: !supported }, async (t) => {
+      const f = fixture();
+      t.after(f.cleanup);
+      const data = join(f.root, 'TEST-account-data');
+      mkdirSync(data);
+      f.management.environment.XDG_DATA_HOME = data;
+      let writerCurrent = true, selectionCurrent = true, writerChecks = 0;
+      const observations: number[] = [];
+      const coordinator = new ProviderManagementCoordinator([f.management], () => {
+        writerChecks++;
+        if (!writerCurrent) throw new Error('TEST writer revoked');
+      }, f.root);
+      const prepare = coordinator.prepareTeamProbe(f.management);
+      const probe = prepare(f.input, () => {
+        observations.push(writerChecks);
+        writerChecks = 0;
+        return selectionCurrent;
+      });
+      try {
+        // Initial admission has its own fences; each later live selection still
+        // requires a fresh writer observation, without an adjacent duplicate.
+        assert.ok(observations.length > 1, 'preparation must exercise repeated live selections');
+        assert.deepEqual(observations.slice(1), Array(observations.length - 1).fill(1));
+        const selectionCalls = observations.length;
+        if (change === 'writer') writerCurrent = false;
+        else if (change === 'sealed') coordinator.seal();
+        else if (change === 'selection') selectionCurrent = false;
+        else {
+          renameSync(data, data + '-original');
+          mkdirSync(data);
+        }
+        const before = { root: readdirSync(f.root).sort(), data: readdirSync(data).sort() };
+        await assert.rejects(probe.run(new AbortController().signal), { code: 'held' });
+        assert.equal(observations.length, selectionCalls + (change === 'selection' ? 1 : 0),
+          'refused writer or target must stop before consulting the captured selection');
+        assert.deepEqual({ root: readdirSync(f.root).sort(), data: readdirSync(data).sort() }, before,
+          'refusal must precede native namespace allocation, not conceal it during cleanup');
+        assert.equal(await probe.close(), true);
+      } finally {
+        writerCurrent = true;
+        await probe.close();
+        await coordinator.close();
+      }
+    });
+}
 
 test('native model admission requires its declared variant and a still-current owner', async () => {
   const selection = { providerID: 'TEST-provider', id: 'TEST-model', variant: 'high' };

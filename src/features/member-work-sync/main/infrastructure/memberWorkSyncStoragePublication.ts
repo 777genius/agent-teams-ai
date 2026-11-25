@@ -79,6 +79,10 @@ export async function captureMemberWorkSyncReplicaPublication(
       await assertMemberWorkSyncDirtyPrimaryOwnership(identity, canonical, primaryIncarnation, gateway);
     }
   }
+  const assertNoUnboundImport = async () => {
+    if (await replica.readUnboundImport(teamName))
+      throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+  };
   return {
     binding,
     identity,
@@ -91,8 +95,12 @@ export async function captureMemberWorkSyncReplicaPublication(
       validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
       validateMemberWorkSyncPrimaryRecords(identity, records);
     },
-    markDirty: () => replica.markDirty(teamName, identity?.incarnation),
+    async markDirty(): Promise<void> {
+      await assertNoUnboundImport();
+      await replica.markDirty(teamName, identity?.incarnation);
+    },
     async writeClean(): Promise<void> {
+      await assertNoUnboundImport();
       if ((await gateway.readPrimaryIncarnation(teamName)) !== (identity?.incarnation ?? null))
         throw new MemberWorkSyncSafetyJsonReadError('unavailable');
       const records = await gateway.listTeamSnapshot(teamName);

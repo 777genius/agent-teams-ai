@@ -1,7 +1,9 @@
 import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
 
+import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import {
   areSnapshotRecordSetsEquivalent,
+  memberWorkSyncRecordSetDigest,
   recordsToSnapshot,
   snapshotToRecords,
 } from './memberWorkSyncSqliteMappers';
@@ -25,10 +27,28 @@ export async function prepareMemberWorkSyncColdPrimary(input: {
 }): Promise<void> {
   const { teamName, gateway, replica, sqlite, publication } = input;
   const incarnation = publication.identity?.incarnation;
-  const source = await replica.readForPrimary(teamName, input.allowDirtyRecovery);
+  const pending = await replica.readUnboundImport(teamName);
+  if (
+    pending &&
+    (incarnation !== undefined ||
+      !input.allowDirtyRecovery ||
+      memberWorkSyncRecordSetDigest(snapshotToRecords(teamName, pending.snapshot)) !==
+        pending.expectedDigest)
+  )
+    throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+  const source = pending?.snapshot ?? (await replica.readForPrimary(teamName, input.allowDirtyRecovery));
   const plan = await sqlite.prepareCanonicalImport(teamName, source, incarnation);
   const expected = recordsToSnapshot(teamName, plan.records);
   publication.validateImport(expected, plan.records);
+  if (pending) {
+    const observed = memberWorkSyncRecordSetDigest(plan.canonicalRecords);
+    if (
+      (await gateway.ping()).integrity !== 'ok' ||
+      (await gateway.readPrimaryIncarnation(teamName)) !== null ||
+      (observed !== pending.preimageDigest && observed !== pending.expectedDigest)
+    )
+      throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+  }
   // A prior bound CLEAN publication, or the established nonempty all-status
   // incarnation proof, can migrate pre-v8 state. Bare dirty empty state cannot.
   const importRequired =
@@ -38,8 +58,24 @@ export async function prepareMemberWorkSyncColdPrimary(input: {
   // Retain all validated incoming rows across the import crash window. A dirty
   // candidate is evidence for authority preparation, never permission to replay a claim.
   const candidate = incarnation !== undefined && importRequired ? expected : undefined;
+  const unboundImport =
+    incarnation === undefined && importRequired
+      ? {
+          preimageDigest: memberWorkSyncRecordSetDigest(plan.canonicalRecords),
+          expectedDigest: memberWorkSyncRecordSetDigest(plan.records),
+          snapshot: expected,
+        }
+      : pending;
+  if (
+    unboundImport &&
+    memberWorkSyncRecordSetDigest(snapshotToRecords(teamName, unboundImport.snapshot)) !==
+      unboundImport.expectedDigest
+  )
+    throw new MemberWorkSyncSafetyJsonReadError('unavailable');
   if (candidate) await replica.markDirtyWithRecoveryCandidate(teamName, incarnation!, candidate);
-  else await publication.markDirty();
+  else if (unboundImport) {
+    if (importRequired) await replica.markDirtyWithUnboundImport(teamName, unboundImport, pending);
+  } else await publication.markDirty();
   try {
     if (importRequired)
       await gateway.importTeam(teamName, plan.records, incarnation ? { incarnation } : undefined);
@@ -52,7 +88,19 @@ export async function prepareMemberWorkSyncColdPrimary(input: {
     // Once import is verified, a failed public action must leave the ordinary
     // recoverable fence. Failure of this transition is still an import failure.
     if (candidate) await publication.markDirty();
+    else if (unboundImport) await replica.completeUnboundImport(teamName, unboundImport);
   } catch (error) {
+    if (unboundImport) {
+      // Retain the intent until a new cold reader proves either exact physical outcome.
+      if (error instanceof InternalStorageOperationInterruptedError) {
+        try {
+          await error.settled;
+        } catch {
+          /* Preserve the original failure and durable intent. */
+        }
+      }
+      throw error;
+    }
     try {
       // RPC rejection does not prove the physical writer stopped. Readback must
       // observe the settled worker and the actual replacement database integrity.

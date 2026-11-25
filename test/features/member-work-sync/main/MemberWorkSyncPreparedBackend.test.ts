@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -74,10 +74,11 @@ afterEach(async () => {
 });
 async function setup(
   kind: 'json' | 'sqlite' = 'sqlite',
-  logger?: { warn: (message: string, metadata?: Record<string, unknown>) => void }
+  logger?: { warn: (message: string, metadata?: Record<string, unknown>) => void },
+  existingRoot?: string
 ) {
-  const root = await mkdtemp(join(tmpdir(), 'mws-prepared-sandbox-'));
-  roots.push(root);
+  const root = existingRoot ?? (await mkdtemp(join(tmpdir(), 'mws-prepared-sandbox-')));
+  if (!roots.includes(root)) roots.push(root);
   const paths = new MemberWorkSyncStorePaths(join(root, 'teams'));
   const core = new InternalStorageWorkerCore({
     databasePath: join(root, 'app.db'),
@@ -154,6 +155,190 @@ describe('prepared backend production storage path', () => {
   function coldStore(h: Awaited<ReturnType<typeof setup>>) {
     return coldStores(h).store;
   }
+
+  it.each(['before commit', 'after commit'] as const)(
+    'retains replica-only rows across an unbound cold import crash %s',
+    async (window) => {
+      const h = await setup();
+      const source = snapshot();
+      await h.replica.writeClean(identity.teamName, source);
+      expect(await h.json.readSnapshotForImport(identity.teamName)).toBeNull();
+      expect((await h.gateway.listTeamSnapshot(identity.teamName)).statuses).toEqual([]);
+      const originalImport = h.gateway.importTeam.bind(h.gateway);
+      let resume!: () => void;
+      let reached!: () => void;
+      const paused = new Promise<void>((resolve) => { resume = resolve; });
+      const atImport = new Promise<void>((resolve) => { reached = resolve; });
+      vi.spyOn(h.gateway, 'importTeam').mockImplementationOnce(async (...args) => {
+        if (window === 'after commit') await originalImport(...args);
+        reached();
+        await paused;
+        if (window === 'before commit') await originalImport(...args);
+      });
+      const opening = h.store.readTeamMetrics(identity.teamName);
+      try {
+        await atImport;
+        // Preserve the actual durable crash window without unwinding the caller's catch.
+        const copied = await mkdtemp(join(tmpdir(), 'TEST-unbound-import-crash-'));
+        roots.push(copied);
+        await cp(h.root, copied, { recursive: true });
+        const restarted = await setup('sqlite', undefined, copied);
+        const imported = vi.spyOn(restarted.gateway, 'importTeam');
+        const claims = vi.spyOn(restarted.gateway, 'outboxClaimDue');
+        await expect(restarted.replica.readClean(identity.teamName, false)).rejects.toThrow();
+        await restarted.store.readTeamMetrics(identity.teamName);
+        const recovered = await restarted.gateway.listTeamSnapshot(identity.teamName);
+        expect(recordsToSnapshot(identity.teamName, recovered).statuses).toEqual(source.statuses);
+        expect(await restarted.gateway.readPrimaryIncarnation(identity.teamName)).toBeNull();
+        expect(imported).toHaveBeenCalledTimes(window === 'before commit' ? 1 : 0);
+        expect(claims).not.toHaveBeenCalled();
+        await expect(restarted.replica.readClean(identity.teamName, false)).resolves.toEqual(source);
+      } finally {
+        resume();
+        await opening;
+      }
+    }
+  );
+
+  async function pendingUnboundImport() {
+    const h = await setup();
+    await h.replica.writeClean(identity.teamName, snapshot());
+    const original = new Error('TEST import interrupted before commit');
+    vi.spyOn(h.gateway, 'importTeam').mockRejectedValueOnce(original);
+    await expect(h.store.readTeamMetrics(identity.teamName)).rejects.toBe(original);
+    expect(await h.replica.readUnboundImport(identity.teamName)).not.toBeNull();
+    return h;
+  }
+
+  it.each([
+    'malformed intent',
+    'changed candidate',
+    'changed primary',
+    'foreign owner',
+    'unhealthy primary',
+    'warm mutation',
+    'JSON fallback',
+    'clean JSON intent',
+    'clean authority intent',
+  ] as const)('retains unbound import evidence and refuses %s', async (failure) => {
+    let h = await pendingUnboundImport();
+    let path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+    const envelope = JSON.parse(await readFile(path, 'utf8'));
+    if (failure === 'warm mutation') {
+      h = await setup();
+      await h.store.readTeamMetrics(identity.teamName);
+      path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      await writeFile(path, JSON.stringify(envelope));
+    } else if (failure === 'changed primary') {
+      await h.gateway.importTeam(
+        identity.teamName,
+        snapshotToRecords(identity.teamName, snapshot(status(2)))
+      );
+    } else if (failure === 'foreign owner') {
+      await h.gateway.importTeam(
+        identity.teamName,
+        await h.gateway.listTeamSnapshot(identity.teamName),
+        { incarnation: 'TEST-foreign-owner' }
+      );
+    } else if (failure === 'unhealthy primary') {
+      vi.spyOn(h.gateway, 'ping').mockResolvedValue({
+        ...(await h.gateway.ping()),
+        integrity: 'recovered',
+      });
+    } else if (
+      failure === 'malformed intent' || failure === 'changed candidate' || failure.startsWith('clean ')
+    ) {
+      if (failure === 'malformed intent') envelope.unboundImport.extra = true;
+      else if (failure === 'changed candidate')
+        envelope.snapshot.statuses[0].evaluatedAt = '2026-09-11T00:00:00.000Z';
+      else envelope.state = 'clean';
+      await writeFile(path, JSON.stringify(envelope));
+    }
+    const before = await readFile(path, 'utf8');
+    const primary = await h.gateway.listTeamSnapshot(identity.teamName);
+    const owner = await h.gateway.readPrimaryIncarnation(identity.teamName);
+    const imported = vi.spyOn(h.gateway, 'importTeam').mockClear();
+    const claims = vi.spyOn(h.gateway, 'outboxClaimDue');
+    const authority = vi.fn();
+    const active = failure.includes('JSON')
+      ? new BackendSelectingMemberWorkSyncStore(
+          new InternalStorageBackendSelector(() => Promise.reject(new Error('TEST JSON backend'))),
+          h.sqlite,
+          h.json,
+          { gateway: h.gateway, paths: h.paths, fallbackRequiresReplica: false }
+        )
+      : h.store;
+    await expect(
+      failure === 'clean authority intent'
+        ? active.withPreparedBackend(identity, authority)
+        : active.claimDue(emptyClaim)
+    ).rejects.toThrow();
+    expect(authority).not.toHaveBeenCalled();
+    expect(imported).not.toHaveBeenCalled();
+    expect(claims).not.toHaveBeenCalled();
+    expect(await h.gateway.listTeamSnapshot(identity.teamName)).toEqual(primary);
+    expect(await h.gateway.readPrimaryIncarnation(identity.teamName)).toBe(owner);
+    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(JSON.parse(before)).toHaveProperty('unboundImport');
+  });
+
+  it('clears the unbound import intent before a public claim and never replays its committed generation', async () => {
+    const h = await setup();
+    const payload: MemberWorkSyncOutboxEnsureInput['payload'] = {
+      from: 'system',
+      to: member.memberName,
+      messageKind: 'member_work_sync_nudge',
+      source: 'member-work-sync',
+      actionMode: 'do',
+      workSyncIntent: 'agenda_sync',
+      text: 'TEST original unbound nudge',
+      taskRefs: [],
+    };
+    const input = {
+      ...member,
+      id: 'TEST-unbound-nudge',
+      agendaFingerprint: 'f',
+      payload,
+      payloadHash: buildMemberWorkSyncNudgePayloadHash(
+        { sha256Hex: (value) => createHash('sha256').update(value).digest('hex') }, payload
+      ),
+      nowIso: status().evaluatedAt,
+    };
+    await h.store.ensurePending(input);
+    const source = recordsToSnapshot(
+      identity.teamName, await h.gateway.listTeamSnapshot(identity.teamName)
+    );
+    await h.replica.writeClean(identity.teamName, source);
+    await h.gateway.importTeam(identity.teamName, {
+      statuses: [], reportIntents: [], outboxItems: [], metricEvents: [],
+    });
+    const cold = coldStores(h);
+    const claim = cold.sqlite.claimDue.bind(cold.sqlite);
+    const original = new Error('TEST public action rejected after claim commit');
+    vi.spyOn(cold.sqlite, 'claimDue').mockImplementationOnce(async (request) => {
+      const envelope = JSON.parse(
+        await readFile(h.paths.getSqliteFallbackReplicaPath(identity.teamName), 'utf8')
+      );
+      expect(envelope.state).toBe('dirty');
+      expect(envelope).not.toHaveProperty('unboundImport');
+      expect(envelope).not.toHaveProperty('snapshot');
+      await claim(request);
+      throw original;
+    });
+    const claims = vi.spyOn(h.gateway, 'outboxClaimDue');
+    await expect(cold.store.claimDue(emptyClaim)).rejects.toBe(original);
+    const committed = await h.gateway.listTeamSnapshot(identity.teamName);
+    expect(committed.outboxItems).toMatchObject([
+      { id: input.id, status: 'claimed', attemptGeneration: 1 },
+    ]);
+    await coldStore(h).readTeamMetrics(identity.teamName);
+    expect(claims).toHaveBeenCalledTimes(1);
+    expect(await h.gateway.listTeamSnapshot(identity.teamName)).toEqual(committed);
+    expect(await h.gateway.readPrimaryIncarnation(identity.teamName)).toBeNull();
+    await expect(h.replica.readClean(identity.teamName, false)).resolves.toEqual(
+      recordsToSnapshot(identity.teamName, committed)
+    );
+  });
 
   it.each(['warm', 'cold'] as const)(
     'review regression: recovers an empty bound primary after a pre-action failure (%s)',

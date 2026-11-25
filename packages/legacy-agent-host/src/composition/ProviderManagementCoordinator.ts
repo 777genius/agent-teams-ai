@@ -242,7 +242,7 @@ export class ProviderManagementCoordinator {
         const target = this.credentialTarget(profile);
         return () => {
           try {
-            this.assertCurrent();
+            // select checks the same writer/closed fence before observing the target.
             assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
             return current();
           } catch { return false; }

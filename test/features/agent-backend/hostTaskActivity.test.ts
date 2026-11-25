@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
 import { projectTaskHistory } from '../../../src/features/agent-backend/main/adapters/output/projectTaskHistory';
 import { createHostTaskActivityApi } from '../../../src/features/agent-backend/renderer/createHostTaskActivityApi';
+import { HostTeamOperationError } from '../../../src/features/agent-backend/renderer/createHostTeamMutations';
 
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { HostActivityContent, HostMemberActivityLog } from '../../../src/shared/types/teamActivity';
@@ -66,23 +67,25 @@ function fixture() {
   const invoke = vi.fn<AgentBackendApi['invoke']>().mockImplementation(async (request) => {
     if (request.operation === 'team.activity.logs.read')
       return { ok: true, value: { kind: 'team-activity-logs', logs: structuredClone(logs) } };
-    if (request.operation === 'task.get')
-      return {
-        ok: true,
-        value: {
-          id: 'task-original',
-          status: 'in_progress',
-          owner: 'bob',
-          historyEvents: [...history],
-        },
-      };
     if (request.operation === 'team.roster.read')
       return { ok: true, value: { revision: 'roster-original', members: [], removedMembers: [] } };
     throw new Error('Unexpected effect dispatch');
   });
   const backend: AgentBackendApi = { invoke, getConnections: vi.fn() };
+  const readTask = vi.fn<Parameters<typeof createHostTaskActivityApi>[0]['readTask']>()
+    .mockImplementation(async (key, taskId, check, assertCurrent) => {
+      expect(key).toBe('host-team:original');
+      expect(taskId).toBe('task-original');
+      expect(check()).toBe(true);
+      assertCurrent();
+      return {
+        id: taskId, subject: 'Original task', status: 'in_progress', owner: 'bob',
+        historyEvents: [...history],
+      };
+    });
   const api = createHostTaskActivityApi({
     backend,
+    readTask,
     captureScope: () => () => current,
     async resolve(key, check) {
       expect(key).toBe('host-team:original');
@@ -98,6 +101,7 @@ function fixture() {
   return {
     api,
     invoke,
+    readTask,
     get logs() {
       return logs;
     },
@@ -153,7 +157,7 @@ describe('Host Task Activity original read scope', () => {
     await f.api.setTaskLogStreamTracking('host-team:original', true);
     for (const [request] of f.invoke.mock.calls) {
       expect(request.handle).toEqual({ handleId: 'original' });
-      expect(['team.activity.logs.read', 'task.get', 'team.roster.read']).toContain(
+      expect(['team.activity.logs.read', 'team.roster.read']).toContain(
         request.operation
       );
       if (request.operation !== 'team.roster.read')
@@ -425,14 +429,35 @@ describe('Host Task Activity original read scope', () => {
       ok: true,
       value: { kind: 'team-activity-logs', logs: task.logs },
     }));
-    task.invoke.mockImplementationOnce(async () => {
+    task.readTask.mockImplementationOnce(async () => {
       task.revoke();
-      return { ok: true, value: { id: 'task-original', status: 'completed' } };
+      return { id: 'task-original', subject: 'Original task', status: 'completed' };
     });
     await expect(task.api.getTaskActivity('host-team:original', 'task-original')).rejects.toThrow(
       'Context revoked'
     );
-    expect(task.invoke).toHaveBeenCalledTimes(2);
+    expect(task.invoke).toHaveBeenCalledTimes(1);
+    expect(task.readTask).toHaveBeenCalledTimes(1);
+  });
+  it.each([null, { id: 'foreign-task', subject: 'Foreign task', status: 'pending' as const }])(
+    'refuses missing or foreign paged task history instead of publishing an empty success', async (task) => {
+      const f = fixture();
+      f.readTask.mockResolvedValueOnce(task);
+      await expect(f.api.getTaskActivity('host-team:original', 'task-original')).rejects.toMatchObject({
+        code: 'invalid-result', outcome: 'unknown',
+      });
+    }
+  );
+  it('preserves paged task refusal and distinguishes absent canonical history from empty history', async () => {
+    const f = fixture();
+    f.readTask.mockRejectedValueOnce(new HostTeamOperationError('forbidden', 'not-dispatched'));
+    await expect(f.api.getTaskActivity('host-team:original', 'task-original')).rejects.toMatchObject({
+      code: 'forbidden', outcome: 'not-dispatched',
+    });
+    f.readTask.mockResolvedValueOnce({ id: 'task-original', subject: 'Original task', status: 'pending' });
+    const activity = await f.api.getTaskActivity('host-team:original', 'task-original');
+    expect(activity).not.toHaveProperty('historyEvents');
+    expect(activity.gaps).toContain('Canonical task history is unavailable.');
   });
   it('revalidates original scope after the source-generation hash await', async () => {
     const f = fixture();
