@@ -16,7 +16,7 @@
 
 <p align="center">
   <strong>You're the boss. Your agents are the team.</strong><br />
-  Give your team a goal. Agents create tasks, delegate, talk to each other and review each other's work. Follow progress across projects and organizations, and step in when your team needs you.<br />
+  Give the lead a goal. Agents create tasks, delegate, talk to each other and review each other's work. Follow progress across teams and projects, and step in when they need you.<br />
   <sub>Free, open-source desktop app for macOS, Windows and Linux. For coding and broader project work. <strong>300+ models · 200+ LLM providers · Free models with no auth</strong> — no signup, API key or credit card needed to get started. Connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Kiro, Z.AI, Xiaomi, MiniMax, Kimi and more.</sub>
 
   <sub>Check also:
@@ -229,6 +229,7 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 Agent Teams AI is a free, open-source workspace for building and running AI teams across Codex, Claude Code, OpenCode, Cursor, Grok, GitHub Copilot, Kiro, Z.AI, Xiaomi, MiniMax, Kimi and more (300+ models, 200+ LLM providers through supported runtimes and provider integrations, free models with no auth).
 
 Ask the lead to deliver a feature, investigate a problem or run a project. The lead can break the work into tasks, assign them to teammates and ask another agent to review the result. A task has a life beyond the chat: an owner, dependencies, comments, attachments, execution logs and, for coding work, code changes. You can see the same work the agents are coordinating, from one task to an entire organization.
+
 - **Assemble your team** — create agent teams using one prompt or a template, with different roles that work autonomously in parallel
 - **Sit back and watch** — agents move work through a live Kanban board; switch to the sortable task table or open a task to inspect ownership, blockers and progress
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
@@ -242,7 +243,7 @@ Ask the lead to deliver a feature, investigate a problem or run a project. The l
 - **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Integrated terminal workspace** — run commands in a visual PTY scoped to each team and project, with local shell tabs, persistent history, autocomplete, and terminal settings
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
-- **Multi-provider orchestration** — choose a runtime and model for each teammate. Mix Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more in the same team. Start with a free model with no auth or use the subscriptions or API keys you already have
+- **Multi-provider orchestration** — choose a runtime and model for each teammate. Auto-detect installed Claude Code, Codex and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more. Mix them in the same team, start with a free model with no auth, or use the subscriptions or API keys you already have
 - **Separate project context** — reuse a team across projects without mixing their tasks and conversations. New teams use separate project histories by default; existing teams retain their shared history
 - **Scheduled automation** — schedule individual agents or entire teams, optionally link runs to board tasks, inspect run history and set scheduled-run budget caps
 - **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment on individual hunks
