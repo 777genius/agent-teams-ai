@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "मासिक बजट",
+      "teamCardUnknown": "उपयोग अज्ञात",
+      "teamCardBlocked": "सीमा पूरी - नया लॉन्च रोका गया",
+      "editor": {
+        "onExceeded": "बजट सीमा पर कार्रवाई",
+        "notifyOnly": "केवल सूचना दें",
+        "blockLaunch": "टीम के नए लॉन्च रोकें",
+        "stopTeam": "चलती टीम रोकें और नए लॉन्च रोकें",
+        "enforcementHint": "उपयोग डेटा न मिले या देर से आए तो नए लॉन्च रुकेंगे। लागत अनुमानित है; बिल सीमा से अधिक हो सकता है।"
+      }
     }
   }
 }

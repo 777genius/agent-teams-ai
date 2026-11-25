@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "মাসিক বাজেট",
+      "teamCardUnknown": "ব্যবহারের তথ্য অজানা",
+      "teamCardBlocked": "সীমা পৌঁছেছে - চালু করা বন্ধ",
+      "editor": {
+        "onExceeded": "বাজেটের সীমায় পৌঁছালে করণীয়",
+        "notifyOnly": "শুধু বিজ্ঞপ্তি",
+        "blockLaunch": "নতুন টিম চালু বন্ধ করুন",
+        "stopTeam": "চলমান টিম বন্ধ করুন ও নতুন চালু বন্ধ করুন",
+        "enforcementHint": "ব্যবহারের তথ্য অনুপস্থিত বা বিলম্বিত হলে নতুন চালু বন্ধ থাকবে। খরচ আনুমানিক; বিল সীমা ছাড়াতে পারে।"
+      }
     }
   }
 }
