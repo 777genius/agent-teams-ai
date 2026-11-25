@@ -7,6 +7,8 @@ const { getTeamBoardLockContext } = require('./boardLock.js');
 const reviewStateHelpers = require('./reviewState.js');
 const { normalizeCreationCommand } = require('./taskCreationCommand.js');
 const { normalizeTaskGroupChatId, applyTaskGroupChatUpdate } = require('./taskGroupAssociation.js');
+const { normalizeTaskRefs } = require('./taskReferences.js');
+const { prepareTaskComment, findExistingClarificationAnswer } = require('./taskCommentPolicy.js');
 
 const TASK_STATUSES = new Set(['pending', 'in_progress', 'completed', 'deleted']);
 const UUID_TASK_ID_PATTERN =
@@ -497,23 +499,6 @@ function parseRelationshipList(paths, value, options = {}) {
   return rawValues.map((entry) => resolveTaskRef(paths, entry, options));
 }
 
-function normalizeTaskRefs(taskRefs) {
-  if (!Array.isArray(taskRefs) || taskRefs.length === 0) {
-    return undefined;
-  }
-
-  const normalized = taskRefs
-    .filter((item) => item && typeof item === 'object')
-    .map((item) => ({
-      taskId: String(item.taskId || '').trim(),
-      displayId: String(item.displayId || '').trim(),
-      teamName: String(item.teamName || '').trim(),
-    }))
-    .filter((item) => item.taskId && item.displayId && item.teamName);
-
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function computeInitialStatus(paths, input, owner, blockedByIds) {
   const explicit = normalizeStatus(input.status);
   if (explicit) return explicit;
@@ -951,61 +936,18 @@ function normalizeMemberName(value) {
 }
 
 function addTaskComment(paths, taskRef, text, options = {}) {
-  if (typeof text !== 'string' || !text.trim()) {
-    throw new Error('Missing comment text');
-  }
-
-  const answerRequestId = options.answerClarificationRequestId;
-  if (answerRequestId !== undefined &&
-      (!UUID_TASK_ID_PATTERN.test(String(answerRequestId)) || options.author !== 'user')) {
-    throw new Error('Invalid task clarification answer identity');
-  }
-  const comment = {
-    // One response identity per clarification cycle makes an uncertain retry
-    // idempotent without a second journal or arbitrary client-chosen comment ID.
-    id: answerRequestId ? 'clarification-answer-' + answerRequestId : options.id || crypto.randomUUID(),
-    author:
-      typeof options.author === 'string' && options.author.trim() ? options.author.trim() : 'user',
-    text,
-    createdAt:
-      typeof options.createdAt === 'string' && options.createdAt.trim()
-        ? options.createdAt.trim()
-        : nowIso(),
-    type: options.type || 'regular',
-    ...(normalizeTaskRefs(options.taskRefs)
-      ? { taskRefs: normalizeTaskRefs(options.taskRefs) }
-      : {}),
-    ...(Array.isArray(options.attachments) && options.attachments.length > 0
-      ? { attachments: options.attachments }
-      : {}),
-  };
+  const { comment, answerRequestId } = prepareTaskComment(text, options, {
+    nowIso,
+    uuidPattern: UUID_TASK_ID_PATTERN,
+  });
 
   if (answerRequestId) {
     // Called under the controller's team-board lock. A stale answer must never
     // clear a newer question, even if it was successfully recorded earlier.
     const current = readTask(paths, taskRef, { includeDeleted: true });
-    if (current.needsClarification === 'user' &&
-        current.clarificationRequestId !== answerRequestId) {
-      throw new Error('Clarification request changed; reload the task before replying');
-    }
-    const existing = (Array.isArray(current.comments) ? current.comments : [])
-      .find((row) => row.id === comment.id);
+    const existing = findExistingClarificationAnswer(current, comment, answerRequestId);
     if (existing) {
-      const refs = (rows) => JSON.stringify(rows || []);
-      const attachments = (rows) => JSON.stringify((rows || []).map((row) => ({
-        id: row.id, filename: row.filename, mimeType: row.mimeType, size: row.size,
-      })));
-      if (existing.author !== comment.author || existing.text !== comment.text ||
-          refs(existing.taskRefs) !== refs(comment.taskRefs) ||
-          attachments(existing.attachments) !== attachments(comment.attachments)) {
-        throw new Error('Clarification already answered with different content');
-      }
       return { comment: existing, task: current, inserted: false, clarificationCleared: false };
-    }
-    if (current.needsClarification !== 'user' ||
-        current.clarificationRequestId !== answerRequestId ||
-        current.status === 'deleted' || current.deletedAt) {
-      throw new Error('Clarification request is no longer awaiting your answer');
     }
   }
 

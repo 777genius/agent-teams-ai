@@ -15,6 +15,11 @@ const completed: ScheduleChangeEvent = {
   detail: 'do-not-send-private-data',
 };
 
+function buildUnreadNotification(payload: NonNullable<ReturnType<typeof scheduleNotificationFromChange>>) {
+  const notification = buildDetectedErrorFromTeam(payload);
+  return { ...notification, isRead: false, createdAt: notification.timestamp };
+}
+
 describe('Schedule notification delivery', () => {
   it('emits one stable event per completed run with a schedule deep link', () => {
     const payload = scheduleNotificationFromChange(completed);
@@ -24,7 +29,7 @@ describe('Schedule notification delivery', () => {
       target: { kind: 'team', teamName: 'private-team', section: 'schedules' },
     });
     expect(JSON.stringify(payload)).not.toContain('do-not-send-private-data');
-    expect(toOutboundNotification(buildDetectedErrorFromTeam(payload!))).toEqual({
+    expect(toOutboundNotification(buildUnreadNotification(payload!))).toEqual({
       event: 'schedule_completed',
       message: 'Agent Teams: Scheduled run completed.',
     });
@@ -37,7 +42,7 @@ describe('Schedule notification delivery', () => {
     });
     expect(payload?.dedupeKey).toBe('schedule:schedule-1:run-1:schedule_failed');
     expect(JSON.stringify(payload)).not.toContain('private-token');
-    expect(toOutboundNotification(buildDetectedErrorFromTeam(payload!))).toEqual({
+    expect(toOutboundNotification(buildUnreadNotification(payload!))).toEqual({
       event: 'schedule_failed',
       message: 'Agent Teams: Scheduled run failed.',
     });

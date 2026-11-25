@@ -53,8 +53,6 @@ export type WarmUpFn = (cwd: string) => Promise<{ ready: boolean; message: strin
 // =============================================================================
 
 export class SchedulerService {
-  private repository: ScheduleRepository;
-  private executor: ScheduledTaskExecutor;
   private warmUpFn: WarmUpFn;
   private smartDispatcher: SmartScheduleDispatcher | null;
   private changeEmitter: ChangeEmitter | null = null;
@@ -77,14 +75,12 @@ export class SchedulerService {
   private readonly stopBarrier = new SchedulerStopBarrier();
 
   constructor(
-    repository: ScheduleRepository,
-    executor: ScheduledTaskExecutor,
+    private repository: ScheduleRepository,
+    private executor: ScheduledTaskExecutor,
     warmUpFn?: WarmUpFn,
     smartDispatcher?: SmartScheduleDispatcher,
     private readonly allowTeamSchedule: ScheduleAdmissionCheck = async () => true
   ) {
-    this.repository = repository;
-    this.executor = executor;
     this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
