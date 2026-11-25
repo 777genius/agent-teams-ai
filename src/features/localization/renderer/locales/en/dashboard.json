@@ -353,6 +353,9 @@
     },
     "budgets": {
       "allTeams": "All teams",
+      "teamCardBudget": "Monthly budget",
+      "teamCardUnknown": "Usage unknown",
+      "teamCardBlocked": "Budget limit reached - launches blocked",
       "configureFor": "Budget for {{scope}}",
       "costLimit": "API-equivalent $ limit",
       "costLimitDetail": "{{cost}} of {{limit}}",
