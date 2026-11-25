@@ -2518,7 +2518,7 @@ export class TeamDataService {
         });
       }
     }
-    const comment =
+    return (
       addResult.comment ??
       ({
         id: randomUUID(),
@@ -2528,9 +2528,8 @@ export class TeamDataService {
         type: 'regular',
         ...(taskRefs && taskRefs.length > 0 ? { taskRefs } : {}),
         ...(attachments && attachments.length > 0 ? { attachments } : {}),
-      } as TaskComment);
-
-    return comment;
+      } as TaskComment)
+    );
   }
 
   private async buildEnrichedSendMessageRequest(

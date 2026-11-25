@@ -2699,13 +2699,11 @@ describe(
       });
       expect(svc.isTeamAlive('failed-opencode-safe-e2e')).toBe(false);
 
-      // The failed launch leaves alice with registration metadata and no
-      // runtime pid, which projects as deliverable-but-registered-only: the
-      // team is not alive, but the member card must not claim the runtime was
-      // proven dead when no pid was ever recorded to look up.
+      // A recorded launch failure is not alive even when only registration
+      // metadata remains. Keep registered_only as the provenance of that metadata.
       const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot('failed-opencode-safe-e2e');
       expect(runtimeSnapshot.members.alice).toMatchObject({
-        alive: true,
+        alive: false,
         livenessKind: 'registered_only',
         providerId: 'opencode',
         runtimeModel: 'opencode/big-pickle',
